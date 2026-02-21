@@ -1,0 +1,26 @@
+#!/bin/bash
+# Ce script corrige le fichier GoogleMapView.tsx cassé
+# Il supprime les lignes cassées 609-827 et les remplace par du code propre
+
+echo "❌ Le fichier GoogleMapView.tsx est trop gros pour être édité automatiquement"
+echo "✅ Solution manuelle requise:"
+echo ""
+echo "1. Ouvrir components/GoogleMapView.tsx"
+echo "2. Trouver la ligne 609 (début du code cassé)"
+echo "3. Supprimer jusqu'à la ligne 827 (fin du code cassé)"
+echo "4. Remplacer par le code suivant:"
+echo ""
+echo "    // Lancer l'appel Directions API"
+echo "    directionsService.route("
+echo "      {"
+echo "        origin: effectiveRouteStart,"
+echo "        destination: effectiveRouteEnd,"
+echo "        travelMode: window.google.maps.TravelMode.DRIVING"
+echo "      },"
+echo "      (result, status) => {"
+echo "        // ... (code existant)"
+echo "      }"
+echo "    );"
+echo ""
+echo "OU PLUS SIMPLE:"
+echo "git checkout components/GoogleMapView.tsx"

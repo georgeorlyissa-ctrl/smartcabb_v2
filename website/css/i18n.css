@@ -1,0 +1,191 @@
+/**
+ * Styles pour le Sélecteur de Langue
+ * SmartCabb Site Web - Design Élégant avec Drapeaux
+ */
+
+.language-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #2d3748;
+    padding: 0.25rem;
+    border-radius: 8px;
+    margin-left: 1rem;
+}
+
+.language-btn,
+.lang-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #cbd5e0;
+    white-space: nowrap;
+}
+
+.language-btn:hover,
+.lang-btn:hover {
+    background: #4a5568;
+    color: white;
+}
+
+.language-btn.active,
+.lang-btn.active {
+    background: #1a202c;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.language-btn svg,
+.lang-btn svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 2px;
+}
+
+.lang-btn .flag {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.lang-btn .lang-text {
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+}
+
+/* Version mobile */
+@media (max-width: 768px) {
+    .language-selector {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1001;
+        flex-direction: row;
+        gap: 0.25rem;
+        background: #2d3748;
+        padding: 0.25rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .language-btn,
+    .lang-btn {
+        padding: 0.5rem 0.75rem;
+        width: auto;
+        height: auto;
+    }
+
+    .language-btn span,
+    .lang-btn span {
+        display: none;
+    }
+
+    .language-btn svg,
+    .lang-btn svg {
+        width: 24px;
+        height: 24px;
+    }
+
+    .language-btn .lang-text,
+    .lang-btn .lang-text {
+        display: none;
+    }
+
+    .language-btn .flag,
+    .lang-btn .flag {
+        font-size: 1.5rem;
+    }
+}
+
+/* Animation d'apparition */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.language-selector {
+    animation: fadeInUp 0.3s ease;
+}
+
+/* Style pour le sélecteur dans le header desktop */
+@media (min-width: 769px) {
+    nav .language-selector {
+        margin-left: auto;
+    }
+}
+
+/* Adaptation pour les différents thèmes */
+.dark-theme .lang-btn {
+    color: #9ca3af;
+}
+
+.dark-theme .lang-btn:hover {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.dark-theme .lang-btn.active {
+    color: white;
+}
+
+/* Tooltip pour le bouton langue */
+.lang-btn[title]::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.lang-btn:hover[title]::after {
+    opacity: 1;
+}
+
+/* Loading state */
+.lang-btn.loading {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.lang-btn.loading::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid #10b981;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}

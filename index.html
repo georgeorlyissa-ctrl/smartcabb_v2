@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-visual" />
+    
+    <!-- 🔄 CACHE CONTROL - Force le rafraîchissement dans l'aperçu Figma -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    
+    <!-- 🧭 Permissions Policy - Autoriser TOUTES les fonctionnalités de géolocalisation -->
+    <meta http-equiv="Permissions-Policy" content="geolocation=(self), camera=(self), microphone=(self), payment=(self)" />
+    
+    <!-- 🚀 Performance & Mobile Optimization -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    
+    <!-- 📱 PWA Configuration -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#06b6d4" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SmartCabb" />
+    
+    <!-- Apple Touch Icons (iOS) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%2306b6d4;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%2310b981;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='180' height='180' rx='30' fill='url(%23grad)'/%3E%3Ctext x='90' y='125' font-family='Arial, sans-serif' font-size='75' font-weight='900' fill='white' text-anchor='middle'%3ESC%3C/text%3E%3C/svg%3E" />
+    
+    <!-- Splash Screen iOS -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    
+    <!-- MS Tile Icon (Windows) -->
+    <meta name="msapplication-TileColor" content="#06b6d4" />
+    <meta name="msapplication-config" content="none" />
+    
+    <!-- 📄 SEO Meta Tags -->
+    <title>SmartCabb - Votre chauffeur à Kinshasa</title>
+    <meta name="description" content="SmartCabb - Service de transport avec chauffeur à Kinshasa. Réservez votre course en quelques clics avec nos véhicules climatisés et nos chauffeurs professionnels." />
+    <meta name="keywords" content="transport, kinshasa, chauffeur, taxi, course, smartcabb, congo, rdc, vtc, réservation, paiement mobile" />
+    <meta name="author" content="SmartCabb" />
+    
+    <!-- 🌐 Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://smartcabb.com/" />
+    <meta property="og:title" content="SmartCabb - Transport à Kinshasa" />
+    <meta property="og:description" content="Réservez votre chauffeur à Kinshasa en quelques clics. Service de qualité, paiement sécurisé." />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:site_name" content="SmartCabb" />
+    
+    <!-- 🐦 Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://smartcabb.com/" />
+    <meta property="twitter:title" content="SmartCabb - Transport à Kinshasa" />
+    <meta property="twitter:description" content="Réservez votre chauffeur à Kinshasa en quelques clics" />
+    
+    <script type="module" src="/main.tsx?v=517.113"></script>
+    
+    <!-- Supprimer le preloader une fois React chargé -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const preloader = document.getElementById('preloader');
+          if (preloader) {
+            preloader.style.opacity = '0';
+            preloader.style.transition = 'opacity 0.3s ease-out';
+            setTimeout(function() {
+              preloader.remove();
+            }, 300);
+          }
+        }, 500);
+      });
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <!-- Preloader HTML natif - Affiché avant le chargement de React -->
+      <div id="preloader" style="position: fixed; inset: 0; background: linear-gradient(135deg, #ecfeff 0%, #ffffff 50%, #f0fdf4 100%); display: flex; align-items: center; justify-content: center; z-index: 9999;">
+        <div style="text-align: center;">
+          <!-- Logo SmartCabb -->
+          <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(6, 182, 212, 0.3); animation: pulse 2s ease-in-out infinite;">
+            <span style="color: white; font-size: 32px; font-weight: 900; font-family: system-ui, -apple-system, sans-serif;">SC</span>
+          </div>
+          
+          <!-- Spinner -->
+          <svg style="width: 40px; height: 40px; margin: 0 auto 16px; animation: spin 1s linear infinite;" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="#06b6d4" stroke-width="4" stroke-dasharray="31.4" stroke-dashoffset="10" stroke-linecap="round" opacity="0.25"/>
+            <circle cx="12" cy="12" r="10" stroke="#06b6d4" stroke-width="4" stroke-dasharray="31.4" stroke-dashoffset="10" stroke-linecap="round"/>
+          </svg>
+          
+          <!-- Texte -->
+          <p style="color: #6b7280; font-size: 16px; font-weight: 500; font-family: system-ui, -apple-system, sans-serif;">Chargement de SmartCabb...</p>
+        </div>
+      </div>
+      
+      <!-- Animations CSS -->
+      <style>
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.05); opacity: 0.9; }
+        }
+      </style>
+    </div>
+    
+    <!-- ✅ PROTECTION SSR: Polyfill pour éviter "Illegal constructor" -->
+    <script>
+      // Protection 1: S'assurer que nous sommes côté client
+      if (typeof window === 'undefined') {
+        throw new Error('❌ Ce code ne devrait jamais s\'exécuter côté serveur');
+      }
+      
+      // Protection 2: Créer des stubs pour les APIs manquantes
+      window.__SMARTCABB_CLIENT_READY__ = false;
+      
+      // Protection 3: Wrapper sécurisé pour localStorage/sessionStorage
+      (function() {
+        try {
+          const test = '__test__';
+          localStorage.setItem(test, test);
+          localStorage.removeItem(test);
+          console.log('✅ localStorage disponible');
+        } catch (e) {
+          console.warn('⚠️ localStorage non disponible, création d\'un fallback');
+          
+          // Créer un fallback en mémoire
+          const memoryStorage = new Map();
+          
+          Object.defineProperty(window, 'localStorage', {
+            value: {
+              getItem: (key) => memoryStorage.get(key) || null,
+              setItem: (key, value) => memoryStorage.set(key, value),
+              removeItem: (key) => memoryStorage.delete(key),
+              clear: () => memoryStorage.clear(),
+              key: (index) => {
+                const keys = Array.from(memoryStorage.keys());
+                return keys[index] || null;
+              },
+              get length() {
+                return memoryStorage.size;
+              }
+            },
+            writable: false,
+            configurable: false
+          });
+        }
+        
+        // Marquer comme prêt
+        window.__SMARTCABB_CLIENT_READY__ = true;
+        console.log('✅ Environnement client initialisé');
+      })();
+    </script>
+  </body>
+</html>

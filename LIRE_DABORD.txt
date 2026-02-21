@@ -1,0 +1,119 @@
+═══════════════════════════════════════════════════════════════════════════════
+🚨 URGENT : BACKEND SMARTCABB NON DÉPLOYÉ
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLÈME IDENTIFIÉ
+------------------
+Votre backend Supabase Edge Function n'est PAS déployé.
+
+IMPACT
+------
+❌ Toutes les requêtes API échouent avec "Failed to fetch"
+❌ Impossible de créer un compte admin
+❌ Impossible de se connecter
+❌ Dashboard inaccessible
+
+CAUSE
+-----
+Après la réinitialisation du repository GitHub :
+• Frontend déployé automatiquement sur Vercel ✅
+• Backend NON déployé sur Supabase ❌
+
+SOLUTION RAPIDE (5 MINUTES)
+---------------------------
+
+📖 Option 1 : Lire la solution rapide
+   Ouvrir : SOLUTION_RAPIDE.md
+
+🤖 Option 2 : Script automatique (RECOMMANDÉ)
+   
+   macOS/Linux :
+   $ chmod +x deploy-backend.sh
+   $ ./deploy-backend.sh
+
+   Windows PowerShell :
+   PS> .\deploy-backend.ps1
+
+🔍 Option 3 : Vérifier l'état actuel
+   
+   macOS/Linux :
+   $ chmod +x check-backend-status.sh
+   $ ./check-backend-status.sh
+
+   Windows PowerShell :
+   PS> .\check-backend-status.ps1
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DOCUMENTATION DISPONIBLE
+-------------------------
+
+1. SOLUTION_RAPIDE.md
+   → Solution en 5 minutes avec commandes exactes
+
+2. README_BACKEND_DEPLOIEMENT.md
+   → Vue d'ensemble complète du problème
+
+3. GUIDE_DEPLOIEMENT_BACKEND_SUPABASE.md
+   → Guide détaillé étape par étape
+
+4. DIAGNOSTIC_BACKEND.md
+   → Diagnostic technique et dépannage
+
+5. .env.supabase.example
+   → Template pour les secrets backend
+
+═══════════════════════════════════════════════════════════════════════════════
+
+COMMANDES RAPIDES
+-----------------
+
+# Vérifier l'état actuel
+./check-backend-status.sh          # macOS/Linux
+.\check-backend-status.ps1         # Windows
+
+# Déployer le backend automatiquement
+./deploy-backend.sh                # macOS/Linux
+.\deploy-backend.ps1               # Windows
+
+# Déployer manuellement
+npm install -g supabase
+mv supabase/functions/server supabase/functions/make-server-2eb02e52
+supabase login
+supabase link --project-ref zaerjqchzqmcxqblkfkg
+supabase functions deploy make-server-2eb02e52
+
+# Vérifier le déploiement
+curl https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52/health
+→ Réponse attendue : {"status":"ok"}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CHECKLIST
+---------
+[ ] Supabase CLI installé
+[ ] Dossier renommé en make-server-2eb02e52
+[ ] Authentifié : supabase login
+[ ] Projet lié
+[ ] Secrets configurés (.env.supabase)
+[ ] Backend déployé
+[ ] Health check répond OK
+[ ] Frontend fonctionne (inscription admin OK)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SUPPORT
+-------
+Si le problème persiste après le déploiement :
+
+1. Vérifier les logs : supabase functions logs make-server-2eb02e52
+2. Consulter DIAGNOSTIC_BACKEND.md
+3. Vérifier les secrets : supabase secrets list
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Créé le : 5 février 2026
+Projet : SmartCabb
+Auteur : Assistant IA Figma Make
+
+═══════════════════════════════════════════════════════════════════════════════

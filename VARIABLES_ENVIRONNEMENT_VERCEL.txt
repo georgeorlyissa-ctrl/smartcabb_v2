@@ -1,0 +1,198 @@
+═══════════════════════════════════════════════════════════════════════
+   🔐 VARIABLES D'ENVIRONNEMENT - VERCEL
+═══════════════════════════════════════════════════════════════════════
+
+⚠️ À AJOUTER LORS DE LA CRÉATION DU PROJET VERCEL
+⚠️ Ou dans: Settings → Environment Variables
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 SUPABASE (Obligatoire)
+───────────────────────────────────────────────────────────────────────
+
+Variable Name: SUPABASE_URL
+Value: [Votre URL Supabase]
+Example: https://xxxxxxxxxxxx.supabase.co
+
+Variable Name: SUPABASE_ANON_KEY
+Value: [Votre Anon Key]
+Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+Variable Name: SUPABASE_SERVICE_ROLE_KEY
+Value: [Votre Service Role Key]
+Example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+Variable Name: SUPABASE_DB_URL
+Value: [Votre Database URL]
+Example: postgresql://postgres:[password]@db.xxxxxxxxxxxx.supabase.co:5432/postgres
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 PAIEMENT - FLUTTERWAVE (Optionnel)
+───────────────────────────────────────────────────────────────────────
+
+Variable Name: FLUTTERWAVE_SECRET_KEY
+Value: [Votre Flutterwave Secret Key]
+Example: FLWSECK_TEST-xxxxxxxxxxxxxxxxxxxxxxxx
+
+Variable Name: FLUTTERWAVE_SIMULATION_MODE
+Value: true
+(ou false en production)
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 SMS - AFRICA'S TALKING (Optionnel)
+───────────────────────────────────────────────────────────────────────
+
+Variable Name: AFRICAS_TALKING_API_KEY
+Value: [Votre Africa's Talking API Key]
+Example: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+Variable Name: AFRICAS_TALKING_USERNAME
+Value: [Votre Username]
+Example: smartcabb
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 EMAIL - SENDGRID (Optionnel)
+───────────────────────────────────────────────────────────────────────
+
+Variable Name: SENDGRID_API_KEY
+Value: [Votre SendGrid API Key]
+Example: SG.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 CARTES - MAPBOX (Optionnel)
+───────────────────────────────────────────────────────────────────────
+
+Variable Name: MAPBOX_API_KEY
+Value: [Votre Mapbox API Key]
+Example: pk.eyJ1Ijoic21hcnRjYWJiIiwiYSI6ImNrxxxxxxxx
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 CARTES - GOOGLE MAPS (Optionnel)
+───────────────────────────────────────────────────────────────────────
+
+Variable Name: GOOGLE_PLACES_API_KEY
+Value: [Votre Google Places API Key]
+Example: AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+Variable Name: GOOGLE_MAPS_API_KEY
+Value: [Votre Google Maps API Key]
+Example: AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+Variable Name: GOOGLE_MAPS_SERVER_API_KEY
+Value: [Votre Google Maps Server API Key]
+Example: AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 NOTIFICATIONS - FIREBASE (Optionnel)
+───────────────────────────────────────────────────────────────────────
+
+Variable Name: FIREBASE_PROJECT_ID
+Value: [Votre Firebase Project ID]
+Example: smartcabb-xxxxx
+
+Variable Name: FIREBASE_SERVER_KEY
+Value: [Votre Firebase Server Key]
+Example: AAAAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 COMMENT AJOUTER SUR VERCEL
+───────────────────────────────────────────────────────────────────────
+
+MÉTHODE 1: Lors de la création du projet
+
+1. Lors de la configuration du projet Vercel
+2. Section "Environment Variables"
+3. Cliquer sur "Add"
+4. Name: [nom de la variable]
+5. Value: [valeur de la variable]
+6. Environments: Production, Preview, Development (cocher les 3)
+7. Répéter pour toutes les variables
+8. Cliquer sur "Deploy"
+
+MÉTHODE 2: Après création du projet
+
+1. Aller sur le projet Vercel
+2. Settings → Environment Variables
+3. Cliquer sur "Add New"
+4. Name: [nom de la variable]
+5. Value: [valeur de la variable]
+6. Environments: Production, Preview, Development (cocher les 3)
+7. Cliquer sur "Save"
+8. Répéter pour toutes les variables
+9. Redéployer le projet (Deployments → ... → Redeploy)
+
+═══════════════════════════════════════════════════════════════════════
+
+📍 OÙ TROUVER CES VALEURS
+───────────────────────────────────────────────────────────────────────
+
+SUPABASE:
+→ https://supabase.com/dashboard/project/[votre-projet]/settings/api
+
+FLUTTERWAVE:
+→ https://dashboard.flutterwave.com/dashboard/settings/apis
+
+AFRICA'S TALKING:
+→ https://account.africastalking.com/apps/sandbox/settings
+
+SENDGRID:
+→ https://app.sendgrid.com/settings/api_keys
+
+MAPBOX:
+→ https://account.mapbox.com/access-tokens/
+
+GOOGLE MAPS:
+→ https://console.cloud.google.com/apis/credentials
+
+FIREBASE:
+→ https://console.firebase.google.com/project/[votre-projet]/settings/cloudmessaging
+
+═══════════════════════════════════════════════════════════════════════
+
+⚠️ IMPORTANT - SÉCURITÉ
+
+• Ne JAMAIS partager ces clés publiquement
+• Ne JAMAIS les commit dans Git
+• Les variables sur Vercel sont sécurisées et chiffrées
+• Utilisez des clés de TEST en développement
+• Utilisez des clés de PRODUCTION uniquement en production
+
+═══════════════════════════════════════════════════════════════════════
+
+✅ CHECKLIST
+
+Avant de déployer, vérifier que vous avez configuré:
+
+- [ ] SUPABASE_URL
+- [ ] SUPABASE_ANON_KEY
+- [ ] SUPABASE_SERVICE_ROLE_KEY
+- [ ] SUPABASE_DB_URL
+- [ ] FLUTTERWAVE_SECRET_KEY (si paiement activé)
+- [ ] AFRICAS_TALKING_API_KEY (si SMS activé)
+- [ ] AFRICAS_TALKING_USERNAME (si SMS activé)
+- [ ] SENDGRID_API_KEY (si email activé)
+- [ ] MAPBOX_API_KEY (si cartes Mapbox utilisées)
+- [ ] GOOGLE_PLACES_API_KEY (si Google Places utilisé)
+- [ ] GOOGLE_MAPS_API_KEY (si Google Maps utilisé)
+- [ ] GOOGLE_MAPS_SERVER_API_KEY (si Google Maps utilisé)
+- [ ] FIREBASE_PROJECT_ID (si notifications push activées)
+- [ ] FIREBASE_SERVER_KEY (si notifications push activées)
+
+═══════════════════════════════════════════════════════════════════════
+
+📝 NOTES
+
+Les variables marquées "Obligatoire" doivent être configurées.
+Les variables marquées "Optionnel" peuvent être ajoutées plus tard.
+
+Si une fonctionnalité ne marche pas après déploiement, vérifier que
+la variable d'environnement correspondante est bien configurée.
+
+═══════════════════════════════════════════════════════════════════════

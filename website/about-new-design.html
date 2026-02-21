@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="À propos de SmartCabb - Votre solution de transport moderne à Kinshasa">
+    <title>À propos - SmartCabb</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00BFA5;
+            --primary-dark: #00A890;
+            --secondary: #0099CC;
+            --dark: #1a1a1a;
+            --gray: #6B7280;
+            --light: #F8F9FA;
+            --white: #FFFFFF;
+            --cyan: #00BFA5;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--dark);
+            overflow-x: hidden;
+            background: var(--white);
+        }
+
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            padding: 1rem 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 3rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .logo-text span {
+            color: var(--primary);
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        /* MASQUER TOUS LES ANCIENS SÉLECTEURS DE LANGUE */
+        .lang-btn,
+        .language-btn,
+        .language-selector,
+        button[data-lang]:not(.language-dropdown-item):not(.language-dropdown-btn) {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
+        .nav-link {
+            color: var(--dark);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            color: var(--primary);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            padding: 0.7rem 1.5rem;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Dropdown de langue */
+        .language-dropdown {
+            position: relative;
+            margin-left: 1rem;
+            z-index: 10000;
+        }
+
+        .language-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            min-width: 140px;
+            position: relative;
+            z-index: 10001;
+        }
+
+        .language-dropdown-btn .flag {
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #666;
+        }
+
+        .language-dropdown-btn .lang-text {
+            flex: 1;
+            text-align: left;
+        }
+
+        .language-dropdown-btn .dropdown-arrow {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .language-dropdown-btn:hover {
+            border-color: #00BFA5;
+            box-shadow: 0 2px 8px rgba(0, 191, 165, 0.2);
+        }
+
+        .language-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .language-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            z-index: 10002;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 140px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .language-dropdown.open .language-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .language-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: white;
+            border: none;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .language-dropdown-item .flag {
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #666;
+        }
+
+        .language-dropdown-item:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+
+        .language-dropdown-item:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+
+        .language-dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .language-dropdown-item.active {
+            background: #e8f5f3;
+            color: #00BFA5;
+        }
+
+        /* Hero Section */
+        .hero-about {
+            background: linear-gradient(135deg, var(--cyan) 0%, var(--secondary) 100%);
+            padding: 8rem 2rem 4rem;
+            text-align: center;
+            color: white;
+            margin-top: 70px;
+        }
+
+        .hero-about h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .hero-about p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+        }
+
+        /* Story Section */
+        .story-section {
+            padding: 5rem 2rem;
+            background: white;
+        }
+
+        .story-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+        }
+
+        .story-content h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            color: var(--dark);
+        }
+
+        .story-content p {
+            color: var(--gray);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+        }
+
+        .story-image {
+            width: 100%;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            object-fit: cover;
+            height: 400px;
+        }
+
+        /* Values Section */
+        .values-section {
+            padding: 5rem 2rem;
+            background: var(--light);
+        }
+
+        .values-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .values-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .values-subtitle {
+            color: var(--gray);
+            margin-bottom: 3rem;
+        }
+
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 3rem;
+        }
+
+        .value-card {
+            text-align: center;
+        }
+
+        .value-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            color: white;
+            font-size: 2rem;
+            transition: transform 0.3s;
+        }
+
+        .value-card:hover .value-icon {
+            transform: scale(1.1);
+        }
+
+        .value-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .value-description {
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        /* Stats Section */
+        .stats-section {
+            padding: 5rem 2rem;
+            background: linear-gradient(135deg, var(--cyan) 0%, var(--secondary) 100%);
+            color: white;
+        }
+
+        .stats-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .stats-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-subtitle {
+            opacity: 0.95;
+            margin-bottom: 3rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+        }
+
+        .stat-card {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Footer */
+        .footer {
+            background: #0A1929;
+            color: white;
+            padding: 3rem 2rem 1.5rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .footer-link {
+            display: block;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+
+        .footer-link:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 2rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-about h1 {
+                font-size: 2rem;
+            }
+
+            .story-container {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .nav-menu {
+                display: none;
+            }
+
+            .stat-number {
+                font-size: 2rem;
+            }
+
+            .language-dropdown {
+                position: fixed;
+                top: 1rem;
+                right: 1rem;
+                z-index: 10000;
+                background: white;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                border-radius: 6px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <div class="logo-icon">SC</div>
+                <div class="logo-text">SMART<span>CABB</span></div>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link" data-i18n="nav.home">Accueil</a>
+                <a href="/services" class="nav-link" data-i18n="nav.services">Services</a>
+                <a href="/drivers" class="nav-link" data-i18n="nav.driver">Chauffeurs</a>
+                <a href="/contact" class="nav-link" data-i18n="nav.contact">Contact</a>
+                <a href="/about" class="nav-link active" data-i18n="nav.about">À Propos</a>
+                <a href="/app/passenger" class="btn-primary" style="text-decoration: none; display: inline-block;" data-i18n="nav.login">Connexion</a>
+                
+                <!-- Sélecteur de langue DROPDOWN -->
+                <div class="language-dropdown">
+                    <button class="language-dropdown-btn" id="languageDropdownBtn">
+                        <span class="flag" id="currentFlag">FR</span>
+                        <span class="lang-text" id="currentLang">Français</span>
+                        <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="language-dropdown-menu" id="languageDropdownMenu">
+                        <button class="language-dropdown-item active" data-lang="fr">
+                            <span class="flag">FR</span>
+                            <span class="lang-text">Français</span>
+                        </button>
+                        <button class="language-dropdown-item" data-lang="en">
+                            <span class="flag">EN</span>
+                            <span class="lang-text">English</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-about">
+        <h1 data-i18n="about.hero-title">À propos de nous</h1>
+        <p data-i18n="about.hero-subtitle">Notre vision : Simplifier & sécuriser la mobilité urbaine à Kinshasa</p>
+    </section>
+
+    <!-- Story Section -->
+    <section class="story-section">
+        <div class="story-container">
+            <div class="story-content">
+                <h2 data-i18n="about.story-title">Notre histoire</h2>
+                <p data-i18n="about.story-p1">
+                    SmartCabb est né d'une vision simple : transformer l'expérience de transport urbain à Kinshasa. 
+                    Face aux défis quotidiens de mobilité dans notre ville, nous avons créé une solution moderne, 
+                    sûre et accessible à tous.
+                </p>
+                <p data-i18n="about.story-p2">
+                    Depuis 2025, nous connectons des milliers de passagers avec des chauffeurs professionnels vérifiés. 
+                    Notre technologie de pointe garantit des trajets sécurisés avec des prix transparents et équitables.
+                </p>
+                <p data-i18n="about.story-p3">
+                    Avec 5 catégories de véhicules (Smart Flex, Smart Confort, Smart Plus, Smart Familial, Smart VIP), 
+                    nous répondons à tous les besoins de déplacement, du trajet quotidien aux occasions spéciales.
+                </p>
+            </div>
+            <img src="https://images.unsplash.com/photo-1675140267995-8096bdf130d5?w=800" alt="Kinshasa" class="story-image">
+        </div>
+    </section>
+
+    <!-- Values Section -->
+    <section class="values-section">
+        <div class="values-container">
+            <h2 class="values-title" data-i18n="about.values-title">Nos valeurs</h2>
+            <p class="values-subtitle" data-i18n="about.values-subtitle">Ce qui nous anime au quotidien</p>
+            
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="value-icon">⚡</div>
+                    <h3 class="value-title" data-i18n="about.value1-title">Innovation</h3>
+                    <p class="value-description" data-i18n="about.value1-desc">
+                        Nous utilisons les dernières technologies pour offrir une expérience de transport fluide et moderne, 
+                        avec géolocalisation en temps réel et paiements sécurisés.
+                    </p>
+                </div>
+                
+                <div class="value-card">
+                    <div class="value-icon">🛡️</div>
+                    <h3 class="value-title" data-i18n="about.value2-title">Fiabilité</h3>
+                    <p class="value-description" data-i18n="about.value2-desc">
+                        Chauffeurs vérifiés et formés, véhicules contrôlés régulièrement, assistance 24/7. 
+                        Votre sécurité et votre satisfaction sont nos priorités absolues.
+                    </p>
+                </div>
+                
+                <div class="value-card">
+                    <div class="value-icon">⭐</div>
+                    <h3 class="value-title" data-i18n="about.value3-title">Satisfaction</h3>
+                    <p class="value-description" data-i18n="about.value3-desc">
+                        Service client réactif, tarifs transparents, système de notation équitable. 
+                        Nous nous engageons à dépasser vos attentes à chaque trajet.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="stats-container">
+            <h2 class="stats-title" data-i18n="about.stats-title">SMARTCABB en chiffres</h2>
+            <p class="stats-subtitle" data-i18n="about.stats-subtitle">Notre impact sur la mobilité urbaine à Kinshasa</p>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">10,000+</div>
+                    <div class="stat-label" data-i18n="about.stat1-label">Passagers inscrits</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-number">500+</div>
+                    <div class="stat-label" data-i18n="about.stat2-label">Chauffeurs</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-number">5,000+</div>
+                    <div class="stat-label" data-i18n="about.stat3-label">Courses complétées</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label" data-i18n="about.stat4-label">Support</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <div class="logo">
+                    <div class="logo-icon">SC</div>
+                    <div class="logo-text">SMART<span>CABB</span></div>
+                </div>
+                <p style="margin-top: 1rem; color: rgba(255, 255, 255, 0.8);" data-i18n="footer.description">
+                    Votre solution de transport moderne et sécurisée à Kinshasa.
+                </p>
+            </div>
+            <div class="footer-section">
+                <h3 data-i18n="footer.services-title">Services</h3>
+                <a href="/services#smart-flex" class="footer-link">Smart Flex</a>
+                <a href="/services#smart-confort" class="footer-link">Smart Confort</a>
+                <a href="/services#smart-plus" class="footer-link">Smart Plus</a>
+                <a href="/services#smart-familial" class="footer-link">Smart Familial</a>
+                <a href="/services#smart-vip" class="footer-link">Smart VIP</a>
+            </div>
+            <div class="footer-section">
+                <h3 data-i18n="footer.company-title">Entreprise</h3>
+                <a href="/about" class="footer-link" data-i18n="footer.about-link">À propos</a>
+                <a href="/drivers" class="footer-link" data-i18n="footer.driver-link">Devenir chauffeur</a>
+                <a href="/#cta-section" class="footer-link" data-i18n="footer.careers-link">Carrières</a>
+                <a href="/" class="footer-link" data-i18n="footer.blog-link">Blog</a>
+            </div>
+            <div class="footer-section">
+                <h3 data-i18n="footer.support-title">Support</h3>
+                <a href="faq.html" class="footer-link" data-i18n="footer.help-link">Centre d'aide</a>
+                <a href="contact-new-design.html" class="footer-link" data-i18n="footer.contact-link">Contact</a>
+                <a href="cgu.html" class="footer-link" data-i18n="footer.terms-link">CGU</a>
+                <a href="politique-confidentialite.html" class="footer-link" data-i18n="footer.privacy-link">Confidentialité</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p data-i18n="footer.copyright">&copy; 2025 SmartCabb. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <!-- 🔥 SYSTÈME DE TRADUCTIONS - INTÉGRÉ DIRECTEMENT 🔥 -->
+    <script>
+        // ============================================================
+        // DICTIONNAIRE DE TRADUCTIONS - INTÉGRÉ
+        // ============================================================
+        window.translations = {
+            // Navigation
+            'nav.home': { fr: 'Accueil', en: 'Home' },
+            'nav.services': { fr: 'Services', en: 'Services' },
+            'nav.driver': { fr: 'Chauffeurs', en: 'Drivers' },
+            'nav.contact': { fr: 'Contact', en: 'Contact' },
+            'nav.about': { fr: 'À Propos', en: 'About' },
+            'nav.login': { fr: 'Connexion', en: 'Login' },
+
+            // Hero Section
+            'about.hero-title': {
+                fr: 'À propos de nous',
+                en: 'About us'
+            },
+            'about.hero-subtitle': {
+                fr: 'Notre vision : Simplifier & sécuriser la mobilité urbaine à Kinshasa',
+                en: 'Our vision: Simplify & secure urban mobility in Kinshasa'
+            },
+
+            // Story Section
+            'about.story-title': {
+                fr: 'Notre histoire',
+                en: 'Our story'
+            },
+            'about.story-p1': {
+                fr: 'SmartCabb est né d\'une vision simple : transformer l\'expérience de transport urbain à Kinshasa. Face aux défis quotidiens de mobilité dans notre ville, nous avons créé une solution moderne, sûre et accessible à tous.',
+                en: 'SmartCabb was born from a simple vision: transforming the urban transport experience in Kinshasa. Facing daily mobility challenges in our city, we created a modern, safe and accessible solution for everyone.'
+            },
+            'about.story-p2': {
+                fr: 'Depuis 2025, nous connectons des milliers de passagers avec des chauffeurs professionnels vérifiés. Notre technologie de pointe garantit des trajets sécurisés avec des prix transparents et équitables.',
+                en: 'Since 2025, we have been connecting thousands of passengers with verified professional drivers. Our cutting-edge technology ensures secure trips with transparent and fair prices.'
+            },
+            'about.story-p3': {
+                fr: 'Avec 5 catégories de véhicules (Smart Flex, Smart Confort, Smart Plus, Smart Familial, Smart VIP), nous répondons à tous les besoins de déplacement, du trajet quotidien aux occasions spéciales.',
+                en: 'With 5 vehicle categories (Smart Flex, Smart Confort, Smart Plus, Smart Familial, Smart VIP), we meet all travel needs, from daily commutes to special occasions.'
+            },
+
+            // Values Section
+            'about.values-title': {
+                fr: 'Nos valeurs',
+                en: 'Our values'
+            },
+            'about.values-subtitle': {
+                fr: 'Ce qui nous anime au quotidien',
+                en: 'What drives us every day'
+            },
+            'about.value1-title': {
+                fr: 'Innovation',
+                en: 'Innovation'
+            },
+            'about.value1-desc': {
+                fr: 'Nous utilisons les dernières technologies pour offrir une expérience de transport fluide et moderne, avec géolocalisation en temps réel et paiements sécurisés.',
+                en: 'We use the latest technologies to provide a smooth and modern transport experience, with real-time geolocation and secure payments.'
+            },
+            'about.value2-title': {
+                fr: 'Fiabilité',
+                en: 'Reliability'
+            },
+            'about.value2-desc': {
+                fr: 'Chauffeurs vérifiés et formés, véhicules contrôlés régulièrement, assistance 24/7. Votre sécurité et votre satisfaction sont nos priorités absolues.',
+                en: 'Verified and trained drivers, regularly inspected vehicles, 24/7 support. Your safety and satisfaction are our absolute priorities.'
+            },
+            'about.value3-title': {
+                fr: 'Satisfaction',
+                en: 'Satisfaction'
+            },
+            'about.value3-desc': {
+                fr: 'Service client réactif, tarifs transparents, système de notation équitable. Nous nous engageons à dépasser vos attentes à chaque trajet.',
+                en: 'Responsive customer service, transparent pricing, fair rating system. We are committed to exceeding your expectations on every trip.'
+            },
+
+            // Stats Section
+            'about.stats-title': {
+                fr: 'SMARTCABB en chiffres',
+                en: 'SMARTCABB in numbers'
+            },
+            'about.stats-subtitle': {
+                fr: 'Notre impact sur la mobilité urbaine à Kinshasa',
+                en: 'Our impact on urban mobility in Kinshasa'
+            },
+            'about.stat1-label': {
+                fr: 'Passagers inscrits',
+                en: 'Registered passengers'
+            },
+            'about.stat2-label': {
+                fr: 'Chauffeurs',
+                en: 'Drivers'
+            },
+            'about.stat3-label': {
+                fr: 'Courses complétées',
+                en: 'Completed rides'
+            },
+            'about.stat4-label': {
+                fr: 'Support',
+                en: 'Support'
+            },
+
+            // Footer
+            'footer.description': {
+                fr: 'Votre solution de transport moderne et sécurisée à Kinshasa.',
+                en: 'Your modern and secure transport solution in Kinshasa.'
+            },
+            'footer.services-title': {
+                fr: 'Services',
+                en: 'Services'
+            },
+            'footer.company-title': {
+                fr: 'Entreprise',
+                en: 'Company'
+            },
+            'footer.about-link': {
+                fr: 'À propos',
+                en: 'About'
+            },
+            'footer.driver-link': {
+                fr: 'Devenir chauffeur',
+                en: 'Become a driver'
+            },
+            'footer.careers-link': {
+                fr: 'Carrières',
+                en: 'Careers'
+            },
+            'footer.blog-link': {
+                fr: 'Blog',
+                en: 'Blog'
+            },
+            'footer.support-title': {
+                fr: 'Support',
+                en: 'Support'
+            },
+            'footer.help-link': {
+                fr: 'Centre d\'aide',
+                en: 'Help Center'
+            },
+            'footer.contact-link': {
+                fr: 'Contact',
+                en: 'Contact'
+            },
+            'footer.terms-link': {
+                fr: 'CGU',
+                en: 'Terms'
+            },
+            'footer.privacy-link': {
+                fr: 'Confidentialité',
+                en: 'Privacy'
+            },
+            'footer.copyright': {
+                fr: '© 2025 SmartCabb. Tous droits réservés.',
+                en: '© 2025 SmartCabb. All rights reserved.'
+            }
+        };
+
+        console.log('✅ Traductions chargées INTÉGRÉES:', Object.keys(window.translations).length, 'clés');
+    </script>
+
+    <script>
+        // ============================================================
+        // LANGUAGE SELECTOR (language-selector.js) - INTÉGRÉ
+        // ============================================================
+        class LanguageSelector {
+            constructor() {
+                this.currentLang = localStorage.getItem('smartcabb_lang') || 'fr';
+                this.init();
+            }
+
+            init() {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.setup());
+                } else {
+                    this.setup();
+                }
+            }
+
+            setup() {
+                console.log('🌍 Setup Language Selector avec langue:', this.currentLang);
+                this.attachEventListeners();
+                this.updateLanguage(this.currentLang);
+                this.updateActiveButton();
+            }
+
+            attachEventListeners() {
+                // Gérer le dropdown
+                const dropdownBtn = document.getElementById('languageDropdownBtn');
+                const dropdown = document.querySelector('.language-dropdown');
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+
+                if (dropdownBtn && dropdown) {
+                    // Ouvrir/fermer le dropdown
+                    dropdownBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        dropdown.classList.toggle('open');
+                    });
+
+                    // Fermer le dropdown en cliquant ailleurs
+                    document.addEventListener('click', (e) => {
+                        if (!dropdown.contains(e.target)) {
+                            dropdown.classList.remove('open');
+                        }
+                    });
+
+                    // Gérer le clic sur un item
+                    dropdownItems.forEach(item => {
+                        item.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const lang = item.getAttribute('data-lang');
+                            
+                            if (lang) {
+                                console.log('🔄 Changement de langue vers:', lang);
+                                this.changeLanguage(lang);
+                                dropdown.classList.remove('open');
+                            }
+                        });
+                    });
+
+                    console.log('✅ Dropdown de langue initialisé');
+                }
+            }
+
+            changeLanguage(lang) {
+                if (lang === this.currentLang) {
+                    console.log('⚠️ Langue déjà active:', lang);
+                    return;
+                }
+
+                console.log('✅ Changement de langue de', this.currentLang, 'vers', lang);
+                this.currentLang = lang;
+                localStorage.setItem('smartcabb_lang', lang);
+                this.updateLanguage(lang);
+                this.updateActiveButton();
+                this.showNotification(lang);
+            }
+
+            updateLanguage(lang) {
+                console.log('🔄 Mise à jour de la langue vers:', lang);
+                
+                // Traduire tous les éléments avec data-i18n
+                const elements = document.querySelectorAll('[data-i18n]');
+                console.log('📝 Éléments à traduire:', elements.length);
+                
+                elements.forEach(element => {
+                    const key = element.getAttribute('data-i18n');
+                    if (window.translations && window.translations[key]) {
+                        const translation = window.translations[key][lang];
+                        if (translation) {
+                            element.textContent = translation;
+                        }
+                    }
+                });
+
+                document.documentElement.lang = lang;
+                console.log('✅ Langue mise à jour avec succès:', lang);
+            }
+
+            updateActiveButton() {
+                // Mettre à jour le bouton principal du dropdown
+                const currentFlag = document.getElementById('currentFlag');
+                const currentLang = document.getElementById('currentLang');
+                
+                if (currentFlag && currentLang) {
+                    if (this.currentLang === 'fr') {
+                        currentFlag.textContent = 'FR';
+                        currentLang.textContent = 'Français';
+                    } else {
+                        currentFlag.textContent = 'EN';
+                        currentLang.textContent = 'English';
+                    }
+                }
+
+                // Mettre à jour les items du dropdown
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+                dropdownItems.forEach(item => {
+                    const itemLang = item.getAttribute('data-lang');
+                    if (itemLang === this.currentLang) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            }
+
+            showNotification(lang) {
+                const langNames = {
+                    fr: 'Français',
+                    en: 'English'
+                };
+
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 100px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #00BFA5, #00A890);
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 10px;
+                    box-shadow: 0 5px 20px rgba(0, 191, 165, 0.3);
+                    z-index: 10001;
+                    font-weight: 600;
+                    animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = `🌍 Langue changée: ${langNames[lang]}`;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 2000);
+            }
+        }
+
+        // Initialiser le sélecteur de langue
+        console.log('🚀 Initialisation du LanguageSelector...');
+        const languageSelector = new LanguageSelector();
+
+        // Ajouter les animations CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        console.log('✅ LanguageSelector initialisé avec succès');
+    </script>
+
+    <!-- Supabase Configuration -->
+    <script src="js/config.js"></script>
+
+    <!-- Backend Integration -->
+    <script src="js/backend-integration.js"></script>
+
+    <!-- ========================================== -->
+    <!-- SMARTCABB CHAT WIDGET - BLOC COMPLET -->
+    <!-- ========================================== -->
+    
+    <!-- Chat Widget Styles -->
+    <style>
+        /* Chat Widget Styles */
+        .smartcabb-chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* Toggle Button */
+        .chat-toggle-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            border: none;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 191, 165, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .chat-toggle-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(0, 191, 165, 0.5);
+        }
+
+        .chat-notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #FF4757;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            border: 2px solid white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Chat Window */
+        .chat-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 360px;
+            max-width: calc(100vw - 40px);
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Chat Header */
+        .chat-header {
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .chat-icon {
+            font-size: 2rem;
+        }
+
+        .chat-header-text h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .chat-header-text p {
+            margin: 0;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .chat-header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .chat-action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #F8F9FA;
+        }
+
+        .chat-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6B7280;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-message.user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .chat-message.bot {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .chat-message.user .message-bubble {
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.bot .message-bubble {
+            background: white;
+            color: #1a1a1a;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #6B7280;
+            margin-top: 0.25rem;
+            text-align: right;
+        }
+
+        /* Chat Input */
+        .chat-input-container {
+            padding: 1rem;
+            background: white;
+            border-top: 1px solid #E5E7EB;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 25px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #00BFA5;
+        }
+
+        .chat-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+        }
+
+        .chat-send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .smartcabb-chat-widget {
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .chat-window {
+                width: calc(100vw - 20px);
+                height: calc(100vh - 100px);
+                bottom: 70px;
+            }
+
+            .chat-toggle-btn {
+                width: 56px;
+                height: 56px;
+            }
+        }
+    </style>
+
+    <!-- Chat Widget HTML -->
+    <div id="smartcabb-chat-widget" class="smartcabb-chat-widget">
+        <!-- Chat Button -->
+        <button id="chat-toggle-btn" class="chat-toggle-btn" aria-label="Ouvrir le chat">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="chat-notification-badge">💬</span>
+        </button>
+
+        <!-- Chat Window -->
+        <div id="chat-window" class="chat-window" style="display: none;">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-header-content">
+                    <div class="chat-icon">💬</div>
+                    <div class="chat-header-text">
+                        <h3>SmartCabb Support</h3>
+                        <p>Nous sommes là pour vous</p>
+                    </div>
+                </div>
+                <div class="chat-header-actions">
+                    <button id="chat-close-btn" class="chat-action-btn" aria-label="Fermer">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <p>Écrivez-nous un message</p>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <input 
+                    type="text" 
+                    id="chat-input" 
+                    class="chat-input" 
+                    placeholder="Votre message..."
+                    aria-label="Message"
+                >
+                <button id="chat-send-btn" class="chat-send-btn" aria-label="Envoyer">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Widget Backend Script (chargé APRÈS le HTML) -->
+    <script src="js/customer-chat-widget.js"></script>
+    
+</body>
+</html>

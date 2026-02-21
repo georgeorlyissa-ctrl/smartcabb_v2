@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCabb - Test Matching en Direct</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #1a73e8;
+            margin-bottom: 10px;
+        }
+        h2 {
+            color: #333;
+            font-size: 18px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .logs-container {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-line {
+            margin-bottom: 5px;
+            padding: 4px;
+            border-left: 3px solid transparent;
+        }
+        .log-info { border-left-color: #0ea5e9; }
+        .log-success { border-left-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
+        .log-error { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+        .log-warning { border-left-color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        .log-critical { 
+            border-left-color: #a855f7; 
+            background: rgba(168, 85, 247, 0.1);
+            font-weight: bold;
+        }
+        button {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background: #1557b0;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status-online { background: #d1fae5; color: #065f46; }
+        .status-offline { background: #fee2e2; color: #991b1b; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #1a73e8;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1a73e8;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 SmartCabb - Test Matching en Direct</h1>
+        <p class="subtitle">Surveillez le matching séquentiel en temps réel</p>
+
+        <div class="auto-refresh">
+            <input type="checkbox" id="autoRefresh" checked>
+            <label for="autoRefresh">Actualisation automatique toutes les 3 secondes</label>
+        </div>
+
+        <div>
+            <button onclick="refreshLogs()">🔄 Rafraîchir</button>
+            <button onclick="clearLogs()">🧹 Effacer</button>
+            <button onclick="getSystemStatus()">📊 Statut Système</button>
+        </div>
+
+        <div class="stats" id="stats"></div>
+    </div>
+
+    <div class="container">
+        <h2>📋 Logs en Direct</h2>
+        <div class="logs-container" id="logs">
+            <div class="log-line log-info">⏳ En attente des logs...</div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'https://wmrksqludchpvitakyci.supabase.co/functions/v1/make-server-2eb02e52';
+        let autoRefreshInterval = null;
+
+        function getLogClass(message) {
+            if (message.includes('✅') || message.includes('SUCCESS')) return 'log-success';
+            if (message.includes('❌') || message.includes('ERROR') || message.includes('ERREUR')) return 'log-error';
+            if (message.includes('⚠️') || message.includes('WARNING')) return 'log-warning';
+            if (message.includes('🚀') || message.includes('CRITIQUE') || message.includes('DÉBUT MATCHING')) return 'log-critical';
+            return 'log-info';
+        }
+
+        function formatLog(logEntry) {
+            const timestamp = new Date(logEntry.timestamp / 1000).toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+            const message = logEntry.event_message || '';
+            const logClass = getLogClass(message);
+            return `<div class="log-line ${logClass}">[${timestamp}] ${escapeHtml(message)}</div>`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function refreshLogs() {
+            try {
+                // Récupérer les logs des 30 dernières secondes
+                const thirtySecondsAgo = new Date(Date.now() - 30000).toISOString();
+                
+                const response = await fetch(
+                    `https://api.supabase.com/v1/projects/zaerjqchzqmcxqblkfkg/logs?filter=make-server-2eb02e52&timestamp_start=${thirtySecondsAgo}`,
+                    {
+                        headers: {
+                            'Authorization': 'Bearer YOUR_SUPABASE_SERVICE_ROLE_KEY'
+                        }
+                    }
+                );
+
+                // En attendant l'API, afficher un message
+                const logsContainer = document.getElementById('logs');
+                logsContainer.innerHTML = `
+                    <div class="log-line log-info">
+                        ℹ️ Pour voir les logs en direct, allez dans Supabase Dashboard → Edge Functions → make-server-2eb02e52 → Logs
+                    </div>
+                    <div class="log-line log-warning">
+                        ⚠️ Cette page affiche le statut système toutes les 3 secondes
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Erreur logs:', error);
+            }
+        }
+
+        async function getSystemStatus() {
+            try {
+                const response = await fetch(`${BASE_URL}/admin/system-status`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayStats(data.status);
+                    updateLogsWithStatus(data.status);
+                }
+            } catch (error) {
+                console.error('Erreur statut:', error);
+                document.getElementById('stats').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value" style="color: #ef4444;">❌</div>
+                        <div class="stat-label">Erreur connexion serveur</div>
+                    </div>
+                `;
+            }
+        }
+
+        function displayStats(status) {
+            const statsHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${status.drivers.total}</div>
+                    <div class="stat-label">Conducteurs Total</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #22c55e;">${status.drivers.online}</div>
+                    <div class="stat-label">En Ligne</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${status.rides.pending}</div>
+                    <div class="stat-label">Courses en Attente</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #f59e0b;">${status.rides.accepted}</div>
+                    <div class="stat-label">Courses Acceptées</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHTML;
+        }
+
+        function updateLogsWithStatus(status) {
+            const logsContainer = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            let logsHTML = `<div class="log-line log-success">[${timestamp}] ✅ Statut mis à jour</div>`;
+            
+            // Conducteurs
+            if (status.drivers.total === 0) {
+                logsHTML += `<div class="log-line log-error">[${timestamp}] ❌ AUCUN CONDUCTEUR dans le KV store !</div>`;
+            } else {
+                logsHTML += `<div class="log-line log-info">[${timestamp}] 📋 ${status.drivers.total} conducteur(s) trouvé(s)</div>`;
+                
+                status.drivers.details.forEach(driver => {
+                    const onlineStatus = driver.isOnline ? '🟢 EN LIGNE' : '🔴 HORS LIGNE';
+                    const gpsStatus = driver.location?.hasGPS ? '📍 GPS OK' : '❌ Pas de GPS';
+                    const logClass = driver.isOnline && driver.location?.hasGPS ? 'log-success' : 'log-warning';
+                    
+                    logsHTML += `<div class="log-line ${logClass}">[${timestamp}] ${onlineStatus} | ${driver.name} | ${gpsStatus} | Note: ${driver.rating}/5</div>`;
+                });
+            }
+            
+            // Courses
+            if (status.rides.pending > 0) {
+                logsHTML += `<div class="log-line log-warning">[${timestamp}] ⚠️ ${status.rides.pending} course(s) en attente</div>`;
+            }
+            
+            // Environnement
+            if (!status.environment.hasFirebase) {
+                logsHTML += `<div class="log-line log-error">[${timestamp}] ❌ Firebase non configuré</div>`;
+            }
+            if (!status.environment.hasAfricasTalking) {
+                logsHTML += `<div class="log-line log-error">[${timestamp}] ❌ Africa's Talking non configuré</div>`;
+            }
+            
+            logsContainer.innerHTML = logsHTML;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '<div class="log-line log-info">🧹 Logs effacés</div>';
+        }
+
+        // Auto-refresh
+        document.getElementById('autoRefresh').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                autoRefreshInterval = setInterval(getSystemStatus, 3000);
+                getSystemStatus();
+            } else {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                }
+            }
+        });
+
+        // Démarrer l'auto-refresh
+        getSystemStatus();
+        autoRefreshInterval = setInterval(getSystemStatus, 3000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+# Robots.txt pour SmartCabb
+# Site web officiel - Kinshasa, RDC
+
+User-agent: *
+Allow: /
+
+# Pages autorisées
+Allow: /website/
+Allow: /website/index.html
+Allow: /website/contact.html
+Allow: /website/faq.html
+Allow: /website/cgu.html
+Allow: /website/politique-confidentialite.html
+Allow: /website/mentions-legales.html
+
+# Fichiers et dossiers à ne pas indexer
+Disallow: /supabase/
+Disallow: /components/
+Disallow: /lib/
+Disallow: /types/
+Disallow: /hooks/
+Disallow: /utils/
+Disallow: /*.sql$
+Disallow: /*.tsx$
+Disallow: /*.ts$
+Disallow: /*.md$
+Disallow: /node_modules/
+Disallow: /.git/
+
+# Fichiers spécifiques à ne pas indexer
+Disallow: /package.json
+Disallow: /tsconfig.json
+Disallow: /vite.config.ts
+
+# Sitemap
+Sitemap: https://votredomaine.com/website/sitemap.xml
+
+# Crawl delay (optionnel - en secondes)
+Crawl-delay: 1
+
+# User-agents spécifiques
+
+# Google
+User-agent: Googlebot
+Allow: /
+
+# Bing
+User-agent: Bingbot
+Allow: /
+
+# Yahoo
+User-agent: Slurp
+Allow: /
+
+# DuckDuckGo
+User-agent: DuckDuckBot
+Allow: /
+
+# Yandex
+User-agent: Yandex
+Allow: /
+
+# Bloquer les mauvais bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /

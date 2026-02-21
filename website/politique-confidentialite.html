@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Politique de Confidentialité - SmartCabb</title>
+    <meta name="description" content="Politique de confidentialité de SmartCabb - Protection de vos données personnelles conformément aux lois de la RDC">
+    <meta name="keywords" content="confidentialité, données personnelles, RGPD, SmartCabb, Kinshasa, RDC">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #f9fafb;
+        }
+
+        header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.75rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .back-link {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.875rem;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .language-dropdown {
+            position: fixed;
+            top: 1.5rem;
+            right: 2rem;
+            z-index: 10000;
+        }
+
+        .language-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            min-width: 140px;
+        }
+
+        .language-dropdown-btn:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+        }
+
+        .language-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .language-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 140px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .language-dropdown.open .language-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .language-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: white;
+            border: none;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .language-dropdown-item:hover { background: #f5f5f5; }
+        .language-dropdown-item.active { background: #dbeafe; color: #3b82f6; }
+
+        .container {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .content {
+            background: white;
+            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title h1 {
+            font-size: 2.25rem;
+            color: #3b82f6;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-title p {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+
+        .page-title .meta {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        section {
+            margin-bottom: 2.5rem;
+        }
+
+        section h2 {
+            font-size: 1.5rem;
+            color: #1f2937;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #3b82f6;
+        }
+
+        section p {
+            color: #4b5563;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        section ul {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        section li {
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+            line-height: 1.7;
+        }
+
+        .info-box {
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid;
+        }
+
+        .info-box.info {
+            background: #dbeafe;
+            border-color: #3b82f6;
+        }
+
+        .info-box.success {
+            background: #d1fae5;
+            border-color: #10b981;
+        }
+
+        footer {
+            background: #1f2937;
+            color: white;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footer-container p {
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .container {
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            .page-title h1 {
+                font-size: 1.75rem;
+            }
+            .language-dropdown {
+                top: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dropdown de langue -->
+    <div class="language-dropdown">
+        <button class="language-dropdown-btn" id="languageDropdownBtn">
+            <span class="flag" id="currentFlag">FR</span>
+            <span class="lang-text" id="currentLang">Français</span>
+            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <div class="language-dropdown-menu">
+            <button class="language-dropdown-item active" data-lang="fr">
+                <span class="flag">FR</span>
+                <span class="lang-text">Français</span>
+            </button>
+            <button class="language-dropdown-item" data-lang="en">
+                <span class="flag">EN</span>
+                <span class="lang-text">English</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <a href="index-new-design.html" class="logo">
+                <span>🔒</span>
+                <span>SmartCabb</span>
+            </a>
+            <a href="index-new-design.html" class="back-link" data-i18n="privacy.back">← Retour à l'accueil</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="content">
+            <!-- Title -->
+            <div class="page-title">
+                <h1 data-i18n="privacy.title">Politique de Confidentialité</h1>
+                <p data-i18n="privacy.subtitle">SmartCabb - Protection de vos données personnelles</p>
+                <p class="meta" data-i18n="privacy.last-update">Dernière mise à jour : 30 octobre 2025</p>
+            </div>
+
+            <!-- Section 1 -->
+            <section>
+                <h2 data-i18n="privacy.s1-title">1. Collecte des Données</h2>
+                <p data-i18n="privacy.s1-p1">
+                    Nous collectons les données suivantes pour fournir nos services de transport :
+                </p>
+                <ul>
+                    <li data-i18n="privacy.s1-l1">Informations personnelles (nom, prénom, téléphone, email)</li>
+                    <li data-i18n="privacy.s1-l2">Données de localisation GPS en temps réel</li>
+                    <li data-i18n="privacy.s1-l3">Historique des courses et trajets</li>
+                    <li data-i18n="privacy.s1-l4">Informations de paiement sécurisées</li>
+                    <li data-i18n="privacy.s1-l5">Évaluations et commentaires</li>
+                </ul>
+            </section>
+
+            <!-- Section 2 -->
+            <section>
+                <h2 data-i18n="privacy.s2-title">2. Utilisation des Données</h2>
+                <p data-i18n="privacy.s2-p1">
+                    Vos données sont utilisées exclusivement pour :
+                </p>
+                <ul>
+                    <li data-i18n="privacy.s2-l1">Faciliter la mise en relation avec les chauffeurs</li>
+                    <li data-i18n="privacy.s2-l2">Suivre vos courses en temps réel pour votre sécurité</li>
+                    <li data-i18n="privacy.s2-l3">Traiter vos paiements de manière sécurisée</li>
+                    <li data-i18n="privacy.s2-l4">Améliorer la qualité de nos services</li>
+                    <li data-i18n="privacy.s2-l5">Assurer le support client</li>
+                </ul>
+            </section>
+
+            <!-- Section 3 -->
+            <section>
+                <h2 data-i18n="privacy.s3-title">3. Protection des Données</h2>
+                <div class="info-box info">
+                    <p style="margin-bottom: 1rem;" data-i18n="privacy.s3-measures"><strong>🔐 Mesures de Sécurité :</strong></p>
+                    <ul style="margin-left: 1.5rem; margin-bottom: 0;">
+                        <li data-i18n="privacy.s3-m1">Chiffrement SSL/TLS de toutes les données</li>
+                        <li data-i18n="privacy.s3-m2">Serveurs sécurisés avec protection DDoS</li>
+                        <li data-i18n="privacy.s3-m3">Accès restreint aux données personnelles</li>
+                        <li data-i18n="privacy.s3-m4">Audits de sécurité réguliers</li>
+                        <li data-i18n="privacy.s3-m5">Conformité aux normes internationales</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 4 -->
+            <section>
+                <h2 data-i18n="privacy.s4-title">4. Vos Droits</h2>
+                <p data-i18n="privacy.s4-p1">
+                    Conformément aux lois de la RDC, vous disposez des droits suivants :
+                </p>
+                <ul>
+                    <li data-i18n="privacy.s4-l1">Droit d'accès à vos données personnelles</li>
+                    <li data-i18n="privacy.s4-l2">Droit de rectification de données inexactes</li>
+                    <li data-i18n="privacy.s4-l3">Droit à l'effacement de vos données</li>
+                    <li data-i18n="privacy.s4-l4">Droit à la portabilité de vos données</li>
+                    <li data-i18n="privacy.s4-l5">Droit d'opposition au traitement</li>
+                </ul>
+            </section>
+
+            <!-- Section 5 -->
+            <section>
+                <h2 data-i18n="privacy.s5-title">5. Contact</h2>
+                <div class="info-box success">
+                    <p style="margin-bottom: 1rem;" data-i18n="privacy.s5-contact"><strong>Pour exercer vos droits ou toute question :</strong></p>
+                    <ul style="margin-left: 0; list-style: none; margin-bottom: 0;">
+                        <li style="margin-bottom: 0.75rem;"><strong>📧 Email :</strong> privacy@smartcabb.cd</li>
+                        <li style="margin-bottom: 0.75rem;"><strong>📞 Téléphone :</strong> +243 990 666 661</li>
+                        <li data-i18n="privacy.s5-response"><strong>⏱️ Délai de réponse :</strong> 48 heures maximum</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Final Note -->
+            <section style="border-top: 2px solid #e5e7eb; padding-top: 2rem; margin-top: 3rem;">
+                <div class="info-box info">
+                    <p style="text-align: center; font-size: 0.875rem; margin-bottom: 0;" data-i18n="privacy.copyright">
+                        © 2025 SmartCabb SARL - Tous droits réservés
+                    </p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <p data-i18n="footer.copyright">&copy; 2025 SmartCabb. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <!-- TRADUCTIONS -->
+    <script>
+        window.translations = {
+            'privacy.back': { fr: '← Retour à l\'accueil', en: '← Back to home' },
+            'privacy.title': { fr: 'Politique de Confidentialité', en: 'Privacy Policy' },
+            'privacy.subtitle': { fr: 'SmartCabb - Protection de vos données personnelles', en: 'SmartCabb - Protection of your personal data' },
+            'privacy.last-update': { fr: 'Dernière mise à jour : 30 octobre 2025', en: 'Last updated: October 30, 2025' },
+            
+            'privacy.s1-title': { fr: '1. Collecte des Données', en: '1. Data Collection' },
+            'privacy.s1-p1': { fr: 'Nous collectons les données suivantes pour fournir nos services de transport :', en: 'We collect the following data to provide our transportation services:' },
+            'privacy.s1-l1': { fr: 'Informations personnelles (nom, prénom, téléphone, email)', en: 'Personal information (name, phone, email)' },
+            'privacy.s1-l2': { fr: 'Données de localisation GPS en temps réel', en: 'Real-time GPS location data' },
+            'privacy.s1-l3': { fr: 'Historique des courses et trajets', en: 'Ride and trip history' },
+            'privacy.s1-l4': { fr: 'Informations de paiement sécurisées', en: 'Secure payment information' },
+            'privacy.s1-l5': { fr: 'Évaluations et commentaires', en: 'Ratings and reviews' },
+            
+            'privacy.s2-title': { fr: '2. Utilisation des Données', en: '2. Data Usage' },
+            'privacy.s2-p1': { fr: 'Vos données sont utilisées exclusivement pour :', en: 'Your data is used exclusively for:' },
+            'privacy.s2-l1': { fr: 'Faciliter la mise en relation avec les chauffeurs', en: 'Facilitate connection with drivers' },
+            'privacy.s2-l2': { fr: 'Suivre vos courses en temps réel pour votre sécurité', en: 'Track your rides in real-time for your safety' },
+            'privacy.s2-l3': { fr: 'Traiter vos paiements de manière sécurisée', en: 'Process your payments securely' },
+            'privacy.s2-l4': { fr: 'Améliorer la qualité de nos services', en: 'Improve the quality of our services' },
+            'privacy.s2-l5': { fr: 'Assurer le support client', en: 'Provide customer support' },
+            
+            'privacy.s3-title': { fr: '3. Protection des Données', en: '3. Data Protection' },
+            'privacy.s3-measures': { fr: '🔐 Mesures de Sécurité :', en: '🔐 Security Measures:' },
+            'privacy.s3-m1': { fr: 'Chiffrement SSL/TLS de toutes les données', en: 'SSL/TLS encryption of all data' },
+            'privacy.s3-m2': { fr: 'Serveurs sécurisés avec protection DDoS', en: 'Secure servers with DDoS protection' },
+            'privacy.s3-m3': { fr: 'Accès restreint aux données personnelles', en: 'Restricted access to personal data' },
+            'privacy.s3-m4': { fr: 'Audits de sécurité réguliers', en: 'Regular security audits' },
+            'privacy.s3-m5': { fr: 'Conformité aux normes internationales', en: 'Compliance with international standards' },
+            
+            'privacy.s4-title': { fr: '4. Vos Droits', en: '4. Your Rights' },
+            'privacy.s4-p1': { fr: 'Conformément aux lois de la RDC, vous disposez des droits suivants :', en: 'In accordance with DRC laws, you have the following rights:' },
+            'privacy.s4-l1': { fr: 'Droit d\'accès à vos données personnelles', en: 'Right to access your personal data' },
+            'privacy.s4-l2': { fr: 'Droit de rectification de données inexactes', en: 'Right to correct inaccurate data' },
+            'privacy.s4-l3': { fr: 'Droit à l\'effacement de vos données', en: 'Right to erasure of your data' },
+            'privacy.s4-l4': { fr: 'Droit à la portabilité de vos données', en: 'Right to data portability' },
+            'privacy.s4-l5': { fr: 'Droit d\'opposition au traitement', en: 'Right to object to processing' },
+            
+            'privacy.s5-title': { fr: '5. Contact', en: '5. Contact' },
+            'privacy.s5-contact': { fr: 'Pour exercer vos droits ou toute question :', en: 'To exercise your rights or any questions:' },
+            'privacy.s5-response': { fr: '⏱️ Délai de réponse : 48 heures maximum', en: '⏱️ Response time: 48 hours maximum' },
+            
+            'privacy.copyright': { fr: '© 2025 SmartCabb SARL - Tous droits réservés', en: '© 2025 SmartCabb SARL - All rights reserved' },
+            'footer.copyright': { fr: '© 2025 SmartCabb. Tous droits réservés.', en: '© 2025 SmartCabb. All rights reserved.' }
+        };
+
+        // LanguageSelector
+        class LanguageSelector {
+            constructor() {
+                this.currentLang = localStorage.getItem('smartcabb_lang') || 'fr';
+                this.init();
+            }
+            init() {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.setup());
+                } else {
+                    this.setup();
+                }
+            }
+            setup() {
+                this.attachEventListeners();
+                this.updateLanguage(this.currentLang);
+                this.updateActiveButton();
+            }
+            attachEventListeners() {
+                const dropdownBtn = document.getElementById('languageDropdownBtn');
+                const dropdown = document.querySelector('.language-dropdown');
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+                if (dropdownBtn && dropdown) {
+                    dropdownBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        dropdown.classList.toggle('open');
+                    });
+                    document.addEventListener('click', (e) => {
+                        if (!dropdown.contains(e.target)) {
+                            dropdown.classList.remove('open');
+                        }
+                    });
+                    dropdownItems.forEach(item => {
+                        item.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const lang = item.getAttribute('data-lang');
+                            if (lang) {
+                                this.changeLanguage(lang);
+                                dropdown.classList.remove('open');
+                            }
+                        });
+                    });
+                }
+            }
+            changeLanguage(lang) {
+                if (lang === this.currentLang) return;
+                this.currentLang = lang;
+                localStorage.setItem('smartcabb_lang', lang);
+                this.updateLanguage(lang);
+                this.updateActiveButton();
+                this.showNotification(lang);
+            }
+            updateLanguage(lang) {
+                const elements = document.querySelectorAll('[data-i18n]');
+                elements.forEach(element => {
+                    const key = element.getAttribute('data-i18n');
+                    if (window.translations && window.translations[key]) {
+                        const translation = window.translations[key][lang];
+                        if (translation) {
+                            element.textContent = translation;
+                        }
+                    }
+                });
+                document.documentElement.lang = lang;
+            }
+            updateActiveButton() {
+                const currentFlag = document.getElementById('currentFlag');
+                const currentLang = document.getElementById('currentLang');
+                if (currentFlag && currentLang) {
+                    if (this.currentLang === 'fr') {
+                        currentFlag.textContent = 'FR';
+                        currentLang.textContent = 'Français';
+                    } else {
+                        currentFlag.textContent = 'EN';
+                        currentLang.textContent = 'English';
+                    }
+                }
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+                dropdownItems.forEach(item => {
+                    const itemLang = item.getAttribute('data-lang');
+                    if (itemLang === this.currentLang) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            }
+            showNotification(lang) {
+                const langNames = { fr: 'Français', en: 'English' };
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed; top: 100px; right: 20px; background: linear-gradient(135deg, #3b82f6, #2563eb);
+                    color: white; padding: 1rem 1.5rem; border-radius: 10px; box-shadow: 0 5px 20px rgba(59, 130, 246, 0.3);
+                    z-index: 10001; font-weight: 600; animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = `🌍 Langue changée: ${langNames[lang]}`;
+                document.body.appendChild(notification);
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 2000);
+            }
+        }
+        const languageSelector = new LanguageSelector();
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

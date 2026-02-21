@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditions Générales d'Utilisation - SmartCabb</title>
+    <meta name="description" content="Conditions Générales d'Utilisation de la plateforme SmartCabb - Service de transport urbain à Kinshasa, RDC">
+    <meta name="keywords" content="CGU, conditions, SmartCabb, transport, Kinshasa, RDC">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #f9fafb;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.75rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .back-link {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.875rem;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* Dropdown de langue */
+        .language-dropdown {
+            position: fixed;
+            top: 1.5rem;
+            right: 2rem;
+            z-index: 10000;
+        }
+
+        .language-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            min-width: 140px;
+        }
+
+        .language-dropdown-btn .flag {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #666;
+        }
+
+        .language-dropdown-btn .lang-text {
+            flex: 1;
+            text-align: left;
+        }
+
+        .language-dropdown-btn .dropdown-arrow {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .language-dropdown-btn:hover {
+            border-color: #10b981;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+        }
+
+        .language-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .language-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 140px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .language-dropdown.open .language-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .language-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: white;
+            border: none;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .language-dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .language-dropdown-item.active {
+            background: #e8f5f3;
+            color: #10b981;
+        }
+
+        /* Container */
+        .container {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .content {
+            background: white;
+            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Title */
+        .page-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title h1 {
+            font-size: 2.25rem;
+            color: #10b981;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-title p {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+
+        .page-title .meta {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 2.5rem;
+        }
+
+        section h2 {
+            font-size: 1.5rem;
+            color: #1f2937;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #10b981;
+        }
+
+        section h3 {
+            font-size: 1.125rem;
+            color: #374151;
+            margin: 1.5rem 0 0.75rem;
+            font-weight: 600;
+        }
+
+        section p {
+            color: #4b5563;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        section ul, section ol {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        section li {
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+            line-height: 1.7;
+        }
+
+        /* Boxes */
+        .info-box {
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid;
+        }
+
+        .info-box.warning {
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+
+        .info-box.info {
+            background: #dbeafe;
+            border-color: #3b82f6;
+        }
+
+        .info-box.success {
+            background: #d1fae5;
+            border-color: #10b981;
+        }
+
+        /* Footer */
+        footer {
+            background: #1f2937;
+            color: white;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footer-container p {
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .container {
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+
+            .content {
+                padding: 1.5rem;
+            }
+
+            .page-title h1 {
+                font-size: 1.75rem;
+            }
+
+            .language-dropdown {
+                top: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dropdown de langue -->
+    <div class="language-dropdown">
+        <button class="language-dropdown-btn" id="languageDropdownBtn">
+            <span class="flag" id="currentFlag">FR</span>
+            <span class="lang-text" id="currentLang">Français</span>
+            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <div class="language-dropdown-menu" id="languageDropdownMenu">
+            <button class="language-dropdown-item active" data-lang="fr">
+                <span class="flag">FR</span>
+                <span class="lang-text">Français</span>
+            </button>
+            <button class="language-dropdown-item" data-lang="en">
+                <span class="flag">EN</span>
+                <span class="lang-text">English</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <a href="index-new-design.html" class="logo">
+                <span>🚖</span>
+                <span>SmartCabb</span>
+            </a>
+            <a href="index-new-design.html" class="back-link" data-i18n="cgu.back">← Retour à l'accueil</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="content">
+            <!-- Title -->
+            <div class="page-title">
+                <h1 data-i18n="cgu.title">Conditions Générales d'Utilisation</h1>
+                <p data-i18n="cgu.subtitle">des Services SmartCabb</p>
+                <p class="meta" data-i18n="cgu.country">République Démocratique du Congo</p>
+                <p class="meta" data-i18n="cgu.last-update">Dernière mise à jour : 30 octobre 2025</p>
+            </div>
+
+            <!-- Section 1 -->
+            <section>
+                <h2 data-i18n="cgu.s1-title">1. Introduction</h2>
+                <p data-i18n="cgu.s1-p1">
+                    Les présentes Conditions Générales d'Utilisation ("CGU") régissent l'accès et l'utilisation de la 
+                    plateforme SmartCabb, une application mobile et un site web permettant aux utilisateurs de commander 
+                    des services de transport à la demande fournis par des chauffeurs indépendants.
+                </p>
+                <p data-i18n="cgu.s1-p2">
+                    En accédant ou en utilisant la plateforme, vous acceptez d'être lié par ces CGU. Si vous n'acceptez 
+                    pas ces termes, veuillez ne pas utiliser nos services.
+                </p>
+            </section>
+
+            <!-- Section 2 -->
+            <section>
+                <h2 data-i18n="cgu.s2-title">2. Services de la Plateforme</h2>
+                <p data-i18n="cgu.s2-p1">
+                    SmartCabb est une plateforme technologique qui met en relation des passagers et des chauffeurs. 
+                    Nous ne fournissons pas de services de transport. Les services de transport sont fournis par des 
+                    chauffeurs indépendants qui ont signé un contrat avec nous.
+                </p>
+                <div class="info-box warning">
+                    <p data-i18n="cgu.s2-warning"><strong>Important :</strong> SmartCabb n'est pas responsable des actes ou omissions des chauffeurs. 
+                    Les chauffeurs sont des partenaires indépendants et non des employés de SmartCabb.</p>
+                </div>
+            </section>
+
+            <!-- Section 3 -->
+            <section>
+                <h2 data-i18n="cgu.s3-title">3. Responsabilité et Sécurité</h2>
+                <p data-i18n="cgu.s3-p1">
+                    SmartCabb s'efforce de garantir la fiabilité et la sécurité de sa plateforme. Nous vérifions tous les 
+                    chauffeurs avant leur activation et assurons un suivi en temps réel de toutes les courses.
+                </p>
+                <div class="info-box info">
+                    <p style="margin-bottom: 1rem;" data-i18n="cgu.s3-measures"><strong>🛡️ Mesures de Sécurité :</strong></p>
+                    <ul style="margin-left: 1.5rem; margin-bottom: 0;">
+                        <li data-i18n="cgu.s3-m1">Vérification des chauffeurs avant activation</li>
+                        <li data-i18n="cgu.s3-m2">Suivi GPS en temps réel de toutes les courses</li>
+                        <li data-i18n="cgu.s3-m3">Bouton SOS d'urgence dans l'application</li>
+                        <li data-i18n="cgu.s3-m4">Système de notation et d'évaluation</li>
+                        <li data-i18n="cgu.s3-m5">Support client disponible 24h/24, 7j/7</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 4 -->
+            <section>
+                <h2 data-i18n="cgu.s4-title">4. Paiement et Tarification</h2>
+                <p data-i18n="cgu.s4-p1">
+                    Les tarifs sont basés sur la distance parcourue, le temps de trajet et la demande. 
+                    Une estimation du coût sera affichée dans l'application avant de confirmer la réservation.
+                </p>
+                <div class="info-box success">
+                    <p style="margin-bottom: 1rem;" data-i18n="cgu.s4-payment-methods"><strong>Les paiements peuvent être effectués par :</strong></p>
+                    <ul style="margin-left: 1.5rem; margin-bottom: 0;">
+                        <li data-i18n="cgu.s4-pm1">💵 <strong>Espèces</strong> (à remettre au chauffeur)</li>
+                        <li data-i18n="cgu.s4-pm2">💳 <strong>Carte de crédit</strong> (via Flutterwave)</li>
+                        <li data-i18n="cgu.s4-pm3">📱 <strong>Mobile Money</strong> (Airtel, Orange, M-Pesa, Vodacom)</li>
+                        <li data-i18n="cgu.s4-pm4">📋 <strong>Post-paiement</strong> (sous réserve d'approbation)</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Section 5 -->
+            <section>
+                <h2 data-i18n="cgu.s5-title">5. Loi Applicable et Juridiction</h2>
+                <p data-i18n="cgu.s5-p1">
+                    Les présentes CGU sont régies par les lois de la <strong>République Démocratique du Congo</strong>.
+                    Tout litige découlant de l'utilisation de la plateforme sera soumis à la juridiction exclusive 
+                    des tribunaux de <strong>Kinshasa, RDC</strong>.
+                </p>
+            </section>
+
+            <!-- Section 6 -->
+            <section>
+                <h2 data-i18n="cgu.s6-title">6. Contactez-nous</h2>
+                <div class="info-box success">
+                    <p style="margin-bottom: 1rem;" data-i18n="cgu.s6-contact"><strong>Pour toute question concernant ces CGU, veuillez nous contacter :</strong></p>
+                    <ul style="margin-left: 0; list-style: none; margin-bottom: 0;">
+                        <li style="margin-bottom: 0.75rem;"><strong>📧 Email :</strong> support@smartcabb.cd</li>
+                        <li style="margin-bottom: 0.75rem;"><strong>📞 Téléphone :</strong> +243 990 666 661 ou +243 814 018 048</li>
+                        <li style="margin-bottom: 0.75rem;"><strong>📍 Adresse :</strong> Kinshasa, République Démocratique du Congo</li>
+                        <li data-i18n="cgu.s6-support"><strong>🕐 Support :</strong> Disponible 24h/24, 7j/7</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Final Note -->
+            <section style="border-top: 2px solid #e5e7eb; padding-top: 2rem; margin-top: 3rem;">
+                <div class="info-box info">
+                    <p style="text-align: center; margin-bottom: 1rem; font-size: 0.875rem;" data-i18n="cgu.final-note">
+                        En utilisant les services SmartCabb, vous reconnaissez avoir lu, compris et accepté 
+                        ces Conditions Générales d'Utilisation dans leur intégralité.
+                    </p>
+                    <p style="text-align: center; font-size: 0.875rem; color: #6b7280; margin-bottom: 0;" data-i18n="cgu.copyright">
+                        © 2025 SmartCabb SARL - Tous droits réservés
+                    </p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <p data-i18n="footer.copyright">&copy; 2025 SmartCabb. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <!-- SYSTÈME DE TRADUCTIONS - INTÉGRÉ -->
+    <script>
+        window.translations = {
+            'cgu.back': { fr: '← Retour à l\'accueil', en: '← Back to home' },
+            'cgu.title': { fr: 'Conditions Générales d\'Utilisation', en: 'Terms of Service' },
+            'cgu.subtitle': { fr: 'des Services SmartCabb', en: 'of SmartCabb Services' },
+            'cgu.country': { fr: 'République Démocratique du Congo', en: 'Democratic Republic of Congo' },
+            'cgu.last-update': { fr: 'Dernière mise à jour : 30 octobre 2025', en: 'Last updated: October 30, 2025' },
+            
+            'cgu.s1-title': { fr: '1. Introduction', en: '1. Introduction' },
+            'cgu.s1-p1': { 
+                fr: 'Les présentes Conditions Générales d\'Utilisation ("CGU") régissent l\'accès et l\'utilisation de la plateforme SmartCabb, une application mobile et un site web permettant aux utilisateurs de commander des services de transport à la demande fournis par des chauffeurs indépendants.',
+                en: 'These Terms of Service ("TOS") govern the access and use of the SmartCabb platform, a mobile application and website allowing users to order on-demand transportation services provided by independent drivers.'
+            },
+            'cgu.s1-p2': {
+                fr: 'En accédant ou en utilisant la plateforme, vous acceptez d\'être lié par ces CGU. Si vous n\'acceptez pas ces termes, veuillez ne pas utiliser nos services.',
+                en: 'By accessing or using the platform, you agree to be bound by these TOS. If you do not accept these terms, please do not use our services.'
+            },
+            
+            'cgu.s2-title': { fr: '2. Services de la Plateforme', en: '2. Platform Services' },
+            'cgu.s2-p1': {
+                fr: 'SmartCabb est une plateforme technologique qui met en relation des passagers et des chauffeurs. Nous ne fournissons pas de services de transport. Les services de transport sont fournis par des chauffeurs indépendants qui ont signé un contrat avec nous.',
+                en: 'SmartCabb is a technology platform that connects passengers and drivers. We do not provide transportation services. Transportation services are provided by independent drivers who have signed a contract with us.'
+            },
+            'cgu.s2-warning': {
+                fr: 'Important : SmartCabb n\'est pas responsable des actes ou omissions des chauffeurs. Les chauffeurs sont des partenaires indépendants et non des employés de SmartCabb.',
+                en: 'Important: SmartCabb is not responsible for the acts or omissions of drivers. Drivers are independent partners and not employees of SmartCabb.'
+            },
+            
+            'cgu.s3-title': { fr: '3. Responsabilité et Sécurité', en: '3. Liability and Safety' },
+            'cgu.s3-p1': {
+                fr: 'SmartCabb s\'efforce de garantir la fiabilité et la sécurité de sa plateforme. Nous vérifions tous les chauffeurs avant leur activation et assurons un suivi en temps réel de toutes les courses.',
+                en: 'SmartCabb strives to ensure the reliability and security of its platform. We verify all drivers before activation and provide real-time tracking of all rides.'
+            },
+            'cgu.s3-measures': { fr: '🛡️ Mesures de Sécurité :', en: '🛡️ Safety Measures:' },
+            'cgu.s3-m1': { fr: 'Vérification des chauffeurs avant activation', en: 'Driver verification before activation' },
+            'cgu.s3-m2': { fr: 'Suivi GPS en temps réel de toutes les courses', en: 'Real-time GPS tracking of all rides' },
+            'cgu.s3-m3': { fr: 'Bouton SOS d\'urgence dans l\'application', en: 'Emergency SOS button in the app' },
+            'cgu.s3-m4': { fr: 'Système de notation et d\'évaluation', en: 'Rating and review system' },
+            'cgu.s3-m5': { fr: 'Support client disponible 24h/24, 7j/7', en: '24/7 customer support available' },
+            
+            'cgu.s4-title': { fr: '4. Paiement et Tarification', en: '4. Payment and Pricing' },
+            'cgu.s4-p1': {
+                fr: 'Les tarifs sont basés sur la distance parcourue, le temps de trajet et la demande. Une estimation du coût sera affichée dans l\'application avant de confirmer la réservation.',
+                en: 'Rates are based on distance traveled, trip time and demand. A cost estimate will be displayed in the app before confirming the booking.'
+            },
+            'cgu.s4-payment-methods': { fr: 'Les paiements peuvent être effectués par :', en: 'Payments can be made by:' },
+            'cgu.s4-pm1': { fr: '💵 Espèces (à remettre au chauffeur)', en: '💵 Cash (to be given to the driver)' },
+            'cgu.s4-pm2': { fr: '💳 Carte de crédit (via Flutterwave)', en: '💳 Credit card (via Flutterwave)' },
+            'cgu.s4-pm3': { fr: '📱 Mobile Money (Airtel, Orange, M-Pesa, Vodacom)', en: '📱 Mobile Money (Airtel, Orange, M-Pesa, Vodacom)' },
+            'cgu.s4-pm4': { fr: '📋 Post-paiement (sous réserve d\'approbation)', en: '📋 Post-payment (subject to approval)' },
+            
+            'cgu.s5-title': { fr: '5. Loi Applicable et Juridiction', en: '5. Applicable Law and Jurisdiction' },
+            'cgu.s5-p1': {
+                fr: 'Les présentes CGU sont régies par les lois de la République Démocratique du Congo. Tout litige découlant de l\'utilisation de la plateforme sera soumis à la juridiction exclusive des tribunaux de Kinshasa, RDC.',
+                en: 'These TOS are governed by the laws of the Democratic Republic of Congo. Any dispute arising from the use of the platform will be subject to the exclusive jurisdiction of the courts of Kinshasa, DRC.'
+            },
+            
+            'cgu.s6-title': { fr: '6. Contactez-nous', en: '6. Contact Us' },
+            'cgu.s6-contact': { fr: 'Pour toute question concernant ces CGU, veuillez nous contacter :', en: 'For any questions about these TOS, please contact us:' },
+            'cgu.s6-support': { fr: '🕐 Support : Disponible 24h/24, 7j/7', en: '🕐 Support: Available 24/7' },
+            
+            'cgu.final-note': {
+                fr: 'En utilisant les services SmartCabb, vous reconnaissez avoir lu, compris et accepté ces Conditions Générales d\'Utilisation dans leur intégralité.',
+                en: 'By using SmartCabb services, you acknowledge that you have read, understood and accepted these Terms of Service in their entirety.'
+            },
+            'cgu.copyright': { fr: '© 2025 SmartCabb SARL - Tous droits réservés', en: '© 2025 SmartCabb SARL - All rights reserved' },
+            'footer.copyright': { fr: '© 2025 SmartCabb. Tous droits réservés.', en: '© 2025 SmartCabb. All rights reserved.' }
+        };
+
+        // LanguageSelector
+        class LanguageSelector {
+            constructor() {
+                this.currentLang = localStorage.getItem('smartcabb_lang') || 'fr';
+                this.init();
+            }
+
+            init() {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.setup());
+                } else {
+                    this.setup();
+                }
+            }
+
+            setup() {
+                this.attachEventListeners();
+                this.updateLanguage(this.currentLang);
+                this.updateActiveButton();
+            }
+
+            attachEventListeners() {
+                const dropdownBtn = document.getElementById('languageDropdownBtn');
+                const dropdown = document.querySelector('.language-dropdown');
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+
+                if (dropdownBtn && dropdown) {
+                    dropdownBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        dropdown.classList.toggle('open');
+                    });
+
+                    document.addEventListener('click', (e) => {
+                        if (!dropdown.contains(e.target)) {
+                            dropdown.classList.remove('open');
+                        }
+                    });
+
+                    dropdownItems.forEach(item => {
+                        item.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const lang = item.getAttribute('data-lang');
+                            if (lang) {
+                                this.changeLanguage(lang);
+                                dropdown.classList.remove('open');
+                            }
+                        });
+                    });
+                }
+            }
+
+            changeLanguage(lang) {
+                if (lang === this.currentLang) return;
+                this.currentLang = lang;
+                localStorage.setItem('smartcabb_lang', lang);
+                this.updateLanguage(lang);
+                this.updateActiveButton();
+                this.showNotification(lang);
+            }
+
+            updateLanguage(lang) {
+                const elements = document.querySelectorAll('[data-i18n]');
+                elements.forEach(element => {
+                    const key = element.getAttribute('data-i18n');
+                    if (window.translations && window.translations[key]) {
+                        const translation = window.translations[key][lang];
+                        if (translation) {
+                            element.textContent = translation;
+                        }
+                    }
+                });
+                document.documentElement.lang = lang;
+            }
+
+            updateActiveButton() {
+                const currentFlag = document.getElementById('currentFlag');
+                const currentLang = document.getElementById('currentLang');
+                
+                if (currentFlag && currentLang) {
+                    if (this.currentLang === 'fr') {
+                        currentFlag.textContent = 'FR';
+                        currentLang.textContent = 'Français';
+                    } else {
+                        currentFlag.textContent = 'EN';
+                        currentLang.textContent = 'English';
+                    }
+                }
+
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+                dropdownItems.forEach(item => {
+                    const itemLang = item.getAttribute('data-lang');
+                    if (itemLang === this.currentLang) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            }
+
+            showNotification(lang) {
+                const langNames = { fr: 'Français', en: 'English' };
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed; top: 100px; right: 20px; background: linear-gradient(135deg, #10b981, #059669);
+                    color: white; padding: 1rem 1.5rem; border-radius: 10px; box-shadow: 0 5px 20px rgba(16, 185, 129, 0.3);
+                    z-index: 10001; font-weight: 600; animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = `🌍 Langue changée: ${langNames[lang]}`;
+                document.body.appendChild(notification);
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 2000);
+            }
+        }
+
+        const languageSelector = new LanguageSelector();
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

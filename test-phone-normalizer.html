@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Normalisateur de Numéros</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .test-group {
+            margin-bottom: 30px;
+        }
+        .test-group h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        .test-case {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ddd;
+        }
+        .test-case.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .test-case.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .test-input {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            color: #495057;
+            font-weight: 600;
+        }
+        .test-arrow {
+            margin: 0 15px;
+            color: #999;
+        }
+        .test-output {
+            flex: 1;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+        }
+        .test-output.valid {
+            color: #28a745;
+        }
+        .test-output.invalid {
+            color: #dc3545;
+        }
+        .test-status {
+            margin-left: 15px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .test-status.pass {
+            background: #28a745;
+            color: white;
+        }
+        .test-status.fail {
+            background: #dc3545;
+            color: white;
+        }
+        .input-section {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .input-section h3 {
+            color: #856404;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .input-group button {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .input-group button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        .result-box.success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+        .result-box.error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            flex: 1;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Test - Normalisateur de Numéros de Téléphone</h1>
+        <p class="subtitle">Vérification du format des numéros pour Africa's Talking (RDC)</p>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="total-tests">0</div>
+                <div class="stat-label">Tests Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="passed-tests" style="color: #28a745;">0</div>
+                <div class="stat-label">Réussis</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="failed-tests" style="color: #dc3545;">0</div>
+                <div class="stat-label">Échoués</div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <h3>🧪 Testez votre numéro</h3>
+            <div class="input-group">
+                <input type="text" id="custom-phone" placeholder="Entrez un numéro de téléphone (ex: 0991234567)">
+                <button onclick="testCustomPhone()">Tester</button>
+            </div>
+            <div id="custom-result"></div>
+        </div>
+
+        <div class="test-group">
+            <h2>✅ Formats Valides (doivent être acceptés)</h2>
+            <div id="valid-tests"></div>
+        </div>
+
+        <div class="test-group">
+            <h2>❌ Formats Invalides (doivent être rejetés)</h2>
+            <div id="invalid-tests"></div>
+        </div>
+    </div>
+
+    <script>
+        // Fonction de normalisation (copie de phone-normalizer.tsx)
+        function normalizePhoneNumber(phone) {
+            if (!phone) return null;
+            
+            // Nettoyer
+            let cleaned = phone.replace(/[\s\-().]/g, '');
+            
+            // Cas 1: +243XXXXXXXXX
+            if (/^\+243\d{9}$/.test(cleaned)) {
+                return cleaned;
+            }
+            
+            // Cas 2: 243XXXXXXXXX
+            if (/^243\d{9}$/.test(cleaned)) {
+                return '+' + cleaned;
+            }
+            
+            // Cas 3: 00243XXXXXXXXX
+            if (/^00243\d{9}$/.test(cleaned)) {
+                return '+' + cleaned.substring(2);
+            }
+            
+            // Cas 4: 0XXXXXXXXX
+            if (/^0\d{9}$/.test(cleaned)) {
+                return '+243' + cleaned.substring(1);
+            }
+            
+            // Cas 5: XXXXXXXXX
+            if (/^\d{9}$/.test(cleaned)) {
+                return '+243' + cleaned;
+            }
+            
+            return null;
+        }
+        
+        function isValidPhoneNumber(phone) {
+            if (!phone) return false;
+            return /^\+243\d{9}$/.test(phone);
+        }
+        
+        // Tests prédéfinis
+        const validTests = [
+            { input: '+243991234567', expected: '+243991234567' },
+            { input: '243991234567', expected: '+243991234567' },
+            { input: '00243991234567', expected: '+243991234567' },
+            { input: '0991234567', expected: '+243991234567' },
+            { input: '991234567', expected: '+243991234567' },
+            { input: '+243 99 123 45 67', expected: '+243991234567' },
+            { input: '+243-99-123-45-67', expected: '+243991234567' },
+            { input: '+243.99.123.45.67', expected: '+243991234567' },
+            { input: '243 991 234 567', expected: '+243991234567' },
+            { input: '+243 (99) 123-45-67', expected: '+243991234567' },
+            { input: '0 99 123 45 67', expected: '+243991234567' },
+        ];
+        
+        const invalidTests = [
+            { input: null, shouldBeNull: true },
+            { input: '', shouldBeNull: true },
+            { input: '12345', shouldBeNull: true },
+            { input: '+1234567890', shouldBeNull: true },
+            { input: 'abc123', shouldBeNull: true },
+            { input: '+243123', shouldBeNull: true },
+            { input: '+24499123456789', shouldBeNull: true },
+            { input: '123', shouldBeNull: true },
+        ];
+        
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+        
+        function runTests() {
+            // Tests valides
+            const validContainer = document.getElementById('valid-tests');
+            validTests.forEach(test => {
+                totalTests++;
+                const result = normalizePhoneNumber(test.input);
+                const passed = result === test.expected && isValidPhoneNumber(result);
+                
+                if (passed) passedTests++;
+                else failedTests++;
+                
+                const div = document.createElement('div');
+                div.className = `test-case ${passed ? 'success' : 'error'}`;
+                div.innerHTML = `
+                    <div class="test-input">${test.input || '(vide)'}</div>
+                    <div class="test-arrow">→</div>
+                    <div class="test-output ${passed ? 'valid' : 'invalid'}">${result || 'null'}</div>
+                    <div class="test-status ${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</div>
+                `;
+                validContainer.appendChild(div);
+            });
+            
+            // Tests invalides
+            const invalidContainer = document.getElementById('invalid-tests');
+            invalidTests.forEach(test => {
+                totalTests++;
+                const result = normalizePhoneNumber(test.input);
+                const passed = test.shouldBeNull ? result === null : !isValidPhoneNumber(result);
+                
+                if (passed) passedTests++;
+                else failedTests++;
+                
+                const div = document.createElement('div');
+                div.className = `test-case ${passed ? 'success' : 'error'}`;
+                div.innerHTML = `
+                    <div class="test-input">${test.input || '(vide)'}</div>
+                    <div class="test-arrow">→</div>
+                    <div class="test-output ${passed ? 'invalid' : 'valid'}">${result || 'null'}</div>
+                    <div class="test-status ${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</div>
+                `;
+                invalidContainer.appendChild(div);
+            });
+            
+            // Mettre à jour les stats
+            document.getElementById('total-tests').textContent = totalTests;
+            document.getElementById('passed-tests').textContent = passedTests;
+            document.getElementById('failed-tests').textContent = failedTests;
+        }
+        
+        function testCustomPhone() {
+            const input = document.getElementById('custom-phone').value;
+            const resultDiv = document.getElementById('custom-result');
+            
+            if (!input) {
+                resultDiv.innerHTML = '<div class="result-box error">⚠️ Veuillez entrer un numéro de téléphone</div>';
+                return;
+            }
+            
+            const normalized = normalizePhoneNumber(input);
+            const valid = normalized && isValidPhoneNumber(normalized);
+            
+            if (valid) {
+                resultDiv.innerHTML = `
+                    <div class="result-box success">
+                        <strong>✅ VALIDE</strong><br>
+                        Format original : ${input}<br>
+                        Format normalisé : ${normalized}<br>
+                        Statut : Accepté par Africa's Talking
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="result-box error">
+                        <strong>❌ INVALIDE</strong><br>
+                        Format original : ${input}<br>
+                        Format normalisé : ${normalized || 'null'}<br>
+                        Statut : Rejeté par Africa's Talking<br>
+                        <br>
+                        <strong>Format attendu :</strong> +243XXXXXXXXX<br>
+                        Exemples : +243991234567, 0991234567, 991234567
+                    </div>
+                `;
+            }
+        }
+        
+        // Lancer les tests au chargement
+        window.addEventListener('load', runTests);
+        
+        // Permettre de tester avec Enter
+        document.getElementById('custom-phone').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') testCustomPhone();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+═══════════════════════════════════════════════════════════════════════
+   📋 LISTE COMPLÈTE DES FICHIERS - v518.3
+═══════════════════════════════════════════════════════════════════════
+
+🔴 FICHIERS MODIFIÉS (à remplacer dans GitHub)
+═══════════════════════════════════════════════════════════════════════
+
+1. /components/ImageCarousel.tsx
+2. /supabase/functions/server/auth-routes.tsx
+3. /BUILD_VERSION.ts
+
+🟢 NOUVEAUX FICHIERS (à créer dans GitHub)
+═══════════════════════════════════════════════════════════════════════
+
+4. /components/admin/SupportAccountManager.tsx
+5. /create-support-account.html
+6. /CREATE_SUPPORT_ACCOUNT.md
+7. /FICHIERS_MODIFIES_FIX_AUTH_SUPPORT.md
+8. /COPIER_VERS_GITHUB_v518_3.txt
+9. /QUICK_FIX_SUMMARY.md
+10. /LISTE_FICHIERS_COMPLETS.txt (ce fichier)
+
+═══════════════════════════════════════════════════════════════════════
+   TOTAL: 3 modifiés + 7 nouveaux = 10 fichiers
+═══════════════════════════════════════════════════════════════════════

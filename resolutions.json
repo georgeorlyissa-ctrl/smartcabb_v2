@@ -1,0 +1,11 @@
+{
+  "comment": "🔒 v517.16 - Force lucide-react@0.263.1 STRICTEMENT",
+  "resolutions": {
+    "lucide-react": "0.263.1",
+    "**/lucide-react": "0.263.1"
+  },
+  "overrides": {
+    "lucide-react": "0.263.1",
+    "**/lucide-react": "0.263.1"
+  }
+}

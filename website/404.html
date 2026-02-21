@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page non trouvée - SmartCabb</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            max-width: 600px;
+        }
+
+        .error-code {
+            font-size: 10rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 1rem;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .taxi-icon {
+            font-size: 5rem;
+            margin-bottom: 2rem;
+            animation: drive 3s ease-in-out infinite;
+        }
+
+        @keyframes drive {
+            0%, 100% {
+                transform: translateX(-20px);
+            }
+            50% {
+                transform: translateX(20px);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        p {
+            font-size: 1.125rem;
+            color: #9ca3af;
+            margin-bottom: 3rem;
+            line-height: 1.6;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(16, 185, 129, 0.6);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .links {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .links h3 {
+            font-size: 1rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .link-item {
+            color: #10b981;
+            text-decoration: none;
+            font-size: 0.9375rem;
+            transition: color 0.3s;
+        }
+
+        .link-item:hover {
+            color: #34d399;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .error-code {
+                font-size: 6rem;
+            }
+
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            p {
+                font-size: 1rem;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .links-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="taxi-icon">🚖</div>
+        <div class="error-code">404</div>
+        <h1>Oups ! Cette route n'existe pas</h1>
+        <p>
+            Désolé, la page que vous cherchez semble s'être perdue dans les rues de Kinshasa. 
+            Mais ne vous inquiétez pas, notre chauffeur SmartCabb va vous ramener à bon port !
+        </p>
+
+        <div class="buttons">
+            <a href="./index.html" class="btn btn-primary">
+                <span>🏠</span>
+                <span>Retour à l'accueil</span>
+            </a>
+            <a href="/" class="btn btn-secondary">
+                <span>🚖</span>
+                <span>Ouvrir l'application</span>
+            </a>
+        </div>
+
+        <div class="links">
+            <h3>Liens utiles</h3>
+            <div class="links-grid">
+                <a href="./index.html" class="link-item">Accueil</a>
+                <a href="./contact.html" class="link-item">Contact</a>
+                <a href="./faq.html" class="link-item">FAQ</a>
+                <a href="./cgu.html" class="link-item">CGU</a>
+                <a href="./politique-confidentialite.html" class="link-item">Confidentialité</a>
+                <a href="./mentions-legales.html" class="link-item">Mentions légales</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- i18n Scripts - ORDRE IMPORTANT -->
+    <script src="./js/translations-complete.js"></script>
+    <script src="./js/i18n.js"></script>
+</body>
+</html>

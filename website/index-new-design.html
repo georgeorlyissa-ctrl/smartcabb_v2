@@ -1,0 +1,2618 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SmartCabb - Solution de transport urbain moderne pour Kinshasa. Réservez vos courses en toute sécurité.">
+    <title>SmartCabb - Votre trajet, votre choix</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00BFA5;
+            --primary-dark: #00A890;
+            --secondary: #0099CC;
+            --dark: #1a1a1a;
+            --gray: #6B7280;
+            --light: #F8F9FA;
+            --white: #FFFFFF;
+            --cyan: #00BFA5;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--dark);
+            overflow-x: hidden;
+            background: var(--white);
+        }
+
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            padding: 1rem 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 3rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .logo-text span {
+            color: var(--primary);
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        /* MASQUER TOUS LES ANCIENS SÉLECTEURS DE LANGUE */
+        .lang-btn,
+        .language-btn,
+        .language-selector,
+        button[data-lang]:not(.language-dropdown-item):not(.language-dropdown-btn) {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
+        .nav-link {
+            color: var(--dark);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            color: var(--primary);
+        }
+
+        .btn-connexion {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-connexion:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Hero Section */
+        .hero {
+            margin-top: 80px;
+            padding: 4rem 2rem;
+            background: url('https://images.unsplash.com/photo-1758620323739-5d2cd8cdc22c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkcml2ZXIlMjBzdGVlcmluZyUyMHdoZWVsJTIwcGFzc2VuZ2VycyUyMGNhciUyMGludGVyaW9yfGVufDF8fHx8MTc2MjA5MTAyNnww&ixlib=rb-4.1.0&q=80&w=1080') center/cover no-repeat;
+            min-height: 600px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 191, 165, 0.7) 0%, rgba(0, 168, 144, 0.65) 100%);
+            z-index: 1;
+        }
+
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-content h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .hero-content h1 span {
+            color: #FFD700;
+        }
+
+        .hero-content p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.95);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 201, 167, 0.3);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 201, 167, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            border: 2px solid white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: var(--primary);
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #FFD700;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+
+        .hero-image {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .phone-mockup {
+            position: relative;
+            width: 300px;
+            height: 600px;
+            background: white;
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border: 8px solid #1a1a1a;
+        }
+
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            border-radius: 30px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .phone-screen img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .floating-card {
+            position: absolute;
+            background: white;
+            border-radius: 15px;
+            padding: 1rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .floating-card-1 {
+            top: 10%;
+            right: -10%;
+        }
+
+        .floating-card-2 {
+            bottom: 10%;
+            left: -10%;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* Nouveau design du téléphone hero */
+        .phone-container-new {
+            position: relative;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .hero-phone-img {
+            width: 100%;
+            height: auto;
+            border-radius: 30px;
+            box-shadow: 0 25px 70px rgba(0, 191, 165, 0.25);
+        }
+
+        .floating-card-new-1 {
+            top: 15%;
+            left: -15%;
+            animation-delay: 0s;
+        }
+
+        .floating-card-new-2 {
+            bottom: 20%;
+            right: -10%;
+            animation-delay: 1.5s;
+        }
+
+        .card-label {
+            font-size: 0.7rem;
+            color: #6B7280;
+            margin-bottom: 0.2rem;
+        }
+
+        .card-value {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .card-rating {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+        }
+
+        .card-stars {
+            font-size: 0.7rem;
+            color: #6B7280;
+            margin-top: 0.2rem;
+            text-align: center;
+        }
+
+        /* Why Choose Section */
+        .why-choose {
+            padding: 4rem 2rem;
+            background: white;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: #1a1a1a;
+        }
+
+        .section-subtitle {
+            color: var(--gray);
+            font-size: 1rem;
+        }
+
+        .features-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-card {
+            text-align: center;
+            padding: 2rem 1rem;
+            border-radius: 15px;
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 1.5rem;
+            background: var(--cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 191, 165, 0.2);
+        }
+
+        .feature-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .feature-description {
+            font-size: 0.9rem;
+            color: var(--gray);
+            line-height: 1.5;
+        }
+
+        /* How It Works Section */
+        .how-it-works {
+            padding: 4rem 2rem;
+            background: var(--light);
+        }
+
+        .steps-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .step-card {
+            text-align: center;
+            background: white;
+            padding: 2rem 1rem;
+            border-radius: 15px;
+            position: relative;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        .step-icon {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 1.5rem;
+            background: var(--cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 191, 165, 0.2);
+        }
+
+        .step-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-description {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+
+        /* Why Choose SmartCabb Section */
+        .why-choose {
+            padding: 4rem 2rem;
+            background: white;
+        }
+
+        .why-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+        }
+
+        .why-card {
+            background: var(--light);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .why-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 191, 165, 0.15);
+            border-color: var(--primary);
+            background: white;
+        }
+
+        .why-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(0, 191, 165, 0.3);
+        }
+
+        .why-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        .why-description {
+            font-size: 0.95rem;
+            color: var(--gray);
+            line-height: 1.6;
+        }
+
+        /* Services Section */
+        .services {
+            padding: 4rem 2rem;
+            background: var(--light);
+        }
+
+        .services-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            border-color: var(--primary);
+        }
+
+        .service-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .service-content {
+            padding: 1.5rem;
+        }
+
+        .service-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .service-description {
+            font-size: 0.95rem;
+            color: var(--gray);
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .service-price {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .btn-service {
+            width: 100%;
+            padding: 0.7rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-service:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Drivers Section */
+        .drivers-section {
+            padding: 5rem 2rem;
+            background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+        }
+
+        .drivers-carousel-container {
+            max-width: 1200px;
+            margin: 3rem auto 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drivers-carousel {
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding: 1rem 0 2rem;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) #e0e0e0;
+        }
+
+        .drivers-carousel::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .drivers-carousel::-webkit-scrollbar-track {
+            background: #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .drivers-carousel::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        .driver-card {
+            min-width: 260px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .driver-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 30px rgba(0, 191, 165, 0.2);
+        }
+
+        .driver-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+        }
+
+        .driver-info {
+            padding: 1.5rem;
+        }
+
+        .driver-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .driver-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .stars {
+            display: flex;
+            gap: 2px;
+        }
+
+        .star {
+            color: #FFB800;
+            font-size: 1rem;
+        }
+
+        .rating-score {
+            font-weight: 600;
+            color: var(--dark);
+            font-size: 0.95rem;
+        }
+
+        .driver-rides {
+            color: var(--gray);
+            font-size: 0.95rem;
+        }
+
+        .driver-rides strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .drivers-carousel {
+                gap: 1rem;
+                padding: 1rem 0.5rem 2rem;
+            }
+
+            .driver-card {
+                min-width: 220px;
+            }
+
+            .driver-image {
+                height: 240px;
+            }
+
+            .driver-info {
+                padding: 1.2rem;
+            }
+
+            .driver-name {
+                font-size: 1.1rem;
+            }
+        }
+
+        /* CTA Section */
+        .cta-section {
+            background: linear-gradient(135deg, var(--cyan) 0%, var(--secondary) 100%);
+            padding: 4rem 2rem;
+            text-align: center;
+            color: white;
+        }
+
+        .cta-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .cta-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .cta-subtitle {
+            font-size: 1.1rem;
+            margin-bottom: 2.5rem;
+            opacity: 0.95;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .store-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid white;
+            border-radius: 12px;
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .store-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .store-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .store-text {
+            text-align: left;
+        }
+
+        .store-label {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        .store-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        /* Footer */
+        .footer {
+            background: #0A1929;
+            color: white;
+            padding: 3rem 2rem 1.5rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-section h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .footer-links {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.5rem;
+        }
+
+        .footer-links a {
+            color: #ccc;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid #333;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .hero-container {
+                grid-template-columns: 1fr;
+            }
+
+            .features-grid,
+            .steps-grid,
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .footer-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero-content h1 {
+                font-size: 2rem;
+            }
+
+            .features-grid,
+            .steps-grid,
+            .services-grid,
+            .footer-container {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-menu {
+                display: none;
+            }
+
+            .hero-stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            /* Ajustement des cartes flottantes sur mobile */
+            .floating-card-new-1 {
+                left: 5%;
+                top: 10%;
+            }
+
+            .floating-card-new-2 {
+                right: 5%;
+                bottom: 15%;
+            }
+
+            .phone-container-new {
+                max-width: 300px;
+            }
+        }
+
+        /* Dropdown de langue */
+        .language-dropdown {
+            position: relative;
+            margin-left: 1rem;
+        }
+
+        .language-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            min-width: 140px;
+        }
+
+        .language-dropdown-btn .flag {
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #666;
+        }
+
+        .language-dropdown-btn .lang-text {
+            flex: 1;
+            text-align: left;
+        }
+
+        .language-dropdown-btn .dropdown-arrow {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .language-dropdown-btn:hover {
+            border-color: #00BFA5;
+            box-shadow: 0 2px 8px rgba(0, 191, 165, 0.2);
+        }
+
+        .language-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .language-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 140px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .language-dropdown.open .language-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .language-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: white;
+            border: none;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .language-dropdown-item .flag {
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #666;
+        }
+
+        .language-dropdown-item:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+
+        .language-dropdown-item:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+
+        .language-dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .language-dropdown-item.active {
+            background: #e8f5f3;
+            color: #00BFA5;
+        }
+
+        @media (max-width: 768px) {
+            .language-dropdown {
+                position: fixed;
+                top: 1rem;
+                right: 1rem;
+                z-index: 10000;
+                margin-left: 0;
+            }
+
+            .why-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .steps-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <div class="logo-icon">SC</div>
+                <div class="logo-text">SMART<span>CABB</span></div>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link active" data-i18n="nav.home">Accueil</a>
+                <a href="/services" class="nav-link" data-i18n="nav.services">Services</a>
+                <a href="/drivers" class="nav-link" data-i18n="nav.driver">Chauffeurs</a>
+                <a href="/contact" class="nav-link" data-i18n="nav.contact">Contact</a>
+                <a href="/about" class="nav-link" data-i18n="nav.about">À Propos</a>
+                <a href="/app/passenger" class="btn-connexion" data-i18n="nav.login">Connexion</a>
+                
+                <!-- Sélecteur de langue DROPDOWN -->
+                <div class="language-dropdown">
+                    <button class="language-dropdown-btn" id="languageDropdownBtn">
+                        <span class="flag" id="currentFlag">FR</span>
+                        <span class="lang-text" id="currentLang">Français</span>
+                        <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="language-dropdown-menu" id="languageDropdownMenu">
+                        <button class="language-dropdown-item active" data-lang="fr">
+                            <span class="flag">FR</span>
+                            <span class="lang-text">Français</span>
+                        </button>
+                        <button class="language-dropdown-item" data-lang="en">
+                            <span class="flag">EN</span>
+                            <span class="lang-text">English</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 data-i18n="hero.title">
+                    Votre trajet,<br>
+                    votre <span>choix</span>
+                </h1>
+                <p data-i18n="hero.subtitle">
+                    Circuler en toute sécurité, réservez en quelques secondes. Liberté de mouvement, 24/7
+                </p>
+                <div class="hero-buttons">
+                    <a href="#cta-section" class="btn-primary" data-i18n="hero.download">Télécharger App</a>
+                    <a href="/?mode=driver" class="btn-secondary" data-i18n="hero.learn-more">Devenir Chauffeur</a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number" data-target="100" data-suffix="+">0</div>
+                        <div class="stat-label" data-i18n="stats.drivers">Chauffeurs</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" data-target="500" data-suffix="+">0</div>
+                        <div class="stat-label" data-i18n="stats.clients">Clients satisfaits</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" data-target="24" data-suffix="/7">0</div>
+                        <div class="stat-label" data-i18n="stats.service">Service disponible</div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <!-- Téléphone principal avec l'app SmartCabb -->
+                <div class="phone-container-new">
+                    <img src="https://images.unsplash.com/photo-1594948506928-2d4cad88d0af?w=400&q=80" 
+                         alt="SmartCabb App - Interface mobile de réservation" 
+                         class="hero-phone-img">
+                    
+                    <!-- Carte flottante 1 - "Course confirmée" -->
+                    <div class="floating-card floating-card-new-1">
+                        <div class="card-label">✓ Course confirmée</div>
+                        <div class="card-value">En route</div>
+                    </div>
+                    
+                    <!-- Carte flottante 2 - "5/5 étoiles" -->
+                    <div class="floating-card floating-card-new-2">
+                        <div class="card-rating">5/5</div>
+                        <div class="card-stars">⭐⭐⭐⭐⭐</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works">
+        <div class="section-header">
+            <h2 class="section-title" data-i18n="how.title">Comment ça marche ?</h2>
+            <p class="section-subtitle" data-i18n="how.subtitle">Réservez votre course en 4 étapes simples</p>
+        </div>
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-icon">
+                    <svg width="35" height="35" fill="white" viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                </div>
+                <h3 class="step-title" data-i18n="how.step1.title">Localiser</h3>
+                <p class="step-description" data-i18n="how.step1.desc">Indiquez votre position et votre destination</p>
+            </div>
+            <div class="step-card">
+                <div class="step-icon">
+                    <svg width="35" height="35" fill="white" viewBox="0 0 24 24">
+                        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                    </svg>
+                </div>
+                <h3 class="step-title" data-i18n="how.step2.title">Choisir</h3>
+                <p class="step-description" data-i18n="how.step2.desc">Sélectionnez le type de véhicule qui vous convient</p>
+            </div>
+            <div class="step-card">
+                <div class="step-icon">
+                    <svg width="35" height="35" fill="white" viewBox="0 0 24 24">
+                        <path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/>
+                    </svg>
+                </div>
+                <h3 class="step-title" data-i18n="how.step3.title">Réserver</h3>
+                <p class="step-description" data-i18n="how.step3.desc">Confirmez votre réservation en un clic</p>
+            </div>
+            <div class="step-card">
+                <div class="step-icon">
+                    <svg width="35" height="35" fill="white" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                <h3 class="step-title" data-i18n="how.step4.title">Profitez</h3>
+                <p class="step-description" data-i18n="how.step4.desc">Montez à bord et profitez de votre trajet</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why Choose SmartCabb Section -->
+    <section class="why-choose">
+        <div class="section-header">
+            <h2 class="section-title" data-i18n="why.title">Pourquoi choisir SmartCabb ?</h2>
+            <p class="section-subtitle" data-i18n="why.subtitle">Un service de qualité avec des avantages inégalés</p>
+        </div>
+        <div class="why-grid">
+            <!-- Feature 1: Réservation instantanée -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.instant.title">Réservation instantanée</h3>
+                <p class="why-description" data-i18n="why.instant.desc">Réservez une course en quelques secondes. Notre système trouve et contacte le meilleur chauffeur le plus proche de votre position.</p>
+            </div>
+
+            <!-- Feature 2: Suivi GPS en temps réel -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.46-4.17-3.77-7.48-7.94-7.94V1h-2v2.06C6.83 3.52 3.52 6.83 3.06 11H1v2h2.06c.46 4.17 3.77 7.48 7.94 7.94V23h2v-2.06c4.17-.46 7.48-3.77 7.94-7.94H23v-2h-2.06zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.gps.title">Suivi GPS en temps réel</h3>
+                <p class="why-description" data-i18n="why.gps.desc">Suivez votre conducteur en temps réel et soyez informé sur chaque étape de votre course.</p>
+            </div>
+
+            <!-- Feature 3: Paiement flexible -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.payment.title">Paiement flexible</h3>
+                <p class="why-description" data-i18n="why.payment.desc">Payez en espèces ou via Mobile Money (Airtel, Orange, M-Pesa). Sécurité et pratique.</p>
+            </div>
+
+            <!-- Feature 4: Conducteurs vérifiés -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.verified.title">Conducteurs vérifiés</h3>
+                <p class="why-description" data-i18n="why.verified.desc">Tous nos conducteurs sont soigneusement sélectionnés et vérifiés pour votre sécurité.</p>
+            </div>
+
+            <!-- Feature 5: Sécurité maximale -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.security.title">Sécurité maximale</h3>
+                <p class="why-description" data-i18n="why.security.desc">Bouton SOS intégré, partage de course avec vos proches, assurance incluse sur chaque trajet.</p>
+            </div>
+
+            <!-- Feature 6: Notifications SMS -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.sms.title">Notifications SMS</h3>
+                <p class="why-description" data-i18n="why.sms.desc">Recevez des notifications par SMS à chaque étape de votre course, même sans Internet.</p>
+            </div>
+
+            <!-- Feature 7: Qualité garantie -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.quality.title">Qualité garantie</h3>
+                <p class="why-description" data-i18n="why.quality.desc">Tous nos chauffeurs sont vérifiés et formés pour votre sécurité</p>
+            </div>
+
+            <!-- Feature 8: Prix raisonnable -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.price.title">Prix raisonnable</h3>
+                <p class="why-description" data-i18n="why.price.desc">Tarifs transparents et compétitifs, sans mauvaises surprises</p>
+            </div>
+
+            <!-- Feature 9: Disponible 24/7 -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.available.title">Disponible 24/7</h3>
+                <p class="why-description" data-i18n="why.available.desc">Service disponible jour et nuit pour tous vos déplacements</p>
+            </div>
+
+            <!-- Feature 10: Confort premium -->
+            <div class="why-card">
+                <div class="why-icon">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="white">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <h3 class="why-title" data-i18n="why.comfort.title">Confort premium</h3>
+                <p class="why-description" data-i18n="why.comfort.desc">Véhicules propres et confortables pour un trajet agréable</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Drivers Section -->
+    <section class="drivers-section">
+        <div class="section-header">
+            <h2 class="section-title" data-i18n="drivers.title">Nos conducteurs professionnels</h2>
+            <p class="section-subtitle" data-i18n="drivers.subtitle">Des chauffeurs vérifiés, formés et dévoués à votre sécurité et confort</p>
+        </div>
+        <div class="drivers-carousel-container">
+            <div class="drivers-carousel">
+                <!-- Chauffeur 1: Patrick Mumbere -->
+                <div class="driver-card">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=500&fit=crop" alt="Patrick Mumbere" class="driver-image">
+                    <div class="driver-info">
+                        <h3 class="driver-name">Patrick Mumbere</h3>
+                        <div class="driver-rating">
+                            <div class="stars">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <span class="rating-score">4.93</span>
+                        </div>
+                        <p class="driver-rides"><strong>2,847</strong> <span data-i18n="drivers.rides">courses</span></p>
+                    </div>
+                </div>
+
+                <!-- Chauffeur 2: Emmanuel Kabongo -->
+                <div class="driver-card">
+                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=500&fit=crop" alt="Emmanuel Kabongo" class="driver-image">
+                    <div class="driver-info">
+                        <h3 class="driver-name">Emmanuel Kabongo</h3>
+                        <div class="driver-rating">
+                            <div class="stars">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <span class="rating-score">4.98</span>
+                        </div>
+                        <p class="driver-rides"><strong>3,542</strong> <span data-i18n="drivers.rides">courses</span></p>
+                    </div>
+                </div>
+
+                <!-- Chauffeur 3: Christelle Kalala -->
+                <div class="driver-card">
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=500&fit=crop" alt="Christelle Kalala" class="driver-image">
+                    <div class="driver-info">
+                        <h3 class="driver-name">Christelle Kalala</h3>
+                        <div class="driver-rating">
+                            <div class="stars">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <span class="rating-score">4.95</span>
+                        </div>
+                        <p class="driver-rides"><strong>1,823</strong> <span data-i18n="drivers.rides">courses</span></p>
+                    </div>
+                </div>
+
+                <!-- Chauffeur 4: Joseph Luamba -->
+                <div class="driver-card">
+                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=500&fit=crop" alt="Joseph Luamba" class="driver-image">
+                    <div class="driver-info">
+                        <h3 class="driver-name">Joseph Luamba</h3>
+                        <div class="driver-rating">
+                            <div class="stars">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <span class="rating-score">4.91</span>
+                        </div>
+                        <p class="driver-rides"><strong>4,156</strong> <span data-i18n="drivers.rides">courses</span></p>
+                    </div>
+                </div>
+
+                <!-- Chauffeur 5: David Lumumba -->
+                <div class="driver-card">
+                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=500&fit=crop" alt="David Lumumba" class="driver-image">
+                    <div class="driver-info">
+                        <h3 class="driver-name">David Lumumba</h3>
+                        <div class="driver-rating">
+                            <div class="stars">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <span class="rating-score">4.96</span>
+                        </div>
+                        <p class="driver-rides"><strong>2,634</strong> <span data-i18n="drivers.rides">courses</span></p>
+                    </div>
+                </div>
+
+                <!-- Chauffeur 6: Nathanaël Ilunga -->
+                <div class="driver-card">
+                    <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=500&fit=crop" alt="Nathanaël Ilunga" class="driver-image">
+                    <div class="driver-info">
+                        <h3 class="driver-name">Nathanaël Ilunga</h3>
+                        <div class="driver-rating">
+                            <div class="stars">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <span class="rating-score">4.89</span>
+                        </div>
+                        <p class="driver-rides"><strong>1,945</strong> <span data-i18n="drivers.rides">courses</span></p>
+                    </div>
+                </div>
+
+                <!-- Chauffeur 7: Rebecca Wemba -->
+                <div class="driver-card">
+                    <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=500&fit=crop" alt="Rebecca Wemba" class="driver-image">
+                    <div class="driver-info">
+                        <h3 class="driver-name">Rebecca Wemba</h3>
+                        <div class="driver-rating">
+                            <div class="stars">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <span class="rating-score">4.97</span>
+                        </div>
+                        <p class="driver-rides"><strong>3,218</strong> <span data-i18n="drivers.rides">courses</span></p>
+                    </div>
+                </div>
+
+                <!-- Chauffeur 8: Miesa Amisi -->
+                <div class="driver-card">
+                    <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop" alt="Miesa Amisi" class="driver-image">
+                    <div class="driver-info">
+                        <h3 class="driver-name">Miesa Amisi</h3>
+                        <div class="driver-rating">
+                            <div class="stars">
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                                <span class="star">★</span>
+                            </div>
+                            <span class="rating-score">4.92</span>
+                        </div>
+                        <p class="driver-rides"><strong>2,489</strong> <span data-i18n="drivers.rides">courses</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="services">
+        <div class="section-header">
+            <h2 class="section-title" data-i18n="services.title">Nos services</h2>
+            <p class="section-subtitle" data-i18n="services.subtitle">Trouvez le moyen de transport qui vous convient</p>
+        </div>
+        <div class="services-grid">
+            <!-- Smart Flex -->
+            <div class="service-card">
+                <img src="https://images.unsplash.com/photo-1748621019980-8c9278b61974?w=400" alt="Smart Flex" class="service-image">
+                <div class="service-content">
+                    <h3 class="service-title" data-i18n="services.smart-flex">🚗 Smart Flex</h3>
+                    <p class="service-description" data-i18n="services.flex.desc">
+                        Économique et climatisé. Idéal pour 1-4 personnes. Véhicules : IST, Suzuki Swift, Vitz.
+                    </p>
+                    <div class="service-price" data-i18n="services.flex.price">À partir de 8$ / 20 000 CDF par heure</div>
+                    <button class="btn-service" data-i18n="services.book">Réserver maintenant</button>
+                </div>
+            </div>
+
+            <!-- Smart Confort -->
+            <div class="service-card">
+                <img src="https://images.unsplash.com/photo-1687730594701-88cdea1ef5ae?w=400" alt="Smart Confort" class="service-image">
+                <div class="service-content">
+                    <h3 class="service-title" data-i18n="services.smart-confort">🚘 Smart Confort</h3>
+                    <p class="service-description" data-i18n="services.confort.desc">
+                        Confort premium pour 1-4 personnes. Véhicules : Blade, Ractis, Nissan Juke, Terrios, Runx.
+                    </p>
+                    <div class="service-price" data-i18n="services.confort.price">À partir de 9.6$ / 24 000 CDF par heure</div>
+                    <button class="btn-service" data-i18n="services.book">Réserver maintenant</button>
+                </div>
+            </div>
+
+            <!-- Smart Plus -->
+            <div class="service-card">
+                <img src="https://images.unsplash.com/photo-1698396401131-0764a42e9446?w=400" alt="Smart Plus" class="service-image">
+                <div class="service-content">
+                    <h3 class="service-title" data-i18n="services.smart-plus">✨ Smart Plus</h3>
+                    <p class="service-description" data-i18n="services.plus.desc">
+                        Luxe et espace pour 1-6 personnes. Véhicules : Toyota Marx, Crown, Mercedes C-Class, Harrier, Vanguard.
+                    </p>
+                    <div class="service-price" data-i18n="services.plus.price">À partir de 12$ / 30 000 CDF par heure</div>
+                    <button class="btn-service" data-i18n="services.book">Réserver maintenant</button>
+                </div>
+            </div>
+
+            <!-- Smart Familial -->
+            <div class="service-card">
+                <img src="https://images.unsplash.com/photo-1632146184865-44f82c1e6043?w=400" alt="Smart Familial" class="service-image">
+                <div class="service-content">
+                    <h3 class="service-title" data-i18n="services.smart-familial">👨‍👩‍👧‍👦 Smart Familial</h3>
+                    <p class="service-description" data-i18n="services.familial.desc">
+                        7 places avec connexion Data gratuit. Parfait pour les familles. Véhicules : Noah, Alphard, Voxy.
+                    </p>
+                    <div class="service-price" data-i18n="services.familial.price">À partir de 15$ / 37 500 CDF par heure</div>
+                    <button class="btn-service" data-i18n="services.book">Réserver maintenant</button>
+                </div>
+            </div>
+
+            <!-- Smart VIP -->
+            <div class="service-card">
+                <img src="https://images.unsplash.com/photo-1748621019980-8c9278b61974?w=400" alt="Smart VIP" class="service-image">
+                <div class="service-content">
+                    <h3 class="service-title" data-i18n="services.smart-vip">👑 Smart VIP</h3>
+                    <p class="service-description" data-i18n="services.vip.desc">
+                        Service VIP 7 places avec rafraîchissement et Data gratuit. Véhicules : Prado, Fortuner.
+                    </p>
+                    <div class="service-price" data-i18n="services.vip.price">Location journalière : 160$ / 400 000 CDF</div>
+                    <button class="btn-service" data-i18n="services.book">Réserver maintenant</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section" id="cta-section">
+        <div class="cta-container">
+            <h2 class="cta-title" data-i18n="cta.title">Prêt à commencer ?</h2>
+            <p class="cta-subtitle" data-i18n="cta.subtitle">Téléchargez l'application et profitez de nos services dès maintenant</p>
+            <div class="cta-buttons">
+                <!-- App Store Button - Redirige vers l'App Store (à remplacer par le vrai lien quand l'app sera publiée) -->
+                <a href="https://apps.apple.com/app/smartcabb" target="_blank" rel="noopener noreferrer" class="store-button">
+                    <div class="store-icon">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
+                            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                        </svg>
+                    </div>
+                    <div class="store-text">
+                        <div class="store-label" data-i18n="cta.download-on">Télécharger sur</div>
+                        <div class="store-name">App Store</div>
+                    </div>
+                </a>
+                <!-- Google Play Button - Redirige vers Google Play (à remplacer par le vrai lien quand l'app sera publiée) -->
+                <a href="https://play.google.com/store/apps/details?id=com.smartcabb.app" target="_blank" rel="noopener noreferrer" class="store-button">
+                    <div class="store-icon">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="white">
+                            <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.5,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
+                        </svg>
+                    </div>
+                    <div class="store-text">
+                        <div class="store-label" data-i18n="cta.available-on">Disponible sur</div>
+                        <div class="store-name">Google Play</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3>SmartCabb</h3>
+                <p style="color: #ccc; line-height: 1.6;" data-i18n="footer.description">
+                    Votre solution de transport moderne et fiable à Kinshasa.
+                </p>
+            </div>
+            <div class="footer-section">
+                <h3 data-i18n="footer.services-title">Services</h3>
+                <ul class="footer-links">
+                    <li><a href="/services" data-i18n="services.smart-flex">Smart Flex</a></li>
+                    <li><a href="/services" data-i18n="services.smart-confort">Smart Confort</a></li>
+                    <li><a href="/services" data-i18n="services.smart-plus">Smart Plus</a></li>
+                    <li><a href="/services" data-i18n="services.smart-vip">Smart VIP</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3 data-i18n="footer.company-title">Entreprise</h3>
+                <ul class="footer-links">
+                    <li><a href="/about" data-i18n="footer.about-link">À propos</a></li>
+                    <li><a href="/drivers" data-i18n="footer.driver-link">Devenir chauffeur</a></li>
+                    <li><a href="faq.html" data-i18n="footer.faq-link">FAQ</a></li>
+                    <li><a href="/contact" data-i18n="footer.contact-link">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3 data-i18n="footer.legal-title">Légal</h3>
+                <ul class="footer-links">
+                    <li><a href="cgu.html" data-i18n="footer.terms-link">Conditions d'utilisation</a></li>
+                    <li><a href="politique-confidentialite.html" data-i18n="footer.privacy-link">Politique de confidentialité</a></li>
+                    <li><a href="mentions-legales.html" data-i18n="footer.legal-notice-link">Mentions légales</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p data-i18n="footer.copyright">&copy; 2025 SmartCabb. Tous droits réservés. | Kinshasa, RDC</p>
+        </div>
+    </footer>
+
+    <!-- Traductions (doit être chargé en premier) -->
+    <script src="js/translations-new-design.js"></script>
+
+    <!-- Système i18n -->
+    <script src="js/i18n.js"></script>
+
+    <!-- Supabase Configuration -->
+    <script src="js/config.js"></script>
+
+    <!-- Backend Integration -->
+    <script src="js/backend-integration.js"></script>
+
+    <!-- SmartCabb Chat Widget - Version Inline -->
+    <style>
+        /* Chat Widget Styles */
+        .smartcabb-chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* Toggle Button */
+        .chat-toggle-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            border: none;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 191, 165, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .chat-toggle-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(0, 191, 165, 0.5);
+        }
+
+        .chat-notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #FF4757;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            border: 2px solid white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Chat Window */
+        .chat-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 360px;
+            max-width: calc(100vw - 40px);
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Chat Header */
+        .chat-header {
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .chat-icon {
+            font-size: 2rem;
+        }
+
+        .chat-header-text h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .chat-header-text p {
+            margin: 0;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .chat-header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .chat-action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #F8F9FA;
+        }
+
+        .chat-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6B7280;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-message.user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .chat-message.bot {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .chat-message.user .message-bubble {
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.bot .message-bubble {
+            background: white;
+            color: #1a1a1a;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #6B7280;
+            margin-top: 0.25rem;
+            text-align: right;
+        }
+
+        /* Chat Input */
+        .chat-input-container {
+            padding: 1rem;
+            background: white;
+            border-top: 1px solid #E5E7EB;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 25px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #00BFA5;
+        }
+
+        .chat-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+        }
+
+        .chat-send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .smartcabb-chat-widget {
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .chat-window {
+                width: calc(100vw - 20px);
+                height: calc(100vh - 100px);
+                bottom: 70px;
+            }
+
+            .chat-toggle-btn {
+                width: 56px;
+                height: 56px;
+            }
+        }
+    </style>
+
+    <!-- Chat Widget HTML -->
+    <div id="smartcabb-chat-widget" class="smartcabb-chat-widget">
+        <!-- Chat Button -->
+        <button id="chat-toggle-btn" class="chat-toggle-btn" aria-label="Ouvrir le chat">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="chat-notification-badge">💬</span>
+        </button>
+
+        <!-- Chat Window -->
+        <div id="chat-window" class="chat-window" style="display: none;">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-header-content">
+                    <div class="chat-icon">💬</div>
+                    <div class="chat-header-text">
+                        <h3>SmartCabb Support</h3>
+                        <p>Nous sommes là pour vous</p>
+                    </div>
+                </div>
+                <div class="chat-header-actions">
+                    <button id="chat-close-btn" class="chat-action-btn" aria-label="Fermer">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <p>Écrivez-nous un message</p>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <input 
+                    type="text" 
+                    id="chat-input" 
+                    class="chat-input" 
+                    placeholder="Votre message..."
+                    aria-label="Message"
+                >
+                <button id="chat-send-btn" class="chat-send-btn" aria-label="Envoyer">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Widget Backend Script (chargé APRÈS le HTML) -->
+    <script src="js/customer-chat-widget.js"></script>
+
+    <!-- Scripts de traduction et changement de langue INTÉGRÉS -->
+    <script>
+        // ============================================================
+        // TRADUCTIONS (translations-new-design.js) - INTÉGRÉ
+        // ============================================================
+        window.translations = {
+            // Navigation
+            'nav.home': {
+                fr: 'Accueil',
+                en: 'Home'
+            },
+            'nav.services': {
+                fr: 'Services',
+                en: 'Services'
+            },
+            'nav.driver': {
+                fr: 'Chauffeurs',
+                en: 'Drivers'
+            },
+            'nav.contact': {
+                fr: 'Contact',
+                en: 'Contact'
+            },
+            'nav.about': {
+                fr: 'À Propos',
+                en: 'About'
+            },
+            'nav.login': {
+                fr: 'Connexion',
+                en: 'Login'
+            },
+
+            // Hero Section
+            'hero.title': {
+                fr: 'Votre trajet, votre choix',
+                en: 'Your ride, your choice'
+            },
+            'hero.subtitle': {
+                fr: 'Circuler en toute sécurité, réservez en quelques secondes. Liberté de mouvement, 24/7',
+                en: 'Travel safely, book in seconds. Freedom of movement, 24/7'
+            },
+            'hero.download': {
+                fr: 'Télécharger App',
+                en: 'Download App'
+            },
+            'hero.learn-more': {
+                fr: 'Devenir Chauffeur',
+                en: 'Become Driver'
+            },
+
+            // Stats
+            'stats.drivers': {
+                fr: 'Chauffeurs',
+                en: 'Drivers'
+            },
+            'stats.clients': {
+                fr: 'Clients satisfaits',
+                en: 'Satisfied Customers'
+            },
+            'stats.service': {
+                fr: 'Service disponible',
+                en: 'Service Available'
+            },
+
+            // Services
+            'services.title': {
+                fr: 'Nos services',
+                en: 'Our Services'
+            },
+            'services.subtitle': {
+                fr: 'Trouvez le moyen de transport qui vous convient',
+                en: 'Find the transportation that suits you'
+            },
+
+            // How It Works
+            'how.title': {
+                fr: 'Comment ça marche ?',
+                en: 'How it works?'
+            },
+            'how.subtitle': {
+                fr: 'Réservez votre course en 4 étapes simples',
+                en: 'Book your ride in 4 simple steps'
+            },
+            'how.step1.title': {
+                fr: 'Localiser',
+                en: 'Locate'
+            },
+            'how.step1.desc': {
+                fr: 'Indiquez votre position et votre destination',
+                en: 'Indicate your position and destination'
+            },
+            'how.step2.title': {
+                fr: 'Choisir',
+                en: 'Choose'
+            },
+            'how.step2.desc': {
+                fr: 'Sélectionnez le type de véhicule qui vous convient',
+                en: 'Select the vehicle type that suits you'
+            },
+            'how.step3.title': {
+                fr: 'Réserver',
+                en: 'Book'
+            },
+            'how.step3.desc': {
+                fr: 'Confirmez votre réservation en un clic',
+                en: 'Confirm your booking in one click'
+            },
+            'how.step4.title': {
+                fr: 'Profitez',
+                en: 'Enjoy'
+            },
+            'how.step4.desc': {
+                fr: 'Montez à bord et profitez de votre trajet',
+                en: 'Get in and enjoy your ride'
+            },
+
+            // Services Details
+            'services.flex.desc': {
+                fr: 'Économique et climatisé. Idéal pour 1-4 personnes. Véhicules : IST, Suzuki Swift, Vitz.',
+                en: 'Economical and air-conditioned. Ideal for 1-4 people. Vehicles: IST, Suzuki Swift, Vitz.'
+            },
+            'services.flex.price': {
+                fr: 'À partir de 8$ / 20 000 CDF par heure',
+                en: 'From $8 / 20,000 CDF per hour'
+            },
+            'services.confort.desc': {
+                fr: 'Confort premium pour 1-4 personnes. Véhicules : Blade, Ractis, Nissan Juke, Terrios, Runx.',
+                en: 'Premium comfort for 1-4 people. Vehicles: Blade, Ractis, Nissan Juke, Terrios, Runx.'
+            },
+            'services.confort.price': {
+                fr: 'À partir de 9.6$ / 24 000 CDF par heure',
+                en: 'From $9.6 / 24,000 CDF per hour'
+            },
+            'services.plus.desc': {
+                fr: 'Luxe et espace pour 1-6 personnes. Véhicules : Toyota Marx, Crown, Mercedes C-Class, Harrier, Vanguard.',
+                en: 'Luxury and space for 1-6 people. Vehicles: Toyota Marx, Crown, Mercedes C-Class, Harrier, Vanguard.'
+            },
+            'services.plus.price': {
+                fr: 'À partir de 12$ / 30 000 CDF par heure',
+                en: 'From $12 / 30,000 CDF per hour'
+            },
+            'services.familial.desc': {
+                fr: '7 places avec connexion Data gratuit. Parfait pour les familles. Véhicules : Noah, Alphard, Voxy.',
+                en: '7 seats with free Data connection. Perfect for families. Vehicles: Noah, Alphard, Voxy.'
+            },
+            'services.familial.price': {
+                fr: 'À partir de 15$ / 37 500 CDF par heure',
+                en: 'From $15 / 37,500 CDF per hour'
+            },
+            'services.vip.desc': {
+                fr: 'Service VIP 7 places avec rafraîchissement et Data gratuit. Véhicules : Prado, Fortuner.',
+                en: 'VIP 7-seat service with refreshments and free Data. Vehicles: Prado, Fortuner.'
+            },
+            'services.vip.price': {
+                fr: 'Location journalière : 160$ / 400 000 CDF',
+                en: 'Daily rental: $160 / 400,000 CDF'
+            },
+            'services.book': {
+                fr: 'Réserver maintenant',
+                en: 'Book now'
+            },
+
+            // Why Choose Section
+            'why.title': {
+                fr: 'Pourquoi choisir SmartCabb ?',
+                en: 'Why choose SmartCabb?'
+            },
+            'why.subtitle': {
+                fr: 'Un service de qualité avec des avantages inégalés',
+                en: 'A quality service with unmatched benefits'
+            },
+            'why.available.title': {
+                fr: 'Disponible 24/7',
+                en: 'Available 24/7'
+            },
+            'why.available.desc': {
+                fr: 'Service disponible jour et nuit pour tous vos déplacements',
+                en: 'Service available day and night for all your trips'
+            },
+            'why.comfort.title': {
+                fr: 'Confort premium',
+                en: 'Premium Comfort'
+            },
+            'why.comfort.desc': {
+                fr: 'Véhicules propres et confortables pour un trajet agréable',
+                en: 'Clean and comfortable vehicles for a pleasant ride'
+            },
+            'why.quality.title': {
+                fr: 'Qualité garantie',
+                en: 'Quality guaranteed'
+            },
+            'why.quality.desc': {
+                fr: 'Tous nos chauffeurs sont vérifiés et formés pour votre sécurité',
+                en: 'All our drivers are verified and trained for your safety'
+            },
+            'why.price.title': {
+                fr: 'Prix raisonnable',
+                en: 'Reasonable price'
+            },
+            'why.price.desc': {
+                fr: 'Tarifs transparents et compétitifs, sans mauvaises surprises',
+                en: 'Transparent and competitive rates, no bad surprises'
+            },
+            'why.available.title': {
+                fr: 'Disponible 24/7',
+                en: 'Available 24/7'
+            },
+            'why.available.desc': {
+                fr: 'Service disponible jour et nuit pour tous vos déplacements',
+                en: 'Service available day and night for all your trips'
+            },
+            'why.comfort.title': {
+                fr: 'Confort premium',
+                en: 'Premium comfort'
+            },
+            'why.comfort.desc': {
+                fr: 'Véhicules propres et confortables pour un trajet agréable',
+                en: 'Clean and comfortable vehicles for a pleasant journey'
+            },
+            'why.instant.title': {
+                fr: 'Réservation instantanée',
+                en: 'Instant Booking'
+            },
+            'why.instant.desc': {
+                fr: 'Réservez une course en quelques secondes. Notre système trouve et contacte le meilleur chauffeur le plus proche de votre position.',
+                en: 'Book a ride in seconds. Our system finds and contacts the best driver closest to your location.'
+            },
+            'why.gps.title': {
+                fr: 'Suivi GPS en temps réel',
+                en: 'Real-Time GPS Tracking'
+            },
+            'why.gps.desc': {
+                fr: 'Suivez votre conducteur en temps réel et soyez informé sur chaque étape de votre course.',
+                en: 'Track your driver in real-time and stay informed about every step of your ride.'
+            },
+            'why.payment.title': {
+                fr: 'Paiement flexible',
+                en: 'Flexible Payment'
+            },
+            'why.payment.desc': {
+                fr: 'Payez en espèces ou via Mobile Money (Airtel, Orange, M-Pesa). Sécurité et pratique.',
+                en: 'Pay in cash or via Mobile Money (Airtel, Orange, M-Pesa). Secure and convenient.'
+            },
+            'why.verified.title': {
+                fr: 'Conducteurs vérifiés',
+                en: 'Verified Drivers'
+            },
+            'why.verified.desc': {
+                fr: 'Tous nos conducteurs sont soigneusement sélectionnés et vérifiés pour votre sécurité.',
+                en: 'All our drivers are carefully selected and verified for your safety.'
+            },
+            'why.security.title': {
+                fr: 'Sécurité maximale',
+                en: 'Maximum Security'
+            },
+            'why.security.desc': {
+                fr: 'Bouton SOS intégré, partage de course avec vos proches, assurance incluse sur chaque trajet.',
+                en: 'Built-in SOS button, share ride with loved ones, insurance included on every trip.'
+            },
+            'why.sms.title': {
+                fr: 'Notifications SMS',
+                en: 'SMS Notifications'
+            },
+            'why.sms.desc': {
+                fr: 'Recevez des notifications par SMS à chaque étape de votre course, même sans Internet.',
+                en: 'Receive SMS notifications at every step of your ride, even without Internet.'
+            },
+
+            // Drivers Section
+            'drivers.title': {
+                fr: 'Nos chauffeurs professionnels',
+                en: 'Our professional drivers'
+            },
+            'drivers.subtitle': {
+                fr: 'Des chauffeurs vérifiés, formés et dévoués à votre sécurité et confort',
+                en: 'Verified drivers, trained and dedicated to your safety and comfort'
+            },
+            'drivers.rides': {
+                fr: 'courses',
+                en: 'rides'
+            },
+
+            // CTA Section
+            'cta.title': {
+                fr: 'Prêt à commencer ?',
+                en: 'Ready to start?'
+            },
+            'cta.subtitle': {
+                fr: 'Téléchargez l\'application et profitez de nos services dès maintenant',
+                en: 'Download the app and enjoy our services now'
+            },
+            'cta.download-on': {
+                fr: 'Télécharger sur',
+                en: 'Download on'
+            },
+            'cta.available-on': {
+                fr: 'Disponible sur',
+                en: 'Available on'
+            },
+
+            // Footer
+            'footer.description': {
+                fr: 'Votre solution de transport moderne et fiable à Kinshasa.',
+                en: 'Your modern and reliable transport solution in Kinshasa.'
+            },
+            'footer.company-title': {
+                fr: 'Entreprise',
+                en: 'Company'
+            },
+            'footer.services-title': {
+                fr: 'Services',
+                en: 'Services'
+            },
+            'footer.legal-title': {
+                fr: 'Légal',
+                en: 'Legal'
+            },
+            'footer.about-link': {
+                fr: 'À propos',
+                en: 'About'
+            },
+            'footer.driver-link': {
+                fr: 'Devenir chauffeur',
+                en: 'Become a driver'
+            },
+            'footer.faq-link': {
+                fr: 'FAQ',
+                en: 'FAQ'
+            },
+            'footer.contact-link': {
+                fr: 'Contact',
+                en: 'Contact'
+            },
+            'footer.terms-link': {
+                fr: 'Conditions d\'utilisation',
+                en: 'Terms of Service'
+            },
+            'footer.privacy-link': {
+                fr: 'Politique de confidentialité',
+                en: 'Privacy Policy'
+            },
+            'footer.legal-notice-link': {
+                fr: 'Mentions légales',
+                en: 'Legal Notice'
+            },
+            'footer.copyright': {
+                fr: '© 2025 SmartCabb. Tous droits réservés. | Kinshasa, RDC',
+                en: '© 2025 SmartCabb. All rights reserved. | Kinshasa, DRC'
+            }
+        };
+
+        console.log('✅ Traductions chargées INTÉGRÉES:', window.translations);
+    </script>
+
+    <script>
+        // ============================================================
+        // LANGUAGE SELECTOR (language-selector.js) - INTÉGRÉ
+        // ============================================================
+        class LanguageSelector {
+            constructor() {
+                this.currentLang = localStorage.getItem('smartcabb_lang') || 'fr';
+                this.init();
+            }
+
+            init() {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        this.setup();
+                    });
+                } else {
+                    this.setup();
+                }
+            }
+
+            setup() {
+                console.log('🚀 Setup du sélecteur de langue...');
+                this.attachEventListeners();
+                this.applyLanguage(this.currentLang);
+                this.updateActiveButton();
+                console.log('✅ Sélecteur de langue initialisé:', this.currentLang);
+            }
+
+            attachEventListeners() {
+                // Ancien système (compatibilité)
+                const langButtons = document.querySelectorAll('.lang-btn, .lang-btn-new');
+                langButtons.forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const lang = e.currentTarget.dataset.lang;
+                        if (lang) {
+                            this.changeLanguage(lang);
+                        }
+                    });
+                });
+
+                // Nouveau système dropdown
+                const dropdownBtn = document.getElementById('languageDropdownBtn');
+                const dropdown = document.querySelector('.language-dropdown');
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+
+                if (dropdownBtn && dropdown) {
+                    // Ouvrir/fermer le dropdown
+                    dropdownBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        dropdown.classList.toggle('open');
+                    });
+
+                    // Fermer le dropdown en cliquant ailleurs
+                    document.addEventListener('click', (e) => {
+                        if (!dropdown.contains(e.target)) {
+                            dropdown.classList.remove('open');
+                        }
+                    });
+
+                    // Gérer le clic sur un item
+                    dropdownItems.forEach(item => {
+                        item.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const lang = item.dataset.lang;
+                            
+                            if (lang) {
+                                console.log('🌍 Clic sur langue dropdown:', lang);
+                                this.changeLanguage(lang);
+                                dropdown.classList.remove('open');
+                            }
+                        });
+                    });
+
+                    console.log('✅ Dropdown de langue initialisé');
+                }
+
+                console.log(`✅ Événements attachés à ${langButtons.length} boutons`);
+            }
+
+            changeLanguage(lang) {
+                if (!lang || lang === this.currentLang) {
+                    return;
+                }
+
+                console.log(`🔄 Changement de langue: ${this.currentLang} → ${lang}`);
+
+                this.currentLang = lang;
+                localStorage.setItem('smartcabb_lang', lang);
+                
+                this.applyLanguage(lang);
+                this.updateActiveButton();
+                this.showNotification(lang);
+
+                console.log('✅ Langue changée avec succès:', lang);
+            }
+
+            showNotification(lang) {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    background: #00BFA5;
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                    z-index: 10000;
+                    font-weight: 600;
+                    animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = lang === 'fr' ? '🇨🇩 Français' : '🇬🇧 English';
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transition = 'opacity 0.3s';
+                    setTimeout(() => notification.remove(), 300);
+                }, 2000);
+            }
+
+            applyLanguage(lang) {
+                console.log('📝 Application de la langue:', lang);
+
+                document.documentElement.lang = lang;
+
+                let translatedCount = 0;
+
+                document.querySelectorAll('[data-i18n]').forEach(element => {
+                    const key = element.dataset.i18n;
+                    const translation = this.getTranslation(key, lang);
+                    
+                    if (translation) {
+                        if (!element.classList.contains('lang-btn')) {
+                            element.textContent = translation;
+                        }
+                        translatedCount++;
+                    } else {
+                        console.warn(`⚠️ Traduction manquante pour: ${key}`);
+                    }
+                });
+
+                console.log(`✅ ${translatedCount} éléments traduits en ${lang.toUpperCase()}`);
+            }
+
+            getTranslation(key, lang) {
+                if (!window.translations) {
+                    console.error('❌ window.translations non trouvé !');
+                    return null;
+                }
+
+                if (window.translations[key]) {
+                    return window.translations[key][lang] || window.translations[key]['fr'];
+                }
+                
+                return null;
+            }
+
+            updateActiveButton() {
+                // Ancien système
+                const langButtons = document.querySelectorAll('.lang-btn, .lang-btn-new');
+                langButtons.forEach(btn => {
+                    const btnLang = btn.dataset.lang;
+                    if (btnLang === this.currentLang) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+
+                // Nouveau système dropdown
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+                const currentFlag = document.getElementById('currentFlag');
+                const currentLang = document.getElementById('currentLang');
+
+                dropdownItems.forEach(item => {
+                    const itemLang = item.dataset.lang;
+                    if (itemLang === this.currentLang) {
+                        item.classList.add('active');
+                        
+                        // Mettre à jour le bouton principal
+                        if (currentFlag && currentLang) {
+                            const flag = item.querySelector('.flag').textContent;
+                            const text = item.querySelector('.lang-text').textContent;
+                            currentFlag.textContent = flag;
+                            currentLang.textContent = text;
+                        }
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+
+                console.log(`🎨 Bouton actif: ${this.currentLang.toUpperCase()}`);
+            }
+        }
+
+        // Initialiser
+        console.log('🚀 Chargement du sélecteur de langue...');
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                window.languageSelector = new LanguageSelector();
+            });
+        } else {
+            window.languageSelector = new LanguageSelector();
+        }
+    </script>
+
+    <!-- Animation d'incrémentation des statistiques -->
+    <script>
+        // Animation des statistiques - Incrémentation rapide
+        function animateStatNumber(element) {
+            const target = parseFloat(element.getAttribute('data-target'));
+            const suffix = element.getAttribute('data-suffix') || '';
+            const decimal = parseInt(element.getAttribute('data-decimal')) || 0;
+            const duration = 1500; // 1.5 secondes pour une animation rapide
+            const steps = 60; // 60 étapes pour une animation fluide
+            const increment = target / steps;
+            const stepDuration = duration / steps;
+            
+            let current = 0;
+            let step = 0;
+            
+            const timer = setInterval(() => {
+                step++;
+                current += increment;
+                
+                if (step >= steps) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                
+                // Afficher le nombre avec ou sans décimales
+                if (decimal > 0) {
+                    element.textContent = current.toFixed(decimal) + suffix;
+                } else {
+                    element.textContent = Math.floor(current) + suffix;
+                }
+            }, stepDuration);
+        }
+
+        // Fonction pour initialiser les observers
+        function initStatsAnimation() {
+            // Intersection Observer pour détecter quand les stats sont visibles
+            const observerOptions = {
+                threshold: 0.3, // Déclencher quand 30% de l'élément est visible
+                rootMargin: '0px'
+            };
+
+            const statsObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting && !entry.target.classList.contains('animated')) {
+                        // Marquer comme animé pour ne pas répéter
+                        entry.target.classList.add('animated');
+                        
+                        // Animer tous les stat-number dans cette section
+                        const statNumbers = entry.target.querySelectorAll('.stat-number');
+                        statNumbers.forEach((statNumber, index) => {
+                            // Délai progressif pour effet cascade
+                            setTimeout(() => {
+                                animateStatNumber(statNumber);
+                            }, index * 100); // 100ms de délai entre chaque stat
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            // Observer la section hero-stats
+            const heroStats = document.querySelector('.hero-stats');
+            
+            if (heroStats) {
+                statsObserver.observe(heroStats);
+            }
+        }
+
+        // Initialiser immédiatement si le DOM est prêt, sinon attendre
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initStatsAnimation);
+        } else {
+            initStatsAnimation();
+        }
+    </script>
+</body>
+</html>

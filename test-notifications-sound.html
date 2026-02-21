@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Notifications Sonores - SmartCabb</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    .test-section {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .test-section h2 {
+      color: #333;
+      font-size: 18px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+    
+    .button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .button:active {
+      transform: translateY(0);
+    }
+    
+    .button-secondary {
+      background: #28a745;
+    }
+    
+    .button-danger {
+      background: #dc3545;
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    
+    .status.info {
+      background: #e7f3ff;
+      color: #0066cc;
+      border-left: 4px solid #0066cc;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border-left: 4px solid #28a745;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #dc3545;
+    }
+    
+    .status.warning {
+      background: #fff3cd;
+      color: #856404;
+      border-left: 4px solid #ffc107;
+    }
+    
+    .permission-badge {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    
+    .permission-granted {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .permission-denied {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .permission-default {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .icon {
+      font-size: 24px;
+    }
+    
+    .log {
+      background: #1e1e1e;
+      color: #00ff00;
+      padding: 15px;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 15px;
+    }
+    
+    .log-entry {
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔊 Test Notifications Sonores</h1>
+    <p class="subtitle">SmartCabb - Système de notification pour conducteurs</p>
+    
+    <!-- Section 1: Permissions -->
+    <div class="test-section">
+      <h2>
+        <span class="icon">🔔</span>
+        Permissions Navigateur
+        <span id="permission-badge" class="permission-badge permission-default">En attente</span>
+      </h2>
+      <button class="button" onclick="requestPermissions()">
+        Demander les permissions
+      </button>
+      <div id="permission-status" class="status info">
+        Cliquez pour demander la permission d'afficher des notifications.
+      </div>
+    </div>
+    
+    <!-- Section 2: Test du son de notification -->
+    <div class="test-section">
+      <h2><span class="icon">🔊</span> Test Son de Notification</h2>
+      <button class="button button-secondary" onclick="testNotificationSound()">
+        Tester le son (beep)
+      </button>
+      <div id="sound-status" class="status info">
+        Joue un son de notification court (0.5 seconde).
+      </div>
+    </div>
+    
+    <!-- Section 3: Test message vocal -->
+    <div class="test-section">
+      <h2><span class="icon">🗣️</span> Test Message Vocal (TTS)</h2>
+      <button class="button button-secondary" onclick="testVoiceMessage()">
+        Tester le message vocal
+      </button>
+      <button class="button button-danger" onclick="stopVoice()">
+        Arrêter la voix
+      </button>
+      <div id="voice-status" class="status info">
+        Synthèse vocale avec Web Speech API.
+      </div>
+    </div>
+    
+    <!-- Section 4: Test notification complète -->
+    <div class="test-section">
+      <h2><span class="icon">🚖</span> Test Notification Complète de Course</h2>
+      <button class="button" onclick="testFullRideNotification()">
+        Tester notification complète (Son + Voix + Vibration)
+      </button>
+      <div id="full-status" class="status info">
+        Simule une vraie notification de course avec tous les éléments.
+      </div>
+    </div>
+    
+    <!-- Section 5: Log Console -->
+    <div class="test-section">
+      <h2><span class="icon">📋</span> Logs</h2>
+      <div id="console-log" class="log">
+        <div class="log-entry">En attente de tests...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 🔧 Fonctions utilitaires de log
+    function addLog(message, type = 'info') {
+      const logDiv = document.getElementById('console-log');
+      const timestamp = new Date().toLocaleTimeString();
+      const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.textContent = `[${timestamp}] ${icon} ${message}`;
+      logDiv.insertBefore(entry, logDiv.firstChild);
+      
+      // Garder seulement les 50 dernières entrées
+      while (logDiv.children.length > 50) {
+        logDiv.removeChild(logDiv.lastChild);
+      }
+    }
+
+    function updateStatus(elementId, message, type = 'info') {
+      const element = document.getElementById(elementId);
+      element.className = `status ${type}`;
+      element.textContent = message;
+    }
+
+    // 🔔 Demander les permissions
+    async function requestPermissions() {
+      addLog('Demande de permissions...');
+      
+      if (!('Notification' in window)) {
+        updateStatus('permission-status', '❌ Ce navigateur ne supporte pas les notifications.', 'error');
+        addLog('Notifications non supportées', 'error');
+        return;
+      }
+
+      try {
+        const permission = await Notification.requestPermission();
+        
+        const badge = document.getElementById('permission-badge');
+        
+        if (permission === 'granted') {
+          badge.className = 'permission-badge permission-granted';
+          badge.textContent = 'Accordée ✅';
+          updateStatus('permission-status', '✅ Permission accordée ! Vous pouvez maintenant recevoir des notifications.', 'success');
+          addLog('Permission accordée', 'success');
+        } else if (permission === 'denied') {
+          badge.className = 'permission-badge permission-denied';
+          badge.textContent = 'Refusée ❌';
+          updateStatus('permission-status', '❌ Permission refusée. Veuillez autoriser les notifications dans les paramètres de votre navigateur.', 'error');
+          addLog('Permission refusée', 'error');
+        } else {
+          badge.className = 'permission-badge permission-default';
+          badge.textContent = 'En attente';
+          updateStatus('permission-status', '⏸️ Aucune réponse. Veuillez réessayer.', 'warning');
+          addLog('Permission en attente', 'warning');
+        }
+      } catch (error) {
+        updateStatus('permission-status', `❌ Erreur : ${error.message}`, 'error');
+        addLog(`Erreur permission : ${error.message}`, 'error');
+      }
+    }
+
+    // 🔊 Test son de notification
+    function testNotificationSound() {
+      addLog('Test du son de notification...');
+      updateStatus('sound-status', '🔊 Lecture du son en cours...', 'info');
+      
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+
+        updateStatus('sound-status', '✅ Son joué avec succès !', 'success');
+        addLog('Son joué avec succès', 'success');
+      } catch (error) {
+        updateStatus('sound-status', `❌ Erreur : ${error.message}`, 'error');
+        addLog(`Erreur son : ${error.message}`, 'error');
+      }
+    }
+
+    // 🗣️ Test message vocal
+    async function testVoiceMessage() {
+      addLog('Test du message vocal...');
+      updateStatus('voice-status', '🗣️ Lecture du message vocal...', 'info');
+
+      if (!('speechSynthesis' in window)) {
+        updateStatus('voice-status', '❌ La synthèse vocale n\'est pas supportée par ce navigateur.', 'error');
+        addLog('Synthèse vocale non supportée', 'error');
+        return;
+      }
+
+      try {
+        window.speechSynthesis.cancel();
+
+        const message = 'Bonjour, vous avez une nouvelle course SmartCabb. Départ : Avenue Kasavubu, Kinshasa. Destination : Place Lumumba, Kinshasa. Merci de confirmer rapidement.';
+        const utterance = new SpeechSynthesisUtterance(message);
+        utterance.lang = 'fr-FR';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        utterance.onend = () => {
+          updateStatus('voice-status', '✅ Message vocal terminé !', 'success');
+          addLog('Message vocal terminé', 'success');
+        };
+
+        utterance.onerror = (event) => {
+          updateStatus('voice-status', `❌ Erreur : ${event.error}`, 'error');
+          addLog(`Erreur synthèse vocale : ${event.error}`, 'error');
+        };
+
+        window.speechSynthesis.speak(utterance);
+        addLog('Message vocal en cours de lecture...', 'info');
+      } catch (error) {
+        updateStatus('voice-status', `❌ Erreur : ${error.message}`, 'error');
+        addLog(`Erreur message vocal : ${error.message}`, 'error');
+      }
+    }
+
+    // 🔇 Arrêter la voix
+    function stopVoice() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        updateStatus('voice-status', '🔇 Synthèse vocale arrêtée.', 'warning');
+        addLog('Synthèse vocale arrêtée', 'warning');
+      }
+    }
+
+    // 🚖 Test notification complète
+    async function testFullRideNotification() {
+      addLog('Test de la notification complète...');
+      updateStatus('full-status', '🚖 Notification complète en cours...', 'info');
+
+      try {
+        // 1. Son de notification
+        addLog('1/4 - Lecture du son...');
+        testNotificationSound();
+
+        // 2. Vibration (si supportée)
+        if ('vibrate' in navigator) {
+          navigator.vibrate([300, 100, 300, 100, 300]);
+          addLog('2/4 - Vibration activée', 'success');
+        } else {
+          addLog('2/4 - Vibration non supportée', 'warning');
+        }
+
+        // 3. Message vocal
+        setTimeout(() => {
+          addLog('3/4 - Lecture du message vocal...');
+          testVoiceMessage();
+        }, 500);
+
+        // 4. Notification navigateur
+        setTimeout(async () => {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const notification = new Notification('🚖 Nouvelle Course SmartCabb', {
+              body: '📍 Avenue Kasavubu → Place Lumumba\n💰 2500 FC\n📏 3.5 km',
+              icon: '/logo.png',
+              badge: '/logo.png',
+              vibrate: [200, 100, 200],
+              requireInteraction: true,
+              tag: 'smartcabb-test-ride'
+            });
+            addLog('4/4 - Notification navigateur affichée', 'success');
+            updateStatus('full-status', '✅ Notification complète envoyée avec succès !', 'success');
+          } else if (Notification.permission === 'denied') {
+            addLog('4/4 - Permission refusée pour les notifications', 'error');
+            updateStatus('full-status', '⚠️ Notification envoyée mais permission refusée.', 'warning');
+          } else {
+            addLog('4/4 - Permission non accordée, demandez-la d\'abord', 'warning');
+            updateStatus('full-status', '⚠️ Veuillez d\'abord accorder la permission.', 'warning');
+          }
+        }, 1000);
+
+      } catch (error) {
+        updateStatus('full-status', `❌ Erreur : ${error.message}`, 'error');
+        addLog(`Erreur notification complète : ${error.message}`, 'error');
+      }
+    }
+
+    // 🚀 Vérifier les permissions au chargement
+    window.addEventListener('load', () => {
+      addLog('Page de test chargée', 'success');
+      
+      if ('Notification' in window) {
+        const permission = Notification.permission;
+        const badge = document.getElementById('permission-badge');
+        
+        if (permission === 'granted') {
+          badge.className = 'permission-badge permission-granted';
+          badge.textContent = 'Accordée ✅';
+          addLog('Permission déjà accordée', 'success');
+        } else if (permission === 'denied') {
+          badge.className = 'permission-badge permission-denied';
+          badge.textContent = 'Refusée ❌';
+          addLog('Permission refusée', 'warning');
+        } else {
+          badge.className = 'permission-badge permission-default';
+          badge.textContent = 'En attente';
+          addLog('Permission en attente', 'info');
+        }
+      } else {
+        addLog('Notifications non supportées par ce navigateur', 'error');
+      }
+    });
+  </script>
+</body>
+</html>

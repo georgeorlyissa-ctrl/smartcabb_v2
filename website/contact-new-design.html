@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Contactez SmartCabb - Nous sommes là pour vous aider à Kinshasa">
+    <title>Contact - SmartCabb</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00BFA5;
+            --primary-dark: #00A890;
+            --secondary: #0099CC;
+            --dark: #1a1a1a;
+            --gray: #6B7280;
+            --light: #F8F9FA;
+            --white: #FFFFFF;
+            --cyan: #00BFA5;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--dark);
+            overflow-x: hidden;
+            background: var(--white);
+        }
+
+        /* Navigation */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%  ;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            padding: 1rem 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 3rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 800;
+            font-size: 1.2rem;
+        }
+
+        .logo-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .logo-text span {
+            color: var(--primary);
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        /* MASQUER TOUS LES ANCIENS SÉLECTEURS DE LANGUE */
+        .lang-btn,
+        .language-btn,
+        .language-selector,
+        button[data-lang]:not(.language-dropdown-item):not(.language-dropdown-btn) {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
+        .nav-link {
+            color: var(--dark);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Dropdown de langue */
+        .language-dropdown {
+            position: relative;
+            margin-left: 1rem;
+            z-index: 10000;
+        }
+
+        .language-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            min-width: 140px;
+            position: relative;
+            z-index: 10001;
+        }
+
+        .language-dropdown-btn .flag {
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #666;
+        }
+
+        .language-dropdown-btn .lang-text {
+            flex: 1;
+            text-align: left;
+        }
+
+        .language-dropdown-btn .dropdown-arrow {
+            margin-left: auto;
+            transition: transform 0.3s ease;
+        }
+
+        .language-dropdown-btn:hover {
+            border-color: #00BFA5;
+            box-shadow: 0 2px 8px rgba(0, 191, 165, 0.2);
+        }
+
+        .language-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .language-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            z-index: 10002;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 140px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .language-dropdown.open .language-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .language-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: white;
+            border: none;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .language-dropdown-item .flag {
+            font-size: 0.85rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #666;
+        }
+
+        .language-dropdown-item:first-child {
+            border-radius: 6px 6px 0 0;
+        }
+
+        .language-dropdown-item:last-child {
+            border-radius: 0 0 6px 6px;
+        }
+
+        .language-dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .language-dropdown-item.active {
+            background: #e8f5f3;
+            color: #00BFA5;
+        }
+
+        /* Hero Section */
+        .hero-contact {
+            padding: 8rem 2rem 4rem;
+            background: url('https://images.unsplash.com/photo-1758620323739-5d2cd8cdc22c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxkcml2ZXIlMjBzdGVlcmluZyUyMHdoZWVsJTIwcGFzc2VuZ2VycyUyMGNhciUyMGludGVyaW9yfGVufDF8fHx8MTc2MjA5MTAyNnww&ixlib=rb-4.1.0&q=80&w=1080') center/cover no-repeat;
+            text-align: center;
+            color: white;
+            position: relative;
+        }
+        
+        .hero-contact::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 191, 165, 0.7) 0%, rgba(0, 168, 144, 0.65) 100%);
+            z-index: 1;
+        }
+
+        .hero-contact h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-contact p {
+            font-size: 1.2rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Contact Container */
+        .contact-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+        }
+
+        /* Form Section */
+        .form-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .section-subtitle {
+            color: var(--gray);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .btn-submit {
+            background: linear-gradient(135deg, var(--cyan), var(--primary-dark));
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+            box-shadow: 0 5px 20px rgba(0, 191, 165, 0.3);
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0, 191, 165, 0.4);
+        }
+
+        /* Info Section */
+        .info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .info-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: var(--dark);
+        }
+
+        .info-item {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+        }
+
+        .info-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 191, 165, 0.1);
+        }
+
+        .info-icon {
+            font-size: 2.5rem;
+        }
+
+        .info-content h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .info-content p {
+            color: var(--gray);
+            margin: 0.25rem 0;
+        }
+
+        .social-links {
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--cyan), var(--primary-dark));
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .social-title {
+            color: white;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .social-icons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .social-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .social-icon:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-5px);
+        }
+
+        /* Map Section */
+        .map-section {
+            background: var(--light);
+            padding: 4rem 2rem;
+        }
+
+        .map-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .map-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .map-subtitle {
+            color: var(--gray);
+            margin-bottom: 2rem;
+        }
+
+        #map {
+            width: 100%;
+            height: 400px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Footer */
+        .footer {
+            background: #0A1929;
+            color: white;
+            padding: 3rem 2rem 1.5rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .footer-link {
+            display: block;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+
+        .footer-link:hover {
+            color: var(--primary);
+        }
+
+        .footer-bottom {
+            max-width: 1200px;
+            margin: 2rem auto 0;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .contact-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .nav-menu {
+                display: none;
+            }
+
+            .language-dropdown {
+                position: fixed;
+                top: 1rem;
+                right: 1rem;
+                z-index: 10000;
+                background: white;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+                border-radius: 6px;
+            }
+
+            .hero-contact h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <div class="logo-icon">SC</div>
+                <div class="logo-text">SMART<span>CABB</span></div>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="nav-link" data-i18n="nav.home">Accueil</a>
+                <a href="/services" class="nav-link" data-i18n="nav.services">Services</a>
+                <a href="/drivers" class="nav-link" data-i18n="nav.driver">Chauffeurs</a>
+                <a href="/contact" class="nav-link" data-i18n="nav.contact">Contact</a>
+                <a href="/app/passenger" class="btn-primary" style="text-decoration: none; display: inline-block;" data-i18n="nav.login">Se connecter</a>
+                
+                <!-- Sélecteur de langue DROPDOWN -->
+                <div class="language-dropdown">
+                    <button class="language-dropdown-btn" id="languageDropdownBtn">
+                        <span class="flag" id="currentFlag">FR</span>
+                        <span class="lang-text" id="currentLang">Français</span>
+                        <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="language-dropdown-menu" id="languageDropdownMenu">
+                        <button class="language-dropdown-item active" data-lang="fr">
+                            <span class="flag">FR</span>
+                            <span class="lang-text">Français</span>
+                        </button>
+                        <button class="language-dropdown-item" data-lang="en">
+                            <span class="flag">EN</span>
+                            <span class="lang-text">English</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-contact">
+        <h1 data-i18n="contact.hero-title">Contact</h1>
+        <p data-i18n="contact.hero-subtitle">Nous sommes là pour vous</p>
+    </section>
+
+    <!-- Contact Container -->
+    <div class="contact-container">
+        <div class="contact-grid">
+            <!-- Form Section -->
+            <div class="form-section">
+                <h2 class="section-title" data-i18n="contact.form-title">Envoyez-nous un message</h2>
+                <p class="section-subtitle" data-i18n="contact.form-subtitle">Remplissez le formulaire ci-dessous</p>
+                
+                <form id="contactForm">
+                    <div class="form-group">
+                        <label for="name" data-i18n="contact.label-name">Nom *</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email" data-i18n="contact.label-email">Email *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone" data-i18n="contact.label-phone">Téléphone</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+243">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="message" data-i18n="contact.label-message">Message *</label>
+                        <textarea id="message" name="message" required data-i18n-placeholder="contact.placeholder-message" placeholder="Écrivez votre message ici..."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-submit" data-i18n="contact.submit-button">Envoyer le message</button>
+                </form>
+            </div>
+
+            <!-- Info Section -->
+            <div class="info-section">
+                <h2 class="info-title" data-i18n="contact.info-title">Nos coordonnées</h2>
+
+                <div class="info-item">
+                    <div class="info-icon">📞</div>
+                    <div class="info-content">
+                        <h3 data-i18n="contact.phone-title">Téléphone</h3>
+                        <p>+243 990 666 661</p>
+                        <p>+243 814 018 048</p>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-icon">✉️</div>
+                    <div class="info-content">
+                        <h3 data-i18n="contact.email-title">Email</h3>
+                        <p>contact@smartcabb.com</p>
+                        <p>support@smartcabb.com</p>
+                    </div>
+                </div>
+
+                <div class="info-item">
+                    <div class="info-icon">📍</div>
+                    <div class="info-content">
+                        <h3 data-i18n="contact.address-title">Adresse</h3>
+                        <p>5D, Avenue du Tchad</p>
+                        <p>C/ Gombe, Kinshasa - RDC</p>
+                    </div>
+                </div>
+
+                <div class="social-links">
+                    <h3 class="social-title" data-i18n="contact.social-title">Suivez-nous</h3>
+                    <div class="social-icons">
+                        <div class="social-icon">📘</div>
+                        <div class="social-icon">🐦</div>
+                        <div class="social-icon">📷</div>
+                        <div class="social-icon">💼</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Section -->
+    <section class="map-section">
+        <div class="map-container">
+            <h2 class="map-title" data-i18n="contact.map-title">Notre localisation</h2>
+            <p class="map-subtitle" data-i18n="contact.map-subtitle">Retrouvez-nous à Kinshasa</p>
+            <div id="map"></div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-section">
+                <h3>SmartCabb</h3>
+                <p style="color: rgba(255, 255, 255, 0.8); margin-bottom: 1rem;" data-i18n="footer.description">
+                    Votre solution de transport intelligente à Kinshasa.
+                </p>
+            </div>
+
+            <div class="footer-section">
+                <h3 data-i18n="footer.quick-links-title">Liens rapides</h3>
+                <a href="/" class="footer-link" data-i18n="nav.home">Accueil</a>
+                <a href="/services" class="footer-link" data-i18n="nav.services">Services</a>
+                <a href="/about" class="footer-link" data-i18n="nav.about">À propos</a>
+                <a href="/drivers" class="footer-link" data-i18n="footer.driver-link">Devenir chauffeur</a>
+            </div>
+
+            <div class="footer-section">
+                <h3 data-i18n="footer.legal-title">Légal</h3>
+                <a href="cgu.html" class="footer-link" data-i18n="footer.terms-link">Conditions d'utilisation</a>
+                <a href="politique-confidentialite.html" class="footer-link" data-i18n="footer.privacy-link">Politique de confidentialité</a>
+                <a href="mentions-legales.html" class="footer-link" data-i18n="footer.legal-notices-link">Mentions légales</a>
+            </div>
+
+            <div class="footer-section">
+                <h3 data-i18n="footer.contact-title">Contact</h3>
+                <p style="color: rgba(255, 255, 255, 0.8);">
+                    📞 +243 990 666 661<br>
+                    ✉️ contact@smartcabb.com
+                </p>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <p data-i18n="footer.copyright">&copy; 2025 SmartCabb. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- 🔥 SYSTÈME DE TRADUCTIONS - INTÉGRÉ DIRECTEMENT 🔥 -->
+    <script>
+        // ============================================================
+        // DICTIONNAIRE DE TRADUCTIONS - INTÉGRÉ
+        // ============================================================
+        window.translations = {
+            // Navigation
+            'nav.home': {
+                fr: 'Accueil',
+                en: 'Home'
+            },
+            'nav.services': {
+                fr: 'Services',
+                en: 'Services'
+            },
+            'nav.driver': {
+                fr: 'Chauffeurs',
+                en: 'Drivers'
+            },
+            'nav.contact': {
+                fr: 'Contact',
+                en: 'Contact'
+            },
+            'nav.about': {
+                fr: 'À propos',
+                en: 'About'
+            },
+            'nav.login': {
+                fr: 'Se connecter',
+                en: 'Login'
+            },
+
+            // Hero Section
+            'contact.hero-title': {
+                fr: 'Contact',
+                en: 'Contact'
+            },
+            'contact.hero-subtitle': {
+                fr: 'Nous sommes là pour vous',
+                en: 'We are here for you'
+            },
+
+            // Form Section
+            'contact.form-title': {
+                fr: 'Envoyez-nous un message',
+                en: 'Send us a message'
+            },
+            'contact.form-subtitle': {
+                fr: 'Remplissez le formulaire ci-dessous',
+                en: 'Fill out the form below'
+            },
+            'contact.label-name': {
+                fr: 'Nom *',
+                en: 'Name *'
+            },
+            'contact.label-email': {
+                fr: 'Email *',
+                en: 'Email *'
+            },
+            'contact.label-phone': {
+                fr: 'Téléphone',
+                en: 'Phone'
+            },
+            'contact.label-message': {
+                fr: 'Message *',
+                en: 'Message *'
+            },
+            'contact.placeholder-message': {
+                fr: 'Écrivez votre message ici...',
+                en: 'Write your message here...'
+            },
+            'contact.submit-button': {
+                fr: 'Envoyer le message',
+                en: 'Send message'
+            },
+
+            // Info Section
+            'contact.info-title': {
+                fr: 'Nos coordonnées',
+                en: 'Our contact information'
+            },
+            'contact.phone-title': {
+                fr: 'Téléphone',
+                en: 'Phone'
+            },
+            'contact.email-title': {
+                fr: 'Email',
+                en: 'Email'
+            },
+            'contact.address-title': {
+                fr: 'Adresse',
+                en: 'Address'
+            },
+            'contact.social-title': {
+                fr: 'Suivez-nous',
+                en: 'Follow us'
+            },
+
+            // Map Section
+            'contact.map-title': {
+                fr: 'Notre localisation',
+                en: 'Our location'
+            },
+            'contact.map-subtitle': {
+                fr: 'Retrouvez-nous à Kinshasa',
+                en: 'Find us in Kinshasa'
+            },
+
+            // Footer
+            'footer.description': {
+                fr: 'Votre solution de transport intelligente à Kinshasa.',
+                en: 'Your smart transport solution in Kinshasa.'
+            },
+            'footer.quick-links-title': {
+                fr: 'Liens rapides',
+                en: 'Quick links'
+            },
+            'footer.legal-title': {
+                fr: 'Légal',
+                en: 'Legal'
+            },
+            'footer.contact-title': {
+                fr: 'Contact',
+                en: 'Contact'
+            },
+            'footer.driver-link': {
+                fr: 'Devenir chauffeur',
+                en: 'Become a driver'
+            },
+            'footer.terms-link': {
+                fr: 'Conditions d\'utilisation',
+                en: 'Terms of Service'
+            },
+            'footer.privacy-link': {
+                fr: 'Politique de confidentialité',
+                en: 'Privacy Policy'
+            },
+            'footer.legal-notices-link': {
+                fr: 'Mentions légales',
+                en: 'Legal notices'
+            },
+            'footer.copyright': {
+                fr: '© 2025 SmartCabb. Tous droits réservés.',
+                en: '© 2025 SmartCabb. All rights reserved.'
+            }
+        };
+
+        console.log('✅ Traductions chargées INTÉGRÉES:', Object.keys(window.translations).length, 'clés');
+    </script>
+
+    <script>
+        // ============================================================
+        // LANGUAGE SELECTOR (language-selector.js) - INTÉGRÉ
+        // ============================================================
+        class LanguageSelector {
+            constructor() {
+                this.currentLang = localStorage.getItem('smartcabb_lang') || 'fr';
+                this.init();
+            }
+
+            init() {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.setup());
+                } else {
+                    this.setup();
+                }
+            }
+
+            setup() {
+                console.log('🌍 Setup Language Selector avec langue:', this.currentLang);
+                this.attachEventListeners();
+                this.updateLanguage(this.currentLang);
+                this.updateActiveButton();
+            }
+
+            attachEventListeners() {
+                // Gérer le dropdown
+                const dropdownBtn = document.getElementById('languageDropdownBtn');
+                const dropdown = document.querySelector('.language-dropdown');
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+
+                if (dropdownBtn && dropdown) {
+                    // Ouvrir/fermer le dropdown
+                    dropdownBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        dropdown.classList.toggle('open');
+                    });
+
+                    // Fermer le dropdown en cliquant ailleurs
+                    document.addEventListener('click', (e) => {
+                        if (!dropdown.contains(e.target)) {
+                            dropdown.classList.remove('open');
+                        }
+                    });
+
+                    // Gérer le clic sur un item
+                    dropdownItems.forEach(item => {
+                        item.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const lang = item.getAttribute('data-lang');
+                            
+                            if (lang) {
+                                console.log('🔄 Changement de langue vers:', lang);
+                                this.changeLanguage(lang);
+                                dropdown.classList.remove('open');
+                            }
+                        });
+                    });
+
+                    console.log('✅ Dropdown de langue initialisé');
+                }
+            }
+
+            changeLanguage(lang) {
+                if (lang === this.currentLang) {
+                    console.log('⚠️ Langue déjà active:', lang);
+                    return;
+                }
+
+                console.log('✅ Changement de langue de', this.currentLang, 'vers', lang);
+                this.currentLang = lang;
+                localStorage.setItem('smartcabb_lang', lang);
+                this.updateLanguage(lang);
+                this.updateActiveButton();
+                this.showNotification(lang);
+            }
+
+            updateLanguage(lang) {
+                console.log('🔄 Mise à jour de la langue vers:', lang);
+                
+                // Traduire tous les éléments avec data-i18n
+                const elements = document.querySelectorAll('[data-i18n]');
+                console.log('📝 Éléments à traduire:', elements.length);
+                
+                elements.forEach(element => {
+                    const key = element.getAttribute('data-i18n');
+                    if (window.translations && window.translations[key]) {
+                        const translation = window.translations[key][lang];
+                        if (translation) {
+                            element.textContent = translation;
+                        }
+                    }
+                });
+
+                // Traduire les placeholders
+                const elementsWithPlaceholder = document.querySelectorAll('[data-i18n-placeholder]');
+                elementsWithPlaceholder.forEach(element => {
+                    const key = element.getAttribute('data-i18n-placeholder');
+                    if (window.translations && window.translations[key]) {
+                        const translation = window.translations[key][lang];
+                        if (translation) {
+                            element.placeholder = translation;
+                        }
+                    }
+                });
+
+                document.documentElement.lang = lang;
+                console.log('✅ Langue mise à jour avec succès:', lang);
+            }
+
+            updateActiveButton() {
+                // Mettre à jour le bouton principal du dropdown
+                const currentFlag = document.getElementById('currentFlag');
+                const currentLang = document.getElementById('currentLang');
+                
+                if (currentFlag && currentLang) {
+                    if (this.currentLang === 'fr') {
+                        currentFlag.textContent = 'FR';
+                        currentLang.textContent = 'Français';
+                    } else {
+                        currentFlag.textContent = 'EN';
+                        currentLang.textContent = 'English';
+                    }
+                }
+
+                // Mettre à jour les items du dropdown
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+                dropdownItems.forEach(item => {
+                    const itemLang = item.getAttribute('data-lang');
+                    if (itemLang === this.currentLang) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            }
+
+            showNotification(lang) {
+                const langNames = {
+                    fr: 'Français',
+                    en: 'English'
+                };
+
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 100px;
+                    right: 20px;
+                    background: linear-gradient(135deg, #00BFA5, #00A890);
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 10px;
+                    box-shadow: 0 5px 20px rgba(0, 191, 165, 0.3);
+                    z-index: 10001;
+                    font-weight: 600;
+                    animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = `🌍 Langue changée: ${langNames[lang]}`;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 2000);
+            }
+        }
+
+        // Initialiser le sélecteur de langue
+        console.log('🚀 Initialisation du LanguageSelector...');
+        const languageSelector = new LanguageSelector();
+
+        // Ajouter les animations CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        console.log('✅ LanguageSelector initialisé avec succès');
+    </script>
+
+    <!-- Supabase Configuration (doit être chargé EN PREMIER) -->
+    <script src="js/config-local.js"></script>
+
+    <script>
+        // Initialize map centered on Kinshasa
+        const map = L.map('map').setView([-4.3276, 15.3136], 13);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Add marker for SmartCabb office
+        const marker = L.marker([-4.3276, 15.3136]).addTo(map);
+        marker.bindPopup('<b>SmartCabb</b><br>5D, Avenue du Tchad<br>C/ Gombe, Kinshasa - RDC').openPopup();
+
+        // Form submission handler with REAL backend integration
+        document.getElementById('contactForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const message = document.getElementById('message').value;
+
+            // Get current language
+            const currentLang = localStorage.getItem('smartcabb_lang') || 'fr';
+
+            // Messages
+            const messages = {
+                validation: {
+                    fr: 'Veuillez remplir tous les champs obligatoires.',
+                    en: 'Please fill in all required fields.'
+                },
+                sending: {
+                    fr: 'Envoi en cours...',
+                    en: 'Sending...'
+                },
+                success: {
+                    fr: `Merci ${name} ! Votre message a été envoyé avec succès.\n\nNous vous répondrons dans les plus brefs délais à ${email}`,
+                    en: `Thank you ${name}! Your message has been sent successfully.\n\nWe will respond to you soon at ${email}`
+                },
+                error: {
+                    fr: 'Une erreur est survenue. Veuillez réessayer ou nous contacter par téléphone.',
+                    en: 'An error occurred. Please try again or contact us by phone.'
+                }
+            };
+
+            // Validation
+            if (!name || !email || !message) {
+                alert(messages.validation[currentLang]);
+                return;
+            }
+
+            // Disable submit button
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = messages.sending[currentLang];
+            submitBtn.style.opacity = '0.6';
+            submitBtn.style.cursor = 'not-allowed';
+
+            try {
+                // Vérifier que la configuration est chargée
+                if (!window.SMARTCABB_CONFIG || !window.SMARTCABB_CONFIG.BACKEND_ENABLED) {
+                    alert('⚠️ Configuration non renseignée.\n\nÉditez le fichier /website/js/config-local.js avec vos clés Supabase avant d\'envoyer un message.');
+                    console.error('❌ SMARTCABB_CONFIG non défini ou backend désactivé');
+                    console.error('SMARTCABB_CONFIG:', window.SMARTCABB_CONFIG);
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.style.cursor = 'pointer';
+                    return;
+                }
+                
+                // Get Supabase API URL from configuration
+                const apiUrl = `${window.SMARTCABB_CONFIG.API_URL}/contact`;
+                
+                console.log('📤 Envoi du message à:', apiUrl);
+                console.log('📋 Données:', { name, email, phone, message: message.substring(0, 50) + '...' });
+                console.log('🔑 Authorization Header:', window.SMARTCABB_CONFIG.SUPABASE_ANON_KEY ? 'Présent' : 'Absent');
+                
+                // Send to backend
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${window.SMARTCABB_CONFIG.SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email,
+                        phone: phone || '',
+                        message: message,
+                        language: currentLang,
+                        source: 'website'
+                    })
+                });
+
+                console.log('📥 Réponse reçue. Status:', response.status, response.statusText);
+
+                if (response.ok) {
+                    const responseData = await response.json();
+                    console.log('✅ Succès:', responseData);
+                    
+                    // Success
+                    alert(messages.success[currentLang]);
+                    
+                    // Reset form
+                    this.reset();
+                } else {
+                    // Error response
+                    const errorText = await response.text();
+                    console.error('❌ Erreur serveur (Status ' + response.status + '):', errorText);
+                    
+                    try {
+                        const errorJson = JSON.parse(errorText);
+                        console.error('❌ Détails erreur:', errorJson);
+                        alert('Erreur: ' + (errorJson.error || errorJson.message || messages.error[currentLang]));
+                    } catch (e) {
+                        alert(messages.error[currentLang] + '\n\nDétails: ' + errorText);
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'envoi:', error);
+                console.error('❌ Type erreur:', error.name);
+                console.error('❌ Message erreur:', error.message);
+                console.error('❌ Stack:', error.stack);
+                
+                // Afficher un message d'erreur plus détaillé
+                alert(messages.error[currentLang] + '\n\nDétails technique:\n' + error.message);
+            } finally {
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+            }
+        });
+    </script>
+
+    <!-- Backend Integration (dépend de config-local.js) -->
+    <script src="js/backend-integration.js"></script>
+
+    <!-- ========================================== -->
+    <!-- SMARTCABB CHAT WIDGET - BLOC COMPLET -->
+    <!-- ========================================== -->
+    
+    <!-- Chat Widget Styles -->
+    <style>
+        /* Chat Widget Styles */
+        .smartcabb-chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99999;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        /* Toggle Button */
+        .chat-toggle-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            border: none;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 191, 165, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .chat-toggle-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(0, 191, 165, 0.5);
+        }
+
+        .chat-notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #FF4757;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            border: 2px solid white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Chat Window */
+        .chat-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 360px;
+            max-width: calc(100vw - 40px);
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Chat Header */
+        .chat-header {
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-header-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .chat-icon {
+            font-size: 2rem;
+        }
+
+        .chat-header-text h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .chat-header-text p {
+            margin: 0;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .chat-header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .chat-action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Chat Messages */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background: #F8F9FA;
+        }
+
+        .chat-empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6B7280;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .chat-message {
+            margin-bottom: 1rem;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-message.user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .chat-message.bot {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .chat-message.user .message-bubble {
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-message.bot .message-bubble {
+            background: white;
+            color: #1a1a1a;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            color: #6B7280;
+            margin-top: 0.25rem;
+            text-align: right;
+        }
+
+        /* Chat Input */
+        .chat-input-container {
+            padding: 1rem;
+            background: white;
+            border-top: 1px solid #E5E7EB;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 25px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #00BFA5;
+        }
+
+        .chat-send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #00BFA5, #00A890);
+            color: white;
+        }
+
+        .chat-send-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .smartcabb-chat-widget {
+                bottom: 10px;
+                right: 10px;
+            }
+
+            .chat-window {
+                width: calc(100vw - 20px);
+                height: calc(100vh - 100px);
+                bottom: 70px;
+            }
+
+            .chat-toggle-btn {
+                width: 56px;
+                height: 56px;
+            }
+        }
+    </style>
+
+    <!-- Chat Widget HTML -->
+    <div id="smartcabb-chat-widget" class="smartcabb-chat-widget">
+        <!-- Chat Button -->
+        <button id="chat-toggle-btn" class="chat-toggle-btn" aria-label="Ouvrir le chat">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="chat-notification-badge">💬</span>
+        </button>
+
+        <!-- Chat Window -->
+        <div id="chat-window" class="chat-window" style="display: none;">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-header-content">
+                    <div class="chat-icon">💬</div>
+                    <div class="chat-header-text">
+                        <h3>SmartCabb Support</h3>
+                        <p>Nous sommes là pour vous</p>
+                    </div>
+                </div>
+                <div class="chat-header-actions">
+                    <button id="chat-close-btn" class="chat-action-btn" aria-label="Fermer">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-empty-state">
+                    <div class="empty-state-icon">💬</div>
+                    <p>Écrivez-nous un message</p>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <input 
+                    type="text" 
+                    id="chat-input" 
+                    class="chat-input" 
+                    placeholder="Votre message..."
+                    aria-label="Message"
+                >
+                <button id="chat-send-btn" class="chat-send-btn" aria-label="Envoyer">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Widget Backend Script (chargé APRÈS le HTML) -->
+    <script src="js/customer-chat-widget.js"></script>
+    
+</body>
+</html>

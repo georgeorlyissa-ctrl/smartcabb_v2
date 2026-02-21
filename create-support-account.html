@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer Compte Support - SmartCabb</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .info-box {
+      background: #f0f9ff;
+      border: 2px solid #0ea5e9;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .info-box h3 {
+      color: #0284c7;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .info-box ul {
+      list-style: none;
+      font-size: 13px;
+      color: #0c4a6e;
+    }
+
+    .info-box li {
+      margin: 5px 0;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 15px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(6, 182, 212, 0.3);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .result-box {
+      margin-top: 30px;
+      padding: 20px;
+      border-radius: 12px;
+      display: none;
+    }
+
+    .result-box.success {
+      background: #f0fdf4;
+      border: 2px solid #22c55e;
+      display: block;
+    }
+
+    .result-box.error {
+      background: #fef2f2;
+      border: 2px solid #ef4444;
+      display: block;
+    }
+
+    .result-box h3 {
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .result-box.success h3 {
+      color: #15803d;
+    }
+
+    .result-box.error h3 {
+      color: #991b1b;
+    }
+
+    .credential-item {
+      background: white;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 10px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .credential-label {
+      font-size: 12px;
+      color: #666;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .credential-value {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .copy-btn {
+      background: #e5e7eb;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: #d1d5db;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      color: #666;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔧 Créer Compte Support</h1>
+      <p>SmartCabb - Gestionnaire de compte support@smartcabb.com</p>
+    </div>
+
+    <div class="info-box">
+      <h3>ℹ️ Informations</h3>
+      <ul>
+        <li>📧 Email: <strong>support@smartcabb.com</strong></li>
+        <li>🔑 Mot de passe par défaut: <strong>Support2026!</strong></li>
+        <li>👤 Rôle: Administrateur</li>
+        <li>🔄 Cette action peut être répétée sans problème</li>
+      </ul>
+    </div>
+
+    <button id="createBtn" class="btn btn-primary" onclick="createSupportAccount()">
+      🚀 Créer/Synchroniser le compte
+    </button>
+
+    <div id="resultBox" class="result-box">
+      <h3 id="resultTitle"></h3>
+      <div id="resultContent"></div>
+    </div>
+
+    <div class="footer">
+      © 2026 SmartCabb • Version 518.2.0
+    </div>
+  </div>
+
+  <script>
+    // Configuration Supabase (à remplir)
+    const SUPABASE_PROJECT_ID = 'lsrnxynshjcbnuuuxlqh'; // Remplacer par votre project ID
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxzcm54eW5zaGpjYm51dXV4bHFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMwODMyNzUsImV4cCI6MjA0ODY1OTI3NX0.7T4sHSiFyPFIUBgjGkf-K06Cy1Yr_98MqbZxAaXM9Rk'; // Remplacer par votre anon key
+
+    async function createSupportAccount() {
+      const btn = document.getElementById('createBtn');
+      const resultBox = document.getElementById('resultBox');
+      const resultTitle = document.getElementById('resultTitle');
+      const resultContent = document.getElementById('resultContent');
+
+      // Disable button and show loading
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Traitement en cours...';
+      resultBox.className = 'result-box';
+      resultBox.style.display = 'none';
+
+      try {
+        const response = await fetch(
+          `https://${SUPABASE_PROJECT_ID}.supabase.co/functions/v1/make-server-2eb02e52/auth/support/create`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Erreur lors de la création du compte');
+        }
+
+        // Success
+        resultBox.className = 'result-box success';
+        resultTitle.textContent = '✅ ' + data.message;
+        resultContent.innerHTML = `
+          <div class="credential-item">
+            <div>
+              <span class="credential-label">📧 Email</span>
+              <div class="credential-value">${data.email}</div>
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('${data.email}')">Copier</button>
+          </div>
+          <div class="credential-item">
+            <div>
+              <span class="credential-label">🔑 Mot de passe</span>
+              <div class="credential-value">${data.password}</div>
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('${data.password}')">Copier</button>
+          </div>
+          <div class="credential-item">
+            <div>
+              <span class="credential-label">🆔 User ID</span>
+              <div class="credential-value" style="font-size: 11px;">${data.userId}</div>
+            </div>
+            <button class="copy-btn" onclick="copyToClipboard('${data.userId}')">Copier</button>
+          </div>
+          ${data.note ? `
+            <div style="margin-top: 15px; padding: 12px; background: #fef3c7; border-radius: 8px;">
+              <strong>💡 Note:</strong> ${data.note}
+            </div>
+          ` : ''}
+          <a href="https://smartcabb.com/app/admin" target="_blank">
+            <button class="btn btn-primary" style="margin-top: 20px;">
+              🚀 Se connecter au panel admin
+            </button>
+          </a>
+        `;
+
+        console.log('✅ Résultat complet:', data);
+
+      } catch (error) {
+        // Error
+        resultBox.className = 'result-box error';
+        resultTitle.textContent = '❌ Erreur';
+        resultContent.innerHTML = `
+          <p style="color: #991b1b; margin-bottom: 15px;">${error.message}</p>
+          <button class="btn btn-primary" onclick="createSupportAccount()">
+            🔄 Réessayer
+          </button>
+        `;
+
+        console.error('❌ Erreur:', error);
+      } finally {
+        // Re-enable button
+        btn.disabled = false;
+        btn.innerHTML = '🚀 Créer/Synchroniser le compte';
+      }
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Copié dans le presse-papiers !');
+      }).catch(err => {
+        console.error('❌ Erreur copie:', err);
+        alert('❌ Impossible de copier');
+      });
+    }
+  </script>
+</body>
+</html>

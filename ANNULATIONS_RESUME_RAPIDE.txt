@@ -1,0 +1,198 @@
+====================================================================
+  SYSTÈME D'ANNULATIONS AVEC RAISONS - RÉSUMÉ RAPIDE
+====================================================================
+
+🎯 OBJECTIF:
+  Quand un passager annule une course:
+  1. Il choisit une raison dans une liste
+  2. L'annulation est enregistrée dans l'historique
+  3. Les admins peuvent voir toutes les annulations et leurs raisons
+
+--------------------------------------------------------------------
+📦 FICHIERS CRÉÉS/MODIFIÉS (5 fichiers)
+--------------------------------------------------------------------
+
+BACKEND (2 fichiers modifiés):
+
+1. supabase/functions/server/ride-routes.tsx ✅
+   → Route POST /cancel modifiée
+   → Enregistre dans passenger_cancellation:{userId}:{timestamp}
+   → Sauvegarde: raison, pickup, destination, prix, pénalité
+
+2. supabase/functions/server/admin-routes.tsx ✅
+   → Route GET /admin/cancellations (toutes les annulations)
+   → Route GET /admin/cancellations/:userId (annulations d'un user)
+   → Statistiques: total, par type, par raison, pénalités
+
+FRONTEND (2 nouveaux composants):
+
+3. components/CancelRideModal.tsx ✅ CRÉÉ
+   → Modal avec 10 raisons prédéfinies:
+     - Changement de plans
+     - Temps d'attente trop long
+     - Chauffeur trop loin
+     - Prix trop élevé
+     - Trouvé autre transport
+     - Urgence / Imprévu
+     - Erreur d'adresse
+     - Problème véhicule
+     - Comportement chauffeur
+     - Autre raison (texte libre)
+   → Affiche avertissement si pénalité
+   → Validation avant confirmation
+
+4. components/admin/CancellationsScreen.tsx ✅ CRÉÉ
+   → Page admin complète avec:
+     - 5 cartes statistiques (total, passagers, conducteurs, pénalités)
+     - Top 6 raisons d'annulation
+     - Filtres (tous / passagers / conducteurs)
+     - Recherche (nom, téléphone, raison)
+     - Liste détaillée de toutes les annulations
+
+--------------------------------------------------------------------
+🔧 CE QU'IL RESTE À FAIRE
+--------------------------------------------------------------------
+
+1. INTÉGRER LE MODAL DANS L'APP PASSAGER:
+   
+   Dans PassengerApp.tsx ou RideSearchScreen.tsx:
+   
+   a) Importer le composant:
+      import { CancelRideModal } from './components/CancelRideModal';
+   
+   b) Ajouter l'état:
+      const [showCancelModal, setShowCancelModal] = useState(false);
+   
+   c) Remplacer le bouton d'annulation actuel:
+      <Button onClick={() => setShowCancelModal(true)}>
+        Annuler la course
+      </Button>
+   
+   d) Ajouter le modal dans le JSX:
+      <CancelRideModal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={async (reason) => {
+          // Appeler la route /cancel avec la raison
+          const response = await fetch('...', {
+            body: JSON.stringify({
+              rideId: currentRide.id,
+              passengerId: currentUser.id,
+              reason,  // ← RAISON SÉLECTIONNÉE
+              cancelledBy: 'passenger'
+            })
+          });
+          // Gérer la réponse
+        }}
+        rideStatus={currentRide.status}
+        hasPenalty={currentRide.status === 'accepted'}
+        penaltyAmount={Math.round(currentRide.estimatedPrice * 0.5)}
+      />
+
+2. INTÉGRER LA PAGE DANS ADMINDASHBOARD:
+   
+   a) Importer le composant:
+      import { CancellationsScreen } from './admin/CancellationsScreen';
+      import { XCircle } from '../../lib/admin-icons';
+   
+   b) Ajouter dans les actions (ligne ~600):
+      {
+        id: 'action-cancellations',
+        title: 'Historique annulations',
+        description: 'Voir toutes les annulations avec raisons',
+        icon: XCircle,
+        action: () => setCurrentScreen('cancellations'),
+        highlight: true,
+        color: 'from-red-500 to-orange-500'
+      }
+   
+   c) Ajouter le rendu conditionnel:
+      {currentScreen === 'cancellations' && <CancellationsScreen />}
+
+--------------------------------------------------------------------
+✅ CHECKLIST
+--------------------------------------------------------------------
+
+Backend:
+[x] ride-routes.tsx modifié (enregistrement historique)
+[x] admin-routes.tsx modifié (routes de récupération)
+
+Frontend - Composants:
+[x] CancelRideModal.tsx créé
+[x] CancellationsScreen.tsx créé
+
+Frontend - Intégration:
+[ ] Intégrer CancelRideModal dans PassengerApp
+[ ] Intégrer CancellationsScreen dans AdminDashboard
+[ ] Importer XCircle dans AdminDashboard
+
+Tests:
+[ ] Annuler course pending (sans pénalité)
+[ ] Annuler course accepted (avec pénalité 50%)
+[ ] Vérifier enregistrement KV store
+[ ] Voir l'annulation dans l'admin
+[ ] Tester filtres et recherche
+
+--------------------------------------------------------------------
+📦 FICHIERS À COPIER DANS GITHUB
+--------------------------------------------------------------------
+
+Maintenant (backend + composants):
+[x] supabase/functions/server/ride-routes.tsx
+[x] supabase/functions/server/admin-routes.tsx
+[x] components/CancelRideModal.tsx
+[x] components/admin/CancellationsScreen.tsx
+
+Après intégration:
+[ ] App passager (fichier à déterminer)
+[ ] components/admin/AdminDashboard.tsx
+
+--------------------------------------------------------------------
+💡 NOTES IMPORTANTES
+--------------------------------------------------------------------
+
+1. Le modal affiche un avertissement si pénalité (course accepted)
+2. Les annulations sont enregistrées avec TOUTES les infos:
+   - Qui (nom, téléphone, type)
+   - Quoi (pickup, destination, prix)
+   - Quand (date et heure)
+   - Pourquoi (raison sélectionnée)
+   - Combien (pénalité si applicable)
+
+3. L'admin peut filtrer par:
+   - Type (passagers / conducteurs)
+   - Recherche (nom, téléphone, raison)
+
+4. Statistiques automatiques:
+   - Total annulations
+   - Par passagers / conducteurs
+   - Avec pénalité
+   - Total pénalités en CDF
+   - Top raisons d'annulation
+
+--------------------------------------------------------------------
+🚀 COMMIT MESSAGE SUGGÉRÉ
+--------------------------------------------------------------------
+
+✨ Système d'annulations avec raisons et historique
+
+Backend:
+- Enregistrement annulations dans KV store
+- Routes admin pour historique complet
+- Statistiques par raison et type
+
+Frontend:
+- Modal choix raison (10 options + personnalisée)
+- Page admin "Historique annulations"
+- Filtres et statistiques en temps réel
+
+Features:
+- Avertissement pénalité si conducteur accepté
+- Enregistrement complet (qui, quoi, quand, pourquoi)
+- Recherche et filtres avancés
+
+====================================================================
+Statut: ✅ BACKEND ET COMPOSANTS PRÊTS
+Reste: Intégration dans PassengerApp et AdminDashboard
+Date: 1er février 2026
+====================================================================

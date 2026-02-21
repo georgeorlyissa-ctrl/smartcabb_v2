@@ -1,0 +1,98 @@
+/**
+ * Styles pour le Sélecteur de Langue - SmartCabb
+ * Design moderne turquoise
+ */
+
+.language-selector {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 0.25rem;
+    border-radius: 25px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.language-selector:hover {
+    border-color: #00BFA5;
+}
+
+.lang-btn {
+    background: transparent;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: #6c757d;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.lang-btn:hover {
+    background: rgba(0, 191, 165, 0.1);
+    color: #00BFA5;
+    transform: scale(1.05);
+}
+
+.lang-btn.active {
+    background: linear-gradient(135deg, #00BFA5, #00A890);
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 191, 165, 0.3);
+}
+
+.lang-btn.active:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 191, 165, 0.4);
+}
+
+/* Animation au changement de langue */
+[data-i18n] {
+    transition: opacity 0.2s;
+}
+
+.language-changing [data-i18n] {
+    opacity: 0.7;
+}
+
+/* Responsive Mobile */
+@media (max-width: 768px) {
+    .language-selector {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 10000;
+        background: white;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .lang-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Version compacte pour navigation */
+.nav-menu .language-selector {
+    margin-left: 1rem;
+}
+
+/* Animation d'entrée */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.language-selector {
+    animation: slideIn 0.3s ease;
+}

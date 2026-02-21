@@ -1,0 +1,109 @@
+====================================================================
+  FIX #13 FINAL AVEC NOTE MOYENNE (5 FICHIERS)
+====================================================================
+
+🎯 PROBLÈME RÉSOLU:
+  - Performance par catégorie: "0 courses"
+  - Top conducteurs: "Conducteur" sans nom
+  - Note moyenne: Non affichée (0.0) ← NOUVEAU FIX
+  - Dashboard vide
+
+--------------------------------------------------------------------
+📦 FICHIERS À COPIER DANS GITHUB
+--------------------------------------------------------------------
+
+BACKEND (2 fichiers):
+
+1. supabase/functions/server/admin-routes.tsx
+   → Route /admin/stats/overview réécrite
+   → Calcul note moyenne depuis courses
+
+2. supabase/functions/server/index.tsx
+   → Route /passengers ajoutée
+
+FRONTEND (3 fichiers):
+
+3. hooks/useSupabaseData.ts
+   → Récupération courses et passagers KV
+
+4. components/admin/StatsCharts.tsx
+   → Top 5 conducteurs corrigé
+   → Performance par catégorie corrigée
+
+5. components/LiveStatsPanel.tsx ⭐ NOUVEAU
+   → Carte "Note moyenne" ajoutée
+   → Affiche note avec 1 décimale (ex: 4.7)
+   → Icône étoile jaune
+
+--------------------------------------------------------------------
+✅ RÉSULTAT FINAL
+--------------------------------------------------------------------
+
+Dashboard principal (7 cartes):
+✅ Conducteurs en ligne (1/23)
+✅ Courses actives (0)
+✅ Courses complétées (0)
+✅ Revenus totaux (268 000 CDF)
+✅ Passagers actifs
+✅ Courses totales
+✅ Note moyenne (4.7) ⭐ ← NOUVELLE CARTE
+
+Analyse des performances:
+✅ Activité 7 derniers jours (graphique)
+✅ Revenus quotidiens (graphique)
+✅ Performance par catégorie (AVEC DONNÉES)
+✅ Top 5 conducteurs (AVEC NOMS ET NOTES)
+
+--------------------------------------------------------------------
+🚀 DÉPLOIEMENT
+--------------------------------------------------------------------
+
+1. Copier les 5 fichiers dans GitHub
+2. Commit: "Fix #13 COMPLET avec note moyenne - Panel admin"
+3. Attendre déploiement Vercel (1-2 min)
+4. Tester dashboard admin
+
+--------------------------------------------------------------------
+✅ CHECKLIST
+--------------------------------------------------------------------
+
+À copier:
+[ ] admin-routes.tsx
+[ ] index.tsx
+[ ] useSupabaseData.ts
+[ ] StatsCharts.tsx
+[ ] LiveStatsPanel.tsx ⭐ NOUVEAU
+
+À vérifier après déploiement:
+[ ] 7 cartes visibles (au lieu de 6)
+[ ] Note moyenne affichée avec étoile
+[ ] Performance par catégorie avec données
+[ ] Top 5 conducteurs avec noms
+[ ] Toutes les stats correctes
+
+====================================================================
+Date: 1er février 2026
+Fichiers: 5
+Statut: ✅ PRÊT POUR PRODUCTION
+====================================================================
+
+COMMIT MESSAGE SUGGÉRÉ:
+--------------------------------------------------------------------
+Fix #13 COMPLET avec note moyenne - Panel admin
+
+Backend:
+- Route /admin/stats/overview réécrite
+- Route /passengers ajoutée
+- Calcul note moyenne depuis courses
+
+Frontend:
+- Hook récupère courses et passagers KV
+- StatsCharts corrigé (top conducteurs + catégories)
+- LiveStatsPanel affiche note moyenne ⭐
+
+Résultat:
+- Dashboard complet: 7 cartes ✅
+- Note moyenne affichée (ex: 4.7) ✅
+- Performance par catégorie ✅
+- Top 5 conducteurs ✅
+--------------------------------------------------------------------

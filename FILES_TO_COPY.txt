@@ -1,0 +1,14 @@
+FICHIERS À COPIER DANS GITHUB - FIX MOTION v2
+==============================================
+
+⚠️ COPIER DANS CET ORDRE EXACT:
+
+1. /lib/motion-polyfill.ts
+2. /lib/motion-init.ts
+3. /main.tsx
+4. /lib/motion.tsx
+
+TOTAL: 4 fichiers critiques
+
+✅ Après copie, commit avec message:
+   "fix: Résolution erreur motion.div is not a function"

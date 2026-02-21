@@ -1,0 +1,85 @@
+═══════════════════════════════════════════════════════════
+    SMARTCABB V7 - FIX NOTIFICATIONS SMS CONDUCTEURS
+═══════════════════════════════════════════════════════════
+
+📋 PROBLÈME RÉSOLU
+──────────────────
+❌ Les conducteurs ne recevaient pas de notifications SMS
+❌ Erreur "InvalidPhoneNumber" dans Africa's Talking
+❌ Erreur "Module not found" lors du déploiement backend
+
+✅ SOLUTION APPLIQUÉE
+──────────────────────
+✓ Création de phone-utils.ts (normalisation centralisée)
+✓ Mise à jour de tous les fichiers backend
+✓ Suppression de phone-normalizer.tsx (problématique)
+✓ Version backend : V6 → V7
+
+🚀 ACTION REQUISE - REDÉPLOYER LE BACKEND
+──────────────────────────────────────────
+
+Choisissez UNE des 3 options ci-dessous :
+
+┌─────────────────────────────────────────────────┐
+│ OPTION 1 : Supabase CLI (⚡ Plus Rapide)        │
+└─────────────────────────────────────────────────┘
+
+supabase functions deploy make-server-2eb02e52
+
+┌─────────────────────────────────────────────────┐
+│ OPTION 2 : GitHub Push (🔄 Auto-Deploy)        │
+└─────────────────────────────────────────────────┘
+
+git add .
+git commit -m "fix: Normalisation téléphone V7"
+git push
+
+┌─────────────────────────────────────────────────┐
+│ OPTION 3 : Dashboard Supabase (🖱️ Manuel)      │
+└─────────────────────────────────────────────────┘
+
+1. https://supabase.com/dashboard
+2. Votre projet SmartCabb
+3. Edge Functions → make-server-2eb02e52
+4. Deploy new version
+
+✅ VÉRIFICATION (Après déploiement)
+───────────────────────────────────
+
+Remplacez XXX par votre project ID Supabase :
+
+curl https://XXX.supabase.co/functions/v1/make-server-2eb02e52/health
+
+Réponse attendue :
+{"status":"ok","timestamp":"..."}
+
+📊 RÉSULTAT ATTENDU
+───────────────────
+
+Après le redéploiement :
+
+✅ Les conducteurs recevront des notifications push
+✅ Les conducteurs recevront des SMS (si solde suffisant)
+✅ Tous les formats de numéros seront acceptés :
+   • +243991234567 (international)
+   • 243991234567 (sans +)
+   • 0991234567 (local RDC)
+   • 991234567 (9 chiffres)
+   • Etc.
+
+✅ Plus d'erreur "InvalidPhoneNumber"
+✅ Attribution séquentielle fonctionnelle
+
+📚 DOCUMENTATION COMPLÈTE
+─────────────────────────
+
+Pour plus de détails, consultez :
+• /CORRECTIF_V7_RESUME.md (Résumé en français)
+• /DEPLOYMENT_GUIDE_V7.md (Guide détaillé)
+• /CHANGELOG_V7.md (Changelog complet)
+• /REDEPLOY_NOW.md (Commandes rapides)
+
+═══════════════════════════════════════════════════════════
+  Version : 7.0.0 | Date : 14 février 2026
+  Statut : ✅ Code corrigé - ⏳ En attente de déploiement
+═══════════════════════════════════════════════════════════

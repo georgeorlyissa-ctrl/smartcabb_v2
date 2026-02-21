@@ -1,0 +1,218 @@
+====================================================================
+  NETTOYAGE DES CONDUCTEURS INVALIDES - SMARTCABB
+====================================================================
+
+✅ FONCTIONNALITÉ IMPLÉMENTÉE:
+  Suppression automatique des conducteurs avec données invalides
+
+📦 FICHIERS MODIFIÉS (2 fichiers):
+────────────────────────────────────────────────────────────────
+
+1. supabase/functions/server/cleanup-routes.tsx ✅ MODIFIÉ
+   
+   Nouvelle route ajoutée:
+     DELETE /cleanup/invalid-drivers
+   
+   Critères de détection des conducteurs invalides:
+     ❌ Pas d'email ou email vide
+     ❌ Nom = "Conducteur inconnu"
+     ❌ Nom vide ou undefined
+     ❌ Téléphone = "Non renseigné"
+     ❌ Téléphone = "()" ou vide
+     ❌ Données manquantes ou corrompues
+   
+   Actions de nettoyage:
+     • Supprime le conducteur (driver:*)
+     • Supprime le profil (profile:*)
+     • Supprime les véhicules associés (vehicle:*)
+     • Supprime l'utilisateur Auth Supabase
+     • Logs détaillés de chaque suppression
+
+2. components/admin/DriversListScreen.tsx ✅ MODIFIÉ
+   
+   Changements:
+     + Import projectId et publicAnonKey
+     + Fonction cleanInvalidDrivers()
+     + Bouton "Nettoyer invalides" dans le header
+     + Confirmation avant suppression
+     + Toast de succès avec nombre supprimé
+     + Rafraîchissement automatique après nettoyage
+
+────────────────────────────────────────────────────────────────
+
+🎯 UTILISATION (INTERFACE ADMIN):
+
+1. Connecte-toi au panel admin (smartcabb.com/admin)
+
+2. Clique sur "Gestion des chauffeurs"
+
+3. En haut à droite, tu verras 3 boutons:
+   ┌─────────────────────────────────────────┐
+   │ [Actualiser] [Exporter CSV] [Nettoyer  ]│
+   │                              invalides  │
+   └─────────────────────────────────────────┘
+
+4. Clique sur "Nettoyer invalides" (bouton rouge)
+
+5. Confirmation s'affiche:
+   ⚠️ Voulez-vous vraiment supprimer tous les conducteurs
+   invalides (sans nom, sans email, ou données incomplètes) ?
+   
+   Cette action est irréversible.
+   
+   [Annuler]  [OK]
+
+6. Clique sur "OK" pour confirmer
+
+7. Le nettoyage s'exécute:
+   • Backend identifie les conducteurs invalides
+   • Supprime les conducteurs + profils + véhicules
+   • Supprime les comptes Auth Supabase
+   
+8. Toast de succès:
+   ✅ "5 conducteur(s) invalide(s) supprimé(s) avec succès !"
+
+9. La liste se rafraîchit automatiquement
+
+────────────────────────────────────────────────────────────────
+
+🔍 CRITÈRES DE DÉTECTION (BACKEND):
+
+Un conducteur est considéré INVALIDE si:
+
+1. Email invalide:
+   ✗ !driver.email
+   ✗ driver.email.trim() === ''
+
+2. Nom invalide:
+   ✗ !driver.full_name
+   ✗ driver.full_name.trim() === ''
+   ✗ driver.full_name === 'Conducteur inconnu'
+   ✗ driver.full_name === 'undefined'
+
+3. Téléphone invalide:
+   ✗ !driver.phone
+   ✗ driver.phone.trim() === ''
+   ✗ driver.phone === 'Non renseigné'
+   ✗ driver.phone === '()'
+   ✗ driver.phone === 'undefined'
+
+4. Données manquantes:
+   ✗ !driver (objet vide ou null)
+
+────────────────────────────────────────────────────────────────
+
+📝 EXEMPLE DE RÉPONSE API:
+
+DELETE /cleanup/invalid-drivers
+
+Succès (200):
+{
+  "success": true,
+  "message": "5 conducteurs invalides supprimés",
+  "details": {
+    "drivers": 5,
+    "profiles": 5,
+    "vehicles": 3
+  },
+  "invalidDriverIds": [
+    "abc123...",
+    "def456...",
+    "ghi789...",
+    "jkl012...",
+    "mno345..."
+  ]
+}
+
+Erreur (500):
+{
+  "success": false,
+  "message": "Erreur lors du nettoyage des conducteurs invalides",
+  "error": "Message d'erreur détaillé"
+}
+
+────────────────────────────────────────────────────────────────
+
+🔧 LOGS BACKEND (CONSOLE):
+
+🧹 Début du nettoyage des conducteurs invalides...
+🔍 Récupération des conducteurs...
+📊 Total conducteurs trouvés: 47
+❌ Conducteur invalide trouvé: abc123 - Conducteur inconnu - 
+❌ Conducteur invalide trouvé: def456 - undefined - test@test.com
+❌ Conducteur invalide trouvé: ghi789 - pas de nom - 
+📊 Conducteurs invalides identifiés: 5
+🗑️ Véhicule supprimé: vehicle:xyz789
+✅ Conducteur supprimé: abc123
+🗑️ Utilisateur Auth supprimé: abc123
+✅ Conducteur supprimé: def456
+...
+✅ Nettoyage des conducteurs invalides terminé
+📊 Résumé: 5 conducteurs, 5 profils, 3 véhicules supprimés
+
+────────────────────────────────────────────────────────────────
+
+⚠️ PRÉCAUTIONS:
+
+1. CONFIRMATION REQUISE:
+   ✅ Popup de confirmation avant suppression
+   ✅ Message clair sur l'irréversibilité
+
+2. SUPPRESSION COMPLÈTE:
+   ✅ Conducteur dans KV store
+   ✅ Profil dans KV store
+   ✅ Véhicules associés
+   ✅ Utilisateur Auth Supabase
+
+3. LOGS DÉTAILLÉS:
+   ✅ Chaque suppression est loggée
+   ✅ ID des conducteurs supprimés retournés
+   ✅ Compteurs par type (drivers, profiles, vehicles)
+
+4. RAFRAÎCHISSEMENT AUTO:
+   ✅ La liste se met à jour après nettoyage
+   ✅ Toast de confirmation avec nombre exact
+
+────────────────────────────────────────────────────────────────
+
+🚀 COMMIT MESSAGE SUGGÉRÉ:
+
+✅ Nettoyage automatique conducteurs invalides
+
+Backend (cleanup-routes.tsx):
+- Route DELETE /cleanup/invalid-drivers
+- Détection: email vide, nom="Conducteur inconnu", téléphone="Non renseigné"
+- Suppression: conducteur + profil + véhicules + auth
+- Logs détaillés avec compteurs
+- Retour JSON avec liste IDs supprimés
+
+Frontend (DriversListScreen.tsx):
+- Bouton "Nettoyer invalides" (rouge)
+- Fonction cleanInvalidDrivers() avec confirmation
+- Toast de succès avec nombre supprimé
+- Rafraîchissement auto de la liste
+
+Sécurité:
+- Confirmation popup avant suppression ✅
+- Message clair sur irréversibilité ✅
+- Try/catch avec gestion erreurs ✅
+
+Résultat:
+- Base de données propre ✅
+- Conducteurs invalides supprimés ✅
+- Données cohérentes et valides ✅
+
+====================================================================
+
+Fichiers modifiés: 2
+Lignes ajoutées: ~150
+Date: 1er février 2026
+Statut: ✅ PRÊT À COPIER
+
+====================================================================
+
+🎯 COPIE CES 2 FICHIERS DANS GITHUB MAINTENANT !
+
+Note: Cette fonctionnalité garantit que ta base de données reste
+      propre en supprimant automatiquement les conducteurs avec
+      des données invalides ou incomplètes (test, simulation, etc.)

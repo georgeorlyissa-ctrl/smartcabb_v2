@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Production
+/build
+/dist
+
+# Environment variables - SECRETS
+.env
+.env.local
+.env.production
+
+# Supabase secrets - IMPORTANT
+utils/supabase/info.tsx
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Vercel
+.vercel

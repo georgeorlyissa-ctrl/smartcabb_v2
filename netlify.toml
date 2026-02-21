@@ -1,0 +1,102 @@
+# ✅ Configuration Netlify pour SmartCabb
+# Gestion du SPA routing et SSR
+
+[build]
+  # Commande de build
+  command = "npm run build"
+  
+  # Dossier de sortie
+  publish = "dist"
+  
+  # Variables d'environnement build
+  [build.environment]
+    NODE_VERSION = "18"
+    NPM_FLAGS = "--legacy-peer-deps"
+
+# Redirections pour SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+  
+# Ne pas rediriger les fichiers statiques
+[[redirects]]
+  from = "/*.js"
+  to = "/:splat"
+  status = 200
+  
+[[redirects]]
+  from = "/*.css"
+  to = "/:splat"
+  status = 200
+  
+[[redirects]]
+  from = "/*.png"
+  to = "/:splat"
+  status = 200
+  
+[[redirects]]
+  from = "/*.jpg"
+  to = "/:splat"
+  status = 200
+  
+[[redirects]]
+  from = "/*.svg"
+  to = "/:splat"
+  status = 200
+  
+[[redirects]]
+  from = "/*.ico"
+  to = "/:splat"
+  status = 200
+  
+[[redirects]]
+  from = "/*.json"
+  to = "/:splat"
+  status = 200
+
+# Headers personnalisés
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=*, camera=*, microphone=*, payment=*"
+
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-cache, no-store, must-revalidate, private"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, immutable"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "public, max-age=3600, immutable"
+
+[[headers]]
+  for = "/*.png"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, immutable"
+
+[[headers]]
+  for = "/*.jpg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, immutable"
+
+[[headers]]
+  for = "/*.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, immutable"
+
+# Plugin pour optimiser les images
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

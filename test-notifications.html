@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCabb - Test Notifications</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status-badge.success { background: #28a745; color: white; }
+        .status-badge.error { background: #dc3545; color: white; }
+        .status-badge.warning { background: #ffc107; color: #000; }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+        }
+        .summary-card h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .summary-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚗 SmartCabb - Test Notifications Conducteurs</h1>
+        <p class="subtitle">Diagnostiquez rapidement pourquoi les notifications ne fonctionnent pas</p>
+
+        <div class="summary">
+            <div class="summary-card">
+                <h3>État Backend</h3>
+                <div class="value" id="backend-status">⏳</div>
+            </div>
+            <div class="summary-card">
+                <h3>Conducteurs Totaux</h3>
+                <div class="value" id="total-drivers">-</div>
+            </div>
+            <div class="summary-card">
+                <h3>Conducteurs En Ligne</h3>
+                <div class="value" id="online-drivers">-</div>
+            </div>
+            <div class="summary-card">
+                <h3>Conducteurs Éligibles</h3>
+                <div class="value" id="eligible-drivers">-</div>
+            </div>
+        </div>
+
+        <!-- Test 1: Backend Ping -->
+        <div class="test-section">
+            <h2>✅ Test 1: Vérifier que le Backend est Déployé</h2>
+            <button onclick="testBackendPing()">🔍 Tester le Backend</button>
+            <div id="ping-result"></div>
+        </div>
+
+        <!-- Test 2: Liste Conducteurs -->
+        <div class="test-section">
+            <h2>👥 Test 2: Lister les Conducteurs Disponibles</h2>
+            <button onclick="testListDrivers()">📋 Lister les Conducteurs</button>
+            <div id="drivers-result"></div>
+        </div>
+
+        <!-- Test 3: Debug Matching -->
+        <div class="test-section">
+            <h2>🔍 Test 3: Diagnostiquer une Course</h2>
+            <div class="input-group">
+                <label for="ride-id">ID de la Course (rideId):</label>
+                <input type="text" id="ride-id" placeholder="ride_1708012345_abc123">
+            </div>
+            <button onclick="testDebugMatching()">🧪 Analyser la Course</button>
+            <div id="debug-result"></div>
+        </div>
+
+        <!-- Test 4: Créer Course Test -->
+        <div class="test-section">
+            <h2>🚕 Test 4: Créer une Course de Test</h2>
+            <p style="margin-bottom: 15px; color: #666;">Cela créera une vraie course dans le système pour tester le matching.</p>
+            <button onclick="testCreateRide()">🚀 Créer Course Test</button>
+            <div id="create-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://zaerjchqxecablflug.supabase.co/functions/v1/make-server-2eb02e52';
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZXJqY2hxeGVjYWJsZmx1ZyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzMzMTU3NDEwLCJleHAiOjIwNDg3MzM0MTB9.OT0A8B2Ioc6NKe0LgEuEGfD5YhQa8OGcyNMx4Z-4Cj8';
+
+        function showResult(elementId, data, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        }
+
+        async function testBackendPing() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Test en cours...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/rides/ping`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('ping-result', data, 'success');
+                    document.getElementById('backend-status').textContent = '✅';
+                    document.getElementById('backend-status').style.color = '#28a745';
+                } else {
+                    showResult('ping-result', data, 'error');
+                    document.getElementById('backend-status').textContent = '❌';
+                    document.getElementById('backend-status').style.color = '#dc3545';
+                }
+            } catch (error) {
+                showResult('ping-result', `❌ Erreur: ${error.message}`, 'error');
+                document.getElementById('backend-status').textContent = '❌';
+                document.getElementById('backend-status').style.color = '#dc3545';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Tester le Backend';
+            }
+        }
+
+        async function testListDrivers() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Chargement...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/rides/test-drivers`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const drivers = data.drivers || [];
+                    const onlineDrivers = drivers.filter(d => d.isOnline).length;
+                    const withGPS = drivers.filter(d => d.location && d.location.lat).length;
+                    
+                    document.getElementById('total-drivers').textContent = drivers.length;
+                    document.getElementById('online-drivers').textContent = onlineDrivers;
+                    document.getElementById('eligible-drivers').textContent = withGPS;
+                    
+                    showResult('drivers-result', data, 'success');
+                } else {
+                    showResult('drivers-result', data, 'error');
+                }
+            } catch (error) {
+                showResult('drivers-result', `❌ Erreur: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📋 Lister les Conducteurs';
+            }
+        }
+
+        async function testDebugMatching() {
+            const rideId = document.getElementById('ride-id').value.trim();
+            
+            if (!rideId) {
+                showResult('debug-result', '❌ Veuillez entrer un ID de course', 'error');
+                return;
+            }
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Analyse...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/rides/debug-matching/${rideId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    let summary = `✅ DIAGNOSTIC COMPLET\n\n`;
+                    summary += `📊 Résumé:\n`;
+                    summary += `- Total conducteurs: ${data.totalDrivers}\n`;
+                    summary += `- Éligibles: ${data.eligibleCount}\n`;
+                    summary += `- Rejetés: ${data.rejectedCount}\n\n`;
+                    
+                    if (data.eligible && data.eligible.length > 0) {
+                        summary += `✅ CONDUCTEURS ÉLIGIBLES:\n`;
+                        data.eligible.forEach((driver, i) => {
+                            summary += `${i + 1}. ${driver.name} - ${driver.distance} - FCM: ${driver.hasFCMToken ? 'OUI' : 'NON'}\n`;
+                        });
+                        summary += `\n`;
+                    }
+                    
+                    if (data.rejected && data.rejected.length > 0) {
+                        summary += `❌ CONDUCTEURS REJETÉS:\n`;
+                        data.rejected.forEach((driver, i) => {
+                            summary += `${i + 1}. ${driver.name} - RAISON: ${driver.rejectionReason}\n`;
+                            summary += `   - En ligne: ${driver.isOnline ? 'OUI' : 'NON'}\n`;
+                            summary += `   - GPS: ${driver.hasGPS ? 'OUI' : 'NON'}\n`;
+                            summary += `   - Catégorie: ${driver.driverCategory} (demandé: ${driver.requestedCategory})\n`;
+                        });
+                    }
+                    
+                    summary += `\n📋 DONNÉES COMPLÈTES:\n${JSON.stringify(data, null, 2)}`;
+                    
+                    showResult('debug-result', summary, data.eligibleCount > 0 ? 'success' : 'error');
+                } else {
+                    showResult('debug-result', data, 'error');
+                }
+            } catch (error) {
+                showResult('debug-result', `❌ Erreur: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🧪 Analyser la Course';
+            }
+        }
+
+        async function testCreateRide() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Création...';
+            
+            try {
+                const testRide = {
+                    passengerId: 'test-user-' + Date.now(),
+                    passengerName: 'Test Passager',
+                    passengerPhone: '+243999999999',
+                    pickup: {
+                        lat: -4.3217,
+                        lng: 15.3125,
+                        address: 'Avenue Tombalbaye, Kinshasa, RDC'
+                    },
+                    destination: {
+                        lat: -4.3297,
+                        lng: 15.3206,
+                        address: 'Boulevard du 30 Juin, Gombe, Kinshasa'
+                    },
+                    vehicleType: 'smart_standard',
+                    estimatedPrice: 15000,
+                    estimatedDuration: 15,
+                    distance: 5.2,
+                    passengerCount: 1
+                };
+                
+                const response = await fetch(`${BACKEND_URL}/rides/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testRide)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.rideId) {
+                    document.getElementById('ride-id').value = data.rideId;
+                    
+                    let result = `✅ COURSE CRÉÉE AVEC SUCCÈS!\n\n`;
+                    result += `🆔 Ride ID: ${data.rideId}\n\n`;
+                    result += `📋 Vous pouvez maintenant:\n`;
+                    result += `1. Utiliser le Test 3 ci-dessus pour analyser cette course\n`;
+                    result += `2. Vérifier les logs Supabase pour voir le matching en action\n`;
+                    result += `3. Vérifier que le conducteur reçoit la notification\n\n`;
+                    result += `📊 Données complètes:\n${JSON.stringify(data, null, 2)}`;
+                    
+                    showResult('create-result', result, 'success');
+                } else {
+                    showResult('create-result', data, 'error');
+                }
+            } catch (error) {
+                showResult('create-result', `❌ Erreur: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Créer Course Test';
+            }
+        }
+
+        // Auto-test au chargement
+        window.addEventListener('load', () => {
+            console.log('🚗 SmartCabb Test Suite chargé');
+            testBackendPing();
+            setTimeout(testListDrivers, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,77 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   FICHIERS À COPIER SUR GITHUB - SMARTCABB                  ║
+║                      SYSTÈME BILINGUE COMPLET (FR/EN)                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+📦 NOMBRE DE FICHIERS À COPIER : 1 seul fichier
+
+✅ FICHIERS DÉJÀ COPIÉS :
+   - contexts/LanguageContext.tsx ✓
+   - components/LanguageSelector.tsx ✓  
+   - App.tsx ✓
+
+❌ FICHIERS À COPIER MAINTENANT :
+   - pages/LandingPage.tsx ← À FAIRE MAINTENANT
+
+══════════════════════════════════════════════════════════════════════════════
+
+📄 FICHIER 1 : pages/LandingPage.tsx
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ÉTAPES SUR GITHUB :
+
+1. Aller sur :
+   https://github.com/georgeorlyissa-ctrl/smartcabb/blob/main/pages/LandingPage.tsx
+
+2. Cliquer sur le bouton ✏️ (Edit this file)
+
+3. SUPPRIMER TOUT le contenu actuel dans l'éditeur
+
+4. COPIER TOUT le contenu du fichier /pages/LandingPage.tsx depuis Figma Make
+   (Ouvrir le fichier dans Figma Make et copier tout le code)
+
+5. COLLER dans l'éditeur GitHub
+
+6. Descendre en bas de la page
+
+7. Dans "Commit changes" :
+   - Message : feat: Complete bilingual translation LandingPage (FR/EN)
+   - Description (optionnel) :
+     - Traduction complète navigation desktop/mobile
+     - Traduction Hero, How, Why, Testimonials, CTA
+     - LanguageSelector ajouté au menu mobile
+     - Support FR/EN avec détection auto navigateur
+
+8. Cliquer sur "Commit changes"
+
+══════════════════════════════════════════════════════════════════════════════
+
+🎯 RÉSULTAT ATTENDU APRÈS LE COMMIT :
+
+✅ Page d'accueil 100% bilingue
+✅ Sélecteur 🇫🇷/🇬🇧 visible desktop ET mobile
+✅ Changement de langue en temps réel
+✅ Sauvegarde du choix de langue (localStorage)
+✅ Détection automatique langue du navigateur
+
+══════════════════════════════════════════════════════════════════════════════
+
+⏱️ TEMPS ESTIMÉ : 2-3 minutes
+
+══════════════════════════════════════════════════════════════════════════════
+
+🚀 APRÈS LE COMMIT :
+
+1. Attendre le redéploiement Vercel (2-3 min automatique)
+2. Ouvrir https://smartcabb.com
+3. Tester le sélecteur de langue
+4. Vérifier que tout est traduit
+
+══════════════════════════════════════════════════════════════════════════════
+
+✅ C'EST FAIT !
+
+Votre site vitrine SmartCabb est maintenant complètement bilingue FR/EN ! 🎉
+
+══════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mentions Légales - SmartCabb</title>
+    <meta name="description" content="Mentions légales de SmartCabb - Informations légales et coordonnées de l'entreprise">
+    <meta name="keywords" content="mentions légales, SmartCabb, Kinshasa, RDC, SARL">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            background: #f9fafb;
+        }
+
+        header {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.75rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .back-link {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.625rem 1.25rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.875rem;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .language-dropdown {
+            position: fixed;
+            top: 1.5rem;
+            right: 2rem;
+            z-index: 10000;
+        }
+
+        .language-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            min-width: 140px;
+        }
+
+        .language-dropdown-btn:hover {
+            border-color: #8b5cf6;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.2);
+        }
+
+        .language-dropdown.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .language-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 140px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .language-dropdown.open .language-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .language-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            background: white;
+            border: none;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            color: #333;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        .language-dropdown-item:hover { background: #f5f5f5; }
+        .language-dropdown-item.active { background: #f3e8ff; color: #8b5cf6; }
+
+        .container {
+            max-width: 900px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .content {
+            background: white;
+            padding: 3rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .page-title {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title h1 {
+            font-size: 2.25rem;
+            color: #8b5cf6;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-title p {
+            color: #6b7280;
+            font-size: 1rem;
+        }
+
+        .page-title .meta {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        section {
+            margin-bottom: 2.5rem;
+        }
+
+        section h2 {
+            font-size: 1.5rem;
+            color: #1f2937;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #8b5cf6;
+        }
+
+        section p {
+            color: #4b5563;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        section ul {
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        section li {
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+            line-height: 1.7;
+        }
+
+        .info-box {
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin: 1.5rem 0;
+            border-left: 4px solid;
+        }
+
+        .info-box.purple {
+            background: #f3e8ff;
+            border-color: #8b5cf6;
+        }
+
+        footer {
+            background: #1f2937;
+            color: white;
+            padding: 2rem;
+            margin-top: 4rem;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footer-container p {
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .container {
+                margin: 2rem auto;
+                padding: 0 1rem;
+            }
+            .content {
+                padding: 1.5rem;
+            }
+            .page-title h1 {
+                font-size: 1.75rem;
+            }
+            .language-dropdown {
+                top: 1rem;
+                right: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dropdown de langue -->
+    <div class="language-dropdown">
+        <button class="language-dropdown-btn" id="languageDropdownBtn">
+            <span class="flag" id="currentFlag">FR</span>
+            <span class="lang-text" id="currentLang">Français</span>
+            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <div class="language-dropdown-menu">
+            <button class="language-dropdown-item active" data-lang="fr">
+                <span class="flag">FR</span>
+                <span class="lang-text">Français</span>
+            </button>
+            <button class="language-dropdown-item" data-lang="en">
+                <span class="flag">EN</span>
+                <span class="lang-text">English</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <a href="index-new-design.html" class="logo">
+                <span>⚖️</span>
+                <span>SmartCabb</span>
+            </a>
+            <a href="index-new-design.html" class="back-link" data-i18n="legal.back">← Retour à l'accueil</a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <div class="content">
+            <!-- Title -->
+            <div class="page-title">
+                <h1 data-i18n="legal.title">Mentions Légales</h1>
+                <p data-i18n="legal.subtitle">Informations légales et coordonnées</p>
+                <p class="meta" data-i18n="legal.last-update">Dernière mise à jour : 30 octobre 2025</p>
+            </div>
+
+            <!-- Section 1 -->
+            <section>
+                <h2 data-i18n="legal.s1-title">1. Éditeur du Site</h2>
+                <div class="info-box purple">
+                    <p><strong>Dénomination sociale :</strong> SmartCabb SARL</p>
+                    <p><strong data-i18n="legal.s1-form">Forme juridique :</strong> <span data-i18n="legal.s1-form-value">Société à Responsabilité Limitée</span></p>
+                    <p><strong data-i18n="legal.s1-capital">Capital social :</strong> 50.000.000 CDF</p>
+                    <p><strong data-i18n="legal.s1-siège">Siège social :</strong> Kinshasa, République Démocratique du Congo</p>
+                    <p><strong data-i18n="legal.s1-director">Directeur de publication :</strong> Jean-Claude Mbuyi</p>
+                </div>
+            </section>
+
+            <!-- Section 2 -->
+            <section>
+                <h2 data-i18n="legal.s2-title">2. Contact</h2>
+                <ul>
+                    <li><strong>📧 Email :</strong> contact@smartcabb.cd</li>
+                    <li><strong>📞 Téléphone :</strong> +243 990 666 661 | +243 814 018 048</li>
+                    <li><strong data-i18n="legal.s2-address">📍 Adresse :</strong> Kinshasa, RDC</li>
+                    <li><strong data-i18n="legal.s2-support">🕐 Support :</strong> <span data-i18n="legal.s2-support-value">Disponible 24h/24, 7j/7</span></li>
+                </ul>
+            </section>
+
+            <!-- Section 3 -->
+            <section>
+                <h2 data-i18n="legal.s3-title">3. Hébergement</h2>
+                <p data-i18n="legal.s3-p1">
+                    Le site web et l'application sont hébergés par <strong>Supabase Inc.</strong>, 
+                    plateforme cloud sécurisée avec des serveurs conformes aux normes internationales de sécurité.
+                </p>
+            </section>
+
+            <!-- Section 4 -->
+            <section>
+                <h2 data-i18n="legal.s4-title">4. Propriété Intellectuelle</h2>
+                <p data-i18n="legal.s4-p1">
+                    L'ensemble du contenu de ce site (textes, images, logos, vidéos) est la propriété exclusive de 
+                    <strong>SmartCabb SARL</strong> et est protégé par les lois sur la propriété intellectuelle 
+                    de la République Démocratique du Congo.
+                </p>
+                <p data-i18n="legal.s4-p2">
+                    Toute reproduction, distribution ou utilisation sans autorisation écrite préalable est strictement interdite.
+                </p>
+            </section>
+
+            <!-- Section 5 -->
+            <section>
+                <h2 data-i18n="legal.s5-title">5. Données Personnelles</h2>
+                <p data-i18n="legal.s5-p1">
+                    Pour plus d'informations sur la collecte et le traitement de vos données personnelles, 
+                    consultez notre <a href="politique-confidentialite.html" style="color: #8b5cf6;" data-i18n="legal.s5-link">Politique de Confidentialité</a>.
+                </p>
+            </section>
+
+            <!-- Final Note -->
+            <section style="border-top: 2px solid #e5e7eb; padding-top: 2rem; margin-top: 3rem;">
+                <div class="info-box purple">
+                    <p style="text-align: center; font-size: 0.875rem; margin-bottom: 0;" data-i18n="legal.copyright">
+                        © 2025 SmartCabb SARL - Tous droits réservés<br>
+                        Entreprise enregistrée en République Démocratique du Congo
+                    </p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <p data-i18n="footer.copyright">&copy; 2025 SmartCabb. Tous droits réservés.</p>
+        </div>
+    </footer>
+
+    <!-- TRADUCTIONS -->
+    <script>
+        window.translations = {
+            'legal.back': { fr: '← Retour à l\'accueil', en: '← Back to home' },
+            'legal.title': { fr: 'Mentions Légales', en: 'Legal Notice' },
+            'legal.subtitle': { fr: 'Informations légales et coordonnées', en: 'Legal information and contact details' },
+            'legal.last-update': { fr: 'Dernière mise à jour : 30 octobre 2025', en: 'Last updated: October 30, 2025' },
+            
+            'legal.s1-title': { fr: '1. Éditeur du Site', en: '1. Site Publisher' },
+            'legal.s1-form': { fr: 'Forme juridique :', en: 'Legal form:' },
+            'legal.s1-form-value': { fr: 'Société à Responsabilité Limitée', en: 'Limited Liability Company' },
+            'legal.s1-capital': { fr: 'Capital social :', en: 'Share capital:' },
+            'legal.s1-siège': { fr: 'Siège social :', en: 'Registered office:' },
+            'legal.s1-director': { fr: 'Directeur de publication :', en: 'Publication director:' },
+            
+            'legal.s2-title': { fr: '2. Contact', en: '2. Contact' },
+            'legal.s2-address': { fr: '📍 Adresse :', en: '📍 Address:' },
+            'legal.s2-support': { fr: '🕐 Support :', en: '🕐 Support:' },
+            'legal.s2-support-value': { fr: 'Disponible 24h/24, 7j/7', en: 'Available 24/7' },
+            
+            'legal.s3-title': { fr: '3. Hébergement', en: '3. Hosting' },
+            'legal.s3-p1': {
+                fr: 'Le site web et l\'application sont hébergés par Supabase Inc., plateforme cloud sécurisée avec des serveurs conformes aux normes internationales de sécurité.',
+                en: 'The website and application are hosted by Supabase Inc., a secure cloud platform with servers compliant with international security standards.'
+            },
+            
+            'legal.s4-title': { fr: '4. Propriété Intellectuelle', en: '4. Intellectual Property' },
+            'legal.s4-p1': {
+                fr: 'L\'ensemble du contenu de ce site (textes, images, logos, vidéos) est la propriété exclusive de SmartCabb SARL et est protégé par les lois sur la propriété intellectuelle de la République Démocratique du Congo.',
+                en: 'All content on this site (texts, images, logos, videos) is the exclusive property of SmartCabb SARL and is protected by the intellectual property laws of the Democratic Republic of Congo.'
+            },
+            'legal.s4-p2': {
+                fr: 'Toute reproduction, distribution ou utilisation sans autorisation écrite préalable est strictement interdite.',
+                en: 'Any reproduction, distribution or use without prior written authorization is strictly prohibited.'
+            },
+            
+            'legal.s5-title': { fr: '5. Données Personnelles', en: '5. Personal Data' },
+            'legal.s5-p1': {
+                fr: 'Pour plus d\'informations sur la collecte et le traitement de vos données personnelles, consultez notre',
+                en: 'For more information on the collection and processing of your personal data, see our'
+            },
+            'legal.s5-link': { fr: 'Politique de Confidentialité', en: 'Privacy Policy' },
+            
+            'legal.copyright': {
+                fr: '© 2025 SmartCabb SARL - Tous droits réservés\nEntreprise enregistrée en République Démocratique du Congo',
+                en: '© 2025 SmartCabb SARL - All rights reserved\nCompany registered in the Democratic Republic of Congo'
+            },
+            'footer.copyright': { fr: '© 2025 SmartCabb. Tous droits réservés.', en: '© 2025 SmartCabb. All rights reserved.' }
+        };
+
+        // LanguageSelector
+        class LanguageSelector {
+            constructor() {
+                this.currentLang = localStorage.getItem('smartcabb_lang') || 'fr';
+                this.init();
+            }
+            init() {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => this.setup());
+                } else {
+                    this.setup();
+                }
+            }
+            setup() {
+                this.attachEventListeners();
+                this.updateLanguage(this.currentLang);
+                this.updateActiveButton();
+            }
+            attachEventListeners() {
+                const dropdownBtn = document.getElementById('languageDropdownBtn');
+                const dropdown = document.querySelector('.language-dropdown');
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+                if (dropdownBtn && dropdown) {
+                    dropdownBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        dropdown.classList.toggle('open');
+                    });
+                    document.addEventListener('click', (e) => {
+                        if (!dropdown.contains(e.target)) {
+                            dropdown.classList.remove('open');
+                        }
+                    });
+                    dropdownItems.forEach(item => {
+                        item.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            const lang = item.getAttribute('data-lang');
+                            if (lang) {
+                                this.changeLanguage(lang);
+                                dropdown.classList.remove('open');
+                            }
+                        });
+                    });
+                }
+            }
+            changeLanguage(lang) {
+                if (lang === this.currentLang) return;
+                this.currentLang = lang;
+                localStorage.setItem('smartcabb_lang', lang);
+                this.updateLanguage(lang);
+                this.updateActiveButton();
+                this.showNotification(lang);
+            }
+            updateLanguage(lang) {
+                const elements = document.querySelectorAll('[data-i18n]');
+                elements.forEach(element => {
+                    const key = element.getAttribute('data-i18n');
+                    if (window.translations && window.translations[key]) {
+                        const translation = window.translations[key][lang];
+                        if (translation) {
+                            element.textContent = translation;
+                        }
+                    }
+                });
+                document.documentElement.lang = lang;
+            }
+            updateActiveButton() {
+                const currentFlag = document.getElementById('currentFlag');
+                const currentLang = document.getElementById('currentLang');
+                if (currentFlag && currentLang) {
+                    if (this.currentLang === 'fr') {
+                        currentFlag.textContent = 'FR';
+                        currentLang.textContent = 'Français';
+                    } else {
+                        currentFlag.textContent = 'EN';
+                        currentLang.textContent = 'English';
+                    }
+                }
+                const dropdownItems = document.querySelectorAll('.language-dropdown-item');
+                dropdownItems.forEach(item => {
+                    const itemLang = item.getAttribute('data-lang');
+                    if (itemLang === this.currentLang) {
+                        item.classList.add('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
+                });
+            }
+            showNotification(lang) {
+                const langNames = { fr: 'Français', en: 'English' };
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed; top: 100px; right: 20px; background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+                    color: white; padding: 1rem 1.5rem; border-radius: 10px; box-shadow: 0 5px 20px rgba(139, 92, 246, 0.3);
+                    z-index: 10001; font-weight: 600; animation: slideIn 0.3s ease;
+                `;
+                notification.textContent = `🌍 Langue changée: ${langNames[lang]}`;
+                document.body.appendChild(notification);
+                setTimeout(() => {
+                    notification.style.animation = 'slideOut 0.3s ease';
+                    setTimeout(() => notification.remove(), 300);
+                }, 2000);
+            }
+        }
+        const languageSelector = new LanguageSelector();
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+            @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

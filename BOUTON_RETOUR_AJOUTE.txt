@@ -1,0 +1,99 @@
+====================================================================
+  BOUTON RETOUR AJOUTÉ - HISTORIQUE DES ANNULATIONS
+====================================================================
+
+✅ MODIFICATION EFFECTUÉE:
+  Ajout d'un bouton "Retour" dans l'écran Historique des annulations
+
+📦 FICHIER MODIFIÉ (1 fichier):
+────────────────────────────────────────────────────────────────
+
+components/admin/CancellationsScreen.tsx ✅ MODIFIÉ
+
+Changements:
+  
+  1. Import de l'icône ArrowLeft:
+     + import { ..., ArrowLeft } from '../../lib/icons';
+  
+  2. Import du hook useAppState:
+     + import { useAppState } from '../../hooks/useAppState';
+  
+  3. Utilisation du hook dans le composant:
+     + const { setCurrentScreen } = useAppState();
+  
+  4. Ajout du bouton Retour dans le header (avant le titre):
+     <Button 
+       onClick={() => setCurrentScreen('admin-dashboard')} 
+       variant="outline" 
+       size="sm"
+       className="gap-2"
+     >
+       <ArrowLeft className="w-4 h-4" />
+       Retour
+     </Button>
+
+────────────────────────────────────────────────────────────────
+
+LOCALISATION DU BOUTON:
+
+Emplacement: En haut à gauche, juste avant le titre
+Position: Header de l'écran (ligne ~129)
+
+Structure du header:
+┌─────────────────────────────────────────────────────────────┐
+│  [← Retour]  Historique des annulations     [🔄 Actualiser]│
+│              Toutes les courses annulées...                 │
+└─────────────────────────────────────────────────────────────┘
+
+────────────────────────────────────────────────────────────────
+
+FONCTIONNALITÉ:
+
+- Clic sur "Retour" → Retour au dashboard admin
+- Icône: Flèche gauche (ArrowLeft)
+- Style: Outline (bordure grise)
+- Taille: Small (sm)
+- Gap: 2 (espacement icône-texte)
+
+────────────────────────────────────────────────────────────────
+
+✅ RÉSULTAT:
+
+AVANT:
+  Historique des annulations              [Actualiser]
+  Toutes les courses annulées avec leurs raisons
+
+APRÈS:
+  [← Retour]  Historique des annulations  [Actualiser]
+              Toutes les courses annulées avec leurs raisons
+
+────────────────────────────────────────────────────────────────
+
+🚀 COMMIT MESSAGE SUGGÉRÉ:
+
+✅ Ajout bouton Retour dans Historique Annulations
+
+Frontend (CancellationsScreen.tsx):
+- Import ArrowLeft icon
+- Import useAppState hook
+- Bouton Retour dans le header
+- Navigation vers admin-dashboard
+
+UX:
+- Facilite le retour au dashboard ✅
+- Bouton visible en haut à gauche ✅
+- Style cohérent avec le reste de l'app ✅
+
+====================================================================
+
+Fichiers modifiés: 1
+Date: 1er février 2026
+Statut: ✅ PRÊT À COPIER
+
+====================================================================
+
+🎯 COPIE CE FICHIER DANS GITHUB MAINTENANT !
+
+Note: Ce fichier complète la fonctionnalité "Historique des 
+      annulations" en ajoutant un moyen simple de revenir au 
+      dashboard admin.

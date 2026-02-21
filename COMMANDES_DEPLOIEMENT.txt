@@ -1,0 +1,199 @@
+================================================================================
+🚀 COMMANDES DE DÉPLOIEMENT - CORRECTION UUID SMARTCABB
+================================================================================
+
+📋 ÉTAPE 1 : VÉRIFICATION PRÉ-DÉPLOIEMENT
+--------------------------------------------------------------------------------
+
+# Rendre les scripts exécutables (Linux/Mac)
+chmod +x verify-uuid-validation.sh
+chmod +x test-uuid-fix.sh
+
+# Vérifier que les validations UUID sont en place
+./verify-uuid-validation.sh
+
+
+📋 ÉTAPE 2 : DÉPLOIEMENT DU BACKEND
+--------------------------------------------------------------------------------
+
+# Option A : Linux/Mac
+npx supabase functions deploy make-server-2eb02e52
+
+# Option B : Windows (utiliser le fichier batch)
+deploy-backend.bat
+
+# Option C : Windows PowerShell
+.\deploy-backend.ps1
+
+
+📋 ÉTAPE 3 : VÉRIFICATION POST-DÉPLOIEMENT
+--------------------------------------------------------------------------------
+
+# Test de santé (remplacer [PROJECT_ID])
+curl https://[PROJECT_ID].supabase.co/functions/v1/make-server-2eb02e52/health
+
+# Vérifier la version
+curl https://[PROJECT_ID].supabase.co/functions/v1/make-server-2eb02e52/version
+
+# Ou utiliser le script automatique (remplacer [PROJECT_ID] et [ANON_KEY])
+./test-uuid-fix.sh [PROJECT_ID] [ANON_KEY]
+
+
+📋 ÉTAPE 4 : SURVEILLANCE DES LOGS
+--------------------------------------------------------------------------------
+
+# Voir les logs en temps réel
+npx supabase functions logs make-server-2eb02e52 --follow
+
+# Voir les derniers logs
+npx supabase functions logs make-server-2eb02e52
+
+# Sauvegarder les logs dans un fichier
+npx supabase functions logs make-server-2eb02e52 > logs-backend.txt
+
+
+📋 ÉTAPE 5 : TEST D'APPROBATION
+--------------------------------------------------------------------------------
+
+1. Ouvrir le panel admin : https://smartcabb.com/admin
+2. Se connecter avec le compte admin
+3. Aller dans "Gestion des conducteurs"
+4. Approuver un conducteur en attente
+5. Ouvrir la console DevTools (F12) et vérifier :
+   ✅ Aucune erreur "Expected parameter to be UUID but is not"
+   ✅ Messages de succès pour les 3 mises à jour (KV, Auth, Postgres)
+
+6. Se déconnecter du panel admin
+7. Se connecter avec le compte conducteur : https://smartcabb.com/driver
+8. VÉRIFIER : Le conducteur voit son tableau de bord (PAS le message "En attente")
+
+
+📋 ÉTAPE 6 : VÉRIFICATION DE LA SYNCHRONISATION
+--------------------------------------------------------------------------------
+
+# Debug d'un conducteur spécifique (remplacer [PROJECT_ID], [DRIVER_ID], [ANON_KEY])
+curl "https://[PROJECT_ID].supabase.co/functions/v1/make-server-2eb02e52/drivers/[DRIVER_ID]/debug" \
+  -H "Authorization: Bearer [ANON_KEY]" \
+  | jq '.'
+
+# Vérifier que les 3 sources ont le même statut :
+# - sources.kv_store.status = "approved"
+# - sources.auth.status_in_metadata = "approved"
+# - sources.postgres_drivers.status = "approved"
+
+
+📋 COMMANDES DE DÉPANNAGE
+--------------------------------------------------------------------------------
+
+# Vérifier le statut de Supabase
+npx supabase status
+
+# Se connecter à Supabase (si pas déjà connecté)
+npx supabase login
+
+# Lister toutes les fonctions déployées
+npx supabase functions list
+
+# Redéployer en mode debug
+npx supabase functions deploy make-server-2eb02e52 --debug
+
+# Vérifier les imports UUID dans le code
+grep -r "isValidUUID" supabase/functions/server/
+
+# Compter les appels getUserById
+grep -r "getUserById" supabase/functions/server/*.tsx | wc -l
+
+
+📋 VARIABLES D'ENVIRONNEMENT NÉCESSAIRES
+--------------------------------------------------------------------------------
+
+Ces variables sont déjà configurées dans Supabase :
+✅ SUPABASE_URL
+✅ SUPABASE_ANON_KEY
+✅ SUPABASE_SERVICE_ROLE_KEY
+✅ SUPABASE_DB_URL
+
+(Aucune nouvelle variable nécessaire pour cette correction)
+
+
+📋 CHECKLIST DE VALIDATION
+--------------------------------------------------------------------------------
+
+PRÉ-DÉPLOIEMENT :
+[ ] Script verify-uuid-validation.sh exécuté sans erreur
+[ ] Tous les fichiers backend sont sauvegardés
+
+DÉPLOIEMENT :
+[ ] Commande de déploiement exécutée avec succès
+[ ] Aucune erreur de compilation
+[ ] Backend déployé sur Supabase
+
+POST-DÉPLOIEMENT :
+[ ] Endpoint /health répond "ok"
+[ ] Endpoint /version affiche "V6"
+[ ] Test UUID invalide géré correctement
+
+TEST FONCTIONNEL :
+[ ] Approbation d'un conducteur réussie
+[ ] Aucune erreur UUID dans la console
+[ ] Conducteur approuvé voit son tableau de bord
+[ ] Les 3 sources (KV, Auth, Postgres) synchronisées
+
+SURVEILLANCE (24H) :
+[ ] Logs backend sans erreur UUID
+[ ] Nouveaux conducteurs approuvés fonctionnent
+[ ] Aucune régression détectée
+
+
+📋 FICHIERS DE RÉFÉRENCE
+--------------------------------------------------------------------------------
+
+Documentation :
+- /DEPLOIEMENT_IMMEDIAT.md          → Guide rapide (LIRE EN PREMIER)
+- /GUIDE_DEPLOIEMENT_ET_TEST_UUID.md → Guide complet et détaillé
+- /RESUME_CORRECTION_UUID.md        → Résumé de la correction
+- /COMMANDES_DEPLOIEMENT.txt        → Ce fichier (commandes uniquement)
+
+Scripts :
+- /verify-uuid-validation.sh        → Vérifier les validations UUID
+- /test-uuid-fix.sh                 → Tester le backend après déploiement
+- /deploy-backend.bat               → Déployer sur Windows
+- /deploy-backend.ps1               → Déployer sur Windows PowerShell
+
+Backend (modifiés) :
+- /supabase/functions/server/uuid-validator.ts      → NOUVEAU (validateur)
+- /supabase/functions/server/index.tsx              → 4 validations ajoutées
+- /supabase/functions/server/driver-routes.tsx      → 3 validations ajoutées
+- /supabase/functions/server/auth-routes.tsx        → 9 validations ajoutées
+- /supabase/functions/server/passenger-routes.tsx   → 1 validation ajoutée
+- /supabase/functions/server/diagnostic-driver-route.tsx → 1 validation ajoutée
+
+
+📋 SUPPORT
+--------------------------------------------------------------------------------
+
+Si vous rencontrez un problème :
+
+1. Capturer les logs :
+   npx supabase functions logs make-server-2eb02e52 > logs-error.txt
+
+2. Déboguer un conducteur problématique :
+   curl "https://[PROJECT_ID].supabase.co/functions/v1/make-server-2eb02e52/drivers/[DRIVER_ID]/debug" \
+     -H "Authorization: Bearer [ANON_KEY]" > driver-debug.json
+
+3. Vérifier les imports :
+   grep -r "uuid-validator" supabase/functions/server/
+
+4. Fournir ces informations avec une description du problème
+
+
+================================================================================
+✅ CORRECTION UUID COMPLÈTE - PRÊT POUR DÉPLOIEMENT
+================================================================================
+
+Date : 10 février 2026
+Version : V6 (Sécurité OWASP + Validation UUID)
+Priorité : HAUTE (Bug critique résolu)
+Statut : PRÊT POUR PRODUCTION
+
+================================================================================

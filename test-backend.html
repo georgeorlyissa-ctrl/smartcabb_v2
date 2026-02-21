@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🧪 Test Backend SmartCabb</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .test-item {
+      margin: 20px 0;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 8px;
+      border-left: 4px solid #ddd;
+    }
+    .test-item.success {
+      border-left-color: #22c55e;
+      background: #f0fdf4;
+    }
+    .test-item.error {
+      border-left-color: #ef4444;
+      background: #fef2f2;
+    }
+    .test-item.loading {
+      border-left-color: #3b82f6;
+      background: #eff6ff;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #2563eb;
+    }
+    pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    .status {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Test Backend SmartCabb</h1>
+    
+    <button onclick="testBackendHealth()">🔍 Tester la connexion backend</button>
+    <button onclick="testAuthSignup()">👤 Tester /auth/signup</button>
+    <button onclick="testDriverCreate()">🚗 Tester /drivers/create</button>
+    
+    <div id="results"></div>
+  </div>
+
+  <script type="module">
+    import { projectId, publicAnonKey } from './utils/supabase/info.js';
+    
+    window.API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52`;
+    window.PUBLIC_ANON_KEY = publicAnonKey;
+    
+    console.log('📋 Configuration:');
+    console.log('  Project ID:', projectId);
+    console.log('  API Base:', window.API_BASE);
+    console.log('  Anon Key:', publicAnonKey ? '✅ Présent' : '❌ Absent');
+  </script>
+
+  <script>
+    const resultsDiv = document.getElementById('results');
+
+    function addResult(title, status, data) {
+      const div = document.createElement('div');
+      div.className = `test-item ${status}`;
+      div.innerHTML = `
+        <div class="status">${title}</div>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+      resultsDiv.appendChild(div);
+    }
+
+    async function testBackendHealth() {
+      resultsDiv.innerHTML = '';
+      addResult('⏳ Test de connexion...', 'loading', { message: 'Envoi de la requête...' });
+
+      try {
+        const response = await fetch(`${window.API_BASE}/health`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${window.PUBLIC_ANON_KEY}`
+          }
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          addResult('✅ Backend accessible !', 'success', {
+            status: response.status,
+            data: data
+          });
+        } else {
+          addResult('⚠️ Backend répond mais avec erreur', 'error', {
+            status: response.status,
+            data: data
+          });
+        }
+      } catch (error) {
+        addResult('❌ Backend inaccessible', 'error', {
+          error: error.message,
+          suggestion: 'Vérifiez que le backend est déployé avec: supabase functions deploy make-server-2eb02e52'
+        });
+      }
+    }
+
+    async function testAuthSignup() {
+      resultsDiv.innerHTML = '';
+      addResult('⏳ Test /auth/signup...', 'loading', { message: 'Création d\'un compte test...' });
+
+      const testData = {
+        phone: '+243999999999',
+        password: 'test123456',
+        full_name: 'Test Conducteur',
+        role: 'driver'
+      };
+
+      try {
+        const response = await fetch(`${window.API_BASE}/auth/signup`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${window.PUBLIC_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(testData)
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          addResult('✅ /auth/signup fonctionne !', 'success', {
+            status: response.status,
+            userId: data.profile?.id,
+            data: data
+          });
+        } else {
+          addResult('⚠️ /auth/signup répond mais avec erreur', 'error', {
+            status: response.status,
+            error: data.error,
+            data: data
+          });
+        }
+      } catch (error) {
+        addResult('❌ Erreur /auth/signup', 'error', {
+          error: error.message
+        });
+      }
+    }
+
+    async function testDriverCreate() {
+      resultsDiv.innerHTML = '';
+      addResult('⏳ Test complet inscription conducteur...', 'loading', { message: 'Étape 1: Création du compte...' });
+
+      const phone = `+243${Date.now().toString().slice(-9)}`;
+      const signupData = {
+        phone: phone,
+        password: 'test123456',
+        full_name: 'Test Conducteur ' + new Date().toLocaleTimeString(),
+        role: 'driver'
+      };
+
+      try {
+        // Étape 1: Créer le compte
+        const signupResponse = await fetch(`${window.API_BASE}/auth/signup`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${window.PUBLIC_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(signupData)
+        });
+
+        const signupResult = await signupResponse.json();
+        
+        if (!signupResult.success) {
+          addResult('❌ Échec création compte', 'error', signupResult);
+          return;
+        }
+
+        addResult('✅ Compte créé', 'success', {
+          userId: signupResult.profile.id
+        });
+
+        // Étape 2: Créer le profil conducteur
+        addResult('⏳ Étape 2: Création du profil conducteur...', 'loading', { userId: signupResult.profile.id });
+
+        const driverData = {
+          userId: signupResult.profile.id,
+          vehicleType: 'economique',
+          licensePlate: 'TEST-123',
+          vehicleBrand: 'Toyota',
+          vehicleModel: 'Corolla',
+          vehicleYear: '2020',
+          vehicleColor: 'Blanche',
+          documents: {}
+        };
+
+        const driverResponse = await fetch(`${window.API_BASE}/drivers/create`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${window.PUBLIC_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(driverData)
+        });
+
+        const driverResult = await driverResponse.json();
+        
+        if (driverResult.success) {
+          addResult('✅ Profil conducteur créé !', 'success', {
+            driver: driverResult.driver
+          });
+        } else {
+          addResult('❌ Échec création profil conducteur', 'error', driverResult);
+        }
+
+      } catch (error) {
+        addResult('❌ Erreur test complet', 'error', {
+          error: error.message,
+          stack: error.stack
+        });
+      }
+    }
+
+    window.testBackendHealth = testBackendHealth;
+    window.testAuthSignup = testAuthSignup;
+    window.testDriverCreate = testDriverCreate;
+  </script>
+</body>
+</html>
