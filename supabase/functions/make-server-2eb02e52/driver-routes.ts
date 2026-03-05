@@ -5,6 +5,8 @@ import { isValidUUID } from "./uuid-validator.ts";
 
 const app = new Hono();
 
+import { normalizePhoneNumber } from "./phone-utils.ts";
+
 // 🔥 FCM: Initialisation Firebase Admin SDK (backend uniquement)
 let firebaseAdmin: any = null;
 
@@ -51,6 +53,181 @@ async function getFirebaseAdmin() {
     return null;
   }
 }
+
+// ============================================
+// 📝 POST /signup - INSCRIPTION CONDUCTEUR
+// ============================================
+app.post("/signup", async (c) => {
+  try {
+    const body = await c.req.json();
+    const {
+      full_name,
+      email,
+      phone,
+      password,
+      vehicleMake,
+      vehicleModel,
+      vehiclePlate,
+      vehicleColor,
+      vehicleCategory,
+      profilePhoto
+    } = body;
+
+    console.log('📝 [DRIVER/SIGNUP] Inscription conducteur:', { full_name, phone, email });
+
+    // Validation
+    if (!full_name || !phone || !password) {
+      return c.json({
+        success: false,
+        error: "Nom complet, téléphone et mot de passe requis"
+      }, 400);
+    }
+
+    if (!vehicleMake || !vehicleModel || !vehiclePlate || !vehicleColor || !vehicleCategory) {
+      return c.json({
+        success: false,
+        error: "Toutes les informations du véhicule sont requises"
+      }, 400);
+    }
+
+    // Normaliser le téléphone
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (!normalizedPhone) {
+      return c.json({
+        success: false,
+        error: "Numéro de téléphone invalide"
+      }, 400);
+    }
+
+    // Créer l'utilisateur via Supabase Auth
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+
+    // Vérifier si l'utilisateur existe déjà
+    const { data: { users: existingUsers } } = await supabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.find(u => {
+      const userPhone = u.user_metadata?.phone || u.phone;
+      return userPhone && normalizePhoneNumber(userPhone) === normalizedPhone;
+    });
+
+    if (existingUser) {
+      console.log('⚠️ [DRIVER/SIGNUP] Utilisateur existant, suppression...');
+      try {
+        await supabase.auth.admin.deleteUser(existingUser.id);
+        console.log('✅ [DRIVER/SIGNUP] Utilisateur supprimé');
+      } catch (deleteError) {
+        console.error('❌ [DRIVER/SIGNUP] Erreur suppression:', deleteError);
+        return c.json({
+          success: false,
+          error: "Ce numéro de téléphone est déjà enregistré"
+        }, 400);
+      }
+    }
+
+    // Générer l'email factice
+    const generatedEmail = email || `u${normalizedPhone}@smartcabb.app`;
+
+    // Créer l'utilisateur
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: generatedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name,
+        name: full_name,
+        phone: normalizedPhone,
+        role: 'driver',
+        vehicle: {
+          make: vehicleMake,
+          model: vehicleModel,
+          license_plate: vehiclePlate,
+          color: vehicleColor,
+          category: vehicleCategory
+        }
+      }
+    });
+
+    if (authError || !authData?.user) {
+      console.error('❌ [DRIVER/SIGNUP] Erreur création auth:', authError);
+      return c.json({
+        success: false,
+        error: authError?.message || "Erreur lors de la création du compte"
+      }, 500);
+    }
+
+    console.log('✅ [DRIVER/SIGNUP] Utilisateur créé:', authData.user.id);
+
+    // Créer le profil conducteur dans KV store
+    const driverProfile = {
+      id: authData.user.id,
+      email: generatedEmail,
+      full_name,
+      phone: normalizedPhone,
+      role: 'driver',
+      status: 'pending', // En attente d'approbation
+      isApproved: false,
+      isAvailable: false,
+      rating: 5.0,
+      totalRides: 0,
+      totalEarnings: 0,
+      balance: 0,
+      vehicle: {
+        make: vehicleMake,
+        model: vehicleModel,
+        license_plate: vehiclePlate,
+        color: vehicleColor,
+        category: vehicleCategory
+      },
+      profilePhoto: profilePhoto || null,
+      created_at: authData.user.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      lastUpdate: new Date().toISOString()
+    };
+
+    // Sauvegarder dans KV store avec vérification
+    console.log(`💾 [DRIVER/SIGNUP] Sauvegarde profil dans KV store avec ID: ${authData.user.id}`);
+    
+    try {
+      // Sauvegarder avec les deux préfixes
+      await kv.set(`driver:${authData.user.id}`, driverProfile);
+      console.log(`✅ [DRIVER/SIGNUP] Sauvegarde driver:${authData.user.id} OK`);
+      
+      await kv.set(`profile:${authData.user.id}`, driverProfile);
+      console.log(`✅ [DRIVER/SIGNUP] Sauvegarde profile:${authData.user.id} OK`);
+      
+      // Vérification immédiate
+      const verification = await kv.get(`driver:${authData.user.id}`);
+      if (verification) {
+        console.log(`✅ [DRIVER/SIGNUP] Vérification: profil trouvé immédiatement après sauvegarde`);
+      } else {
+        console.error(`❌ [DRIVER/SIGNUP] ERREUR CRITIQUE: Profil non trouvé juste après sauvegarde!`);
+        // Essayer de sauvegarder à nouveau
+        await kv.set(`driver:${authData.user.id}`, driverProfile);
+        await kv.set(`profile:${authData.user.id}`, driverProfile);
+      }
+    } catch (kvError) {
+      console.error(`❌ [DRIVER/SIGNUP] Erreur sauvegarde KV store:`, kvError);
+      throw kvError;
+    }
+
+    console.log('✅ [DRIVER/SIGNUP] Profil conducteur créé et sauvegardé avec succès');
+
+    return c.json({
+      success: true,
+      user: authData.user,
+      profile: driverProfile
+    });
+
+  } catch (error) {
+    console.error('❌ [DRIVER/SIGNUP] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur serveur"
+    }, 500);
+  }
+});
 
 // ============================================
 // 📋 GET ALL DRIVERS (LISTE POUR ADMIN PANEL)
@@ -149,6 +326,50 @@ app.get("/", async (c) => {
   }
 });
 
+// 🔍 DIAGNOSTIC - Vérifier l'état du KV store pour un driver
+app.get("/debug/:id", async (c) => {
+  try {
+    const driverId = c.req.param('id');
+    console.log(`🔍 [DEBUG /drivers/debug/:id] Diagnostic pour ID: ${driverId}`);
+    
+    // Vérifier avec driver:
+    const driverKey = await kv.get(`driver:${driverId}`);
+    console.log(`  ├─ driver:${driverId} => ${driverKey ? '✅ TROUVÉ' : '❌ ABSENT'}`);
+    
+    // Vérifier avec profile:
+    const profileKey = await kv.get(`profile:${driverId}`);
+    console.log(`  ├─ profile:${driverId} => ${profileKey ? '✅ TROUVÉ' : '❌ ABSENT'}`);
+    
+    // Lister toutes les clés commençant par driver:
+    const allDrivers = await kv.getByPrefix('driver:');
+    console.log(`  ├─ Total clés driver:* => ${allDrivers?.length || 0}`);
+    
+    // Lister toutes les clés commençant par profile:
+    const allProfiles = await kv.getByPrefix('profile:');
+    console.log(`  └─ Total clés profile:* => ${allProfiles?.length || 0}`);
+    
+    return c.json({
+      success: true,
+      driverId,
+      found: {
+        driver: !!driverKey,
+        profile: !!profileKey
+      },
+      data: {
+        driver: driverKey || null,
+        profile: profileKey || null
+      },
+      counts: {
+        totalDrivers: allDrivers?.length || 0,
+        totalProfiles: allProfiles?.length || 0
+      }
+    });
+  } catch (error) {
+    console.error('❌ [DEBUG /drivers/debug/:id] Erreur:', error);
+    return c.json({ success: false, error: 'Erreur diagnostic' }, 500);
+  }
+});
+
 // 👨‍✈️ GET DRIVER PROFILE
 app.get("/:id", async (c) => {
   try {
@@ -157,55 +378,46 @@ app.get("/:id", async (c) => {
       return c.json({ success: false, error: "ID conducteur invalide" }, 400);
     }
     
-    let driver = await kv.get(`driver:${driverId}`);
+    // ✅ FIX: Système de retry intelligent avec 3 tentatives
+    let driver = null;
+    const maxAttempts = 3;
+    const delays = [0, 1000, 2000]; // 0ms, 1s, 2s
     
-    // ✅ AUTO-CRÉATION : Si le profil conducteur n'existe pas, le créer automatiquement
-    if (!driver) {
-      console.log(`⚠️ Profil conducteur ${driverId} introuvable dans KV store, tentative d'auto-création...`);
-      
-      // Récupérer les infos de l'utilisateur depuis Supabase Auth
-      const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-      );
-      
-      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(driverId);
-      
-      if (userError || !userData?.user) {
-        console.error(`❌ Impossible de récupérer l'utilisateur depuis Supabase Auth:`, userError);
-        return c.json({ 
-          success: false, 
-          error: "Profil conducteur non trouvé et impossible de le créer automatiquement" 
-        }, 404);
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // Attendre avant le retry (sauf pour la première tentative)
+      if (attempt > 0) {
+        console.log(`⏳ [GET /:id] Tentative ${attempt + 1}/${maxAttempts} après ${delays[attempt]}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delays[attempt]));
       }
       
-      // Créer le profil conducteur à partir des données Supabase Auth
-      const userMetadata = userData.user.user_metadata || {};
-      driver = {
-        id: userData.user.id,
-        email: userData.user.email || `u${userMetadata.phone || driverId}@smartcabb.app`,
-        full_name: userMetadata.full_name || userMetadata.name || 'Conducteur',
-        phone: userMetadata.phone || null,
-        role: 'driver',
-        balance: 0,
-        status: 'offline',
-        isApproved: false,
-        rating: 5.0,
-        totalRides: 0,
-        vehicle: userMetadata.vehicle || null,
-        vehicleType: userMetadata.vehicleType || null,
-        created_at: userData.user.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        lastUpdate: new Date().toISOString()
-      };
+      // Essayer avec driver:
+      driver = await kv.get(`driver:${driverId}`);
       
-      // Sauvegarder dans le KV store
-      await kv.set(`driver:${driverId}`, driver);
+      if (driver) {
+        console.log(`✅ [GET /:id] Profil trouvé avec driver: à la tentative ${attempt + 1}`);
+        break;
+      }
       
-      // Sauvegarder aussi avec le préfixe profile: pour compatibilité
-      await kv.set(`profile:${driverId}`, driver);
+      // Essayer avec profile:
+      driver = await kv.get(`profile:${driverId}`);
       
-      console.log(`✅ Profil conducteur créé automatiquement: ${driver.full_name} (${driver.email})`);
+      if (driver) {
+        console.log(`✅ [GET /:id] Profil trouvé avec profile: à la tentative ${attempt + 1}`);
+        // Copier vers driver: pour la prochaine fois
+        await kv.set(`driver:${driverId}`, driver);
+        break;
+      }
+      
+      console.log(`⚠️ [GET /:id] Tentative ${attempt + 1}/${maxAttempts} échouée`);
+    }
+    
+    // Si toujours pas trouvé après tous les retries
+    if (!driver) {
+      console.error(`❌ [GET /:id] Profil conducteur ${driverId} introuvable après ${maxAttempts} tentatives`);
+      return c.json({ 
+        success: false, 
+        error: "Profil conducteur non trouvé. Veuillez réessayer dans quelques instants." 
+      }, 404);
     }
     
     return c.json({ success: true, driver });
@@ -640,7 +852,9 @@ app.post("/update/:id", async (c) => {
       const { data: authUser, error: authGetError } = await supabase.auth.admin.getUserById(driverId);
       
       if (authGetError || !authUser) {
-        console.error('❌ SOURCE 3: Impossible de récupérer l\'utilisateur Auth:', authGetError);
+        // ✅ FIX: Ne pas bloquer si l'utilisateur Auth n'est pas trouvé (peut être supprimé ou pas encore créé)
+        console.error('❌ SOURCE 3: Impossible de récupérer l\'utilisateur Auth:', authGetError?.message);
+        console.log('⚠️ Continuing without Auth metadata update (user might not exist in Auth yet)');
       } else {
         // Mettre à jour le user_metadata
         const currentMetadata = authUser.user.user_metadata || {};
@@ -663,7 +877,8 @@ app.post("/update/:id", async (c) => {
         }
       }
     } catch (authError) {
-      console.error('❌ SOURCE 3: Exception Auth:', authError);
+      console.error('❌ SOURCE 3: Exception Auth:', authError instanceof Error ? authError.message : authError);
+      console.log('⚠️ Continuing despite Auth error');
     }
     
     console.log('🔥🔥🔥 ========== BACKEND: UPDATE DRIVER FIN ==========');
@@ -905,17 +1120,50 @@ app.post("/create", async (c) => {
       return c.json({ success: false, error: "ID utilisateur invalide" }, 400);
     }
 
-    // Récupérer le profil de base depuis Supabase Auth
+    // Récupérer le profil de base depuis Supabase Auth (avec retry)
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+    // ✅ FIX: Retry pour gérer les délais de propagation Auth
+    let authUser: any = null;
+    let authError: any = null;
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      console.log(`🔄 [DRIVERS/CREATE] Tentative ${attempt}/3 de récupération Auth...`);
+      const result = await supabase.auth.admin.getUserById(userId);
+      authUser = result.data;
+      authError = result.error;
+      
+      if (!authError && authUser) {
+        console.log(`✅ [DRIVERS/CREATE] Utilisateur Auth trouvé à la tentative ${attempt}`);
+        break;
+      }
+      
+      if (attempt < 3) {
+        console.log(`⚠️ [DRIVERS/CREATE] Utilisateur non trouvé, attente 1s avant retry...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
     
     if (authError || !authUser) {
-      console.error('❌ [DRIVERS/CREATE] Utilisateur non trouvé dans Auth:', authError);
-      return c.json({ success: false, error: "Utilisateur non trouvé" }, 404);
+      console.error('❌ [DRIVERS/CREATE] Utilisateur non trouvé dans Auth après 3 tentatives:', authError?.message || 'User not found');
+      console.log('⚠️ [DRIVERS/CREATE] Création du profil avec données minimales...');
+      
+      // ✅ FIX: Continuer avec des données minimales au lieu de bloquer
+      authUser = {
+        user: {
+          id: userId,
+          email: '',
+          user_metadata: {
+            full_name: 'Conducteur',
+            name: 'Conducteur',
+            phone: ''
+          },
+          phone: ''
+        }
+      };
     }
 
     // Normaliser les champs du véhicule

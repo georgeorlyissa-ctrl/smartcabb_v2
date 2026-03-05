@@ -6,7 +6,7 @@ import { isValidEmail, normalizeEmail } from "./email-validation.ts";
 const app = new Hono();
 
 // 📱 SIGNUP - Inscription utilisateur (passager ou conducteur)
-app.post("/auth/signup", async (c) => {
+app.post("/signup", async (c) => {
   try {
     const { email, password, phone, name, full_name, role } = await c.req.json();
 
@@ -195,7 +195,7 @@ app.post("/auth/signup", async (c) => {
 });
 
 // 🔑 LOGIN - Connexion
-app.post("/auth/login", async (c) => {
+app.post("/login", async (c) => {
   try {
     const body = await c.req.json();
     const { identifier, email, password } = body;
@@ -340,7 +340,7 @@ app.post("/auth/login", async (c) => {
 });
 
 // 🚪 LOGOUT - Déconnexion
-app.post("/auth/logout", async (c) => {
+app.post("/logout", async (c) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     
