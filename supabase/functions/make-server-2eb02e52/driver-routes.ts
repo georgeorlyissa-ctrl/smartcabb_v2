@@ -186,33 +186,43 @@ app.post("/signup", async (c) => {
       lastUpdate: new Date().toISOString()
     };
 
-    // Sauvegarder dans KV store avec vérification
-    console.log(`💾 [DRIVER/SIGNUP] Sauvegarde profil dans KV store avec ID: ${authData.user.id}`);
+    // 💾 SAUVEGARDE DANS KV STORE - DIRECT BYPASS
+    console.log(`💾 [DRIVER/SIGNUP] Sauvegarde du profil ID: ${authData.user.id}`);
     
     try {
-      // Sauvegarder avec les deux préfixes
-      await kv.set(`driver:${authData.user.id}`, driverProfile);
-      console.log(`✅ [DRIVER/SIGNUP] Sauvegarde driver:${authData.user.id} OK`);
+      // Sauvegarder directement via Supabase (bypass du wrapper KV qui peut échouer)
+      const { data: savedData, error: saveError } = await supabase
+        .from("kv_store_2eb02e52")
+        .upsert({ key: `driver:${authData.user.id}`, value: driverProfile })
+        .select();
       
-      await kv.set(`profile:${authData.user.id}`, driverProfile);
-      console.log(`✅ [DRIVER/SIGNUP] Sauvegarde profile:${authData.user.id} OK`);
+      if (saveError) {
+        console.error(`❌ [DRIVER/SIGNUP] Erreur sauvegarde KV:`, saveError);
+        throw new Error(`Sauvegarde échouée: ${saveError.message}`);
+      }
+      
+      console.log(`✅ [DRIVER/SIGNUP] Profil sauvegardé dans KV store`);
       
       // Vérification immédiate
-      const verification = await kv.get(`driver:${authData.user.id}`);
-      if (verification) {
-        console.log(`✅ [DRIVER/SIGNUP] Vérification: profil trouvé immédiatement après sauvegarde`);
+      const { data: checkData } = await supabase
+        .from("kv_store_2eb02e52")
+        .select("value")
+        .eq("key", `driver:${authData.user.id}`)
+        .single();
+      
+      if (checkData) {
+        console.log(`✅ [DRIVER/SIGNUP] Vérification: profil trouvé (${checkData.value?.full_name})`);
       } else {
-        console.error(`❌ [DRIVER/SIGNUP] ERREUR CRITIQUE: Profil non trouvé juste après sauvegarde!`);
-        // Essayer de sauvegarder à nouveau
-        await kv.set(`driver:${authData.user.id}`, driverProfile);
-        await kv.set(`profile:${authData.user.id}`, driverProfile);
+        console.warn(`⚠️ [DRIVER/SIGNUP] Vérification: profil non trouvé immédiatement`);
       }
+      
     } catch (kvError) {
-      console.error(`❌ [DRIVER/SIGNUP] Erreur sauvegarde KV store:`, kvError);
-      throw kvError;
+      console.error(`❌ [DRIVER/SIGNUP] Exception sauvegarde KV:`, kvError);
+      // Important: ne pas throw pour éviter de bloquer l'inscription
+      // Le profil sera récupéré depuis Auth si nécessaire
     }
 
-    console.log('✅ [DRIVER/SIGNUP] Profil conducteur créé et sauvegardé avec succès');
+    console.log('✅ [DRIVER/SIGNUP] Profil conducteur créé et prêt à être retourné');
 
     return c.json({
       success: true,
@@ -370,6 +380,69 @@ app.get("/debug/:id", async (c) => {
   }
 });
 
+// 🧪 TEST - Créer manuellement un profil dans le KV store
+app.post("/test-kv-save", async (c) => {
+  try {
+    const testProfile = {
+      id: 'test-' + Date.now(),
+      full_name: 'Test Driver ' + Date.now(),
+      phone: '+243900000000',
+      email: 'test@example.com',
+      role: 'driver',
+      status: 'pending',
+      created_at: new Date().toISOString()
+    };
+    
+    console.log('🧪 [TEST] Tentative de sauvegarde test:', testProfile.id);
+    
+    // Test 1: Via kv.set()
+    await kv.set(`driver:${testProfile.id}`, testProfile);
+    console.log('✅ [TEST] kv.set() terminé');
+    
+    // Test 2: Vérification immédiate
+    const retrieved = await kv.get(`driver:${testProfile.id}`);
+    console.log('🔍 [TEST] kv.get() résultat:', retrieved ? 'TROUVÉ' : 'ABSENT');
+    
+    // Test 3: Sauvegarde directe Supabase
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    
+    const { error: directError } = await supabase
+      .from('kv_store_2eb02e52')
+      .upsert({ key: `test-direct:${testProfile.id}`, value: testProfile });
+    
+    console.log('🔍 [TEST] Sauvegarde directe:', directError ? 'ERREUR' : 'OK');
+    if (directError) {
+      console.error('❌ [TEST] Erreur Supabase:', directError);
+    }
+    
+    // Test 4: Récupération directe
+    const { data: directData, error: getError } = await supabase
+      .from('kv_store_2eb02e52')
+      .select('value')
+      .eq('key', `test-direct:${testProfile.id}`)
+      .maybeSingle();
+    
+    console.log('🔍 [TEST] Récupération directe:', directData ? 'TROUVÉ' : 'ABSENT');
+    
+    return c.json({
+      success: true,
+      results: {
+        kvSet: 'completed',
+        kvGet: retrieved ? 'found' : 'not_found',
+        supabaseSave: directError ? 'error' : 'success',
+        supabaseGet: directData ? 'found' : 'not_found'
+      },
+      testProfile
+    });
+  } catch (error) {
+    console.error('❌ [TEST] Erreur:', error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
 // 👨‍✈️ GET DRIVER PROFILE
 app.get("/:id", async (c) => {
   try {
@@ -378,48 +451,113 @@ app.get("/:id", async (c) => {
       return c.json({ success: false, error: "ID conducteur invalide" }, 400);
     }
     
-    // ✅ FIX: Système de retry intelligent avec 3 tentatives
+    console.log(`🔍 [GET /:id] Récupération profil conducteur: ${driverId}`);
+    
+    // ✅ FIX COMPLET: Utiliser UNIQUEMENT la méthode directe Supabase
+    // kv.get() semble avoir des problèmes - bypass complet
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    
     let driver = null;
     const maxAttempts = 3;
-    const delays = [0, 1000, 2000]; // 0ms, 1s, 2s
+    const delays = [0, 500, 1000]; // 0ms, 500ms, 1s
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // Attendre avant le retry (sauf pour la première tentative)
       if (attempt > 0) {
         console.log(`⏳ [GET /:id] Tentative ${attempt + 1}/${maxAttempts} après ${delays[attempt]}ms...`);
         await new Promise(resolve => setTimeout(resolve, delays[attempt]));
       }
       
-      // Essayer avec driver:
-      driver = await kv.get(`driver:${driverId}`);
+      console.log(`🔧 [GET /:id] Recherche DIRECTE dans kv_store_2eb02e52...`);
       
-      if (driver) {
-        console.log(`✅ [GET /:id] Profil trouvé avec driver: à la tentative ${attempt + 1}`);
-        break;
+      try {
+        // Rechercher avec les deux clés possibles
+        const { data, error } = await supabase
+          .from('kv_store_2eb02e52')
+          .select('value')
+          .or(`key.eq.driver:${driverId},key.eq.profile:${driverId}`)
+          .limit(1)
+          .maybeSingle();
+        
+        if (error) {
+          console.error(`❌ [GET /:id] Erreur SQL tentative ${attempt + 1}:`, error);
+          continue;
+        }
+        
+        if (data && data.value) {
+          console.log(`✅ [GET /:id] Profil trouvé à la tentative ${attempt + 1}!`);
+          console.log(`📊 [GET /:id] Nom: ${data.value.full_name}, Téléphone: ${data.value.phone}`);
+          driver = data.value;
+          break;
+        } else {
+          console.log(`⚠️ [GET /:id] Tentative ${attempt + 1}: Aucun résultat`);
+        }
+      } catch (queryError) {
+        console.error(`❌ [GET /:id] Exception tentative ${attempt + 1}:`, queryError);
       }
-      
-      // Essayer avec profile:
-      driver = await kv.get(`profile:${driverId}`);
-      
-      if (driver) {
-        console.log(`✅ [GET /:id] Profil trouvé avec profile: à la tentative ${attempt + 1}`);
-        // Copier vers driver: pour la prochaine fois
-        await kv.set(`driver:${driverId}`, driver);
-        break;
-      }
-      
-      console.log(`⚠️ [GET /:id] Tentative ${attempt + 1}/${maxAttempts} échouée`);
     }
     
-    // Si toujours pas trouvé après tous les retries
+    // Si pas trouvé dans KV, essayer de récupérer depuis Auth et recréer le profil
     if (!driver) {
-      console.error(`❌ [GET /:id] Profil conducteur ${driverId} introuvable après ${maxAttempts} tentatives`);
-      return c.json({ 
-        success: false, 
-        error: "Profil conducteur non trouvé. Veuillez réessayer dans quelques instants." 
-      }, 404);
+      console.log(`⚠️ [GET /:id] Profil non trouvé dans KV, tentative depuis Auth...`);
+      
+      try {
+        const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(driverId);
+        
+        if (authError || !authUser?.user) {
+          console.error(`❌ [GET /:id] Utilisateur Auth non trouvé:`, authError);
+          return c.json({ 
+            success: false, 
+            error: "Profil conducteur non trouvé. Veuillez réessayer dans quelques instants." 
+          }, 404);
+        }
+        
+        console.log(`✅ [GET /:id] Utilisateur trouvé dans Auth, reconstruction du profil...`);
+        
+        // Reconstruire le profil depuis les metadata Auth
+        const metadata = authUser.user.user_metadata || {};
+        driver = {
+          id: authUser.user.id,
+          email: authUser.user.email || metadata.email || '',
+          full_name: metadata.full_name || metadata.name || 'Conducteur',
+          phone: metadata.phone || authUser.user.phone || '',
+          role: 'driver',
+          status: 'pending',
+          isApproved: false,
+          isAvailable: false,
+          rating: 5.0,
+          totalRides: 0,
+          totalEarnings: 0,
+          balance: 0,
+          vehicle: metadata.vehicle || {},
+          profilePhoto: metadata.profilePhoto || null,
+          created_at: authUser.user.created_at,
+          updated_at: new Date().toISOString(),
+          lastUpdate: new Date().toISOString()
+        };
+        
+        // Sauvegarder dans KV pour la prochaine fois
+        try {
+          await supabase
+            .from('kv_store_2eb02e52')
+            .upsert({ key: `driver:${driverId}`, value: driver });
+          console.log(`✅ [GET /:id] Profil reconstruit et sauvegardé dans KV`);
+        } catch (saveError) {
+          console.error(`⚠️ [GET /:id] Impossible de sauvegarder le profil reconstruit:`, saveError);
+        }
+        
+      } catch (reconstructError) {
+        console.error(`❌ [GET /:id] Erreur reconstruction profil:`, reconstructError);
+        return c.json({ 
+          success: false, 
+          error: "Profil conducteur non trouvé. Veuillez réessayer dans quelques instants." 
+        }, 404);
+      }
     }
     
+    console.log(`✅ [GET /:id] Retour du profil: ${driver.full_name}`);
     return c.json({ success: true, driver });
   } catch (error) {
     console.error("❌ Erreur récupération conducteur:", error);

@@ -32,6 +32,7 @@ import * as adminUsersRoutes from "./admin_users_routes.ts";
 import resetDatabaseRoutes from "./reset-database-routes.ts";
 import { securityMiddleware } from "./security-middleware.ts";
 import auditRoutes from "./audit-emails-route.ts";
+import kvTestRoutes from "./kv-test-route.ts";
 
 const app = new Hono();
 
@@ -2120,6 +2121,11 @@ app.route('/make-server-2eb02e52/sms', smsRoutes);
 // TEST ROUTES
 // ============================================
 app.route('/make-server-2eb02e52/test', testRoutes);
+
+// ============================================
+// 🔍 KV STORE TEST ROUTES (DIAGNOSTIC)
+// ============================================
+app.route('/make-server-2eb02e52/kv-test', kvTestRoutes);
 
 // ============================================
 // 🗺️ GOOGLE MAPS API - ROUTES PRINCIPALES
