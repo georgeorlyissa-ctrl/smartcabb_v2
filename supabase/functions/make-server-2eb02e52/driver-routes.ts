@@ -507,7 +507,9 @@ app.get("/:id", async (c) => {
         const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(driverId);
         
         if (authError || !authUser?.user) {
-          console.error(`❌ [GET /:id] Utilisateur Auth non trouvé:`, authError);
+          // L'utilisateur n'existe nulle part (ni KV ni Auth)
+          // C'est une situation normale si l'ID est invalide ou si l'utilisateur a été supprimé
+          console.log(`ℹ️ [GET /:id] Utilisateur ${driverId} n'existe pas dans Auth (${authError?.message || 'user not found'})`);
           return c.json({ 
             success: false, 
             error: "Profil conducteur non trouvé. Veuillez réessayer dans quelques instants." 
