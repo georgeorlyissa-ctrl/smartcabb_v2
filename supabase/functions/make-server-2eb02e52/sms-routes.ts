@@ -7,7 +7,7 @@ const app = new Hono();
 /**
  * Provider Africa's Talking pour la RDC
  */
-async function sendViaAfricasTalking(to: string, message: string): Promise<{ success: boolean; error?: string }> {
+async function sendViaAfricasTalking(to: string, message: string): Promise<{ success: boolean; error?: string; silent?: boolean }> {
   const apiKey = Deno.env.get('AFRICAS_TALKING_API_KEY');
   const username = Deno.env.get('AFRICAS_TALKING_USERNAME') || 'sandbox';
 
@@ -63,13 +63,15 @@ async function sendViaAfricasTalking(to: string, message: string): Promise<{ suc
       
       // ✅ GESTION SPÉCIFIQUE DE L'ERREUR InsufficientBalance
       if (errorStatus === 'InsufficientBalance') {
-        console.error('❌ ⚠️  SOLDE INSUFFISANT - Votre compte Africa\'s Talking n\'a plus de crédit SMS');
-        console.error('💡 SOLUTION: Rechargez votre compte sur https://account.africastalking.com');
-        console.error('📱 SMS NON ENVOYÉ vers', formattedPhone, ':', message.substring(0, 50));
+        console.warn('⚠️ SOLDE SMS INSUFFISANT - Compte Africa\'s Talking sans crédit');
+        console.warn('💡 Rechargez sur: https://account.africastalking.com');
+        console.warn(`📱 SMS non envoyé vers ${formattedPhone}: ${message.substring(0, 50)}...`);
         
+        // ✅ NE PAS BLOQUER L'APPLICATION - Juste logger l'erreur
         return { 
           success: false, 
-          error: '⚠️ Solde SMS insuffisant. Rechargez votre compte Africa\'s Talking sur https://account.africastalking.com'
+          error: 'SMS non envoyé (solde insuffisant)',
+          silent: true  // Indicateur pour ne pas afficher l'erreur à l'utilisateur
         };
       }
       

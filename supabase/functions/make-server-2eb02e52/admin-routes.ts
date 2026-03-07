@@ -108,7 +108,26 @@ app.get("/stats", async (c) => {
     const drivers = await kv.getByPrefix('driver:');
     const passengers = await kv.getByPrefix('passenger:');
     const rides = await kv.getByPrefix('ride:');
-    return c.json({ success: true, stats: { totalDrivers: drivers.length, totalPassengers: passengers.length, totalRides: rides.length } });
+    
+    // ✅ FILTRER UNIQUEMENT LES CONDUCTEURS APPROUVÉS
+    const approvedDrivers = drivers.filter((driver: any) => 
+      driver.isApproved === true && driver.status !== 'pending' && driver.status !== 'rejected'
+    );
+    
+    // ✅ COMPTER LES CONDUCTEURS EN ATTENTE
+    const pendingDrivers = drivers.filter((driver: any) => 
+      driver.status === 'pending' || (!driver.isApproved && driver.status !== 'rejected')
+    );
+    
+    return c.json({ 
+      success: true, 
+      stats: { 
+        totalDrivers: approvedDrivers.length, 
+        totalPassengers: passengers.length, 
+        totalRides: rides.length,
+        pendingDrivers: pendingDrivers.length  // ✅ NOUVEAU: Nombre de conducteurs en attente
+      } 
+    });
   } catch (error) {
     console.error("❌ Erreur stats admin:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);

@@ -26,6 +26,13 @@ export async function getAllUsers(c: Context) {
     // Récupérer tous les admins depuis KV
     const allAdmins = await kv.getByPrefix('admin:');
     
+    // ✅ FILTRER UNIQUEMENT LES CONDUCTEURS APPROUVÉS (pour la liste principale)
+    const approvedDrivers = allDrivers.filter((driver: any) => 
+      driver.isApproved === true && driver.status !== 'pending' && driver.status !== 'rejected'
+    );
+    
+    console.log(`📊 Conducteurs totaux: ${allDrivers.length}, Approuvés: ${approvedDrivers.length}`);
+    
     // Récupérer aussi les passagers depuis la table profiles
     let passengersFromProfiles: any[] = [];
     try {
@@ -59,7 +66,7 @@ export async function getAllUsers(c: Context) {
     });
     
     // Transformer les conducteurs
-    const drivers = (allDrivers || []).map((driver: any) => ({
+    const drivers = (approvedDrivers || []).map((driver: any) => ({
       id: driver.id,
       role: 'Conducteur' as const,
       name: driver.full_name || driver.name || 'Conducteur inconnu',

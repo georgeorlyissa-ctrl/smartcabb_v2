@@ -188,6 +188,7 @@ app.post("/signup", async (c) => {
 
     // 💾 SAUVEGARDE DANS KV STORE - DIRECT BYPASS
     console.log(`💾 [DRIVER/SIGNUP] Sauvegarde du profil ID: ${authData.user.id}`);
+    console.log(`📦 [DRIVER/SIGNUP] Données à sauvegarder:`, JSON.stringify(driverProfile, null, 2));
     
     try {
       // Sauvegarder directement via Supabase (bypass du wrapper KV qui peut échouer)
@@ -198,10 +199,16 @@ app.post("/signup", async (c) => {
       
       if (saveError) {
         console.error(`❌ [DRIVER/SIGNUP] Erreur sauvegarde KV:`, saveError);
-        throw new Error(`Sauvegarde échouée: ${saveError.message}`);
+        console.error(`❌ [DRIVER/SIGNUP] Code erreur:`, saveError.code);
+        console.error(`❌ [DRIVER/SIGNUP] Message:`, saveError.message);
+        console.error(`❌ [DRIVER/SIGNUP] Détails:`, saveError.details);
+        console.error(`❌ [DRIVER/SIGNUP] ERREUR CRITIQUE: Le conducteur ne sera pas visible dans le panel admin!`);
+        console.error(`❌ [DRIVER/SIGNUP] Il faudra synchroniser manuellement depuis Auth vers KV`);
+        // ⚠️ NE PAS THROW pour ne pas bloquer l'inscription
       }
       
       console.log(`✅ [DRIVER/SIGNUP] Profil sauvegardé dans KV store`);
+      console.log(`✅ [DRIVER/SIGNUP] Données sauvegardées:`, savedData);
       
       // Vérification immédiate
       const { data: checkData } = await supabase
@@ -218,6 +225,9 @@ app.post("/signup", async (c) => {
       
     } catch (kvError) {
       console.error(`❌ [DRIVER/SIGNUP] Exception sauvegarde KV:`, kvError);
+      console.error(`❌ [DRIVER/SIGNUP] Type exception:`, kvError?.constructor?.name);
+      console.error(`❌ [DRIVER/SIGNUP] Message exception:`, kvError instanceof Error ? kvError.message : 'N/A');
+      console.error(`❌ [DRIVER/SIGNUP] Stack trace:`, kvError instanceof Error ? kvError.stack : 'N/A');
       // Important: ne pas throw pour éviter de bloquer l'inscription
       // Le profil sera récupéré depuis Auth si nécessaire
     }
@@ -250,6 +260,13 @@ app.get("/", async (c) => {
     const drivers = await kv.getByPrefix('driver:');
     
     console.log(`📦 [GET /drivers] KV Store: ${drivers?.length || 0} conducteur(s) trouvé(s)`);
+    
+    // ✅ DEBUG: Logger les IDs des conducteurs trouvés
+    if (drivers && drivers.length > 0) {
+      console.log(`📋 [GET /drivers] IDs conducteurs:`, drivers.map((d: any) => d.id || 'NO_ID'));
+      console.log(`📋 [GET /drivers] Noms conducteurs:`, drivers.map((d: any) => d.full_name || 'NO_NAME'));
+      console.log(`📋 [GET /drivers] Status conducteurs:`, drivers.map((d: any) => `${d.full_name}: status=${d.status}, isApproved=${d.isApproved}`));
+    }
     
     // ✅ FIX: Si KV est vide, récupérer depuis Postgres
     if (!drivers || drivers.length === 0) {

@@ -327,6 +327,35 @@ app.post("/login", async (c) => {
       console.log("📋 Profil récupéré:", profile ? "✅" : "❌");
     }
 
+    // 🔒 VÉRIFICATION : Bloquer les conducteurs non approuvés
+    if (profile.role === 'driver') {
+      // Vérifier le statut dans le profil driver spécifique
+      const driverProfile = await kvModule.get(`driver:${data.user.id}`);
+      
+      if (driverProfile) {
+        const isApproved = driverProfile.isApproved === true;
+        const status = driverProfile.status;
+        
+        console.log(`🔍 [AUTH/LOGIN] Vérification conducteur - Status: ${status}, Approved: ${isApproved}`);
+        
+        if (!isApproved || status === 'pending') {
+          console.log(`❌ [AUTH/LOGIN] Conducteur non approuvé - ID: ${data.user.id}`);
+          return c.json({ 
+            success: false, 
+            error: "Votre compte est en attente d'approbation par l'administrateur. Vous recevrez une notification une fois votre compte approuvé." 
+          }, 403);
+        }
+        
+        if (status === 'rejected' || status === 'suspended') {
+          console.log(`❌ [AUTH/LOGIN] Conducteur rejeté/suspendu - ID: ${data.user.id}`);
+          return c.json({ 
+            success: false, 
+            error: "Votre compte a été désactivé. Veuillez contacter l'administrateur." 
+          }, 403);
+        }
+      }
+    }
+
     return c.json({ 
       success: true, 
       session: data.session,
