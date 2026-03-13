@@ -204,24 +204,45 @@ app.post("/signup", async (c) => {
         console.error(`❌ [DRIVER/SIGNUP] Détails:`, saveError.details);
         console.error(`❌ [DRIVER/SIGNUP] ERREUR CRITIQUE: Le conducteur ne sera pas visible dans le panel admin!`);
         console.error(`❌ [DRIVER/SIGNUP] Il faudra synchroniser manuellement depuis Auth vers KV`);
-        // ⚠️ NE PAS THROW pour ne pas bloquer l'inscription
+        
+        // ⚠️ Retourner une erreur pour informer l'utilisateur
+        return c.json({
+          success: false,
+          error: "Erreur technique lors de l'enregistrement. Votre compte est créé mais invisible pour l'admin. Contactez le support.",
+          details: saveError.message
+        }, 500);
       }
       
       console.log(`✅ [DRIVER/SIGNUP] Profil sauvegardé dans KV store`);
       console.log(`✅ [DRIVER/SIGNUP] Données sauvegardées:`, savedData);
       
       // Vérification immédiate
-      const { data: checkData } = await supabase
+      const { data: checkData, error: checkError } = await supabase
         .from("kv_store_2eb02e52")
         .select("value")
         .eq("key", `driver:${authData.user.id}`)
         .single();
       
-      if (checkData) {
-        console.log(`✅ [DRIVER/SIGNUP] Vérification: profil trouvé (${checkData.value?.full_name})`);
-      } else {
-        console.warn(`⚠️ [DRIVER/SIGNUP] Vérification: profil non trouvé immédiatement`);
+      if (checkError) {
+        console.error(`⚠️ [DRIVER/SIGNUP] Erreur vérification:`, checkError.message);
+        
+        return c.json({
+          success: false,
+          error: "Erreur technique: impossible de vérifier l'enregistrement. Contactez le support.",
+          details: checkError.message
+        }, 500);
       }
+      
+      if (!checkData) {
+        console.error(`❌ [DRIVER/SIGNUP] ÉCHEC CRITIQUE: Profil non trouvé après sauvegarde!`);
+        
+        return c.json({
+          success: false,
+          error: "Erreur technique: votre compte n'est pas visible. Contactez le support.",
+        }, 500);
+      }
+      
+      console.log(`✅ [DRIVER/SIGNUP] Vérification: profil trouvé (${checkData.value?.full_name})`);
       
     } catch (kvError) {
       console.error(`❌ [DRIVER/SIGNUP] Exception sauvegarde KV:`, kvError);

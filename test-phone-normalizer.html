@@ -3,383 +3,347 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test - Normalisateur de Numéros</title>
+    <title>🔍 TEST DEBUG DRIVERS API</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            font-family: monospace;
+            max-width: 1400px;
+            margin: 20px auto;
             padding: 20px;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: #1e1e1e;
+            color: #00ff00;
         }
         h1 {
-            color: #667eea;
-            margin-bottom: 10px;
-            font-size: 28px;
-        }
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-        .test-group {
-            margin-bottom: 30px;
-        }
-        .test-group h2 {
-            color: #333;
-            font-size: 18px;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #667eea;
-        }
-        .test-case {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            margin-bottom: 8px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            border-left: 4px solid #ddd;
-        }
-        .test-case.success {
-            border-left-color: #28a745;
-            background: #d4edda;
-        }
-        .test-case.error {
-            border-left-color: #dc3545;
-            background: #f8d7da;
-        }
-        .test-input {
-            flex: 1;
-            font-family: 'Courier New', monospace;
-            color: #495057;
-            font-weight: 600;
-        }
-        .test-arrow {
-            margin: 0 15px;
-            color: #999;
-        }
-        .test-output {
-            flex: 1;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-        }
-        .test-output.valid {
-            color: #28a745;
-        }
-        .test-output.invalid {
-            color: #dc3545;
-        }
-        .test-status {
-            margin-left: 15px;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .test-status.pass {
-            background: #28a745;
-            color: white;
-        }
-        .test-status.fail {
-            background: #dc3545;
-            color: white;
-        }
-        .input-section {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-        .input-section h3 {
-            color: #856404;
-            margin-bottom: 15px;
-            font-size: 16px;
-        }
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        .input-group input {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 6px;
-            font-size: 16px;
-            font-family: 'Courier New', monospace;
-        }
-        .input-group input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .input-group button {
-            padding: 12px 24px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
-        }
-        .input-group button:hover {
-            background: #5568d3;
-            transform: translateY(-2px);
-        }
-        .result-box {
-            margin-top: 15px;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-        }
-        .result-box.success {
-            background: #d4edda;
-            border: 2px solid #28a745;
-            color: #155724;
-        }
-        .result-box.error {
-            background: #f8d7da;
-            border: 2px solid #dc3545;
-            color: #721c24;
-        }
-        .stats {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .stat-card {
-            flex: 1;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            color: #00ff00;
             text-align: center;
         }
-        .stat-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #667eea;
+        .config {
+            background: #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
         }
-        .stat-label {
-            font-size: 14px;
-            color: #666;
-            margin-top: 5px;
+        .config input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: #222;
+            color: #0f0;
+            border: 1px solid #555;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            margin: 10px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        #result {
+            background: #000;
+            padding: 20px;
+            border-radius: 10px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .highlight {
+            background: #ff0;
+            color: #000;
+            padding: 2px 5px;
+            font-weight: bold;
+        }
+        .error {
+            color: #ff0000;
+        }
+        .success {
+            color: #00ff00;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #2a2a2a;
+        }
+        th, td {
+            border: 1px solid #555;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #333;
+            color: #0f0;
+        }
+        tr:nth-child(even) {
+            background: #252525;
+        }
+        .alex-row {
+            background: #ff0 !important;
+            color: #000 !important;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📱 Test - Normalisateur de Numéros de Téléphone</h1>
-        <p class="subtitle">Vérification du format des numéros pour Africa's Talking (RDC)</p>
-
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value" id="total-tests">0</div>
-                <div class="stat-label">Tests Total</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="passed-tests" style="color: #28a745;">0</div>
-                <div class="stat-label">Réussis</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="failed-tests" style="color: #dc3545;">0</div>
-                <div class="stat-label">Échoués</div>
-            </div>
-        </div>
-
-        <div class="input-section">
-            <h3>🧪 Testez votre numéro</h3>
-            <div class="input-group">
-                <input type="text" id="custom-phone" placeholder="Entrez un numéro de téléphone (ex: 0991234567)">
-                <button onclick="testCustomPhone()">Tester</button>
-            </div>
-            <div id="custom-result"></div>
-        </div>
-
-        <div class="test-group">
-            <h2>✅ Formats Valides (doivent être acceptés)</h2>
-            <div id="valid-tests"></div>
-        </div>
-
-        <div class="test-group">
-            <h2>❌ Formats Invalides (doivent être rejetés)</h2>
-            <div id="invalid-tests"></div>
+    <h1>🔍 DEBUG DRIVERS API - IDENTIFIER ALEX MBOLELA</h1>
+    
+    <div class="config">
+        <strong>📝 CONFIGURATION SUPABASE :</strong><br>
+        <input type="text" id="projectId" placeholder="Project ID (ex: abcdefghijklmnop)" value="">
+        <input type="text" id="anonKey" placeholder="Anon Key (eyJhbGciOi...)" value="">
+        <div style="color: #888; font-size: 12px; margin-top: 10px;">
+            💡 Ces valeurs se trouvent dans /utils/supabase/info.tsx
         </div>
     </div>
+    
+    <div style="text-align: center;">
+        <button onclick="testDriversAPI()">🧪 CHARGER /drivers</button>
+        <button onclick="testDriversAPIWithTable()">📊 CHARGER /drivers (TABLEAU)</button>
+        <button onclick="searchAlexMbolela()">🔍 CHERCHER "ALEX MBOLELA"</button>
+    </div>
+
+    <div id="result"></div>
 
     <script>
-        // Fonction de normalisation (copie de phone-normalizer.tsx)
-        function normalizePhoneNumber(phone) {
-            if (!phone) return null;
+        let allDrivers = [];
+
+        // Auto-remplir depuis localStorage si disponible
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedProjectId = localStorage.getItem('smartcabb_project_id');
+            const savedAnonKey = localStorage.getItem('smartcabb_anon_key');
             
-            // Nettoyer
-            let cleaned = phone.replace(/[\s\-().]/g, '');
-            
-            // Cas 1: +243XXXXXXXXX
-            if (/^\+243\d{9}$/.test(cleaned)) {
-                return cleaned;
+            if (savedProjectId) document.getElementById('projectId').value = savedProjectId;
+            if (savedAnonKey) document.getElementById('anonKey').value = savedAnonKey;
+        });
+
+        function getConfig() {
+            const projectId = document.getElementById('projectId').value.trim();
+            const anonKey = document.getElementById('anonKey').value.trim();
+
+            if (!projectId || !anonKey) {
+                alert('⚠️ Veuillez remplir le Project ID et l\'Anon Key !');
+                return null;
             }
-            
-            // Cas 2: 243XXXXXXXXX
-            if (/^243\d{9}$/.test(cleaned)) {
-                return '+' + cleaned;
-            }
-            
-            // Cas 3: 00243XXXXXXXXX
-            if (/^00243\d{9}$/.test(cleaned)) {
-                return '+' + cleaned.substring(2);
-            }
-            
-            // Cas 4: 0XXXXXXXXX
-            if (/^0\d{9}$/.test(cleaned)) {
-                return '+243' + cleaned.substring(1);
-            }
-            
-            // Cas 5: XXXXXXXXX
-            if (/^\d{9}$/.test(cleaned)) {
-                return '+243' + cleaned;
-            }
-            
-            return null;
+
+            // Sauvegarder dans localStorage
+            localStorage.setItem('smartcabb_project_id', projectId);
+            localStorage.setItem('smartcabb_anon_key', anonKey);
+
+            return {
+                projectId,
+                anonKey,
+                serverUrl: `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52`
+            };
         }
-        
-        function isValidPhoneNumber(phone) {
-            if (!phone) return false;
-            return /^\+243\d{9}$/.test(phone);
+
+        async function testDriversAPI() {
+            const config = getConfig();
+            if (!config) return;
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="success">⏳ Chargement...</div>';
+
+            try {
+                console.log('🔄 Appel API:', `${config.serverUrl}/drivers`);
+                
+                const response = await fetch(`${config.serverUrl}/drivers`, {
+                    headers: {
+                        'Authorization': `Bearer ${config.anonKey}`
+                    }
+                });
+
+                console.log('📊 Statut réponse:', response.status);
+
+                if (!response.ok) {
+                    resultDiv.innerHTML = `<div class="error">❌ Erreur HTTP ${response.status}: ${response.statusText}</div>`;
+                    return;
+                }
+
+                const data = await response.json();
+                console.log('📦 Data reçue:', data);
+
+                if (data.success) {
+                    allDrivers = data.drivers || [];
+                    
+                    let html = `<div class="success">✅ ${allDrivers.length} CONDUCTEUR(S) TROUVÉ(S)</div>\n\n`;
+                    html += `Source: ${data.source || 'N/A'}\n`;
+                    html += `Count: ${data.count || 0}\n\n`;
+                    html += `====================================\n\n`;
+
+                    allDrivers.forEach((driver, index) => {
+                        html += `${index + 1}. ${driver.full_name || driver.name || 'NO NAME'}\n`;
+                        html += `   ID: ${driver.id || 'NO ID'}\n`;
+                        html += `   Phone: ${driver.phone || 'NO PHONE'}\n`;
+                        html += `   Email: ${driver.email || 'NO EMAIL'}\n`;
+                        html += `   Status: ${driver.status || 'N/A'}\n`;
+                        html += `   isApproved: ${driver.isApproved}\n`;
+                        html += `   Created: ${driver.created_at || 'N/A'}\n`;
+                        html += `   Vehicle: ${driver.vehicle?.make || 'N/A'} ${driver.vehicle?.model || ''}\n`;
+                        html += `\n`;
+                    });
+
+                    // Chercher Alex Mbolela
+                    const alex = allDrivers.find(d => 
+                        (d.full_name || '').toLowerCase().includes('alex') || 
+                        (d.name || '').toLowerCase().includes('alex') ||
+                        (d.phone || '').includes('811111111')
+                    );
+
+                    if (alex) {
+                        html += `\n<span class="highlight">🎯 ALEX MBOLELA TROUVÉ !</span>\n`;
+                        html += JSON.stringify(alex, null, 2);
+                    } else {
+                        html += `\n<span class="error">❌ ALEX MBOLELA PAS TROUVÉ DANS LA LISTE !</span>\n`;
+                        html += `\nConducteurs disponibles:\n`;
+                        allDrivers.forEach((d, i) => {
+                            html += `${i+1}. ${d.full_name || d.name} (${d.phone})\n`;
+                        });
+                    }
+
+                    resultDiv.innerHTML = `<pre>${html}</pre>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Erreur API: ${data.error || 'Erreur inconnue'}</div>`;
+                }
+            } catch (error) {
+                console.error('❌ Erreur:', error);
+                resultDiv.innerHTML = `<div class="error">❌ Erreur réseau: ${error.message}</div>`;
+            }
         }
-        
-        // Tests prédéfinis
-        const validTests = [
-            { input: '+243991234567', expected: '+243991234567' },
-            { input: '243991234567', expected: '+243991234567' },
-            { input: '00243991234567', expected: '+243991234567' },
-            { input: '0991234567', expected: '+243991234567' },
-            { input: '991234567', expected: '+243991234567' },
-            { input: '+243 99 123 45 67', expected: '+243991234567' },
-            { input: '+243-99-123-45-67', expected: '+243991234567' },
-            { input: '+243.99.123.45.67', expected: '+243991234567' },
-            { input: '243 991 234 567', expected: '+243991234567' },
-            { input: '+243 (99) 123-45-67', expected: '+243991234567' },
-            { input: '0 99 123 45 67', expected: '+243991234567' },
-        ];
-        
-        const invalidTests = [
-            { input: null, shouldBeNull: true },
-            { input: '', shouldBeNull: true },
-            { input: '12345', shouldBeNull: true },
-            { input: '+1234567890', shouldBeNull: true },
-            { input: 'abc123', shouldBeNull: true },
-            { input: '+243123', shouldBeNull: true },
-            { input: '+24499123456789', shouldBeNull: true },
-            { input: '123', shouldBeNull: true },
-        ];
-        
-        let totalTests = 0;
-        let passedTests = 0;
-        let failedTests = 0;
-        
-        function runTests() {
-            // Tests valides
-            const validContainer = document.getElementById('valid-tests');
-            validTests.forEach(test => {
-                totalTests++;
-                const result = normalizePhoneNumber(test.input);
-                const passed = result === test.expected && isValidPhoneNumber(result);
-                
-                if (passed) passedTests++;
-                else failedTests++;
-                
-                const div = document.createElement('div');
-                div.className = `test-case ${passed ? 'success' : 'error'}`;
-                div.innerHTML = `
-                    <div class="test-input">${test.input || '(vide)'}</div>
-                    <div class="test-arrow">→</div>
-                    <div class="test-output ${passed ? 'valid' : 'invalid'}">${result || 'null'}</div>
-                    <div class="test-status ${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</div>
-                `;
-                validContainer.appendChild(div);
-            });
-            
-            // Tests invalides
-            const invalidContainer = document.getElementById('invalid-tests');
-            invalidTests.forEach(test => {
-                totalTests++;
-                const result = normalizePhoneNumber(test.input);
-                const passed = test.shouldBeNull ? result === null : !isValidPhoneNumber(result);
-                
-                if (passed) passedTests++;
-                else failedTests++;
-                
-                const div = document.createElement('div');
-                div.className = `test-case ${passed ? 'success' : 'error'}`;
-                div.innerHTML = `
-                    <div class="test-input">${test.input || '(vide)'}</div>
-                    <div class="test-arrow">→</div>
-                    <div class="test-output ${passed ? 'invalid' : 'valid'}">${result || 'null'}</div>
-                    <div class="test-status ${passed ? 'pass' : 'fail'}">${passed ? 'PASS' : 'FAIL'}</div>
-                `;
-                invalidContainer.appendChild(div);
-            });
-            
-            // Mettre à jour les stats
-            document.getElementById('total-tests').textContent = totalTests;
-            document.getElementById('passed-tests').textContent = passedTests;
-            document.getElementById('failed-tests').textContent = failedTests;
+
+        async function testDriversAPIWithTable() {
+            const config = getConfig();
+            if (!config) return;
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="success">⏳ Chargement...</div>';
+
+            try {
+                const response = await fetch(`${config.serverUrl}/drivers`, {
+                    headers: {
+                        'Authorization': `Bearer ${config.anonKey}`
+                    }
+                });
+
+                if (!response.ok) {
+                    resultDiv.innerHTML = `<div class="error">❌ Erreur HTTP ${response.status}: ${response.statusText}</div>`;
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    allDrivers = data.drivers || [];
+                    
+                    // Créer un tableau HTML
+                    let html = `<div class="success">✅ ${allDrivers.length} CONDUCTEUR(S) TROUVÉ(S)</div>`;
+                    html += `<div style="color: #888;">Source: ${data.source || 'N/A'} | Count: ${data.count || 0}</div>`;
+                    html += `<table>`;
+                    html += `<tr>
+                        <th>#</th>
+                        <th>Nom</th>
+                        <th>Téléphone</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Approuvé</th>
+                        <th>Created</th>
+                        <th>Véhicule</th>
+                    </tr>`;
+
+                    allDrivers.forEach((driver, index) => {
+                        const isAlex = (driver.full_name || '').toLowerCase().includes('alex') || 
+                                       (driver.name || '').toLowerCase().includes('alex') ||
+                                       (driver.phone || '').includes('811111111');
+                        const rowClass = isAlex ? 'alex-row' : '';
+                        
+                        html += `<tr class="${rowClass}">`;
+                        html += `<td>${index + 1}</td>`;
+                        html += `<td><strong>${driver.full_name || driver.name || 'NO NAME'}</strong></td>`;
+                        html += `<td>${driver.phone || 'NO PHONE'}</td>`;
+                        html += `<td>${driver.email || 'NO EMAIL'}</td>`;
+                        html += `<td>${driver.status || 'N/A'}</td>`;
+                        html += `<td>${driver.isApproved ? '✅' : '❌'}</td>`;
+                        html += `<td>${driver.created_at ? new Date(driver.created_at).toLocaleString('fr-FR') : 'N/A'}</td>`;
+                        html += `<td>${driver.vehicle?.make || 'N/A'} ${driver.vehicle?.model || ''}</td>`;
+                        html += `</tr>`;
+                    });
+
+                    html += `</table>`;
+
+                    // Chercher Alex Mbolela
+                    const alex = allDrivers.find(d => 
+                        (d.full_name || '').toLowerCase().includes('alex') || 
+                        (d.name || '').toLowerCase().includes('alex') ||
+                        (d.phone || '').includes('811111111')
+                    );
+
+                    if (alex) {
+                        html += `<pre style="margin-top: 20px;"><span class="highlight">🎯 ALEX MBOLELA TROUVÉ - DONNÉES COMPLÈTES :</span>\n`;
+                        html += JSON.stringify(alex, null, 2);
+                        html += `</pre>`;
+                    } else {
+                        html += `<pre style="margin-top: 20px;"><span class="error">❌ ALEX MBOLELA PAS TROUVÉ DANS LA LISTE !</span>\n\n`;
+                        html += `Conducteurs disponibles:\n`;
+                        allDrivers.forEach((d, i) => {
+                            html += `${i+1}. ${d.full_name || d.name} (${d.phone})\n`;
+                        });
+                        html += `</pre>`;
+                    }
+
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Erreur API: ${data.error || 'Erreur inconnue'}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Erreur réseau: ${error.message}</div>`;
+            }
         }
-        
-        function testCustomPhone() {
-            const input = document.getElementById('custom-phone').value;
-            const resultDiv = document.getElementById('custom-result');
-            
-            if (!input) {
-                resultDiv.innerHTML = '<div class="result-box error">⚠️ Veuillez entrer un numéro de téléphone</div>';
+
+        async function searchAlexMbolela() {
+            if (allDrivers.length === 0) {
+                alert('⚠️ Veuillez d\'abord charger les conducteurs avec le bouton "CHARGER /drivers"');
                 return;
             }
+
+            const resultDiv = document.getElementById('result');
             
-            const normalized = normalizePhoneNumber(input);
-            const valid = normalized && isValidPhoneNumber(normalized);
-            
-            if (valid) {
+            const alex = allDrivers.find(d => 
+                (d.full_name || '').toLowerCase().includes('alex') || 
+                (d.name || '').toLowerCase().includes('alex') ||
+                (d.phone || '').includes('811111111')
+            );
+
+            if (alex) {
                 resultDiv.innerHTML = `
-                    <div class="result-box success">
-                        <strong>✅ VALIDE</strong><br>
-                        Format original : ${input}<br>
-                        Format normalisé : ${normalized}<br>
-                        Statut : Accepté par Africa's Talking
-                    </div>
+                    <div class="success">✅ ALEX MBOLELA TROUVÉ !</div>
+                    <pre>${JSON.stringify(alex, null, 2)}</pre>
                 `;
             } else {
                 resultDiv.innerHTML = `
-                    <div class="result-box error">
-                        <strong>❌ INVALIDE</strong><br>
-                        Format original : ${input}<br>
-                        Format normalisé : ${normalized || 'null'}<br>
-                        Statut : Rejeté par Africa's Talking<br>
-                        <br>
-                        <strong>Format attendu :</strong> +243XXXXXXXXX<br>
-                        Exemples : +243991234567, 0991234567, 991234567
-                    </div>
+                    <div class="error">❌ ALEX MBOLELA PAS TROUVÉ</div>
+                    <pre>Cherché dans ${allDrivers.length} conducteur(s)
+
+Critères de recherche:
+- Nom contient "alex" (insensible à la casse)
+- Téléphone contient "811111111"
+
+Conducteurs disponibles:
+${allDrivers.map((d, i) => `${i+1}. ${d.full_name || d.name} (${d.phone})`).join('\n')}
+                    </pre>
                 `;
             }
         }
-        
-        // Lancer les tests au chargement
-        window.addEventListener('load', runTests);
-        
-        // Permettre de tester avec Enter
-        document.getElementById('custom-phone').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') testCustomPhone();
-        });
     </script>
 </body>
 </html>
