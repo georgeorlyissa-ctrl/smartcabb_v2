@@ -196,7 +196,6 @@ export async function sendFCMNotification(
           notification: {
             sound: 'default',
             channelId: 'smartcabb_rides',
-            priority: 'high',
             defaultSound: true,
             defaultVibrateTimings: true
           }

@@ -308,6 +308,59 @@ app.post("/send", async (c) => {
 });
 
 /**
+ * 📨 Envoyer une notification avec token direct (pour tests)
+ * POST /fcm/send-direct
+ */
+app.post("/send-direct", async (c) => {
+  try {
+    const { token, title, body, data } = await c.req.json();
+
+    if (!token || !title || !body) {
+      return c.json({ success: false, error: "token, title et body requis" }, 400);
+    }
+
+    console.log(`📤 Envoi notification direct au token:`, token.substring(0, 20) + '...');
+
+    // Vérifier la config Firebase
+    if (!isFirebaseAdminConfigured()) {
+      console.error('❌ Firebase Admin non configuré');
+      return c.json({ 
+        success: false, 
+        error: 'Firebase non configuré - Vérifiez FIREBASE_PROJECT_ID et FIREBASE_SERVICE_ACCOUNT_JSON' 
+      }, 500);
+    }
+
+    // Envoyer la notification directement
+    const result = await sendFCMNotification(token, {
+      title,
+      body,
+      data: data || {}
+    });
+
+    if (result.success) {
+      console.log(`✅ Notification envoyée avec succès:`, result.messageId);
+      return c.json({ 
+        success: true, 
+        messageId: result.messageId,
+        token: token.substring(0, 20) + '...'
+      });
+    } else {
+      console.error(`❌ Échec envoi notification:`, result.error);
+      return c.json({ 
+        success: false, 
+        error: result.error || 'Erreur inconnue lors de l\'envoi' 
+      }, 500);
+    }
+  } catch (error) {
+    console.error("❌ Erreur envoi notification direct FCM:", error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : "Erreur serveur" 
+    }, 500);
+  }
+});
+
+/**
  * 🔍 Diagnostic FCM serveur
  * GET /fcm/diagnostic
  */

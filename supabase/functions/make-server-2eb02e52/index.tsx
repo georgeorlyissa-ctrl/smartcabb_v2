@@ -3,40 +3,111 @@ import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import * as kv from "./kv-wrapper.ts";
-import { isValidUUID } from "./uuid-validator.ts";
-import { normalizePhoneNumber, isValidPhoneNumber } from "./phone-utils.ts";
-import smsRoutes from "./sms-routes.ts";
-import backupRoutes from "./backup-routes.ts";
-import exportRoutes from "./export-routes.ts";
-import websiteRoutes from "./website-routes.ts";
-import chatRoutes from "./chat-routes.ts";
-import cleanupRoutes from "./cleanup-routes.ts";
+// 🔥 IMPORTS COMMENTÉS TEMPORAIREMENT POUR FIX 404
+// import { isValidUUID } from "./uuid-validator.ts";
+// import { normalizePhoneNumber, isValidPhoneNumber } from "./phone-utils.ts";
+// import smsRoutes from "./sms-routes.ts";
+// import backupRoutes from "./backup-routes.ts";
+// import exportRoutes from "./export-routes.ts";
+// import websiteRoutes from "./website-routes.ts";
+// import chatRoutes from "./chat-routes.ts";
+// import cleanupRoutes from "./cleanup-routes.ts";
 import authRoutes from "./auth-routes.ts";
-import driverRoutes from "./driver-routes.ts";
-import passengerRoutes from "./passenger-routes.ts";
-import walletRoutes from "./wallet-routes.ts";
+// import driverRoutes from "./driver-routes.ts";
+// import passengerRoutes from "./passenger-routes.ts";
+// import walletRoutes from "./wallet-routes.ts";
 import rideRoutes from "./ride-routes.ts";
 import adminRoutes from "./admin-routes.ts";
-import settingsRoutes from "./settings-routes.ts";
-import emailRoutes from "./email-routes.ts";
-import emergencyRoutes from "./emergency-routes.ts";
-import { testRoutes } from "./test-routes.ts";
-import diagnosticRoute from "./diagnostic-driver-route.ts";
-import geocodingApp from "./geocoding-api.ts";
-import analyticsApp from "./analytics-api.ts";
-import nominatimApp from "./nominatim-enriched-api.ts";
+import cancellationRoutes from "./cancellation-routes.ts";
+// import settingsRoutes from "./settings-routes.ts";
+// import emailRoutes from "./email-routes.ts";
+// import emergencyRoutes from "./emergency-routes.ts";
+// import { testRoutes } from "./test-routes.ts";
+// import diagnosticRoute from "./diagnostic-driver-route.ts";
+// import geocodingApp from "./geocoding-api.ts";
+// import analyticsApp from "./analytics-api.ts";
+// import nominatimApp from "./nominatim-enriched-api.ts";
 import fcmRoutes from "./fcm-routes.ts";
 import googleMapsApp from "./google-maps-api.ts";
-import configRoutes from "./config-routes.ts";
-import * as adminUsersRoutes from "./admin_users_routes.ts";
-import resetDatabaseRoutes from "./reset-database-routes.ts";
-import { securityMiddleware } from "./security-middleware.ts";
-import auditRoutes from "./audit-emails-route.ts";
-import kvTestRoutes from "./kv-test-route.ts";
+// import configRoutes from "./config-routes.ts";
+// import * as adminUsersRoutes from "./admin_users_routes.ts";
+// import resetDatabaseRoutes from "./reset-database-routes.ts";
+// import { securityMiddleware } from "./security-middleware.ts";
+// import auditRoutes from "./audit-emails-route.ts";
+// import kvTestRoutes from "./kv-test-route.ts";
 
 const app = new Hono();
 
-// 🔄 REDÉPLOIEMENT FORCÉ V7 - FIX NORMALISATION TÉLÉPHONE - 14/02/2026
+// ✅ FONCTIONS UTILITAIRES INLINE (temporaire pour fix 404)
+
+// Validation UUID
+function isValidUUID(uuid: string): boolean {
+  if (!uuid || typeof uuid !== 'string') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(uuid);
+}
+
+// Normalisation numéro de téléphone congolais
+function normalizePhoneNumber(phone: string): string | null {
+  if (!phone) return null;
+  
+  // Retirer tous les caractères non numériques sauf le +
+  let cleaned = phone.replace(/[^\d+]/g, '');
+  
+  // Si commence par +243, OK
+  if (cleaned.startsWith('+243')) {
+    return cleaned;
+  }
+  
+  // Si commence par 00243, remplacer par +243
+  if (cleaned.startsWith('00243')) {
+    return '+' + cleaned.substring(2);
+  }
+  
+  // Si commence par 243, ajouter +
+  if (cleaned.startsWith('243')) {
+    return '+' + cleaned;
+  }
+  
+  // Si commence par 0, remplacer par +243
+  if (cleaned.startsWith('0')) {
+    return '+243' + cleaned.substring(1);
+  }
+  
+  // Si 9 chiffres sans préfixe, ajouter +243
+  if (/^\d{9}$/.test(cleaned)) {
+    return '+243' + cleaned;
+  }
+  
+  return null;
+}
+
+// Validation numéro de téléphone congolais
+function isValidPhoneNumber(phone: string): boolean {
+  if (!phone) return false;
+  
+  // Format attendu : +243XXXXXXXXX (9 chiffres après +243)
+  const phoneRegex = /^\+243\d{9}$/;
+  return phoneRegex.test(phone);
+}
+
+// ✅ Client Supabase global (Service Role Key pour admin)
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
+
+// 🧪 ROUTE DE TEST ULTRA-SIMPLE - Pour vérifier que le serveur démarre
+app.get('/make-server-2eb02e52/ping', (c) => {
+  console.log('✅ PING reçu - Serveur fonctionne !');
+  return c.json({ 
+    success: true, 
+    message: 'SmartCabb Server is running!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 🔄 REDÉPLOIEMENT FORCÉ V8 - FIX CONFLIT ROUTES - 07/03/2026
 // ✅ Normalisation centralisée des numéros de téléphone (phone-utils.ts)
 // ✅ Fix erreur InvalidPhoneNumber Africa's Talking
 // ✅ Firebase Cloud Messaging pour notifications push
@@ -66,21 +137,33 @@ if (supabaseUrl) {
   }
 }
 
-// Enable logger
-app.use('*', logger(console.log));
+// 🔥 CORS EN PREMIER - AVANT TOUT (y compris logger)
+app.use('*', async (c, next) => {
+  // Headers CORS ultra-permissifs pour debug
+  c.header('Access-Control-Allow-Origin', '*');
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  c.header('Access-Control-Allow-Headers', '*');
+  c.header('Access-Control-Max-Age', '86400');
+  c.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Si c'est une requête OPTIONS (preflight), répondre IMMÉDIATEMENT
+  if (c.req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Max-Age': '86400',
+      }
+    });
+  }
+  
+  await next();
+});
 
-// Enable CORS for all routes and methods
-app.use(
-  "/*",
-  cors({
-    origin: ["https://smartcabb.com", "https://www.smartcabb.com", "http://localhost:3000", "http://localhost:5173"],
-    allowHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Cache-Control", "Pragma"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    exposeHeaders: ["Content-Length", "X-RateLimit-Remaining"],
-    maxAge: 600,
-    credentials: true,
-  }),
-);
+// Enable logger APRÈS CORS
+app.use('*', logger(console.log));
 
 // ✅ ROUTES PUBLIQUES (définies AVANT le middleware de sécurité)
 // Health check endpoint
@@ -156,6 +239,139 @@ app.get('/make-server-2eb02e52/config/google-maps-key', (c) => {
   } catch (error) {
     console.error('❌ Error loading Google Maps key:', error);
     return c.json({ success: false, error: 'Failed to load API key' }, 500);
+  }
+});
+
+// ✅ ENDPOINT GOOGLE MAPS REVERSE GEOCODING (Coordonnées → Adresse)
+app.get('/make-server-2eb02e52/google-maps/reverse', async (c) => {
+  try {
+    const lat = c.req.query('lat');
+    const lng = c.req.query('lng');
+    
+    if (!lat || !lng) {
+      return c.json({ success: false, error: 'Paramètres lat et lng requis' }, 400);
+    }
+    
+    // Récupérer la clé API Google Maps
+    const googleMapsKey = 
+      Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY') || 
+      Deno.env.get('GOOGLE_MAPS_API_KEY') ||
+      Deno.env.get('API_KEY');
+    
+    if (!googleMapsKey) {
+      console.error('❌ GOOGLE_MAPS_API_KEY non configurée');
+      return c.json({ success: false, error: 'API key not configured' }, 500);
+    }
+    
+    console.log(`🌍 [GEOCODE] Reverse geocoding: ${lat}, ${lng}`);
+    
+    // Appeler l'API Google Maps Geocoding
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${googleMapsKey}&language=fr`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.status === 'OK' && data.results && data.results.length > 0) {
+      console.log(`✅ [GEOCODE] Adresse trouvée: ${data.results[0].formatted_address}`);
+      return c.json({ 
+        success: true, 
+        result: data.results[0]
+      });
+    } else {
+      console.warn(`⚠️ [GEOCODE] Aucune adresse trouvée (status: ${data.status})`);
+      return c.json({ 
+        success: false, 
+        error: `Geocoding failed: ${data.status}`,
+        status: data.status
+      }, 404);
+    }
+  } catch (error) {
+    console.error('❌ [GEOCODE] Erreur:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur serveur' 
+    }, 500);
+  }
+});
+
+// ============================================
+// 🔧 ROUTES DE CONFIGURATION GLOBALE
+// ============================================
+
+// GET /config/get - Récupérer la configuration globale
+app.get('/make-server-2eb02e52/config/get', async (c) => {
+  try {
+    console.log('📋 [CONFIG] Récupération de la configuration globale...');
+    
+    // Récupérer la config depuis le KV store
+    const config = await kv.get('smartcabb_global_config');
+    
+    if (config) {
+      console.log('✅ [CONFIG] Configuration trouvée');
+      return c.json({ success: true, config });
+    }
+    
+    // Si pas de config, retourner la config par défaut
+    console.log('ℹ️ [CONFIG] Aucune config trouvée, utilisation des valeurs par défaut');
+    const defaultConfig = {
+      exchangeRate: 2800,
+      commissionRate: 10,
+      nightTimeStart: '21:00',
+      nightTimeEnd: '06:00',
+      freeWaitingMinutes: 10,
+      distantZoneMultiplier: 2,
+      postpaidEnabled: true,
+      postpaidFee: 5000,
+      flutterwaveEnabled: true,
+      smsEnabled: true,
+      smsProvider: 'africas_talking',
+      notificationsEnabled: true,
+      appVersion: '1.0.0',
+      maintenanceMode: false,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    return c.json({ success: true, config: defaultConfig });
+  } catch (error) {
+    console.error('❌ [CONFIG] Erreur récupération config:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur' 
+    }, 500);
+  }
+});
+
+// POST /config/update - Mettre à jour la configuration globale (admin uniquement)
+app.post('/make-server-2eb02e52/config/update', async (c) => {
+  try {
+    console.log('💾 [CONFIG] Mise à jour de la configuration...');
+    
+    const { config } = await c.req.json();
+    
+    if (!config) {
+      return c.json({ 
+        success: false, 
+        error: 'Configuration manquante' 
+      }, 400);
+    }
+    
+    // Ajouter le timestamp de mise à jour
+    const updatedConfig = {
+      ...config,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // Sauvegarder dans le KV store
+    await kv.set('smartcabb_global_config', updatedConfig);
+    
+    console.log('✅ [CONFIG] Configuration mise à jour avec succès');
+    return c.json({ success: true, config: updatedConfig });
+  } catch (error) {
+    console.error('❌ [CONFIG] Erreur mise à jour config:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur' 
+    }, 500);
   }
 });
 
@@ -874,6 +1090,134 @@ app.post("/make-server-2eb02e52/create-admin", async (c) => {
 });
 
 // ============================================
+// 🔧 DIAGNOSE & FIX BAD EMAILS
+// ============================================
+
+/**
+ * Diagnostique les utilisateurs avec des emails malformés
+ * Format problématique : u+243XXXXXXXXX@smartcabb.app
+ * Format correct : u243XXXXXXXXX@smartcabb.app
+ */
+app.get("/make-server-2eb02e52/admin/diagnose-bad-emails", async (c) => {
+  try {
+    console.log('🔍 [DIAGNOSE] Recherche des emails malformés...');
+
+    // Liste tous les utilisateurs Auth
+    const { data: users, error } = await supabase.auth.admin.listUsers();
+
+    if (error) {
+      console.error('❌ Erreur liste utilisateurs:', error);
+      return c.json({ 
+        success: false, 
+        error: 'Erreur lors de la récupération des utilisateurs' 
+      }, 500);
+    }
+
+    // Filtrer les utilisateurs avec email contenant "u+243"
+    const usersWithBadEmails = users.users
+      .filter(user => user.email && user.email.includes('u+243'))
+      .map(user => ({
+        id: user.id,
+        email: user.email || '',
+        full_name: user.user_metadata?.full_name || user.user_metadata?.name || 'Utilisateur',
+        phone: user.user_metadata?.phone || ''
+      }));
+
+    console.log(`🔍 [DIAGNOSE] ${usersWithBadEmails.length} utilisateur(s) avec emails malformés`);
+
+    return c.json({
+      success: true,
+      count: usersWithBadEmails.length,
+      users: usersWithBadEmails
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur diagnostic:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur inattendue' 
+    }, 500);
+  }
+});
+
+/**
+ * Répare l'email d'un utilisateur spécifique
+ * Retire le "+" du format email
+ */
+app.post("/make-server-2eb02e52/admin/fix-user-email/:userId", async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    console.log(`🔧 [FIX EMAIL] Réparation de l'utilisateur: ${userId}`);
+
+    if (!isValidUUID(userId)) {
+      return c.json({ 
+        success: false, 
+        error: 'ID utilisateur invalide' 
+      }, 400);
+    }
+
+    // Récupérer l'utilisateur
+    const { data: userData, error: getUserError } = await supabase.auth.admin.getUserById(userId);
+
+    if (getUserError || !userData.user) {
+      console.error('❌ Utilisateur introuvable:', getUserError);
+      return c.json({ 
+        success: false, 
+        error: 'Utilisateur introuvable' 
+      }, 404);
+    }
+
+    const oldEmail = userData.user.email || '';
+    
+    // Vérifier si l'email contient "u+243"
+    if (!oldEmail.includes('u+243')) {
+      console.log('✅ Email déjà au bon format:', oldEmail);
+      return c.json({
+        success: true,
+        message: 'Email déjà au bon format',
+        oldEmail,
+        newEmail: oldEmail
+      });
+    }
+
+    // Générer le nouvel email (retirer le +)
+    const newEmail = oldEmail.replace('u+243', 'u243');
+    console.log(`🔄 [FIX EMAIL] ${oldEmail} → ${newEmail}`);
+
+    // Mettre à jour l'email dans Supabase Auth
+    const { data: updateData, error: updateError } = await supabase.auth.admin.updateUserById(
+      userId,
+      { email: newEmail }
+    );
+
+    if (updateError) {
+      console.error('❌ Erreur mise à jour email:', updateError);
+      return c.json({ 
+        success: false, 
+        error: `Erreur mise à jour: ${updateError.message}` 
+      }, 500);
+    }
+
+    console.log('✅ [FIX EMAIL] Email réparé avec succès');
+
+    return c.json({
+      success: true,
+      message: 'Email réparé avec succès',
+      oldEmail,
+      newEmail,
+      userId
+    });
+
+  } catch (error) {
+    console.error('❌ Erreur réparation email:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur inattendue' 
+    }, 500);
+  }
+});
+
+// ============================================
 // CREATE PROFILE (FIX PERMISSIONS 42501)
 // ============================================
 
@@ -886,7 +1230,7 @@ app.post("/make-server-2eb02e52/create-profile", async (c) => {
     const body = await c.req.json();
     const { userId, email, fullName, phone, role } = body;
 
-    console.log('📝 Création profil serveur pour:', userId);
+    console.log('��� Création profil serveur pour:', userId);
 
     // Create Supabase client with SERVICE_ROLE_KEY
     const supabase = createClient(
@@ -1671,7 +2015,9 @@ app.post("/make-server-2eb02e52/signup-driver", async (c) => {
       id: authData.user.id,
       user_id: authData.user.id,
       license_number: tempLicenseNumber,
-      status: 'approved', // ✅ AUTO-APPROUVER LES NOUVEAUX CONDUCTEURS (anciennement 'pending')
+      status: 'pending', // ✅ NOUVEAUX CONDUCTEURS EN ATTENTE D'APPROBATION
+      isApproved: false, // ✅ Pas approuvé par défaut
+      is_approved: false, // ✅ Alias pour compatibilité
       rating: 0,
       total_rides: 0,
       is_available: false,
@@ -2108,114 +2454,557 @@ app.post("/make-server-2eb02e52/delete-user-by-id", async (c) => {
 // app.use('*', securityMiddleware);
 
 // ============================================
-// AUTH ROUTES
+// 🔥 ROUTES COMMENTÉES TEMPORAIREMENT POUR FIX 404
 // ============================================
-app.route('/make-server-2eb02e52', authRoutes);
-
-// ============================================
-// SMS ROUTES
-// ============================================
-app.route('/make-server-2eb02e52/sms', smsRoutes);
-
-// ============================================
-// TEST ROUTES
-// ============================================
-app.route('/make-server-2eb02e52/test', testRoutes);
-
-// ============================================
-// 🔍 KV STORE TEST ROUTES (DIAGNOSTIC)
-// ============================================
-app.route('/make-server-2eb02e52/kv-test', kvTestRoutes);
-
-// ============================================
-// 🗺️ GOOGLE MAPS API - ROUTES PRINCIPALES
-// ============================================
+app.route('/make-server-2eb02e52/auth', authRoutes);
+// app.route('/make-server-2eb02e52/sms', smsRoutes);
+// app.route('/make-server-2eb02e52/test', testRoutes);
+// app.route('/make-server-2eb02e52/kv-test', kvTestRoutes);
 app.route('/make-server-2eb02e52/google-maps', googleMapsApp);
-
-// ============================================
-// GEOCODING API ROUTES (Mapbox + Nominatim) - DEPRECATED
-// ============================================
-app.route('/make-server-2eb02e52/geocoding', geocodingApp);
-
-// ============================================
-// NOMINATIM ENRICHED API - 50 000+ POI EN RDC - DEPRECATED
-// ============================================
-app.route('/make-server-2eb02e52/nominatim', nominatimApp);
-
-// ============================================
-// ANALYTICS API ROUTES (Tracking pour ranking intelligent)
-// ============================================
-app.route('/make-server-2eb02e52/analytics', analyticsApp);
-
-// ============================================
-// DIAGNOSTIC ROUTES (Diagnostic conducteur)
-// ============================================
-app.route('/make-server-2eb02e52', diagnosticRoute);
-
-// ============================================
-// BACKUP ROUTES
-// ============================================
-app.route('/make-server-2eb02e52/backups', backupRoutes);
-
-// ============================================
-// EXPORT ROUTES
-// ============================================
-app.route('/make-server-2eb02e52/export', exportRoutes);
-
-// ============================================
-// CLEANUP ROUTES (Nettoyage des données)
-// ============================================
-app.route('/make-server-2eb02e52/cleanup', cleanupRoutes);
-
-// ============================================
-// 📧 AUDIT EMAILS ROUTES (Prévention bounces)
-// ============================================
-app.route('/make-server-2eb02e52', auditRoutes);
-
-// ============================================
-// WEBSITE ROUTES
-// ============================================
-app.route('/make-server-2eb02e52/website', websiteRoutes);
-
-// ============================================
-// CHAT ROUTES
-// ============================================
-app.route('/make-server-2eb02e52/chat', chatRoutes);
+// app.route('/make-server-2eb02e52/geocoding', geocodingApp);
+// app.route('/make-server-2eb02e52/nominatim', nominatimApp);
+// app.route('/make-server-2eb02e52/analytics', analyticsApp);
+// app.route('/make-server-2eb02e52', diagnosticRoute);
+// app.route('/make-server-2eb02e52/backups', backupRoutes);
+// app.route('/make-server-2eb02e52/export', exportRoutes);
+// app.route('/make-server-2eb02e52/cleanup', cleanupRoutes);
+// app.route('/make-server-2eb02e52', auditRoutes);
+// app.route('/make-server-2eb02e52/website', websiteRoutes);
+// app.route('/make-server-2eb02e52/chat', chatRoutes);
 
 // ============================================
 // DRIVER ROUTES (Conducteurs)
 // ============================================
-app.route('/make-server-2eb02e52/drivers', driverRoutes);
+// 🔥 ROUTE INLINE SIMPLIFIÉE - Sans dépendances externes
+app.get('/make-server-2eb02e52/drivers', async (c) => {
+  try {
+    console.log('📋 Récupération de la liste des conducteurs');
+    
+    // Récupérer tous les conducteurs depuis le KV store
+    const allDrivers = await kv.getByPrefix('driver:');
+    
+    console.log(`✅ ${allDrivers.length} conducteurs trouvés`);
+    
+    return c.json({
+      success: true,
+      drivers: allDrivers,
+      count: allDrivers.length
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération conducteurs:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur inconnue'
+    }, 500);
+  }
+});
+
+// ============================================
+// 📝 POST /drivers/signup - INSCRIPTION CONDUCTEUR
+// ============================================
+app.post('/make-server-2eb02e52/drivers/signup', async (c) => {
+  try {
+    const body = await c.req.json();
+    const {
+      full_name,
+      email,
+      phone,
+      password,
+      vehicleMake,
+      vehicleModel,
+      vehiclePlate,
+      vehicleColor,
+      vehicleCategory,
+      profilePhoto
+    } = body;
+
+    console.log('📝 [DRIVER/SIGNUP] Inscription conducteur:', { full_name, phone, email });
+
+    // Validation
+    if (!full_name || !phone || !password) {
+      return c.json({
+        success: false,
+        error: "Nom complet, téléphone et mot de passe requis"
+      }, 400);
+    }
+
+    if (!vehicleMake || !vehicleModel || !vehiclePlate || !vehicleColor || !vehicleCategory) {
+      return c.json({
+        success: false,
+        error: "Toutes les informations du véhicule sont requises"
+      }, 400);
+    }
+
+    // Normaliser le téléphone
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (!normalizedPhone) {
+      return c.json({
+        success: false,
+        error: "Numéro de téléphone invalide"
+      }, 400);
+    }
+
+    // Vérifier si l'utilisateur existe déjà
+    const { data: { users: existingUsers } } = await supabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.find(u => {
+      const userPhone = u.user_metadata?.phone || u.phone;
+      return userPhone && normalizePhoneNumber(userPhone) === normalizedPhone;
+    });
+
+    if (existingUser) {
+      console.log('⚠️ [DRIVER/SIGNUP] Utilisateur existant, suppression...');
+      try {
+        await supabase.auth.admin.deleteUser(existingUser.id);
+        console.log('✅ [DRIVER/SIGNUP] Utilisateur supprimé');
+      } catch (deleteError) {
+        console.error('❌ [DRIVER/SIGNUP] Erreur suppression:', deleteError);
+        return c.json({
+          success: false,
+          error: "Ce numéro de téléphone est déjà enregistré"
+        }, 400);
+      }
+    }
+
+    // Générer l'email factice (SANS le +)
+    const phoneWithoutPlus = normalizedPhone.replace(/\+/g, '');
+    const generatedEmail = email || `u${phoneWithoutPlus}@smartcabb.app`;
+
+    // Créer l'utilisateur
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: generatedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name,
+        name: full_name,
+        phone: normalizedPhone,
+        role: 'driver',
+        vehicle: {
+          make: vehicleMake,
+          model: vehicleModel,
+          license_plate: vehiclePlate,
+          color: vehicleColor,
+          category: vehicleCategory
+        }
+      }
+    });
+
+    if (authError || !authData?.user) {
+      console.error('❌ [DRIVER/SIGNUP] Erreur création auth:', authError);
+      return c.json({
+        success: false,
+        error: authError?.message || "Erreur lors de la création du compte"
+      }, 500);
+    }
+
+    console.log('✅ [DRIVER/SIGNUP] Utilisateur créé:', authData.user.id);
+
+    // Créer le profil conducteur dans KV store
+    const driverProfile = {
+      id: authData.user.id,
+      email: generatedEmail,
+      full_name,
+      phone: normalizedPhone,
+      role: 'driver',
+      status: 'pending', // En attente d'approbation
+      isApproved: false,
+      isAvailable: false,
+      rating: 5.0,
+      totalRides: 0,
+      totalEarnings: 0,
+      balance: 0,
+      vehicle: {
+        make: vehicleMake,
+        model: vehicleModel,
+        license_plate: vehiclePlate,
+        color: vehicleColor,
+        category: vehicleCategory
+      },
+      profilePhoto: profilePhoto || null,
+      created_at: authData.user.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      lastUpdate: new Date().toISOString()
+    };
+
+    // 💾 Sauvegarder dans KV store
+    console.log(`💾 [DRIVER/SIGNUP] Sauvegarde du profil ID: ${authData.user.id}`);
+    
+    await kv.set(`driver:${authData.user.id}`, driverProfile);
+    
+    console.log('✅ [DRIVER/SIGNUP] Profil conducteur créé avec succès');
+
+    return c.json({
+      success: true,
+      user: authData.user,
+      profile: driverProfile
+    });
+
+  } catch (error) {
+    console.error('❌ [DRIVER/SIGNUP] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur serveur"
+    }, 500);
+  }
+});
 
 // ============================================
 // PASSENGER ROUTES (Passagers)
 // ============================================
-app.route('/make-server-2eb02e52/passengers', passengerRoutes);
+// 🔥 ROUTE INLINE SIMPLIFIÉE - Sans dépendances externes
+app.get('/make-server-2eb02e52/passengers', async (c) => {
+  try {
+    console.log('📋 Récupération de la liste des passagers');
+    
+    // Récupérer tous les passagers depuis le KV store
+    const allPassengers = await kv.getByPrefix('passenger:');
+    
+    console.log(`✅ ${allPassengers.length} passagers trouvés`);
+    
+    return c.json({
+      success: true,
+      passengers: allPassengers,
+      count: allPassengers.length
+    });
+  } catch (error) {
+    console.error('❌ Erreur récupération passagers:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur inconnue'
+    }, 500);
+  }
+});
+
+// 🆕 GET /passengers/:id - Récupérer un passager par ID (avec auto-création si nécessaire)
+app.get('/make-server-2eb02e52/passengers/:id', async (c) => {
+  try {
+    const passengerId = c.req.param('id');
+    
+    console.log('🔍 [PASSENGER/GET] Recherche passager ID:', passengerId);
+    
+    // Validation UUID
+    if (!isValidUUID(passengerId)) {
+      return c.json({
+        success: false,
+        error: 'ID invalide'
+      }, 400);
+    }
+    
+    // Chercher le passager dans le KV store
+    let passenger = await kv.get(`passenger:${passengerId}`);
+    
+    if (passenger) {
+      console.log('✅ [PASSENGER/GET] Passager trouvé dans KV store');
+      return c.json({
+        success: true,
+        passenger
+      });
+    }
+    
+    // 🔧 AUTO-RÉPARATION : Si le passager n'existe pas dans KV, tenter réparation UUID
+    console.log('⚠️ [PASSENGER/GET] Passager non trouvé dans KV avec UUID:', passengerId);
+    console.log('🔍 [PASSENGER/GET] Recherche dans Auth...');
+    
+    const { data: authData, error: authError } = await supabase.auth.admin.getUserById(passengerId);
+    
+    if (authError || !authData?.user) {
+      // 🔧 ÉTAPE 2 : UUID pas dans Auth, c'est peut-être un UUID orphelin
+      console.log('⚠️ [PASSENGER/GET] UUID non trouvé dans Auth, recherche profils orphelins...');
+      
+      // Récupérer tous les profils KV pour chercher cet UUID orphelin
+      const allProfiles = await kv.getByPrefix('passenger:');
+      const orphanProfile = allProfiles.find((p: any) => p.id === passengerId);
+      
+      if (orphanProfile && orphanProfile.phone) {
+        console.log('🔧 [PASSENGER/GET] Profil orphelin trouvé:', orphanProfile.phone);
+        
+        // Chercher le vrai utilisateur dans Auth par téléphone
+        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+        
+        if (!listError && users) {
+          const normalizedOrphanPhone = (orphanProfile.phone || '').replace(/\D/g, '');
+          const realAuthUser = users.find((u: any) => {
+            const userPhone = (u.user_metadata?.phone || '').replace(/\D/g, '');
+            return userPhone && userPhone === normalizedOrphanPhone;
+          });
+          
+          if (realAuthUser) {
+            console.log('🔧 [PASSENGER/GET] Auth trouvé, UUID correct:', realAuthUser.id);
+            console.log('🔧 [PASSENGER/GET] Migration:', passengerId, '→', realAuthUser.id);
+            
+            // Supprimer le profil orphelin
+            await kv.del(`passenger:${passengerId}`);
+            console.log('  🗑️ Supprimé passenger orphelin:', passengerId);
+            
+            // Créer le profil avec le bon UUID
+            const repairedPassenger = {
+              id: realAuthUser.id,
+              email: realAuthUser.email || orphanProfile.email,
+              full_name: realAuthUser.user_metadata?.full_name || orphanProfile.full_name || 'Utilisateur',
+              phone: realAuthUser.user_metadata?.phone || orphanProfile.phone,
+              role: 'passenger',
+              balance: orphanProfile.balance || 0,
+              totalRides: orphanProfile.totalRides || 0,
+              rating: orphanProfile.rating || 5.0,
+              created_at: realAuthUser.created_at || orphanProfile.created_at || new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            
+            await kv.set(`passenger:${realAuthUser.id}`, repairedPassenger);
+            await kv.set(`profile:${realAuthUser.id}`, repairedPassenger);
+            console.log('✅ [PASSENGER/GET] Profil réparé:', realAuthUser.id);
+            
+            return c.json({
+              success: true,
+              passenger: repairedPassenger,
+              repaired: true,
+              old_uuid: passengerId,
+              new_uuid: realAuthUser.id
+            });
+          }
+        }
+      }
+      
+      // UUID vraiment invalide
+      console.error('❌ [PASSENGER/GET] UUID invalide:', passengerId);
+      return c.json({
+        success: false,
+        error: 'Profil introuvable. Veuillez contacter le support.',
+        details: 'UUID non trouvé dans Auth et aucun profil orphelin dans KV'
+      }, 404);
+    }
+    
+    // ✅ UUID trouvé dans Auth, créer le profil KV
+    console.log('✅ [PASSENGER/GET] Utilisateur trouvé dans Auth, création profil KV...');
+    
+    const newPassenger = {
+      id: authData.user.id,
+      email: authData.user.email || `u${authData.user.user_metadata?.phone}@smartcabb.app`,
+      full_name: authData.user.user_metadata?.full_name || authData.user.user_metadata?.name || 'Utilisateur',
+      phone: authData.user.user_metadata?.phone || '',
+      role: 'passenger',
+      balance: 0,
+      totalRides: 0,
+      rating: 5.0,
+      created_at: authData.user.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    // Sauvegarder dans KV store
+    await kv.set(`passenger:${passengerId}`, newPassenger);
+    await kv.set(`profile:${passengerId}`, newPassenger);
+    
+    console.log('✅ [PASSENGER/GET] Profil passager créé automatiquement:', newPassenger);
+    
+    return c.json({
+      success: true,
+      passenger: newPassenger,
+      created: true
+    });
+    
+  } catch (error) {
+    console.error('❌ [PASSENGER/GET] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur serveur'
+    }, 500);
+  }
+});
+
+// 🆕 POST /passengers/signup - Inscription passager
+app.post('/make-server-2eb02e52/passengers/signup', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { full_name, email, phone, password } = body;
+
+    console.log('📝 [PASSENGER/SIGNUP] Inscription passager:', { full_name, phone, email });
+
+    // Validation
+    if (!full_name || !phone || !password) {
+      return c.json({
+        success: false,
+        error: "Nom complet, téléphone et mot de passe requis"
+      }, 400);
+    }
+
+    // Normaliser le téléphone
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (!normalizedPhone) {
+      return c.json({
+        success: false,
+        error: "Numéro de téléphone invalide"
+      }, 400);
+    }
+
+    // Vérifier si l'utilisateur existe déjà
+    const { data: { users: existingUsers } } = await supabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.find(u => {
+      const userPhone = u.user_metadata?.phone || u.phone;
+      return userPhone && normalizePhoneNumber(userPhone) === normalizedPhone;
+    });
+
+    if (existingUser) {
+      console.log('⚠️ [PASSENGER/SIGNUP] Utilisateur existant avec ce numéro');
+      return c.json({
+        success: false,
+        error: "Ce numéro de téléphone est déjà enregistré"
+      }, 400);
+    }
+
+    // Générer l'email factice (SANS le +)
+    const phoneWithoutPlus = normalizedPhone.replace(/\+/g, '');
+    const generatedEmail = email || `u${phoneWithoutPlus}@smartcabb.app`;
+
+    // Créer l'utilisateur
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: generatedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name,
+        name: full_name,
+        phone: normalizedPhone,
+        role: 'passenger'
+      }
+    });
+
+    if (authError || !authData?.user) {
+      console.error('❌ [PASSENGER/SIGNUP] Erreur création auth:', authError);
+      return c.json({
+        success: false,
+        error: authError?.message || "Erreur lors de la création du compte"
+      }, 500);
+    }
+
+    console.log('✅ [PASSENGER/SIGNUP] Utilisateur créé:', authData.user.id);
+
+    // Créer le profil passager dans KV store
+    const passengerProfile = {
+      id: authData.user.id,
+      email: generatedEmail,
+      full_name,
+      phone: normalizedPhone,
+      role: 'passenger',
+      balance: 0,
+      totalRides: 0,
+      rating: 5.0,
+      created_at: authData.user.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // 💾 Sauvegarder dans KV store
+    console.log(`💾 [PASSENGER/SIGNUP] Sauvegarde du profil ID: ${authData.user.id}`);
+    
+    await kv.set(`passenger:${authData.user.id}`, passengerProfile);
+    
+    console.log('✅ [PASSENGER/SIGNUP] Profil passager créé avec succès');
+
+    return c.json({
+      success: true,
+      user: authData.user,
+      profile: passengerProfile
+    });
+
+  } catch (error) {
+    console.error('❌ [PASSENGER/SIGNUP] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur serveur"
+    }, 500);
+  }
+});
+
+// 🆕 ROUTE DE DIAGNOSTIC - Créer profil passager manuellement (URGENT FIX)
+app.post('/make-server-2eb02e52/diagnostic/create-passenger-profile', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId } = body;
+    
+    console.log('🔧 [DIAGNOSTIC] Création manuelle profil pour user ID:', userId);
+    
+    if (!userId || !isValidUUID(userId)) {
+      return c.json({
+        success: false,
+        error: 'User ID invalide ou manquant'
+      }, 400);
+    }
+    
+    // Récupérer les données depuis Supabase Auth
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userError || !userData?.user) {
+      console.error('❌ [DIAGNOSTIC] Utilisateur non trouvé dans Auth:', userError);
+      return c.json({
+        success: false,
+        error: 'Utilisateur non trouvé dans Supabase Auth',
+        details: userError
+      }, 404);
+    }
+    
+    console.log('✅ [DIAGNOSTIC] Utilisateur trouvé dans Auth:', {
+      id: userData.user.id,
+      email: userData.user.email,
+      phone: userData.user.user_metadata?.phone,
+      full_name: userData.user.user_metadata?.full_name
+    });
+    
+    // Vérifier si le profil existe déjà dans KV
+    const existingProfile = await kv.get(`passenger:${userId}`);
+    if (existingProfile) {
+      console.log('⚠️ [DIAGNOSTIC] Profil déjà existant dans KV:', existingProfile);
+      return c.json({
+        success: true,
+        message: 'Profil déjà existant',
+        profile: existingProfile,
+        wasCreated: false
+      });
+    }
+    
+    // Créer le profil passager
+    const newPassenger = {
+      id: userData.user.id,
+      email: userData.user.email || `u${userData.user.user_metadata?.phone}@smartcabb.app`,
+      full_name: userData.user.user_metadata?.full_name || userData.user.user_metadata?.name || 'Utilisateur',
+      phone: userData.user.user_metadata?.phone || '',
+      role: 'passenger',
+      balance: 0,
+      totalRides: 0,
+      rating: 5.0,
+      created_at: userData.user.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    // Sauvegarder dans KV store
+    await kv.set(`passenger:${userId}`, newPassenger);
+    
+    console.log('✅ [DIAGNOSTIC] Profil passager créé avec succès:', newPassenger);
+    
+    return c.json({
+      success: true,
+      message: 'Profil créé avec succès',
+      profile: newPassenger,
+      wasCreated: true
+    });
+    
+  } catch (error) {
+    console.error('❌ [DIAGNOSTIC] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur serveur',
+      stack: error instanceof Error ? error.stack : undefined
+    }, 500);
+  }
+});
 
 // ============================================
-// WALLET ROUTES (Portefeuille & Recharges)
+// 🔥 ROUTES COMMENTÉES TEMPORAIREMENT POUR FIX 404
 // ============================================
-app.route('/make-server-2eb02e52/wallet', walletRoutes);
-
-// ============================================
-// RIDE ROUTES (Courses & Matching)
-// ============================================
+// app.route('/make-server-2eb02e52/wallet', walletRoutes);
 app.route('/make-server-2eb02e52/rides', rideRoutes);
-
-// ============================================
-// ADMIN ROUTES (Analytics & Statistics)
-// ============================================
 app.route('/make-server-2eb02e52/admin', adminRoutes);
-
-// ============================================
-// 🗑️ RESET DATABASE ROUTES (DANGER ZONE)
-// ============================================
-app.route('/make-server-2eb02e52/reset', resetDatabaseRoutes);
-
-// ============================================
-// SETTINGS ROUTES (System Settings)
-// ============================================
-app.route('/make-server-2eb02e52/settings', settingsRoutes);
+app.route('/make-server-2eb02e52/cancellations', cancellationRoutes);
+// app.route('/make-server-2eb02e52/reset', resetDatabaseRoutes);
+// app.route('/make-server-2eb02e52/settings', settingsRoutes);
 
 // ============================================
 // TEST DIRECT SETTINGS ROUTE (Debugging)
@@ -2246,24 +3035,12 @@ app.get('/make-server-2eb02e52/settings-test', async (c) => {
 });
 
 // ============================================
-// EMAIL ROUTES (Email Management)
+// 🔥 ROUTES COMMENTÉES TEMPORAIREMENT POUR FIX 404
 // ============================================
-app.route('/make-server-2eb02e52', emailRoutes);
-
-// ============================================
-// EMERGENCY ROUTES (SOS & Alerts)
-// ============================================
-app.route('/make-server-2eb02e52/emergency', emergencyRoutes);
-
-// ============================================
-// FCM ROUTES (Firebase Cloud Messaging)
-// ============================================
+// app.route('/make-server-2eb02e52', emailRoutes);
+// app.route('/make-server-2eb02e52/emergency', emergencyRoutes);
 app.route('/make-server-2eb02e52/fcm', fcmRoutes);
-
-// ============================================
-// CONFIG ROUTES (Configuration Globale)
-// ============================================
-app.route('/make-server-2eb02e52/config', configRoutes);
+// app.route('/make-server-2eb02e52/config', configRoutes);
 
 // ============================================
 // CONTACT FORM ROUTE
@@ -2737,90 +3514,6 @@ app.post("/make-server-2eb02e52/cleanup-auth-users", async (c) => {
 });
 
 // ============================================
-// GET ALL DRIVERS FROM KV STORE
-// ============================================
-
-/**
- * Récupère tous les conducteurs depuis le KV store + Postgres (fallback)
- * Utilisé par le panel admin pour afficher la liste des chauffeurs
- * ✅ FIX: Si KV store est vide, récupérer depuis Postgres profiles avec role='driver'
- */
-app.get("/make-server-2eb02e52/drivers", async (c) => {
-  try {
-    console.log('📊 Récupération de tous les conducteurs...');
-    
-    // Récupérer tous les drivers du KV store
-    let drivers = await kv.getByPrefix('driver:');
-    
-    console.log(`📦 KV Store: ${drivers?.length || 0} conducteur(s) trouvé(s)`);
-    
-    // ✅ FIX: Si KV est vide, récupérer depuis Postgres
-    if (!drivers || drivers.length === 0) {
-      console.log('⚠️ KV store vide, récupération depuis Postgres...');
-      
-      try {
-        // Récupérer les profils conducteurs depuis Postgres
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'driver');
-        
-        if (error) {
-          console.error('❌ Erreur Postgres profiles:', error);
-        } else if (profiles && profiles.length > 0) {
-          console.log(`✅ Postgres: ${profiles.length} conducteur(s) trouvé(s)`);
-          
-          // Convertir les profiles en format driver
-          drivers = profiles.map((profile: any) => ({
-            id: profile.id,
-            user_id: profile.id,
-            full_name: profile.full_name || 'Conducteur inconnu',
-            email: profile.email || '',
-            phone: profile.phone || '',
-            status: 'pending', // Par défaut en attente
-            is_approved: false,
-            is_available: false,
-            rating: 0,
-            total_rides: 0,
-            total_earnings: 0,
-            created_at: profile.created_at,
-            updated_at: profile.updated_at || profile.created_at,
-            // Infos véhicule vides par défaut
-            vehicle_make: '',
-            vehicle_model: '',
-            vehicle_plate: '',
-            vehicle_color: '',
-            vehicle_category: 'standard',
-            vehicle_year: new Date().getFullYear(),
-          }));
-          
-          console.log('🔄 Conducteurs convertis depuis Postgres:', drivers.length);
-        }
-      } catch (postgresError) {
-        console.error('❌ Erreur récupération Postgres:', postgresError);
-      }
-    }
-    
-    console.log(`✅ TOTAL: ${drivers?.length || 0} conducteur(s) retourné(s)`);
-    
-    return c.json({
-      success: true,
-      drivers: drivers || [],
-      count: drivers?.length || 0,
-      source: drivers && drivers.length > 0 && !drivers[0].vehicle_make ? 'postgres' : 'kv'
-    });
-    
-  } catch (error) {
-    console.error('❌ Erreur récupération conducteurs:', error);
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Erreur serveur',
-      drivers: []
-    }, 500);
-  }
-});
-
-// ============================================
 // MIGRATION : POSTGRES → KV STORE (CONDUCTEURS)
 // ============================================
 
@@ -2974,39 +3667,6 @@ app.get("/make-server-2eb02e52/admin/migrate-drivers-to-kv", async (c) => {
   }
 });
 
-// ============================================
-// GET ALL PASSENGERS FROM KV STORE
-// ============================================
-
-/**
- * Récupère tous les passagers depuis le KV store
- * Utilisé par le panel admin pour afficher la liste des passagers
- */
-app.get("/make-server-2eb02e52/passengers", async (c) => {
-  try {
-    console.log('📊 Récupération de tous les passagers depuis KV store...');
-    
-    // Récupérer tous les passengers du KV store
-    const passengers = await kv.getByPrefix('passenger:');
-    
-    console.log(`✅ ${passengers?.length || 0} passager(s) trouvé(s)`);
-    
-    return c.json({
-      success: true,
-      passengers: passengers || [],
-      count: passengers?.length || 0
-    });
-    
-  } catch (error) {
-    console.error('❌ Erreur récupération passagers:', error);
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Erreur serveur',
-      passengers: []
-    }, 500);
-  }
-});
-
 /**
  * 🔍 ROUTE DE DIAGNOSTIC - Afficher le contenu détaillé du KV store pour les drivers
  * Permet de voir exactement ce qui est stocké pour déboguer
@@ -3054,17 +3714,885 @@ app.get("/make-server-2eb02e52/debug/drivers", async (c) => {
 });
 
 // ============================================
+// 🔄 SYNCHRONISATION AUTH → KV
+// ============================================
+
+/**
+ * Synchroniser les conducteurs depuis Supabase Auth vers le KV store
+ * Utile quand la sauvegarde automatique échoue lors de l'inscription
+ */
+app.post("/make-server-2eb02e52/admin/sync-drivers", async (c) => {
+  try {
+    console.log('🔄 [SYNC] Début synchronisation conducteurs Auth → KV...');
+    
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
+    
+    // Récupérer tous les utilisateurs de Auth
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error('❌ [SYNC] Erreur récupération utilisateurs:', listError);
+      return c.json({ success: false, error: listError.message }, 500);
+    }
+    
+    // Filtrer les conducteurs
+    const drivers = users?.filter(u => u.user_metadata?.role === 'driver') || [];
+    console.log(`📋 [SYNC] ${drivers.length} conducteur(s) trouvé(s) dans Auth`);
+    
+    let syncCount = 0;
+    let skipCount = 0;
+    const errors: string[] = [];
+    
+    // Synchroniser chaque conducteur
+    for (const driver of drivers) {
+      const driverId = driver.id;
+      const userMetadata = driver.user_metadata || {};
+      
+      // Vérifier si existe déjà dans KV
+      const existingDriver = await kv.get(`driver:${driverId}`);
+      
+      if (existingDriver) {
+        console.log(`⏭️ [SYNC] Driver ${driverId} existe déjà, skip`);
+        skipCount++;
+        continue;
+      }
+      
+      // Créer le profil conducteur
+      const driverProfile = {
+        id: driverId,
+        email: driver.email || `u${userMetadata.phone}@smartcabb.app`,
+        full_name: userMetadata.full_name || userMetadata.name || 'Conducteur',
+        phone: userMetadata.phone,
+        role: 'driver',
+        status: 'pending',
+        isApproved: false,
+        isAvailable: false,
+        rating: 5.0,
+        totalRides: 0,
+        totalEarnings: 0,
+        balance: 0,
+        vehicle: userMetadata.vehicle || {},
+        created_at: driver.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        lastUpdate: new Date().toISOString()
+      };
+      
+      // Sauvegarder dans KV
+      try {
+        await kv.set(`driver:${driverId}`, driverProfile);
+        console.log(`✅ [SYNC] Driver ${driverId} (${driverProfile.full_name}) synchronisé`);
+        syncCount++;
+      } catch (saveError) {
+        const errorMsg = `Erreur sauvegarde ${driverId}: ${saveError instanceof Error ? saveError.message : 'Erreur inconnue'}`;
+        console.error(`❌ [SYNC] ${errorMsg}`);
+        errors.push(errorMsg);
+      }
+    }
+    
+    console.log(`✅ [SYNC] Synchronisation terminée: ${syncCount} créés, ${skipCount} skippés, ${errors.length} erreurs`);
+    
+    return c.json({
+      success: true,
+      message: `Synchronisation terminée`,
+      synced: syncCount,
+      skipped: skipCount,
+      errors: errors,
+      total: drivers.length
+    });
+    
+  } catch (error) {
+    console.error('❌ [SYNC] Erreur:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur serveur'
+    }, 500);
+  }
+});
+
+// ============================================
 // 🆕 ADMIN: Gestion des utilisateurs
 // ============================================
 
-// Route: Récupérer TOUS les utilisateurs (passagers + conducteurs + admins)
-app.get("/make-server-2eb02e52/admin/users/all", adminUsersRoutes.getAllUsers);
+// GET /admin/users/all - Récupérer tous les utilisateurs
+app.get("/make-server-2eb02e52/admin/users/all", async (c) => {
+  try {
+    console.log('📋 [ADMIN] Récupération de tous les utilisateurs...');
+    
+    // Récupérer les utilisateurs depuis Supabase Auth
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+    
+    if (authError) {
+      console.error('❌ [ADMIN] Erreur récupération users Auth:', authError);
+      return c.json({ success: false, error: authError.message }, 500);
+    }
+    
+    console.log(`✅ [ADMIN] ${authUsers?.length || 0} utilisateur(s) trouvé(s) dans Auth`);
+    
+    // ✅ Fonction pour convertir les rôles en français
+    const convertRole = (role: string) => {
+      const roleMap: Record<string, string> = {
+        'passenger': 'Passager',
+        'driver': 'Conducteur',
+        'admin': 'Administrateur'
+      };
+      return roleMap[role] || 'unknown';
+    };
+    
+    // Formater les utilisateurs pour le frontend
+    const formattedUsers = (authUsers || []).map(user => {
+      const rawRole = user.user_metadata?.role || 'unknown';
+      const fullName = user.user_metadata?.full_name || user.user_metadata?.name || 'N/A';
+      return {
+        id: user.id,
+        role: convertRole(rawRole),
+        name: fullName,  // ✅ Ajouter name pour compatibilité frontend
+        full_name: fullName,
+        phone: user.user_metadata?.phone || 'N/A',
+        email: user.email || 'N/A',
+        password: '••••••••',  // ✅ Mot de passe masqué par défaut
+        created_at: user.created_at,
+        createdAt: user.created_at,  // ✅ Alias pour compatibilité
+        last_sign_in_at: user.last_sign_in_at,
+        lastLoginAt: user.last_sign_in_at,  // ✅ Alias pour compatibilité
+        vehicle_type: user.user_metadata?.vehicle_type,
+        vehicleCategory: user.user_metadata?.vehicle_type,  // ✅ Alias
+        license_plate: user.user_metadata?.license_plate,
+        vehiclePlate: user.user_metadata?.license_plate,  // ✅ Alias
+        status: user.user_metadata?.status || 'active'
+      };
+    });
+    
+    // ✅ Calculer les statistiques
+    const stats = {
+      passengers: formattedUsers.filter(u => u.role === 'Passager').length,
+      drivers: formattedUsers.filter(u => u.role === 'Conducteur').length,
+      admins: formattedUsers.filter(u => u.role === 'Administrateur').length
+    };
+    
+    return c.json({ 
+      success: true, 
+      users: formattedUsers,
+      total: formattedUsers.length,
+      count: formattedUsers.length,
+      stats: stats  // ✅ AJOUTÉ: stats pour le frontend
+    });
+  } catch (error) {
+    console.error('❌ [ADMIN] Erreur récupération users:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur' 
+    }, 500);
+  }
+});
 
-// Route: Diagnostic des utilisateurs
-app.get("/make-server-2eb02e52/admin/users/diagnostic", adminUsersRoutes.getUsersDiagnostic);
+// GET /admin/users/diagnostic - Diagnostic utilisateurs (Auth vs KV)
+app.get("/make-server-2eb02e52/admin/users/diagnostic", async (c) => {
+  try {
+    console.log('🔍 [ADMIN] Diagnostic utilisateurs...');
+    
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      return c.json({ success: false, error: authError.message }, 500);
+    }
+    
+    const kvDrivers = await kv.getByPrefix('driver:') || [];
+    const kvPassengers = await kv.getByPrefix('passenger:') || [];
+    
+    const authDrivers = (authUsers || []).filter(u => u.user_metadata?.role === 'driver');
+    const authPassengers = (authUsers || []).filter(u => u.user_metadata?.role === 'passenger');
+    const authAdmins = (authUsers || []).filter(u => u.user_metadata?.role === 'admin');
+    
+    const diagnostic = {
+      auth: {
+        total: authUsers?.length || 0,
+        drivers: authDrivers.length,
+        passengers: authPassengers.length,
+        admins: authAdmins.length
+      },
+      kv: {
+        drivers: kvDrivers.length,
+        passengers: kvPassengers.length
+      },
+      orphaned: {
+        authWithoutKV: authUsers?.filter(u => {
+          const role = u.user_metadata?.role;
+          if (role === 'driver') {
+            return !kvDrivers.some((d: any) => d.id === u.id);
+          }
+          if (role === 'passenger') {
+            return !kvPassengers.some((p: any) => p.id === u.id);
+          }
+          return false;
+        }).length || 0,
+        kvWithoutAuth: [
+          ...kvDrivers.filter((d: any) => !authUsers?.some(u => u.id === d.id)),
+          ...kvPassengers.filter((p: any) => !authUsers?.some(u => u.id === p.id))
+        ].length
+      }
+    };
+    
+    console.log('✅ [ADMIN] Diagnostic:', JSON.stringify(diagnostic, null, 2));
+    return c.json({ success: true, diagnostic });
+  } catch (error) {
+    console.error('❌ [ADMIN] Erreur diagnostic:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur' 
+    }, 500);
+  }
+});
 
-// Route: Nettoyer les utilisateurs orphelins
-app.post("/make-server-2eb02e52/admin/users/cleanup", adminUsersRoutes.cleanupOrphanedUsers);
+// POST /admin/users/cleanup - Nettoyer les utilisateurs orphelins
+app.post("/make-server-2eb02e52/admin/users/cleanup", async (c) => {
+  try {
+    console.log('🧹 [ADMIN] Nettoyage des utilisateurs orphelins...');
+    
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      return c.json({ success: false, error: authError.message }, 500);
+    }
+    
+    const kvDrivers = await kv.getByPrefix('driver:') || [];
+    const kvPassengers = await kv.getByPrefix('passenger:') || [];
+    
+    let cleaned = 0;
+    
+    for (const driver of kvDrivers) {
+      if (driver && !authUsers?.some(u => u.id === (driver as any).id)) {
+        await kv.del(`driver:${(driver as any).id}`);
+        cleaned++;
+        console.log(`🗑️ Driver KV orphelin supprimé: ${(driver as any).id}`);
+      }
+    }
+    
+    for (const passenger of kvPassengers) {
+      if (passenger && !authUsers?.some(u => u.id === (passenger as any).id)) {
+        await kv.del(`passenger:${(passenger as any).id}`);
+        cleaned++;
+        console.log(`🗑️ Passenger KV orphelin supprimé: ${(passenger as any).id}`);
+      }
+    }
+    
+    console.log(`✅ [ADMIN] ${cleaned} entrée(s) orpheline(s) supprimée(s)`);
+    return c.json({ success: true, cleaned });
+  } catch (error) {
+    console.error('❌ [ADMIN] Erreur cleanup:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur' 
+    }, 500);
+  }
+});
+
+// POST /admin/users/sync-from-auth - Synchroniser depuis Auth vers KV
+app.post("/make-server-2eb02e52/admin/users/sync-from-auth", async (c) => {
+  try {
+    console.log('🔄 [ADMIN] Synchronisation Auth → KV...');
+    
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      return c.json({ success: false, error: authError.message }, 500);
+    }
+    
+    let synced = 0;
+    
+    for (const user of authUsers || []) {
+      const role = user.user_metadata?.role;
+      
+      if (role === 'driver') {
+        const existingDriver = await kv.get(`driver:${user.id}`);
+        if (!existingDriver) {
+          const newDriver = {
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name,
+            phone: user.user_metadata?.phone,
+            vehicle_type: user.user_metadata?.vehicle_type || 'economy',
+            license_plate: user.user_metadata?.license_plate,
+            status: 'offline',
+            is_available: false,
+            created_at: user.created_at,
+            updated_at: new Date().toISOString()
+          };
+          await kv.set(`driver:${user.id}`, newDriver);
+          synced++;
+          console.log(`✅ Driver créé dans KV: ${user.id}`);
+        }
+      } else if (role === 'passenger') {
+        const existingPassenger = await kv.get(`passenger:${user.id}`);
+        if (!existingPassenger) {
+          const newPassenger = {
+            id: user.id,
+            full_name: user.user_metadata?.full_name || user.user_metadata?.name,
+            phone: user.user_metadata?.phone,
+            created_at: user.created_at,
+            updated_at: new Date().toISOString()
+          };
+          await kv.set(`passenger:${user.id}`, newPassenger);
+          synced++;
+          console.log(`✅ Passenger créé dans KV: ${user.id}`);
+        }
+      }
+    }
+    
+    console.log(`✅ [ADMIN] ${synced} utilisateur(s) synchronisé(s)`);
+    return c.json({ success: true, synced });
+  } catch (error) {
+    console.error('❌ [ADMIN] Erreur sync:', error);
+    return c.json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur' 
+    }, 500);
+  }
+});
+
+// Route: Diagnostic COMPLET (Auth + KV + Routes)
+app.get("/make-server-2eb02e52/debug/full-diagnostic", async (c) => {
+  try {
+    console.log('🔍 [DIAGNOSTIC COMPLET] Début...');
+    
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+    if (authError) {
+      return c.json({ success: false, error: authError.message }, 500);
+    }
+    
+    const authDrivers = (authUsers || []).filter(u => u.user_metadata?.role === 'driver');
+    const kvDrivers = await kv.getByPrefix('driver:') || [];
+    
+    const diagnostic = {
+      auth: { total: authUsers?.length || 0, drivers: authDrivers.length },
+      kv: { drivers: kvDrivers.length },
+      driversAuth: authDrivers.map(d => ({ id: d.id, name: d.user_metadata?.full_name, phone: d.user_metadata?.phone })),
+      driversKV: kvDrivers.map((d: any) => ({ id: d.id, name: d.full_name, phone: d.phone, status: d.status })),
+      summary: `Auth: ${authDrivers.length} drivers, KV: ${kvDrivers.length} drivers`
+    };
+    
+    console.log('✅ [DIAGNOSTIC]:', JSON.stringify(diagnostic, null, 2));
+    return c.json({ success: true, diagnostic });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : 'Erreur' }, 500);
+  }
+});
+
+// ============================================
+// 🔧 UUID SYNC ROUTES - DIAGNOSTIC ET RÉPARATION
+// ============================================
+
+/**
+ * 🔍 DIAGNOSTIC : Vérifier la synchronisation UUID entre Auth et KV pour un utilisateur spécifique
+ * POST /make-server-2eb02e52/sync/diagnostic
+ * Body: { phone: "+243XXXXXXXXX" }
+ */
+app.post("/make-server-2eb02e52/sync/diagnostic", async (c) => {
+  try {
+    const { phone } = await c.req.json();
+    
+    if (!phone) {
+      return c.json({ success: false, error: "Téléphone requis" }, 400);
+    }
+
+    console.log('🔍 [SYNC/DIAGNOSTIC] Recherche utilisateur avec téléphone:', phone);
+
+    // Récupérer tous les utilisateurs de Supabase Auth
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error('❌ [SYNC/DIAGNOSTIC] Erreur récupération utilisateurs:', listError);
+      return c.json({ success: false, error: listError.message }, 500);
+    }
+
+    // Normaliser le téléphone pour comparaison
+    const normalizedPhone = phone.replace(/\D/g, '');
+    
+    // Chercher l'utilisateur dans Auth
+    const authUser = users?.find(u => {
+      const userPhone = u.user_metadata?.phone || u.phone || '';
+      const normalizedUserPhone = userPhone.replace(/\D/g, '');
+      return normalizedUserPhone === normalizedPhone || 
+             normalizedUserPhone.endsWith(normalizedPhone) ||
+             normalizedPhone.endsWith(normalizedUserPhone);
+    });
+
+    if (!authUser) {
+      console.log('❌ [SYNC/DIAGNOSTIC] Utilisateur non trouvé dans Supabase Auth');
+      return c.json({ 
+        success: false, 
+        error: "Utilisateur non trouvé dans Supabase Auth",
+        phone: normalizedPhone
+      }, 404);
+    }
+
+    console.log('✅ [SYNC/DIAGNOSTIC] Utilisateur trouvé dans Auth:', authUser.id);
+
+    // Chercher les profils dans le KV store
+    const profileKey = `profile:${authUser.id}`;
+    const passengerKey = `passenger:${authUser.id}`;
+    const driverKey = `driver:${authUser.id}`;
+
+    const profile = await kv.get(profileKey);
+    const passenger = await kv.get(passengerKey);
+    const driver = await kv.get(driverKey);
+
+    // Chercher aussi des profils orphelins (avec d'autres UUID)
+    const allProfiles = await kv.getByPrefix('profile:');
+    const allPassengers = await kv.getByPrefix('passenger:');
+    const allDrivers = await kv.getByPrefix('driver:');
+
+    const orphanProfiles = allProfiles.filter((p: any) => {
+      const pPhone = p.value?.phone?.replace(/\D/g, '') || '';
+      return pPhone === normalizedPhone && p.value?.id !== authUser.id;
+    });
+
+    const orphanPassengers = allPassengers.filter((p: any) => {
+      const pPhone = p.value?.phone?.replace(/\D/g, '') || '';
+      return pPhone === normalizedPhone && p.value?.id !== authUser.id;
+    });
+
+    const orphanDrivers = allDrivers.filter((d: any) => {
+      const dPhone = d.value?.phone?.replace(/\D/g, '') || '';
+      return dPhone === normalizedPhone && d.value?.id !== authUser.id;
+    });
+
+    console.log('📊 [SYNC/DIAGNOSTIC] Résultats:');
+    console.log('  - Auth UUID:', authUser.id);
+    console.log('  - Profile trouvé:', !!profile);
+    console.log('  - Passenger trouvé:', !!passenger);
+    console.log('  - Driver trouvé:', !!driver);
+    console.log('  - Profils orphelins:', orphanProfiles.length);
+    console.log('  - Passagers orphelins:', orphanPassengers.length);
+    console.log('  - Conducteurs orphelins:', orphanDrivers.length);
+
+    return c.json({
+      success: true,
+      diagnostic: {
+        auth: {
+          uuid: authUser.id,
+          email: authUser.email,
+          phone: authUser.user_metadata?.phone,
+          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name,
+          role: authUser.user_metadata?.role,
+          created_at: authUser.created_at
+        },
+        kv: {
+          profile_exists: !!profile,
+          passenger_exists: !!passenger,
+          driver_exists: !!driver,
+          profile_data: profile || null,
+          passenger_data: passenger || null,
+          driver_data: driver || null
+        },
+        orphans: {
+          profiles: orphanProfiles.map((p: any) => ({
+            key: p.key,
+            uuid: p.value?.id,
+            name: p.value?.full_name || p.value?.name,
+            phone: p.value?.phone,
+            role: p.value?.role
+          })),
+          passengers: orphanPassengers.map((p: any) => ({
+            key: p.key,
+            uuid: p.value?.id,
+            name: p.value?.full_name || p.value?.name,
+            phone: p.value?.phone
+          })),
+          drivers: orphanDrivers.map((d: any) => ({
+            key: d.key,
+            uuid: d.value?.id,
+            name: d.value?.full_name || d.value?.name,
+            phone: d.value?.phone
+          }))
+        },
+        needs_sync: orphanProfiles.length > 0 || orphanPassengers.length > 0 || orphanDrivers.length > 0 || !profile
+      }
+    });
+  } catch (error) {
+    console.error('❌ [SYNC/DIAGNOSTIC] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur serveur'
+    }, 500);
+  }
+});
+
+/**
+ * 🔧 RÉPARATION : Synchroniser les UUID pour un utilisateur spécifique
+ * POST /make-server-2eb02e52/sync/repair
+ * Body: { phone: "+243XXXXXXXXX" }
+ */
+app.post("/make-server-2eb02e52/sync/repair", async (c) => {
+  try {
+    const { phone } = await c.req.json();
+    
+    if (!phone) {
+      return c.json({ success: false, error: "Téléphone requis" }, 400);
+    }
+
+    console.log('🔧 [SYNC/REPAIR] Début de la réparation pour:', phone);
+
+    // Récupérer tous les utilisateurs de Supabase Auth
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error('❌ [SYNC/REPAIR] Erreur récupération utilisateurs:', listError);
+      return c.json({ success: false, error: listError.message }, 500);
+    }
+
+    // Normaliser le téléphone
+    const normalizedPhone = phone.replace(/\D/g, '');
+    
+    // Chercher l'utilisateur dans Auth
+    const authUser = users?.find(u => {
+      const userPhone = u.user_metadata?.phone || u.phone || '';
+      const normalizedUserPhone = userPhone.replace(/\D/g, '');
+      return normalizedUserPhone === normalizedPhone || 
+             normalizedUserPhone.endsWith(normalizedPhone) ||
+             normalizedPhone.endsWith(normalizedUserPhone);
+    });
+
+    if (!authUser) {
+      console.log('❌ [SYNC/REPAIR] Utilisateur non trouvé dans Supabase Auth');
+      return c.json({ 
+        success: false, 
+        error: "Utilisateur non trouvé dans Supabase Auth" 
+      }, 404);
+    }
+
+    console.log('✅ [SYNC/REPAIR] Utilisateur trouvé dans Auth:', authUser.id);
+
+    const correctUUID = authUser.id;
+    const metadata = authUser.user_metadata || {};
+    const role = metadata.role || 'passenger';
+
+    // Chercher les profils orphelins
+    const allProfiles = await kv.getByPrefix('profile:');
+    const allPassengers = await kv.getByPrefix('passenger:');
+    const allDrivers = await kv.getByPrefix('driver:');
+
+    const orphanProfiles = allProfiles.filter((p: any) => {
+      const pPhone = p.value?.phone?.replace(/\D/g, '') || '';
+      return pPhone === normalizedPhone && p.value?.id !== correctUUID;
+    });
+
+    const orphanPassengers = allPassengers.filter((p: any) => {
+      const pPhone = p.value?.phone?.replace(/\D/g, '') || '';
+      return pPhone === normalizedPhone && p.value?.id !== correctUUID;
+    });
+
+    const orphanDrivers = allDrivers.filter((d: any) => {
+      const dPhone = d.value?.phone?.replace(/\D/g, '') || '';
+      return dPhone === normalizedPhone && d.value?.id !== correctUUID;
+    });
+
+    console.log('🗑️ [SYNC/REPAIR] Suppression des profils orphelins...');
+    
+    // Récupérer les données d'un profil orphelin (si disponible) pour les fusionner
+    let existingData: any = null;
+    if (orphanProfiles.length > 0) {
+      existingData = orphanProfiles[0].value;
+    } else if (orphanPassengers.length > 0) {
+      existingData = orphanPassengers[0].value;
+    } else if (orphanDrivers.length > 0) {
+      existingData = orphanDrivers[0].value;
+    }
+
+    // Supprimer les profils orphelins
+    for (const orphan of orphanProfiles) {
+      const oldUUID = orphan.value?.id;
+      if (oldUUID) {
+        await kv.del(`profile:${oldUUID}`);
+        console.log('  ✅ Supprimé profile:', oldUUID);
+      }
+    }
+
+    for (const orphan of orphanPassengers) {
+      const oldUUID = orphan.value?.id;
+      if (oldUUID) {
+        await kv.del(`passenger:${oldUUID}`);
+        console.log('  ✅ Supprimé passenger:', oldUUID);
+      }
+    }
+
+    for (const orphan of orphanDrivers) {
+      const oldUUID = orphan.value?.id;
+      if (oldUUID) {
+        await kv.del(`driver:${oldUUID}`);
+        console.log('  ✅ Supprimé driver:', oldUUID);
+      }
+    }
+
+    // Créer le profil avec le bon UUID
+    console.log('✨ [SYNC/REPAIR] Création du profil avec le bon UUID...');
+
+    const newProfile = {
+      id: correctUUID,
+      email: authUser.email || `u${metadata.phone || correctUUID}@smartcabb.app`,
+      full_name: metadata.full_name || metadata.name || existingData?.full_name || existingData?.name || 'Utilisateur',
+      phone: metadata.phone || existingData?.phone || null,
+      role: role,
+      balance: existingData?.balance || 0,
+      account_type: existingData?.account_type || 'prepaid',
+      created_at: authUser.created_at || existingData?.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      
+      // Conserver les données supplémentaires si disponibles
+      ...(existingData?.profile_picture_url && { profile_picture_url: existingData.profile_picture_url }),
+      ...(existingData?.is_blocked !== undefined && { is_blocked: existingData.is_blocked })
+    };
+
+    // Sauvegarder le profil avec les bonnes clés
+    await kv.set(`profile:${correctUUID}`, newProfile);
+    console.log('  ✅ Créé profile:', correctUUID);
+
+    if (role === 'passenger') {
+      await kv.set(`passenger:${correctUUID}`, newProfile);
+      console.log('  ✅ Créé passenger:', correctUUID);
+    } else if (role === 'driver') {
+      // Pour les conducteurs, conserver les données spécifiques
+      const driverProfile = {
+        ...newProfile,
+        ...(existingData?.vehicle_registration && { vehicle_registration: existingData.vehicle_registration }),
+        ...(existingData?.vehicle_model && { vehicle_model: existingData.vehicle_model }),
+        ...(existingData?.vehicle_category && { vehicle_category: existingData.vehicle_category }),
+        ...(existingData?.isApproved !== undefined && { isApproved: existingData.isApproved }),
+        ...(existingData?.status && { status: existingData.status }),
+        ...(existingData?.isAvailable !== undefined && { isAvailable: existingData.isAvailable })
+      };
+      await kv.set(`driver:${correctUUID}`, driverProfile);
+      console.log('  ✅ Créé driver:', correctUUID);
+    }
+
+    console.log('✅ [SYNC/REPAIR] Réparation terminée avec succès');
+
+    return c.json({
+      success: true,
+      message: "Synchronisation réussie",
+      repair: {
+        correct_uuid: correctUUID,
+        old_uuids_removed: [
+          ...orphanProfiles.map((p: any) => p.value?.id),
+          ...orphanPassengers.map((p: any) => p.value?.id),
+          ...orphanDrivers.map((d: any) => d.value?.id)
+        ].filter(id => id),
+        profile_created: newProfile
+      }
+    });
+  } catch (error) {
+    console.error('❌ [SYNC/REPAIR] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur serveur'
+    }, 500);
+  }
+});
+
+/**
+ * 🔧 RÉPARATION GLOBALE : Synchroniser tous les utilisateurs Auth vers KV
+ * POST /make-server-2eb02e52/sync/repair-all
+ * 
+ * Version 3.0.13 - Réparation complète avec détection et suppression des profils orphelins
+ * Cette route applique la même logique que /sync/repair mais pour TOUS les utilisateurs automatiquement
+ */
+app.post("/make-server-2eb02e52/sync/repair-all", async (c) => {
+  try {
+    console.log('🔧 [SYNC/REPAIR-ALL] Début de la réparation globale...');
+
+    // Récupérer tous les utilisateurs de Supabase Auth
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error('❌ [SYNC/REPAIR-ALL] Erreur récupération utilisateurs:', listError);
+      return c.json({ success: false, error: listError.message }, 500);
+    }
+
+    console.log(`📋 [SYNC/REPAIR-ALL] ${users?.length || 0} utilisateurs trouvés dans Auth`);
+
+    // Récupérer tous les profils existants UNE SEULE FOIS pour optimisation
+    console.log('📦 [SYNC/REPAIR-ALL] Récupération de tous les profils existants...');
+    const allProfiles = await kv.getByPrefix('profile:');
+    const allPassengers = await kv.getByPrefix('passenger:');
+    const allDrivers = await kv.getByPrefix('driver:');
+
+    const results = {
+      total: users?.length || 0,
+      synced: 0,
+      repaired: 0,
+      orphansRemoved: 0,
+      skipped: 0,
+      errors: [] as any[]
+    };
+
+    for (const authUser of users || []) {
+      try {
+        const correctUUID = authUser.id;
+        const metadata = authUser.user_metadata || {};
+        const role = metadata.role || 'passenger';
+        const authPhone = (metadata.phone || '').replace(/\D/g, '');
+
+        console.log(`\n🔍 [SYNC/REPAIR-ALL] Traitement: ${metadata.full_name || 'Utilisateur'} (${correctUUID})`);
+
+        // Vérifier si le profil existe déjà avec le bon UUID
+        const existingProfile = await kv.get(`profile:${correctUUID}`);
+        
+        // Chercher les profils orphelins avec le même téléphone mais un UUID différent
+        const orphanProfiles = allProfiles.filter((p: any) => {
+          const pPhone = (p.value?.phone || '').replace(/\D/g, '');
+          return pPhone && pPhone === authPhone && p.value?.id !== correctUUID;
+        });
+
+        const orphanPassengers = allPassengers.filter((p: any) => {
+          const pPhone = (p.value?.phone || '').replace(/\D/g, '');
+          return pPhone && pPhone === authPhone && p.value?.id !== correctUUID;
+        });
+
+        const orphanDrivers = allDrivers.filter((d: any) => {
+          const dPhone = (d.value?.phone || '').replace(/\D/g, '');
+          return dPhone && dPhone === authPhone && d.value?.id !== correctUUID;
+        });
+
+        const hasOrphans = orphanProfiles.length > 0 || orphanPassengers.length > 0 || orphanDrivers.length > 0;
+
+        // Si le profil existe déjà avec le bon UUID ET qu'il n'y a pas d'orphelins, skip
+        if (existingProfile && !hasOrphans) {
+          console.log(`⏭️ [SYNC/REPAIR-ALL] Profil déjà synchronisé et pas d'orphelins`);
+          results.skipped++;
+          continue;
+        }
+
+        // Si profil existe ET il y a des orphelins : réparation nécessaire
+        if (existingProfile && hasOrphans) {
+          console.log(`🔧 [SYNC/REPAIR-ALL] Profil existe mais orphelins détectés - nettoyage...`);
+        }
+
+        // Si profil n'existe pas mais il y a des orphelins : migration nécessaire
+        if (!existingProfile && hasOrphans) {
+          console.log(`🔧 [SYNC/REPAIR-ALL] ⚠️ DÉSYNCHRONISATION UUID DÉTECTÉE !`);
+          console.log(`  - UUID Auth correct: ${correctUUID}`);
+          console.log(`  - ${orphanProfiles.length} profil(s) orphelin(s) trouvé(s)`);
+          console.log(`  - ${orphanPassengers.length} passenger(s) orphelin(s) trouvé(s)`);
+          console.log(`  - ${orphanDrivers.length} driver(s) orphelin(s) trouvé(s)`);
+        }
+
+        // Récupérer les données d'un profil orphelin (si disponible) pour les fusionner
+        let existingData: any = null;
+        if (orphanProfiles.length > 0) {
+          existingData = orphanProfiles[0].value;
+        } else if (orphanPassengers.length > 0) {
+          existingData = orphanPassengers[0].value;
+        } else if (orphanDrivers.length > 0) {
+          existingData = orphanDrivers[0].value;
+        }
+
+        // Supprimer TOUS les profils orphelins
+        for (const orphan of orphanProfiles) {
+          const oldUUID = orphan.value?.id;
+          if (oldUUID) {
+            await kv.del(`profile:${oldUUID}`);
+            console.log(`  🗑️ Supprimé profile orphelin: ${oldUUID}`);
+            results.orphansRemoved++;
+          }
+        }
+
+        for (const orphan of orphanPassengers) {
+          const oldUUID = orphan.value?.id;
+          if (oldUUID) {
+            await kv.del(`passenger:${oldUUID}`);
+            console.log(`  🗑️ Supprimé passenger orphelin: ${oldUUID}`);
+            results.orphansRemoved++;
+          }
+        }
+
+        for (const orphan of orphanDrivers) {
+          const oldUUID = orphan.value?.id;
+          if (oldUUID) {
+            await kv.del(`driver:${oldUUID}`);
+            console.log(`  🗑️ Supprimé driver orphelin: ${oldUUID}`);
+            results.orphansRemoved++;
+          }
+        }
+
+        // Créer/mettre à jour le profil avec le bon UUID
+        const newProfile = {
+          id: correctUUID,
+          email: authUser.email || `u${metadata.phone || correctUUID}@smartcabb.app`,
+          full_name: metadata.full_name || metadata.name || existingData?.full_name || existingData?.name || 'Utilisateur',
+          phone: metadata.phone || existingData?.phone || null,
+          role: role,
+          balance: existingProfile?.balance || existingData?.balance || 0,
+          account_type: existingProfile?.account_type || existingData?.account_type || 'prepaid',
+          created_at: authUser.created_at || existingData?.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          
+          // Conserver les données supplémentaires si disponibles
+          ...(existingProfile?.profile_picture_url && { profile_picture_url: existingProfile.profile_picture_url }),
+          ...(existingData?.profile_picture_url && !existingProfile?.profile_picture_url && { profile_picture_url: existingData.profile_picture_url }),
+          ...(existingProfile?.is_blocked !== undefined ? { is_blocked: existingProfile.is_blocked } : existingData?.is_blocked !== undefined && { is_blocked: existingData.is_blocked })
+        };
+
+        // Sauvegarder le profil
+        await kv.set(`profile:${correctUUID}`, newProfile);
+        
+        if (role === 'passenger') {
+          await kv.set(`passenger:${correctUUID}`, newProfile);
+        } else if (role === 'driver') {
+          // Pour les conducteurs, conserver les données spécifiques
+          const driverProfile = {
+            ...newProfile,
+            ...(existingProfile?.vehicle_registration && { vehicle_registration: existingProfile.vehicle_registration }),
+            ...(existingData?.vehicle_registration && !existingProfile?.vehicle_registration && { vehicle_registration: existingData.vehicle_registration }),
+            ...(existingProfile?.vehicle_model && { vehicle_model: existingProfile.vehicle_model }),
+            ...(existingData?.vehicle_model && !existingProfile?.vehicle_model && { vehicle_model: existingData.vehicle_model }),
+            ...(existingProfile?.vehicle_category && { vehicle_category: existingProfile.vehicle_category }),
+            ...(existingData?.vehicle_category && !existingProfile?.vehicle_category && { vehicle_category: existingData.vehicle_category }),
+            ...(existingProfile?.isApproved !== undefined ? { isApproved: existingProfile.isApproved } : existingData?.isApproved !== undefined && { isApproved: existingData.isApproved }),
+            ...(existingProfile?.status && { status: existingProfile.status }),
+            ...(existingData?.status && !existingProfile?.status && { status: existingData.status }),
+            ...(existingProfile?.isAvailable !== undefined ? { isAvailable: existingProfile.isAvailable } : existingData?.isAvailable !== undefined && { isAvailable: existingData.isAvailable })
+          };
+          await kv.set(`driver:${correctUUID}`, driverProfile);
+        }
+
+        if (hasOrphans) {
+          console.log(`✅ [SYNC/REPAIR-ALL] ✨ Réparation réussie: ${correctUUID} (${newProfile.full_name})`);
+          results.repaired++;
+        } else {
+          console.log(`✅ [SYNC/REPAIR-ALL] Profil créé: ${correctUUID} (${newProfile.full_name})`);
+          results.synced++;
+        }
+      } catch (error) {
+        console.error(`❌ [SYNC/REPAIR-ALL] Erreur pour ${authUser.id}:`, error);
+        results.errors.push({
+          uuid: authUser.id,
+          name: authUser.user_metadata?.full_name || 'Inconnu',
+          error: error instanceof Error ? error.message : 'Erreur inconnue'
+        });
+      }
+    }
+
+    console.log('\n🎉 [SYNC/REPAIR-ALL] RÉPARATION GLOBALE TERMINÉE');
+    console.log('═══════════════════════════════════════════════');
+    console.log(`  📊 Total utilisateurs: ${results.total}`);
+    console.log(`  ✅ Profils créés: ${results.synced}`);
+    console.log(`  🔧 Profils réparés: ${results.repaired}`);
+    console.log(`  🗑️ Profils orphelins supprimés: ${results.orphansRemoved}`);
+    console.log(`  ⏭️ Profils ignorés (déjà OK): ${results.skipped}`);
+    console.log(`  ❌ Erreurs: ${results.errors.length}`);
+    console.log('═══════════════════════════════════════════════');
+
+    return c.json({
+      success: true,
+      message: "Réparation globale terminée avec succès",
+      results
+    });
+  } catch (error) {
+    console.error('❌ [SYNC/REPAIR-ALL] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur serveur'
+    }, 500);
+  }
+});
 
 // ============================================
 // 💓 DRIVER HEARTBEAT - PERSISTANCE STATUT EN LIGNE
@@ -3185,69 +4713,143 @@ app.post("/make-server-2eb02e52/drivers/:driverId", async (c) => {
 
 /**
  * Récupère un conducteur spécifique depuis le KV store
+ * ✅ AVEC AUTO-RÉPARATION UUID ORPHELIN (comme /passengers/:id)
  */
 app.get("/make-server-2eb02e52/drivers/:driverId", async (c) => {
   try {
     const driverId = c.req.param('driverId');
-    console.log('🔍 Récupération conducteur:', driverId);
+    console.log('🔍 [DRIVER/GET] Recherche conducteur ID:', driverId);
     
-    const driver = await kv.get(`driver:${driverId}`);
+    // ÉTAPE 1 : Chercher dans le KV Store
+    let driver = await kv.get(`driver:${driverId}`);
     
-    if (!driver) {
+    if (driver) {
+      console.log('✅ [DRIVER/GET] Conducteur trouvé dans KV:', driver.full_name);
+      
+      // 🔧 FIX CRITIQUE : Normaliser les données du véhicule
+      const vehicle = driver.vehicle || {};
+      const normalizedDriver = {
+        ...driver,
+        vehicle_make: driver.vehicle_make || vehicle.make || '',
+        vehicle_model: driver.vehicle_model || vehicle.model || '',
+        vehicle_plate: driver.vehicle_plate || vehicle.license_plate || '',
+        vehicle_category: driver.vehicle_category || vehicle.category || 'smart_standard',
+        vehicle_color: driver.vehicle_color || vehicle.color || '',
+        vehicle_year: driver.vehicle_year || vehicle.year || new Date().getFullYear(),
+        vehicle: Object.keys(vehicle).length > 0 ? {
+          make: vehicle.make || driver.vehicle_make || '',
+          model: vehicle.model || driver.vehicle_model || '',
+          license_plate: vehicle.license_plate || driver.vehicle_plate || '',
+          category: vehicle.category || driver.vehicle_category || 'smart_standard',
+          color: vehicle.color || driver.vehicle_color || '',
+          year: vehicle.year || driver.vehicle_year || new Date().getFullYear(),
+          seats: vehicle.seats || 4
+        } : (driver.vehicle_make || driver.vehicle_model || driver.vehicle_plate) ? {
+          make: driver.vehicle_make || '',
+          model: driver.vehicle_model || '',
+          license_plate: driver.vehicle_plate || '',
+          category: driver.vehicle_category || 'smart_standard',
+          color: driver.vehicle_color || '',
+          year: driver.vehicle_year || new Date().getFullYear(),
+          seats: 4
+        } : {}
+      };
+      
+      if (normalizedDriver.vehicle_make || normalizedDriver.vehicle_model) {
+        await kv.set(`driver:${driverId}`, normalizedDriver);
+      }
+      
+      return c.json({
+        success: true,
+        driver: normalizedDriver
+      });
+    }
+    
+    // ÉTAPE 2 : Pas dans KV, chercher dans Supabase Auth
+    console.log('⚠️ [DRIVER/GET] Conducteur non trouvé dans KV, recherche dans Auth...');
+    
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(driverId);
+    
+    if (authError || !authData?.user) {
+      // ÉTAPE 3 : UUID orphelin - Auto-réparation
+      console.log('⚠️ [DRIVER/GET] UUID non trouvé dans Auth, recherche profils orphelins...');
+      
+      const allDriverProfiles = await kv.getByPrefix('driver:');
+      const orphanProfile = allDriverProfiles.find((item: any) => item.id === driverId);
+      
+      if (orphanProfile && orphanProfile.phone) {
+        console.log('🔧 [DRIVER/GET] Profil orphelin trouvé avec téléphone:', orphanProfile.phone);
+        
+        // Chercher dans Auth par téléphone
+        const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+        const users = usersData?.users || [];
+        const realAuthUser = users.find((u: any) => u.phone === orphanProfile.phone);
+        
+        if (realAuthUser) {
+          console.log('🔧 [DRIVER/GET] Auth trouvé, UUID correct:', realAuthUser.id);
+          console.log('🔧 [DRIVER/GET] Migration:', driverId, '→', realAuthUser.id);
+          
+          // Supprimer l'ancien profil orphelin
+          await kv.del(`driver:${driverId}`);
+          console.log('  🗑️ Supprimé driver orphelin:', driverId);
+          
+          // Créer le profil avec le BON UUID
+          const repairedDriver = {
+            ...orphanProfile,
+            id: realAuthUser.id,
+            updated_at: new Date().toISOString()
+          };
+          
+          await kv.set(`driver:${realAuthUser.id}`, repairedDriver);
+          console.log('  ✅ Créé driver avec UUID correct:', realAuthUser.id);
+          console.log('✅ [DRIVER/GET] Profil réparé:', repairedDriver.full_name);
+          
+          return c.json({
+            success: true,
+            driver: repairedDriver,
+            repaired: true,
+            old_uuid: driverId,
+            new_uuid: realAuthUser.id
+          });
+        }
+      }
+      
+      console.error('❌ [DRIVER/GET] Conducteur introuvable partout (KV + Auth + orphelins)');
       return c.json({ 
         success: false, 
         error: 'Conducteur non trouvé' 
       }, 404);
     }
     
-    // 🔧 FIX CRITIQUE : Normaliser les données du véhicule
-    // S'assurer que les champs individuels ET l'objet vehicle sont présents
-    const vehicle = driver.vehicle || {};
-    
-    // Construire les champs individuels depuis vehicle OU vice-versa
-    const normalizedDriver = {
-      ...driver,
-      // Champs individuels (priorité aux champs existants, sinon depuis vehicle)
-      vehicle_make: driver.vehicle_make || vehicle.make || '',
-      vehicle_model: driver.vehicle_model || vehicle.model || '',
-      vehicle_plate: driver.vehicle_plate || vehicle.license_plate || '',
-      vehicle_category: driver.vehicle_category || vehicle.category || 'smart_standard',
-      vehicle_color: driver.vehicle_color || vehicle.color || '',
-      vehicle_year: driver.vehicle_year || vehicle.year || new Date().getFullYear(),
-      // Objet vehicle (priorité à l'objet existant, sinon depuis les champs individuels)
-      vehicle: Object.keys(vehicle).length > 0 ? {
-        make: vehicle.make || driver.vehicle_make || '',
-        model: vehicle.model || driver.vehicle_model || '',
-        license_plate: vehicle.license_plate || driver.vehicle_plate || '',
-        category: vehicle.category || driver.vehicle_category || 'smart_standard',
-        color: vehicle.color || driver.vehicle_color || '',
-        year: vehicle.year || driver.vehicle_year || new Date().getFullYear(),
-        seats: vehicle.seats || 4
-      } : (driver.vehicle_make || driver.vehicle_model || driver.vehicle_plate) ? {
-        make: driver.vehicle_make || '',
-        model: driver.vehicle_model || '',
-        license_plate: driver.vehicle_plate || '',
-        category: driver.vehicle_category || 'smart_standard',
-        color: driver.vehicle_color || '',
-        year: driver.vehicle_year || new Date().getFullYear(),
-        seats: 4
-      } : {}
+    // ÉTAPE 2bis : Trouvé dans Auth, créer dans KV
+    console.log('✅ [DRIVER/GET] Trouvé dans Auth, création dans KV...');
+    const newDriver = {
+      id: authData.user.id,
+      email: authData.user.email,
+      phone: authData.user.phone || authData.user.user_metadata?.phone,
+      full_name: authData.user.user_metadata?.full_name || 'Conducteur',
+      role: 'driver',
+      status: authData.user.user_metadata?.status || 'pending',
+      vehicle_make: authData.user.user_metadata?.vehicle_make || '',
+      vehicle_model: authData.user.user_metadata?.vehicle_model || '',
+      vehicle_plate: authData.user.user_metadata?.vehicle_plate || '',
+      vehicle_category: authData.user.user_metadata?.vehicle_category || 'smart_standard',
+      vehicle_color: authData.user.user_metadata?.vehicle_color || '',
+      created_at: authData.user.created_at,
+      updated_at: new Date().toISOString()
     };
     
-    // Si des données ont été normalisées, les sauvegarder pour la prochaine fois
-    if (normalizedDriver.vehicle_make || normalizedDriver.vehicle_model || normalizedDriver.vehicle_plate) {
-      await kv.set(`driver:${driverId}`, normalizedDriver);
-      console.log('✅ Données conducteur normalisées et sauvegardées');
-    }
-    
-    // 🚨 VÉRIFICATION CRITIQUE : Retourner le statut pour la validation côté client
-    // Note: On retourne les données, mais le client DOIT vérifier le statut avant de permettre l'accès
-    console.log(`✅ Conducteur trouvé: ${normalizedDriver.full_name || normalizedDriver.name} (Statut: ${normalizedDriver.status})`);
-    console.log(`🚗 Véhicule: ${normalizedDriver.vehicle_make} ${normalizedDriver.vehicle_model} (${normalizedDriver.vehicle_category})`);
+    await kv.set(`driver:${authData.user.id}`, newDriver);
+    console.log('✅ [DRIVER/GET] Conducteur créé dans KV depuis Auth');
     
     return c.json({
       success: true,
-      driver: normalizedDriver
+      driver: newDriver
     });
     
   } catch (error) {
@@ -3296,6 +4898,324 @@ app.get("/make-server-2eb02e52/drivers/:driverId/location", async (c) => {
       success: false, 
       error: error instanceof Error ? error.message : 'Erreur serveur'
     }, 500);
+  }
+});
+
+// ============================================
+// DRIVER WALLET ROUTES - Gestion des portefeuilles conducteurs
+// ============================================
+
+/**
+ * GET /drivers/:driverId/wallets - Récupérer les deux soldes
+ */
+app.get("/make-server-2eb02e52/drivers/:driverId/wallets", async (c) => {
+  try {
+    const driverId = c.req.param('driverId');
+    
+    if (!isValidUUID(driverId)) {
+      return c.json({ success: false, error: "ID conducteur invalide" }, 400);
+    }
+    
+    const driver = await kv.get(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+    
+    const creditBalance = driver.balance || 0;
+    const earningsBalance = driver.earningsBalance || 0;
+    
+    console.log(`📊 [WALLETS] Driver ${driverId}:`, {
+      creditBalance,
+      earningsBalance
+    });
+    
+    return c.json({
+      success: true,
+      creditBalance,
+      earningsBalance
+    });
+  } catch (error) {
+    console.error("❌ [WALLETS] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+/**
+ * POST /drivers/:driverId/wallet/recharge - Recharger le solde de crédit
+ */
+app.post("/make-server-2eb02e52/drivers/:driverId/wallet/recharge", async (c) => {
+  try {
+    const driverId = c.req.param('driverId');
+    const { amount } = await c.req.json();
+    
+    if (!isValidUUID(driverId)) {
+      return c.json({ success: false, error: "ID conducteur invalide" }, 400);
+    }
+    
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return c.json({ success: false, error: "Montant invalide" }, 400);
+    }
+    
+    if (amount < 1000) {
+      return c.json({ success: false, error: "Montant minimum: 1 000 CDF" }, 400);
+    }
+    
+    const driver = await kv.get(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+    
+    // Ajouter au solde de crédit
+    const oldBalance = driver.balance || 0;
+    const newCreditBalance = oldBalance + amount;
+    
+    driver.balance = newCreditBalance;
+    driver.lastUpdate = new Date().toISOString();
+    
+    await kv.set(`driver:${driverId}`, driver);
+    
+    console.log(`💳 [RECHARGE] Driver ${driverId}: ${oldBalance} CDF → ${newCreditBalance} CDF (+${amount} CDF)`);
+    
+    // Enregistrer la transaction dans l'historique
+    const transactionKey = `transaction:${crypto.randomUUID()}`;
+    await kv.set(transactionKey, {
+      id: crypto.randomUUID(),
+      driverId,
+      type: 'recharge',
+      amount,
+      oldBalance,
+      newBalance: newCreditBalance,
+      timestamp: new Date().toISOString(),
+      status: 'completed'
+    });
+    
+    return c.json({
+      success: true,
+      newCreditBalance,
+      message: `Recharge de ${amount.toLocaleString('fr-FR')} CDF effectuée avec succès`
+    });
+  } catch (error) {
+    console.error("❌ [RECHARGE] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+/**
+ * POST /drivers/:driverId/wallet/withdraw - Retirer du solde de gains
+ */
+app.post("/make-server-2eb02e52/drivers/:driverId/wallet/withdraw", async (c) => {
+  try {
+    const driverId = c.req.param('driverId');
+    const { amount } = await c.req.json();
+    
+    if (!isValidUUID(driverId)) {
+      return c.json({ success: false, error: "ID conducteur invalide" }, 400);
+    }
+    
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return c.json({ success: false, error: "Montant invalide" }, 400);
+    }
+    
+    if (amount < 5000) {
+      return c.json({ success: false, error: "Montant minimum de retrait: 5 000 CDF" }, 400);
+    }
+    
+    const driver = await kv.get(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+    
+    const earningsBalance = driver.earningsBalance || 0;
+    
+    if (amount > earningsBalance) {
+      return c.json({ 
+        success: false, 
+        error: `Solde insuffisant. Disponible: ${earningsBalance.toLocaleString('fr-FR')} CDF` 
+      }, 400);
+    }
+    
+    // Déduire du solde de gains
+    const newEarningsBalance = earningsBalance - amount;
+    
+    driver.earningsBalance = newEarningsBalance;
+    driver.lastUpdate = new Date().toISOString();
+    
+    await kv.set(`driver:${driverId}`, driver);
+    
+    console.log(`💸 [WITHDRAW] Driver ${driverId}: ${earningsBalance} CDF → ${newEarningsBalance} CDF (-${amount} CDF)`);
+    
+    // Enregistrer la demande de retrait
+    const withdrawalKey = `withdrawal:${crypto.randomUUID()}`;
+    await kv.set(withdrawalKey, {
+      id: crypto.randomUUID(),
+      driverId,
+      driverName: driver.full_name || driver.name,
+      driverPhone: driver.phone,
+      amount,
+      oldBalance: earningsBalance,
+      newBalance: newEarningsBalance,
+      status: 'pending',
+      requestedAt: new Date().toISOString(),
+      processedAt: null,
+      paymentMethod: 'mobile_money',
+      notes: 'Demande de retrait en attente de traitement'
+    });
+    
+    return c.json({
+      success: true,
+      newEarningsBalance,
+      message: `Demande de retrait de ${amount.toLocaleString('fr-FR')} CDF enregistrée. Traitement sous 24-48h.`
+    });
+  } catch (error) {
+    console.error("❌ [WITHDRAW] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+/**
+ * POST /drivers/:driverId/status - Changer le statut online/offline
+ */
+app.post("/make-server-2eb02e52/drivers/:driverId/status", async (c) => {
+  try {
+    const driverId = c.req.param('driverId');
+    const { status, location } = await c.req.json();
+    
+    console.log('🔄 [STATUS] Changement statut:', { driverId, status, hasLocation: !!location });
+    
+    if (!isValidUUID(driverId)) {
+      return c.json({ success: false, error: "ID conducteur invalide" }, 400);
+    }
+    
+    if (!status || !['online', 'offline'].includes(status)) {
+      return c.json({ success: false, error: "Statut invalide (online ou offline)" }, 400);
+    }
+    
+    const driver = await kv.get(`driver:${driverId}`);
+    if (!driver) {
+      console.error(`❌ [STATUS] Conducteur non trouvé: ${driverId}`);
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+    
+    const isOnline = status === 'online';
+    
+    // Vérifier les statuts bloqués
+    const blockedStatuses = ['pending', 'rejected', 'suspended'];
+    const isBlocked = blockedStatuses.includes(driver.status);
+    
+    if (isOnline && isBlocked) {
+      let errorMessage = "Votre compte doit être approuvé avant de vous mettre en ligne";
+      if (driver.status === 'rejected') {
+        errorMessage = "Votre compte a été rejeté. Contactez le support.";
+      } else if (driver.status === 'suspended') {
+        errorMessage = "Votre compte est suspendu. Contactez le support.";
+      }
+      console.error(`❌ [STATUS] Conducteur bloqué:`, { driverId, status: driver.status });
+      return c.json({ success: false, error: errorMessage }, 403);
+    }
+    
+    // Auto-approuver si nécessaire
+    if (!driver.status || (driver.status !== 'approved' && !blockedStatuses.includes(driver.status))) {
+      console.log(`✅ [STATUS] Auto-approbation du conducteur ${driverId}`);
+      driver.status = 'approved';
+      driver.approved_at = driver.approved_at || new Date().toISOString();
+    }
+    
+    // Vérifier le solde si mise en ligne
+    const currentBalance = driver.balance || 0;
+    if (isOnline && currentBalance < 0) {
+      console.error(`❌ [STATUS] Solde insuffisant:`, { driverId, balance: currentBalance });
+      return c.json({ 
+        success: false, 
+        error: `Solde insuffisant (${currentBalance} CDF). Veuillez recharger votre compte.` 
+      }, 403);
+    }
+    
+    // ✅ FIX CRITIQUE : Mettre à jour TOUS les champs utilisés par le matching
+    driver.is_available = isOnline;
+    driver.available = isOnline;
+    driver.status = status;
+    
+    // Mettre à jour la position si fournie
+    if (location && typeof location.lat === 'number' && typeof location.lng === 'number') {
+      driver.location = location;
+      driver.current_location = location;
+      driver.currentLocation = location;
+      driver.last_location_update = new Date().toISOString();
+    }
+    
+    driver.updated_at = new Date().toISOString();
+    driver.lastUpdate = new Date().toISOString();
+    
+    // ✅ Sauvegarder dans KV Store (double sauvegarde pour compatibilité)
+    await kv.set(`driver:${driverId}`, driver);
+    await kv.set(`profile:${driverId}`, driver);
+    
+    console.log(`✅ [STATUS] Conducteur ${driverId} maintenant ${status} -`, {
+      available: driver.available,
+      is_available: driver.is_available,
+      balance: currentBalance,
+      hasLocation: !!driver.currentLocation,
+      vehicleCategory: driver.vehicle?.category || driver.vehicleCategory || driver.vehicle_category
+    });
+    
+    return c.json({ 
+      success: true, 
+      driver,
+      message: isOnline ? 'Vous êtes maintenant en ligne' : 'Vous êtes maintenant hors ligne'
+    });
+  } catch (error) {
+    console.error("❌ [STATUS] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+/**
+ * POST /drivers/:driverId/location - Mettre à jour la position GPS du conducteur
+ */
+app.post("/make-server-2eb02e52/drivers/:driverId/location", async (c) => {
+  try {
+    const driverId = c.req.param('driverId');
+    const { latitude, longitude } = await c.req.json();
+    
+    console.log('📍 [LOCATION] Mise à jour position:', { driverId, latitude, longitude });
+    
+    if (!isValidUUID(driverId)) {
+      return c.json({ success: false, error: "ID conducteur invalide" }, 400);
+    }
+    
+    if (!latitude || !longitude || typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return c.json({ success: false, error: "Coordonnées GPS invalides" }, 400);
+    }
+    
+    // Vérifier que les coordonnées sont dans la zone de Kinshasa (approximativement)
+    if (latitude < -5.0 || latitude > -4.0 || longitude < 15.0 || longitude > 15.8) {
+      console.warn('⚠️ [LOCATION] Coordonnées hors zone Kinshasa:', { latitude, longitude });
+    }
+    
+    const driver = await kv.get(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+    
+    // Mettre à jour la position
+    driver.currentLocation = {
+      latitude,
+      longitude,
+      updated_at: new Date().toISOString()
+    };
+    driver.updated_at = new Date().toISOString();
+    
+    await kv.set(`driver:${driverId}`, driver);
+    
+    console.log(`✅ [LOCATION] Position du conducteur ${driverId} mise à jour`);
+    
+    return c.json({ 
+      success: true,
+      location: driver.currentLocation
+    });
+  } catch (error) {
+    console.error("❌ [LOCATION] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
   }
 });
 
@@ -3712,7 +5632,7 @@ app.post('/make-server-2eb02e52/admin/passengers/delete-all', async (c) => {
     console.log('═══════════════════════════════════════════════');
     console.log('📊 RAPPORT DE SUPPRESSION DES PASSAGERS');
     console.log('═══════════════════════════════════════════════');
-    console.log(`✅ Passagers supprimés de Supabase Auth: ${deletedFromAuth}`);
+    console.log(`��� Passagers supprimés de Supabase Auth: ${deletedFromAuth}`);
     console.log(`✅ Entrées KV supprimées: ${deletedFromKV}`);
     console.log(`✅ Courses supprimées: ${deletedRides}`);
     console.log(`❌ Erreurs: ${errors.length}`);
@@ -4125,5 +6045,112 @@ app.delete('/make-server-2eb02e52/admin/clean-all-system', async (c) => {
 // - Supprimée le 24/02/2026 car elle pollue la base de données
 // - NE PAS RÉACTIVER CETTE FONCTIONNALITÉ
 
-// ✅ Démarrage du serveur Hono
-Deno.serve(app.fetch);
+// ============================================
+// 🔧 FIX EMAILS - RÉPARATION DES EMAILS MALFORMÉS
+// ============================================
+// Routes pour diagnostiquer et réparer les emails au format u+243... (avec +)
+// qui doivent être corrigés en u243... (sans +) pour que la connexion fonctionne
+
+import fixEmailsRoutes from "./fix-emails-routes.ts";
+app.route('/make-server-2eb02e52/fix-emails', fixEmailsRoutes);
+
+console.log('✅ Routes de réparation d\'emails chargées');
+
+// ============================================
+// 🛡️ ROUTE ADMIN PROFILE
+// ============================================
+// Route pour récupérer le profil admin depuis le KV store
+app.get("/make-server-2eb02e52/admin/profile/:userId", async (c) => {
+  try {
+    const userId = c.req.param('userId');
+    
+    if (!userId || !isValidUUID(userId)) {
+      return c.json({
+        success: false,
+        error: 'ID utilisateur invalide'
+      }, 400);
+    }
+    
+    console.log(`🛡️ [ADMIN PROFILE] Récupération du profil admin: ${userId}`);
+    
+    // Récupérer le profil depuis le KV store
+    const adminProfile = await kv.get(`admin:${userId}`);
+    
+    if (!adminProfile) {
+      // Essayer avec le préfixe profile:
+      const profile = await kv.get(`profile:${userId}`);
+      
+      if (!profile || profile.role !== 'admin') {
+        console.log(`❌ [ADMIN PROFILE] Profil admin non trouvé pour: ${userId}`);
+        return c.json({
+          success: false,
+          error: 'Profil admin non trouvé'
+        }, 404);
+      }
+      
+      console.log(`✅ [ADMIN PROFILE] Profil admin récupéré (depuis profile:)`);
+      return c.json({
+        success: true,
+        admin: profile
+      });
+    }
+    
+    console.log(`✅ [ADMIN PROFILE] Profil admin récupéré (depuis admin:)`);
+    return c.json({
+      success: true,
+      admin: adminProfile
+    });
+    
+  } catch (error) {
+    console.error('❌ [ADMIN PROFILE] Erreur:', error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Erreur serveur'
+    }, 500);
+  }
+});
+
+console.log('✅ Route admin profile chargée');
+
+// ============================================
+// 🗑️ PURGE UTILISATEUR - SUPPRESSION DÉFINITIVE
+// ============================================
+// Routes pour purger complètement un utilisateur de Supabase Auth
+// et libérer son email pour permettre de créer un nouveau compte
+import purgeUserRoutes from "./purge-user-route.ts";
+app.route('/make-server-2eb02e52/purge', purgeUserRoutes);
+
+console.log('✅ Routes de purge utilisateur chargées');
+
+// ✅ Démarrage du serveur Hono avec CORS wrapper
+Deno.serve(async (req) => {
+  // Gérer OPTIONS en premier
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
+
+  // Passer la requête à Hono
+  const response = await app.fetch(req);
+
+  // Ajouter les headers CORS à TOUTES les réponses
+  const headers = new Headers(response.headers);
+  headers.set('Access-Control-Allow-Origin', '*');
+  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  headers.set('Access-Control-Allow-Headers', '*');
+  headers.set('Access-Control-Max-Age', '86400');
+
+  // Retourner la réponse avec les headers CORS
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+});

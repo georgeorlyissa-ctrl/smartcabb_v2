@@ -410,4 +410,57 @@ app.get("/drivers/diagnostic/:phone", async (c) => {
   }
 });
 
+// ============================================
+// GET /cancellations - Historique des annulations
+// ============================================
+app.get("/cancellations", async (c) => {
+  try {
+    console.log('📊 Récupération de toutes les annulations...');
+    
+    // Récupérer toutes les annulations
+    const allCancellations = await kv.getByPrefix('cancellation:');
+    
+    // Trier par date (plus récent en premier)
+    const sortedCancellations = allCancellations.sort((a: any, b: any) => {
+      return new Date(b.cancelledAt).getTime() - new Date(a.cancelledAt).getTime();
+    });
+    
+    // Calculer les statistiques
+    const byPassenger = allCancellations.filter((c: any) => c.cancelledBy === 'passenger').length;
+    const byDriver = allCancellations.filter((c: any) => c.cancelledBy === 'driver').length;
+    const withPenalty = allCancellations.filter((c: any) => c.hasPenalty).length;
+    const totalPenalties = allCancellations
+      .filter((c: any) => c.hasPenalty)
+      .reduce((sum: number, c: any) => sum + (c.penaltyAmount || 0), 0);
+    
+    // Compter les raisons d'annulation
+    const reasonCounts: Record<string, number> = {};
+    allCancellations.forEach((c: any) => {
+      const reason = c.reason || 'Non spécifiée';
+      reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+    });
+    
+    const stats = {
+      total: allCancellations.length,
+      byPassenger,
+      byDriver,
+      withPenalty,
+      totalPenalties,
+    };
+    
+    console.log(`✅ ${allCancellations.length} annulations récupérées`);
+    console.log(`📊 Statistiques:`, stats);
+    
+    return c.json({
+      success: true,
+      cancellations: sortedCancellations,
+      stats,
+      byReason: reasonCounts
+    });
+  } catch (error) {
+    console.error("❌ Erreur récupération annulations:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
 export default app;

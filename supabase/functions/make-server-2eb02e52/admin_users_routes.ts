@@ -6,113 +6,86 @@ import type { Context } from 'npm:hono';
 import * as kv from './kv_store.tsx';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-// 🆕 ADMIN: Récupérer TOUS les utilisateurs (passagers + conducteurs + admins)
+// 🆕 ADMIN: Récupérer TOUS les utilisateurs DIRECTEMENT depuis Supabase Auth (source unique de vérité)
 export async function getAllUsers(c: Context) {
   try {
-    console.log('👥 [ADMIN] Récupération de TOUS les utilisateurs...');
+    console.log('👥 [ADMIN] Récupération de TOUS les utilisateurs depuis Supabase Auth...');
     
-    // Créer le client Supabase
+    // Créer le client Supabase avec les droits admin
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
     
-    // Récupérer tous les conducteurs depuis KV
-    const allDrivers = await kv.getByPrefix('driver:');
+    // ✅ LIRE DIRECTEMENT DEPUIS SUPABASE AUTH (source unique de vérité)
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
     
-    // Récupérer tous les passagers depuis KV
-    const allPassengersKV = await kv.getByPrefix('passenger:');
-    
-    // Récupérer tous les admins depuis KV
-    const allAdmins = await kv.getByPrefix('admin:');
-    
-    // ✅ FILTRER UNIQUEMENT LES CONDUCTEURS APPROUVÉS (pour la liste principale)
-    const approvedDrivers = allDrivers.filter((driver: any) => 
-      driver.isApproved === true && driver.status !== 'pending' && driver.status !== 'rejected'
-    );
-    
-    console.log(`📊 Conducteurs totaux: ${allDrivers.length}, Approuvés: ${approvedDrivers.length}`);
-    
-    // Récupérer aussi les passagers depuis la table profiles
-    let passengersFromProfiles: any[] = [];
-    try {
-      const { data: profilesData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'passenger');
-      
-      if (!error && profilesData) {
-        passengersFromProfiles = profilesData;
-        console.log(`📊 Passagers depuis profiles: ${passengersFromProfiles.length}`);
-      }
-    } catch (err) {
-      console.warn('⚠️ Impossible de récupérer les profiles:', err);
+    if (authError) {
+      console.error('❌ [ADMIN] Erreur lecture Supabase Auth:', authError);
+      return c.json({ 
+        success: false, 
+        error: authError.message,
+        users: [],
+        total: 0,
+        stats: { passengers: 0, drivers: 0, admins: 0 }
+      }, 500);
     }
     
-    // Combiner les passagers KV et profiles (en évitant les doublons)
-    const kvPassengerIds = new Set((allPassengersKV || []).map((p: any) => p.id));
-    const uniquePassengersFromProfiles = passengersFromProfiles.filter(
-      (p: any) => !kvPassengerIds.has(p.id)
+    console.log(`📊 [ADMIN] ${authUsers?.length || 0} utilisateurs trouvés dans Supabase Auth`);
+    
+    // Pour chaque utilisateur, enrichir avec les données du KV store (si disponibles)
+    const enrichedUsers = await Promise.all(
+      (authUsers || []).map(async (authUser) => {
+        const metadata = authUser.user_metadata || {};
+        const role = metadata.role || 'passenger';
+        
+        // Essayer de récupérer les données enrichies depuis le KV store
+        let kvData = null;
+        try {
+          if (role === 'driver') {
+            kvData = await kv.get(`driver:${authUser.id}`);
+          } else if (role === 'admin') {
+            kvData = await kv.get(`admin:${authUser.id}`);
+          } else {
+            kvData = await kv.get(`passenger:${authUser.id}`);
+          }
+        } catch (err) {
+          // Pas grave si le KV n'a pas les données
+          console.log(`⚠️ Pas de données KV pour ${authUser.id}`);
+        }
+        
+        // Construire l'utilisateur avec Auth comme source principale, KV comme enrichissement
+        const user: any = {
+          id: authUser.id,
+          role: role === 'driver' ? 'Conducteur' : role === 'admin' ? 'Administrateur' : 'Passager',
+          name: metadata.full_name || metadata.name || kvData?.full_name || kvData?.name || 'Utilisateur',
+          phone: metadata.phone || kvData?.phone || 'Non renseigné',
+          email: authUser.email || kvData?.email || 'Non renseigné',
+          password: metadata.password || kvData?.password || 'password123', // Mot de passe depuis metadata ou KV
+          balance: kvData?.balance || 0,
+          accountType: kvData?.account_type || 'prepaid',
+          createdAt: authUser.created_at || new Date().toISOString(),
+          lastLoginAt: authUser.last_sign_in_at || kvData?.last_login_at
+        };
+        
+        // Ajouter les champs spécifiques aux conducteurs
+        if (role === 'driver') {
+          user.vehicleCategory = kvData?.vehicle?.category || kvData?.vehicle_category || 'standard';
+          user.vehiclePlate = kvData?.vehicle?.license_plate || kvData?.vehicle_plate || kvData?.license_plate || 'N/A';
+          user.vehicleModel = kvData?.vehicle?.model || kvData?.vehicle_model || 'N/A';
+          user.status = kvData?.status || 'pending';
+          user.rating = kvData?.rating || 0;
+          user.totalTrips = kvData?.total_trips || kvData?.total_rides || 0;
+        }
+        
+        return user;
+      })
     );
     
-    const allPassengers = [...(allPassengersKV || []), ...uniquePassengersFromProfiles];
-    
-    console.log(`📊 Données brutes:`, {
-      drivers: allDrivers?.length || 0,
-      passengersKV: allPassengersKV?.length || 0,
-      passengersProfiles: uniquePassengersFromProfiles.length,
-      passengersTotal: allPassengers.length,
-      admins: allAdmins?.length || 0
-    });
-    
-    // Transformer les conducteurs
-    const drivers = (approvedDrivers || []).map((driver: any) => ({
-      id: driver.id,
-      role: 'Conducteur' as const,
-      name: driver.full_name || driver.name || 'Conducteur inconnu',
-      phone: driver.phone || 'Non renseigné',
-      email: driver.email || 'Non renseigné',
-      password: '********', // Masqué
-      balance: driver.balance || 0,
-      accountType: driver.account_type || 'prepaid',
-      vehicleCategory: driver.vehicle?.category || driver.vehicle_category,
-      vehiclePlate: driver.vehicle?.license_plate || driver.license_plate,
-      vehicleModel: driver.vehicle?.model || driver.vehicle_model,
-      status: driver.status || 'pending',
-      rating: driver.rating || 0,
-      totalTrips: driver.total_trips || 0,
-      createdAt: driver.created_at || new Date().toISOString(),
-      lastLoginAt: driver.last_login_at
-    }));
-    
-    // Transformer les passagers
-    const passengers = (allPassengers || []).map((passenger: any) => ({
-      id: passenger.id,
-      role: 'Passager' as const,
-      name: passenger.name || passenger.full_name || 'Passager inconnu',
-      phone: passenger.phone || 'Non renseigné',
-      email: passenger.email || 'Non renseigné',
-      password: '********', // Masqué
-      balance: passenger.balance || 0,
-      accountType: passenger.account_type || 'prepaid',
-      createdAt: passenger.created_at || new Date().toISOString(),
-      lastLoginAt: passenger.last_login_at
-    }));
-    
-    // Transformer les admins
-    const admins = (allAdmins || []).map((admin: any) => ({
-      id: admin.id,
-      role: 'Administrateur' as const,
-      name: admin.name || admin.full_name || 'Admin',
-      phone: admin.phone || 'Non renseigné',
-      email: admin.email || 'Non renseigné',
-      password: '********', // Masqué
-      createdAt: admin.created_at || new Date().toISOString(),
-      lastLoginAt: admin.last_login_at
-    }));
-    
-    // Combiner tous les utilisateurs
-    const allUsers = [...passengers, ...drivers, ...admins];
+    // Séparer par rôle pour les stats
+    const passengers = enrichedUsers.filter(u => u.role === 'Passager');
+    const drivers = enrichedUsers.filter(u => u.role === 'Conducteur');
+    const admins = enrichedUsers.filter(u => u.role === 'Administrateur');
     
     const stats = {
       passengers: passengers.length,
@@ -120,19 +93,27 @@ export async function getAllUsers(c: Context) {
       admins: admins.length
     };
     
-    console.log(`✅ [ADMIN] ${allUsers.length} utilisateurs trouvés:`, stats);
+    console.log(`✅ [ADMIN] Utilisateurs enrichis:`, stats);
+    console.log(`📋 Détail:`, {
+      totalAuth: authUsers?.length || 0,
+      totalEnrichi: enrichedUsers.length,
+      passengers: passengers.length,
+      drivers: drivers.length,
+      admins: admins.length
+    });
     
     return c.json({
       success: true,
-      users: allUsers,
-      total: allUsers.length,
-      stats
+      users: enrichedUsers,
+      total: enrichedUsers.length,
+      stats,
+      source: 'supabase-auth' // Indiquer la source des données
     });
     
   } catch (error) {
     console.error('❌ [ADMIN] Erreur récupération utilisateurs:', error);
-    return c.json({
-      success: false,
+    return c.json({ 
+      success: false, 
       error: error instanceof Error ? error.message : 'Erreur serveur',
       users: [],
       total: 0,
@@ -141,150 +122,142 @@ export async function getAllUsers(c: Context) {
   }
 }
 
-// 🆕 ADMIN: Diagnostic des utilisateurs
+// 🔍 DIAGNOSTIC: Comparer Auth vs KV
 export async function getUsersDiagnostic(c: Context) {
   try {
-    console.log('🔍 [ADMIN] Diagnostic des utilisateurs...');
+    console.log('🔍 [DIAGNOSTIC] Analyse Auth vs KV...');
     
-    // Récupérer tous les conducteurs, passagers et admins du KV Store
-    const allDrivers = await kv.getByPrefix('driver:');
-    const allPassengers = await kv.getByPrefix('passenger:');
-    const allAdmins = await kv.getByPrefix('admin:');
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
     
-    const kvTotal = (allDrivers?.length || 0) + (allPassengers?.length || 0) + (allAdmins?.length || 0);
+    // Compter dans Auth
+    const { data: { users: authUsers }, error } = await supabase.auth.admin.listUsers();
+    const authCount = authUsers?.length || 0;
     
-    console.log(`📊 KV Store: ${kvTotal} utilisateurs`);
-    
-    // Diagnostic simple pour l'instant
-    const diagnostic = {
-      kvStore: {
-        total: kvTotal,
-        passengers: allPassengers?.length || 0,
-        drivers: allDrivers?.length || 0,
-        admins: allAdmins?.length || 0,
-        orphaned: 0 // À calculer ci-dessous
-      },
-      supabaseAuth: {
-        total: 0, // À implémenter avec Supabase Auth si nécessaire
-        missingInKv: 0
-      },
-      profiles: {
-        total: 0 // À implémenter avec table profiles
-      }
+    const authByRole = {
+      drivers: authUsers?.filter(u => u.user_metadata?.role === 'driver').length || 0,
+      passengers: authUsers?.filter(u => u.user_metadata?.role === 'passenger').length || 0,
+      admins: authUsers?.filter(u => u.user_metadata?.role === 'admin').length || 0
     };
     
-    // Identifier les utilisateurs orphelins (données de test)
-    const orphanedUsers: any[] = [];
+    // Compter dans KV
+    const kvDrivers = await kv.getByPrefix('driver:');
+    const kvPassengers = await kv.getByPrefix('passenger:');
+    const kvAdmins = await kv.getByPrefix('admin:');
     
-    // Vérifier les conducteurs
-    for (const driver of allDrivers || []) {
-      if (!driver.id || !driver.email || driver.email === 'Non renseigné' || !driver.full_name) {
-        orphanedUsers.push({
-          id: driver.id || 'unknown',
-          name: driver.full_name || driver.name || 'Inconnu',
-          phone: driver.phone || 'N/A',
-          email: driver.email || 'N/A',
-          role: 'Conducteur',
-          createdAt: driver.created_at || new Date().toISOString(),
-          source: 'KV Store'
+    const kvCount = (kvDrivers?.length || 0) + (kvPassengers?.length || 0) + (kvAdmins?.length || 0);
+    
+    const kvByRole = {
+      drivers: kvDrivers?.length || 0,
+      passengers: kvPassengers?.length || 0,
+      admins: kvAdmins?.length || 0
+    };
+    
+    // Trouver les utilisateurs manquants dans KV
+    const missingInKV: any[] = [];
+    for (const authUser of authUsers || []) {
+      const role = authUser.user_metadata?.role || 'passenger';
+      const prefix = role === 'driver' ? 'driver' : role === 'admin' ? 'admin' : 'passenger';
+      const kvUser = await kv.get(`${prefix}:${authUser.id}`);
+      
+      if (!kvUser) {
+        missingInKV.push({
+          id: authUser.id,
+          email: authUser.email,
+          role: role,
+          phone: authUser.user_metadata?.phone,
+          name: authUser.user_metadata?.full_name || authUser.user_metadata?.name
         });
       }
     }
     
-    // Vérifier les passagers
-    for (const passenger of allPassengers || []) {
-      if (!passenger.id || !passenger.email || passenger.email === 'Non renseigné' || !passenger.name) {
-        orphanedUsers.push({
-          id: passenger.id || 'unknown',
-          name: passenger.name || passenger.full_name || 'Inconnu',
-          phone: passenger.phone || 'N/A',
-          email: passenger.email || 'N/A',
-          role: 'Passager',
-          createdAt: passenger.created_at || new Date().toISOString(),
-          source: 'KV Store'
-        });
-      }
-    }
-    
-    diagnostic.kvStore.orphaned = orphanedUsers.length;
-    
-    const recommendations = {
-      message: orphanedUsers.length > 0
-        ? `⚠️ ${orphanedUsers.length} utilisateur(s) orphelin(s) détecté(s). Ces données semblent être de test.`
-        : '✅ Toutes les données semblent cohérentes.',
-      shouldCleanup: orphanedUsers.length > 0,
-      shouldSync: false
-    };
-    
-    console.log(`✅ [ADMIN] Diagnostic terminé:`, { orphanedUsers: orphanedUsers.length });
+    console.log(`📊 DIAGNOSTIC:`, {
+      auth: { total: authCount, ...authByRole },
+      kv: { total: kvCount, ...kvByRole },
+      missingInKV: missingInKV.length
+    });
     
     return c.json({
       success: true,
-      diagnostic,
-      orphanedUsers,
-      authUsers: [], // À implémenter avec Supabase Auth
-      recommendations
+      diagnostic: {
+        auth: {
+          total: authCount,
+          byRole: authByRole
+        },
+        kv: {
+          total: kvCount,
+          byRole: kvByRole
+        },
+        discrepancy: {
+          totalMissing: missingInKV.length,
+          missingUsers: missingInKV
+        }
+      }
     });
     
   } catch (error) {
-    console.error('❌ [ADMIN] Erreur diagnostic:', error);
-    return c.json({
-      success: false,
+    console.error('❌ [DIAGNOSTIC] Erreur:', error);
+    return c.json({ 
+      success: false, 
       error: error instanceof Error ? error.message : 'Erreur serveur'
     }, 500);
   }
 }
 
-// 🆕 ADMIN: Nettoyer les utilisateurs orphelins
+// 🧹 NETTOYAGE: Supprimer les utilisateurs orphelins (KV sans Auth)
 export async function cleanupOrphanedUsers(c: Context) {
   try {
-    console.log('🧹 [ADMIN] Nettoyage des utilisateurs orphelins...');
+    console.log('🧹 [CLEANUP] Nettoyage des utilisateurs orphelins...');
     
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+    
+    // Récupérer tous les utilisateurs Auth
+    const { data: { users: authUsers } } = await supabase.auth.admin.listUsers();
+    const authIds = new Set((authUsers || []).map(u => u.id));
+    
+    // Récupérer tous les utilisateurs KV
+    const kvDrivers = await kv.getByPrefix('driver:') || [];
+    const kvPassengers = await kv.getByPrefix('passenger:') || [];
+    const kvAdmins = await kv.getByPrefix('admin:') || [];
+    
+    const allKvUsers = [...kvDrivers, ...kvPassengers, ...kvAdmins];
+    
+    // Trouver et supprimer les orphelins
     let deletedCount = 0;
+    const orphans: string[] = [];
     
-    // Récupérer tous les conducteurs et passagers
-    const allDrivers = await kv.getByPrefix('driver:');
-    const allPassengers = await kv.getByPrefix('passenger:');
-    
-    // Supprimer les conducteurs invalides
-    for (const driver of allDrivers || []) {
-      if (!driver.id || !driver.email || driver.email === 'Non renseigné' || !driver.full_name) {
-        console.log(`🗑️ Suppression conducteur invalide: ${driver.id}`);
-        await kv.del(`driver:${driver.id}`);
-        await kv.del(`profile:${driver.id}`);
-        await kv.del(`wallet:${driver.id}`);
-        await kv.del(`driver_location:${driver.id}`);
-        await kv.del(`driver_status:${driver.id}`);
-        await kv.del(`fcm_token:${driver.id}`);
-        await kv.del(`driver_stats:${driver.id}`);
+    for (const kvUser of allKvUsers) {
+      if (!authIds.has(kvUser.id)) {
+        // Cet utilisateur est dans KV mais pas dans Auth = orphelin
+        const role = kvUser.role || 'passenger';
+        const prefix = role === 'driver' ? 'driver' : role === 'admin' ? 'admin' : 'passenger';
+        
+        await kv.del(`${prefix}:${kvUser.id}`);
+        orphans.push(`${kvUser.full_name || kvUser.name} (${kvUser.id})`);
         deletedCount++;
+        
+        console.log(`🗑️ Orphelin supprimé: ${kvUser.full_name} (${kvUser.id})`);
       }
     }
     
-    // Supprimer les passagers invalides
-    for (const passenger of allPassengers || []) {
-      if (!passenger.id || !passenger.email || passenger.email === 'Non renseigné' || !passenger.name) {
-        console.log(`🗑️ Suppression passager invalide: ${passenger.id}`);
-        await kv.del(`passenger:${passenger.id}`);
-        await kv.del(`profile:${passenger.id}`);
-        await kv.del(`wallet:${passenger.id}`);
-        await kv.del(`fcm_token:${passenger.id}`);
-        deletedCount++;
-      }
-    }
-    
-    console.log(`✅ [ADMIN] ${deletedCount} utilisateur(s) invalide(s) supprimé(s)`);
+    console.log(`✅ [CLEANUP] ${deletedCount} orphelins supprimés`);
     
     return c.json({
       success: true,
-      message: `${deletedCount} utilisateur(s) invalide(s) supprimé(s)`,
-      deletedCount
+      message: `${deletedCount} utilisateur(s) orphelin(s) supprimé(s)`,
+      deletedCount,
+      orphans
     });
     
   } catch (error) {
-    console.error('❌ [ADMIN] Erreur nettoyage:', error);
-    return c.json({
-      success: false,
+    console.error('❌ [CLEANUP] Erreur:', error);
+    return c.json({ 
+      success: false, 
       error: error instanceof Error ? error.message : 'Erreur serveur'
     }, 500);
   }

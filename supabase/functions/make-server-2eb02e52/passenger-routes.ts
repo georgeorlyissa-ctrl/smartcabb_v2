@@ -10,82 +10,81 @@ const app = new Hono();
 // ============================================
 app.get("/", async (c) => {
   try {
-    console.log('📊 [GET /passengers] Récupération de tous les passagers...');
+    console.log('📊 [GET /passengers] Récupération depuis Supabase Auth (source unique de vérité)...');
     
-    // Récupérer tous les passengers du KV store
-    const passengers = await kv.getByPrefix('passenger:');
+    // ✅ LIRE DIRECTEMENT DEPUIS SUPABASE AUTH
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
     
-    console.log(`📦 [GET /passengers] KV Store: ${passengers?.length || 0} passager(s) trouvé(s)`);
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
     
-    // ✅ FIX: Si KV est vide, récupérer depuis Postgres
-    if (!passengers || passengers.length === 0) {
-      console.log('⚠️ [GET /passengers] KV store vide, récupération depuis Postgres...');
-      
-      try {
-        const supabase = createClient(
-          Deno.env.get('SUPABASE_URL')!,
-          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        );
-        
-        // Récupérer les profils passagers depuis Postgres
-        const { data: profiles, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('role', 'passenger');
-        
-        if (error) {
-          console.error('❌ [GET /passengers] Erreur Postgres profiles:', error);
-          return c.json({
-            success: true,
-            passengers: [],
-            count: 0,
-            source: 'kv-empty'
-          });
-        } else if (profiles && profiles.length > 0) {
-          console.log(`✅ [GET /passengers] Postgres: ${profiles.length} passager(s) trouvé(s)`);
-          
-          // Convertir les profiles en format passenger
-          const passengersFromPostgres = profiles.map((profile: any) => ({
-            id: profile.id,
-            full_name: profile.full_name || 'Passager inconnu',
-            email: profile.email || '',
-            phone: profile.phone || '',
-            role: 'passenger',
-            balance: 0,
-            created_at: profile.created_at,
-            updated_at: profile.updated_at || profile.created_at,
-            is_blocked: false
-          }));
-          
-          console.log('✅ [GET /passengers] Passagers convertis depuis Postgres:', passengersFromPostgres.length);
-          
-          return c.json({
-            success: true,
-            passengers: passengersFromPostgres,
-            count: passengersFromPostgres.length,
-            source: 'postgres'
-          });
-        }
-      } catch (postgresError) {
-        console.error('❌ [GET /passengers] Erreur récupération Postgres:', postgresError);
-      }
+    if (authError) {
+      console.error('❌ [GET /passengers] Erreur Supabase Auth:', authError);
+      return c.json({
+        success: false,
+        error: authError.message,
+        passengers: [],
+        count: 0
+      }, 500);
     }
     
-    console.log(`✅ [GET /passengers] TOTAL: ${passengers?.length || 0} passager(s) retourné(s)`);
+    // Filtrer uniquement les passagers (role='passenger' OU pas de role défini)
+    const passengerAuthUsers = (authUsers || []).filter(u => {
+      const role = u.user_metadata?.role;
+      return !role || role === 'passenger';
+    });
+    console.log(`📋 [GET /passengers] ${passengerAuthUsers.length} passager(s) trouvé(s) dans Auth`);
+    
+    // Enrichir chaque passager avec les données du KV store
+    const passengers = await Promise.all(
+      passengerAuthUsers.map(async (authUser) => {
+        const metadata = authUser.user_metadata || {};
+        
+        // Essayer de récupérer les données enrichies depuis le KV store
+        let kvData = null;
+        try {
+          kvData = await kv.get(`passenger:${authUser.id}`);
+        } catch (err) {
+          // Pas grave si le KV n'a pas les données
+        }
+        
+        // Auth comme source principale, KV comme enrichissement
+        return {
+          id: authUser.id,
+          user_id: authUser.id,
+          name: metadata.full_name || metadata.name || kvData?.name || kvData?.full_name || 'Passager',
+          full_name: metadata.full_name || metadata.name || kvData?.full_name || kvData?.name || 'Passager',
+          email: authUser.email || kvData?.email || `u${metadata.phone || authUser.id}@smartcabb.app`,
+          phone: metadata.phone || kvData?.phone || '',
+          balance: kvData?.balance || 0,
+          account_type: kvData?.account_type || 'prepaid',
+          created_at: authUser.created_at || new Date().toISOString(),
+          updated_at: kvData?.updated_at || authUser.created_at,
+          last_login_at: authUser.last_sign_in_at,
+          role: 'passenger',
+          is_blocked: kvData?.is_blocked || false
+        };
+      })
+    );
+    
+    console.log(`✅ [GET /passengers] ${passengers.length} passager(s) retourné(s) (Auth + KV)`);
     
     return c.json({
       success: true,
-      passengers: passengers || [],
-      count: passengers?.length || 0,
-      source: 'kv'
+      passengers: passengers,
+      count: passengers.length,
+      source: 'supabase-auth-enriched-kv'
     });
     
   } catch (error) {
-    console.error('❌ [GET /passengers] Erreur récupération passagers:', error);
-    return c.json({ 
-      success: false, 
+    console.error('❌ [GET /passengers] Erreur:', error);
+    return c.json({
+      success: false,
       error: error instanceof Error ? error.message : 'Erreur serveur',
-      passengers: []
+      passengers: [],
+      count: 0
     }, 500);
   }
 });

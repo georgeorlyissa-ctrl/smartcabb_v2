@@ -79,9 +79,17 @@ async function findAndNotifyNearbyDrivers(ride: any) {
     
     // Calculer la distance entre le point de départ et chaque chauffeur
     const driversWithDistance = eligibleDrivers.map((driver: any) => {
+      // ✅ FIX: Vérifier que pickup et coordinates existent avant d'accéder à lat/lng
+      const pickupLat = ride.pickup?.coordinates?.lat || ride.pickupLocation?.lat || ride.from?.lat;
+      const pickupLng = ride.pickup?.coordinates?.lng || ride.pickupLocation?.lng || ride.from?.lng;
+      
+      // Si pas de coordonnées de pickup, utiliser Kinshasa par défaut
+      const lat = pickupLat || -4.3276;
+      const lng = pickupLng || 15.3136;
+      
       const distance = calculateDistance(
-        ride.pickup.coordinates.lat,
-        ride.pickup.coordinates.lng,
+        lat,
+        lng,
         driver.currentLocation?.lat || -4.3276,
         driver.currentLocation?.lng || 15.3136
       );
@@ -109,22 +117,33 @@ async function findAndNotifyNearbyDrivers(ride: any) {
           continue;
         }
         
+        // ✅ FIX: Normaliser les données du ride pour les notifications
+        const pickupName = ride.pickup?.name || ride.pickupLocation?.name || ride.from?.name || 'Point de départ';
+        const destinationName = ride.destination?.name || ride.destinationLocation?.name || ride.to?.name || 'Destination';
+        const pickupLat = ride.pickup?.coordinates?.lat || ride.pickupLocation?.lat || ride.from?.lat || -4.3276;
+        const pickupLng = ride.pickup?.coordinates?.lng || ride.pickupLocation?.lng || ride.from?.lng || 15.3136;
+        const destinationLat = ride.destination?.coordinates?.lat || ride.destinationLocation?.lat || ride.to?.lat || -4.3276;
+        const destinationLng = ride.destination?.coordinates?.lng || ride.destinationLocation?.lng || ride.to?.lng || 15.3136;
+        const distance = ride.distance || 0;
+        const duration = ride.duration || 0;
+        const estimatedPrice = ride.estimatedPrice || 0;
+        
         // 📱 Envoyer notification push
         const result = await sendFCMNotification(driver.fcmToken, {
           title: '🚗 Nouvelle course disponible !',
-          body: `${ride.pickup.name} → ${ride.destination.name} (${ride.distance.toFixed(1)} km, ${Math.round(ride.estimatedPrice)} FC)`,
+          body: `${pickupName} → ${destinationName} (${distance.toFixed(1)} km, ${Math.round(estimatedPrice)} FC)`,
           data: {
             rideId: ride.id,
             type: 'new_ride_request',
-            pickupLat: ride.pickup.coordinates.lat.toString(),
-            pickupLng: ride.pickup.coordinates.lng.toString(),
-            destinationLat: ride.destination.coordinates.lat.toString(),
-            destinationLng: ride.destination.coordinates.lng.toString(),
-            pickupName: ride.pickup.name,
-            destinationName: ride.destination.name,
-            distance: ride.distance.toString(),
-            duration: ride.duration.toString(),
-            estimatedPrice: ride.estimatedPrice.toString(),
+            pickupLat: pickupLat.toString(),
+            pickupLng: pickupLng.toString(),
+            destinationLat: destinationLat.toString(),
+            destinationLng: destinationLng.toString(),
+            pickupName,
+            destinationName,
+            distance: distance.toString(),
+            duration: duration.toString(),
+            estimatedPrice: estimatedPrice.toString(),
             vehicleCategory: ride.vehicleCategory,
             distanceToPickup: driver.distanceToPickup.toFixed(1)
           }
@@ -586,10 +605,12 @@ app.post("/cancel", async (c) => {
     console.log(`🚫 Demande d'annulation de course ${rideId} par ${cancelledBy}`);
     
     if (!isValidUUID(rideId)) {
-      return c.json({ success: false, error: "ID course invalide" }, 400);
+      return c.json({ success: false, error: "ID de course invalide" }, 400);
     }
     
+    // Récupérer la course
     const ride = await kv.get<any>(`ride:${rideId}`);
+    
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
@@ -598,6 +619,54 @@ app.post("/cancel", async (c) => {
     if (ride.status === 'completed' || ride.status === 'cancelled') {
       return c.json({ success: false, error: "Course déjà terminée ou annulée" }, 400);
     }
+    
+    // 📊 Créer l'enregistrement d'annulation pour le panel admin
+    const cancellationRecord = {
+      id: `cancellation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      rideId: rideId,
+      cancelledAt: new Date().toISOString(),
+      cancelledBy: cancelledBy, // 'passenger' ou 'driver'
+      reason: reason || 'Non spécifiée',
+      
+      // Informations de la course
+      pickup: ride.pickup || 'Non spécifié',
+      destination: ride.destination || 'Non spécifié',
+      estimatedPrice: ride.estimatedPrice || 0,
+      distance: ride.distance || 0,
+      vehicleType: ride.vehicleType || 'smart_standard',
+      status: ride.status, // 'searching', 'accepted', 'in_progress', etc.
+      
+      // Informations passager
+      passengerId: ride.passengerId,
+      passengerName: ride.passengerName || 'Non spécifié',
+      passengerPhone: ride.passengerPhone || 'Non spécifié',
+      
+      // Informations conducteur (si déjà assigné)
+      driverId: ride.driverId || null,
+      driverName: ride.driverName || null,
+      driverPhone: ride.driverPhone || null,
+      
+      // Métadonnées
+      createdAt: ride.createdAt || new Date().toISOString(),
+      acceptedAt: ride.acceptedAt || null,
+      startedAt: ride.startedAt || null,
+      
+      // Calcul de pénalité potentielle
+      hasPenalty: false,
+      penaltyAmount: 0,
+    };
+    
+    // Calculer la pénalité si annulation après acceptation
+    if (ride.status === 'accepted' || ride.status === 'in_progress') {
+      cancellationRecord.hasPenalty = true;
+      // Pénalité de 10% du prix estimé (minimum 500 CDF)
+      cancellationRecord.penaltyAmount = Math.max(500, Math.round(ride.estimatedPrice * 0.1));
+    }
+    
+    // Sauvegarder l'annulation dans la KV store
+    await kv.set(`cancellation:${cancellationRecord.id}`, cancellationRecord);
+    
+    console.log(`✅ Annulation enregistrée : ${cancellationRecord.id}`);
     
     // Annuler la course
     ride.status = 'cancelled';
@@ -646,7 +715,11 @@ app.post("/cancel", async (c) => {
       console.error('❌ Erreur envoi notification d\'annulation:', error);
     }
     
-    return c.json({ success: true, ride });
+    return c.json({ 
+      success: true, 
+      ride,
+      cancellation: cancellationRecord 
+    });
   } catch (error) {
     console.error("❌ Erreur annulation course:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);

@@ -258,4 +258,29 @@ app.post("/simulate-driver-signup", async (c) => {
   }
 });
 
+// Test 5: Lire tous les conducteurs du KV Store (avec prefix drivers:)
+app.get("/drivers-prefix", async (c) => {
+  try {
+    console.log("🔍 [KV-TEST] Lecture de tous les conducteurs avec prefix 'drivers:'...");
+    
+    // Utiliser getByPrefix pour récupérer tous les conducteurs
+    const drivers = await kv.getByPrefix("drivers:");
+    
+    console.log(`✅ [KV-TEST] ${drivers.length} conducteur(s) trouvé(s) dans le KV Store`);
+    
+    return c.json({
+      success: true,
+      count: drivers.length,
+      drivers: drivers,
+      message: `${drivers.length} conducteur(s) trouvé(s) dans le KV Store`
+    });
+  } catch (error) {
+    console.error("❌ [KV-TEST] Erreur lecture conducteurs:", error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
+});
+
 export default app;
