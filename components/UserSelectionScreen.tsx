@@ -30,160 +30,162 @@ export function UserSelectionScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex flex-col items-center justify-center px-6 relative overflow-hidden">
-      {/* Cercles décoratifs */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-green-100 rounded-full blur-3xl opacity-30 -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-100 rounded-full blur-3xl opacity-30 translate-x-1/2 translate-y-1/2" />
+    <div className="min-h-screen bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 flex flex-col items-center justify-center px-6 relative overflow-hidden">
+      {/* Animated Background Elements - Design moderne */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Orbes flottants */}
+        <div className="absolute top-20 left-20 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-yellow-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 bg-green-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+        
+        {/* Grille de points moderne */}
+        <div className="absolute inset-0 opacity-20" style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255, 255, 255, 0.3) 1px, transparent 1px)',
+          backgroundSize: '50px 50px'
+        }} />
+      </div>
 
       {/* Bouton Admin en haut à droite */}
-      <div className="absolute top-6 right-6">
-        <Button
+      <div className="absolute top-6 right-6 z-20">
+        <button
           onClick={handleAdminClick}
-          variant="outline"
-          size="sm"
-          className="bg-white/80 backdrop-blur-sm hover:bg-purple-50 border-purple-200 hover:border-purple-400 transition-all shadow-md"
+          className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-all cursor-pointer shadow-xl shadow-yellow-400/50"
+          title="Accès Admin"
         >
-          <Shield className="w-4 h-4 mr-2 text-purple-600" />
-          <span className="text-purple-700">Admin</span>
-        </Button>
+          <Shield className="w-6 h-6 text-gray-900" />
+        </button>
       </div>
 
       {/* Contenu principal */}
       <div className="relative z-10 w-full max-w-4xl">
         {/* Logo et titre */}
-        <div className="text-center mb-12">
-          <div className="flex justify-center mb-6">
-            <SmartCabbLogo size="large" />
+        <div className="text-center mb-12 animate-in fade-in zoom-in duration-700">
+          {/* Logo avec cercles animés */}
+          <div className="mx-auto mb-8 relative inline-block">
+            {/* Cercles extérieurs animés */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-40 h-40 rounded-full border-4 border-white/20 animate-ping" style={{ animationDuration: '3s' }}></div>
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-36 h-36 rounded-full border-2 border-white/30 animate-pulse" style={{ animationDuration: '2s' }}></div>
+            </div>
+            
+            {/* Logo principal */}
+            <div className="relative w-28 h-28 mx-auto bg-white rounded-3xl shadow-2xl shadow-black/30 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl font-black bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 bg-clip-text text-transparent">
+                  SC
+                </div>
+              </div>
+            </div>
           </div>
-          <h1 className="text-primary mb-3">
-            Bienvenue sur SmartCabb
+
+          <h1 className="text-5xl font-black text-white mb-3 tracking-tight">
+            Smart<span className="text-yellow-300">Cabb</span>
           </h1>
-          <p className="text-muted-foreground text-lg">
-            Sélectionnez votre profil pour commencer
+          
+          {/* Ligne de séparation */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="h-1 w-16 bg-gradient-to-r from-transparent via-white to-transparent rounded-full"></div>
+            <div className="h-1 w-1 bg-white rounded-full"></div>
+            <div className="h-1 w-16 bg-gradient-to-r from-transparent via-white to-transparent rounded-full"></div>
+          </div>
+          
+          <p className="text-xl text-white/95 font-semibold">
+            Sélectionnez votre profil
           </p>
         </div>
 
-        {/* Boutons Passager et Conducteur côte à côte */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        {/* Boutons Passager et Conducteur - Design ultra moderne */}
+        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom duration-700" style={{ animationDelay: '200ms' }}>
           {/* Bouton Passager */}
-          <div>
-            <button
-              onClick={handlePassengerClick}
-              className="w-full group relative overflow-hidden rounded-3xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-green-400 p-8 md:p-12"
-            >
-              {/* Gradient de fond au hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
-              <div className="relative z-10">
-                {/* Icône */}
-                <div className="mb-6 flex justify-center">
-                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-shadow">
-                    <User className="w-12 h-12 md:w-16 md:h-16 text-white" />
-                  </div>
-                </div>
-
-                {/* Texte */}
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 group-hover:text-green-700 transition-colors">
-                  Passager
-                </h2>
-                <p className="text-gray-600 text-sm md:text-base mb-6">
-                  Réservez une course en quelques secondes
-                </p>
-
-                {/* Features */}
-                <div className="space-y-2 text-left text-sm text-gray-500">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span>Réservation rapide</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span>Suivi en temps réel</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                    <span>Paiement sécurisé</span>
-                  </div>
-                </div>
-
-                {/* Arrow indicator */}
-                <div className="mt-6 text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+          <button
+            onClick={handlePassengerClick}
+            className="group relative overflow-hidden rounded-3xl bg-white shadow-2xl hover:shadow-white/30 transition-all duration-300 p-8 md:p-10 hover:scale-105"
+          >
+            <div className="relative z-10">
+              {/* Icône */}
+              <div className="mb-6 flex justify-center">
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-cyan-500 to-green-500 flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all group-hover:scale-110">
+                  <User className="w-12 h-12 md:w-14 md:h-14 text-white" />
                 </div>
               </div>
-            </button>
-          </div>
+
+              {/* Texte */}
+              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 group-hover:text-cyan-600 transition-colors">
+                Passager
+              </h2>
+              <p className="text-gray-600 text-base md:text-lg mb-6 font-medium">
+                Réservez une course instantanément
+              </p>
+
+              {/* Features */}
+              <div className="space-y-3 text-left text-sm md:text-base text-gray-600 font-medium">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                  <span>✨ Réservation rapide</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                  <span>📍 Suivi en temps réel</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                  <span>💳 Paiement sécurisé</span>
+                </div>
+              </div>
+            </div>
+          </button>
 
           {/* Bouton Conducteur */}
-          <div>
-            <button
-              onClick={handleDriverClick}
-              className="w-full group relative overflow-hidden rounded-3xl bg-white shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-blue-400 p-8 md:p-12"
-            >
-              {/* Gradient de fond au hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              
-              <div className="relative z-10">
-                {/* Icône */}
-                <div className="mb-6 flex justify-center">
-                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-shadow">
-                    <Car className="w-12 h-12 md:w-16 md:h-16 text-white" />
-                  </div>
-                </div>
-
-                {/* Texte */}
-                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 group-hover:text-blue-700 transition-colors">
-                  Conducteur
-                </h2>
-                <p className="text-gray-600 text-sm md:text-base mb-6">
-                  Générez des revenus en conduisant
-                </p>
-
-                {/* Features */}
-                <div className="space-y-2 text-left text-sm text-gray-500">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>Horaires flexibles</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>Paiements instantanés</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    <span>Assistance 24/7</span>
-                  </div>
-                </div>
-
-                {/* Arrow indicator */}
-                <div className="mt-6 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
+          <button
+            onClick={handleDriverClick}
+            className="group relative overflow-hidden rounded-3xl bg-white shadow-2xl hover:shadow-white/30 transition-all duration-300 p-8 md:p-10 hover:scale-105"
+          >
+            <div className="relative z-10">
+              {/* Icône */}
+              <div className="mb-6 flex justify-center">
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-green-500 to-yellow-500 flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all group-hover:scale-110">
+                  <Car className="w-12 h-12 md:w-14 md:h-14 text-white" />
                 </div>
               </div>
-            </button>
-          </div>
+
+              {/* Texte */}
+              <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-3 group-hover:text-green-600 transition-colors">
+                Conducteur
+              </h2>
+              <p className="text-gray-600 text-base md:text-lg mb-6 font-medium">
+                Générez des revenus en conduisant
+              </p>
+
+              {/* Features */}
+              <div className="space-y-3 text-left text-sm md:text-base text-gray-600 font-medium">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span>⏰ Horaires flexibles</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span>💰 Paiements instantanés</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span>🛟 Assistance 24/7</span>
+                </div>
+              </div>
+            </div>
+          </button>
         </div>
 
         {/* Footer info */}
-        <div className="text-center mt-12">
-          <p className="text-sm text-gray-500">
+        <div className="text-center mt-10 animate-in fade-in duration-1000" style={{ animationDelay: '400ms' }}>
+          <p className="text-white/90 font-medium">
             Nouveau sur SmartCabb ? Créez un compte en quelques secondes
           </p>
-          <p className="text-xs text-gray-400 mt-2">
-            Transport intelligent • Kinshasa, RDC
+          <p className="text-white/70 text-sm mt-2">
+            🚗 Transport intelligent • 📍 Kinshasa, RDC
           </p>
         </div>
-      </div>
-
-      {/* Version */}
-      <div className="absolute bottom-4 left-0 right-0 text-center">
-        <p className="text-xs text-gray-400">
-          SmartCabb v96.4 • Interface Production
-        </p>
       </div>
     </div>
   );

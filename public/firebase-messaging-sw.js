@@ -6,70 +6,101 @@
  * 
  * ⚠️ IMPORTANT : Ce fichier DOIT être à la racine /public/
  * 
- * @version 1.0.0
- * @date 2026-01-20
+ * @version 2.1.0 - Avec gestion erreurs et fallback
+ * @date 2026-02-28
  */
 
-// Import Firebase scripts
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+// Import Firebase scripts avec gestion d'erreur
+try {
+  importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+  console.log('[Service Worker] Scripts Firebase chargés');
+} catch (error) {
+  console.error('[Service Worker] Erreur chargement Firebase:', error);
+}
 
-// Configuration Firebase (identique à firebase-config.ts)
-const firebaseConfig = {
-  apiKey: "AIzaSyATn8o24PvSwg1LHCFeFdteAA_fGte-Tqs",
-  authDomain: "smartcabb-bed00.firebaseapp.com",
-  projectId: "smartcabb-bed00",
-  storageBucket: "smartcabb-bed00.firebasestorage.app",
-  messagingSenderId: "855559530237",
-  appId: "1:855559530237:web:5ea0fa4232bb08196f4094",
-  measurementId: "G-8QY9ZYGC7B"
-};
+// 🔑 Configuration Firebase - Sera injectée au runtime depuis l'app
+let firebaseConfig = null;
+let messaging = null;
 
-// Initialiser Firebase dans le Service Worker
-firebase.initializeApp(firebaseConfig);
-
-// Récupérer l'instance Messaging
-const messaging = firebase.messaging();
-
-// 🔔 Gérer les notifications en arrière-plan
-messaging.onBackgroundMessage((payload) => {
-  console.log('[Service Worker] Notification reçue en arrière-plan :', payload);
-
-  // Extraire les données
-  const notificationTitle = payload.notification?.title || 'SmartCabb';
-  const notificationOptions = {
-    body: payload.notification?.body || 'Nouvelle notification',
-    icon: '/logo-smartcabb.png',
-    badge: '/badge-smartcabb.png',
-    tag: 'smartcabb-ride-notification',
-    requireInteraction: true,
-    vibrate: [200, 100, 200, 100, 200], // Vibration plus longue
-    silent: false, // ⚠️ IMPORTANT : Ne pas mettre en silence
-    // 🔊 SON DE NOTIFICATION - CRITIQUE pour sonner même en arrière-plan
-    sound: '/notification-sound.mp3', // Son personnalisé
-    data: payload.data || {},
-    // Options supplémentaires pour Android/Chrome
-    actions: payload.data?.rideId ? [
-      {
-        action: 'accept',
-        title: '✅ Accepter',
-        icon: '/icon-accept.png'
-      },
-      {
-        action: 'decline',
-        title: '❌ Refuser',
-        icon: '/icon-decline.png'
+// 📨 Écouter les messages de l'app principale pour recevoir la config
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'INIT_FIREBASE') {
+    console.log('[Service Worker] Configuration Firebase reçue');
+    firebaseConfig = event.data.config;
+    
+    // Initialiser Firebase avec la config reçue
+    if (firebaseConfig && firebaseConfig.apiKey) {
+      try {
+        // ✅ Vérifier si Firebase est déjà initialisé AVANT de réinitialiser
+        const existingApps = firebase.apps || [];
+        
+        if (existingApps.length > 0) {
+          console.log('[Service Worker] Firebase déjà initialisé, réutilisation de l\'app existante');
+          messaging = firebase.messaging();
+        } else {
+          console.log('[Service Worker] Initialisation de Firebase...');
+          firebase.initializeApp(firebaseConfig);
+          messaging = firebase.messaging();
+          console.log('[Service Worker] Firebase initialisé avec succès ✅');
+        }
+        
+        // Configurer le listener de notifications
+        setupNotificationListener();
+      } catch (error) {
+        console.error('[Service Worker] Erreur initialisation Firebase:', error);
       }
-    ] : [],
-    // Priorité haute pour notifications importantes
-    priority: 'high',
-    // Timestamp pour trier les notifications
-    timestamp: Date.now()
-  };
-
-  // Afficher la notification
-  return self.registration.showNotification(notificationTitle, notificationOptions);
+    }
+  }
 });
+
+// 🔔 Configurer le gestionnaire de notifications en arrière-plan
+function setupNotificationListener() {
+  if (!messaging) {
+    console.warn('[Service Worker] Messaging non initialisé');
+    return;
+  }
+
+  // Gérer les notifications en arrière-plan
+  messaging.onBackgroundMessage((payload) => {
+    console.log('[Service Worker] Notification reçue en arrière-plan :', payload);
+
+    // Extraire les données
+    const notificationTitle = payload.notification?.title || 'SmartCabb';
+    const notificationOptions = {
+      body: payload.notification?.body || 'Nouvelle notification',
+      icon: '/logo-smartcabb.png',
+      badge: '/badge-smartcabb.png',
+      tag: 'smartcabb-ride-notification',
+      requireInteraction: true,
+      vibrate: [200, 100, 200, 100, 200], // Vibration plus longue
+      silent: false, // ⚠️ IMPORTANT : Ne pas mettre en silence
+      // 🔊 SON DE NOTIFICATION - CRITIQUE pour sonner même en arrière-plan
+      sound: '/notification-sound.mp3', // Son personnalisé
+      data: payload.data || {},
+      // Options supplémentaires pour Android/Chrome
+      actions: payload.data?.rideId ? [
+        {
+          action: 'accept',
+          title: '✅ Accepter',
+          icon: '/icon-accept.png'
+        },
+        {
+          action: 'decline',
+          title: '❌ Refuser',
+          icon: '/icon-decline.png'
+        }
+      ] : [],
+      // Priorité haute pour notifications importantes
+      priority: 'high',
+      // Timestamp pour trier les notifications
+      timestamp: Date.now()
+    };
+
+    // Afficher la notification
+    return self.registration.showNotification(notificationTitle, notificationOptions);
+  });
+}
 
 // 🎯 Gérer les actions sur la notification (Accepter/Refuser)
 self.addEventListener('notificationclick', (event) => {

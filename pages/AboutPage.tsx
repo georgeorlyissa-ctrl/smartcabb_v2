@@ -7,35 +7,47 @@ import { useLanguage } from '../contexts/LanguageContext';
 export function AboutPage() {
   const { t, language } = useLanguage();
 
+  // ============================================================
+  // ✅ POUR REMPLACER UNE IMAGE :
+  // 1. Mets ta photo dans le dossier public/
+  // 2. Remplace l'URL Unsplash par '/nom-de-ton-image.jpg'
+  // Exemple : image: '/excellence-smartcabb.jpg'
+  // ============================================================
   const values = [
     {
-      icon: '🎯',
+      image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=300&fit=crop',
+      // ↑ Remplace cette URL par ton image si tu veux
+      
       titleFR: 'Excellence',
       titleEN: 'Excellence',
-      descFR: 'Nous visons l\'excellence dans chaque aspect de notre service',
-      descEN: 'We aim for excellence in every aspect of our service'
+      descFR: "Nous visons l'excellence dans chaque aspect de notre service",
+      descEN: 'We aim for excellence in every aspect of our service',
+      gradient: 'from-blue-400 to-blue-600',
+      shadow: 'shadow-blue-500/50'
     },
     {
-      icon: '🤝',
+      image: '/confiance.png',
+      // ↑ Remplace cette URL par ton image si tu veux
+      
       titleFR: 'Confiance',
       titleEN: 'Trust',
       descFR: 'La confiance de nos clients est notre priorité absolue',
-      descEN: 'Our customers\' trust is our top priority'
+      descEN: "Our customers' trust is our top priority",
+      gradient: 'from-green-400 to-green-600',
+      shadow: 'shadow-green-500/50'
     },
     {
-      icon: '🚀',
+      image: 'tech.jpg',
+      // ↑ Remplace cette URL par ton image si tu veux
+      
       titleFR: 'Innovation',
       titleEN: 'Innovation',
       descFR: 'Nous innovons constamment pour améliorer votre expérience',
-      descEN: 'We constantly innovate to improve your experience'
+      descEN: 'We constantly innovate to improve your experience',
+      gradient: 'from-yellow-400 to-orange-500',
+      shadow: 'shadow-yellow-500/50'
     },
-    {
-      icon: '🇨🇩',
-      titleFR: 'Local',
-      titleEN: 'Local',
-      descFR: '100% congolais, créé pour répondre aux besoins locaux',
-      descEN: '100% Congolese, created to meet local needs'
-    }
+    
   ];
 
   return (
@@ -43,16 +55,71 @@ export function AboutPage() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { font-family: 'Inter', sans-serif !important; }
-        
+
         .gradient-text {
           background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
         }
+
+        @keyframes float3d {
+          0%, 100% { transform: translateY(0px) rotateX(0deg) rotateY(0deg); }
+          50% { transform: translateY(-15px) rotateX(10deg) rotateY(10deg); }
+        }
+
+        @keyframes pulse3d {
+          0%, 100% { transform: scale(1); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.3); }
+          50% { transform: scale(1.05); box-shadow: 0 20px 40px -10px rgba(0,0,0,0.4); }
+        }
+
+        @keyframes rotate3d {
+          0% { transform: perspective(1000px) rotateY(0deg); }
+          100% { transform: perspective(1000px) rotateY(360deg); }
+        }
+
+        @keyframes floatIcon {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+
+        .icon-3d {
+          animation: float3d 3s ease-in-out infinite;
+          transition: all 0.3s ease;
+          transform-style: preserve-3d;
+          perspective: 1000px;
+        }
+
+        .icon-3d:hover {
+          animation: rotate3d 1s ease-in-out;
+          transform: scale(1.1) translateY(-5px);
+        }
+
+        .icon-float {
+          animation: floatIcon 3s ease-in-out infinite;
+        }
+
+        .value-card {
+          transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .value-card:hover {
+          transform: translateY(-12px);
+        }
+
+        .value-card:hover .card-image {
+          transform: scale(1.08);
+        }
+
+        .card-image {
+          transition: transform 0.5s ease;
+        }
+
+        .value-card:hover .icon-3d {
+          animation: pulse3d 1s ease-in-out infinite;
+        }
       `}</style>
 
-      {/* Navigation */}
       <SiteNavigation />
 
       {/* Hero */}
@@ -64,14 +131,11 @@ export function AboutPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="inline-block px-4 py-2 bg-cyan-100 rounded-full text-cyan-700 font-semibold text-sm mb-6">
-              🚀 {t('about.story')}
-            </div>
             <h1 className="text-6xl font-black mb-6">
-              {t('about.title')}
+              {language === 'fr' ? 'À propos de SmartCabb' : 'About SmartCabb'}
             </h1>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              {language === 'fr' 
+              {language === 'fr'
                 ? 'La première plateforme congolaise de transport intelligent, créée par des Congolais pour les Congolais'
                 : 'The first Congolese smart transportation platform, created by Congolese for Congolese'}
             </p>
@@ -79,92 +143,108 @@ export function AboutPage() {
         </div>
       </section>
 
-      {/* Mission */}
+      {/* Mission & Vision */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-5xl font-black mb-6">
-                {t('about.mission')}
-              </h2>
-              <p className="text-xl text-gray-600 mb-6 leading-relaxed">
-                {t('about.missionText')}
-              </p>
-              <p className="text-lg text-gray-600 leading-relaxed">
-                {language === 'fr'
-                  ? 'Nous croyons que chaque Congolais mérite un transport de qualité. C\'est pourquoi nous avons créé SmartCabb : une plateforme 100% locale qui connecte passagers et chauffeurs en temps réel, avec des tarifs transparents et un service irréprochable.'
-                  : 'We believe that every Congolese deserves quality transportation. That\'s why we created SmartCabb: a 100% local platform that connects passengers and drivers in real time, with transparent pricing and impeccable service.'}
-              </p>
-            </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              <div className="aspect-square bg-gradient-to-br from-cyan-100 to-blue-100 rounded-3xl flex items-center justify-center">
-                <div className="text-9xl">🎯</div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
+          <div className="grid lg:grid-cols-2 gap-8">
 
-      {/* Vision */}
-      <section className="py-20 bg-gradient-to-b from-white to-slate-50">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            
+            {/* Mission */}
             <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
               viewport={{ once: true }}
-              className="relative order-2 lg:order-1"
+              className="relative p-10 rounded-3xl overflow-hidden bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100"
             >
-              <div className="aspect-square bg-gradient-to-br from-orange-100 to-pink-100 rounded-3xl flex items-center justify-center">
-                <div className="text-9xl">🚀</div>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-200/30 rounded-full blur-3xl"></div>
+              <div className="relative">
+                <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-6">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-4xl font-black mb-6 text-gray-900">
+                  {language === 'fr' ? 'Notre mission' : 'Our mission'}
+                </h2>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  {language === 'fr'
+                    ? 'Révolutionner le transport en RD Congo en offrant une solution moderne, sûre et accessible à tous les Congolais, avec des tarifs transparents et un service irréprochable.'
+                    : 'Revolutionize transportation in DR Congo by offering a modern, safe and accessible solution to all Congolese, with transparent pricing and impeccable service.'}
+                </p>
               </div>
             </motion.div>
 
+            {/* Vision */}
             <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
-              className="order-1 lg:order-2"
+              className="relative p-10 rounded-3xl overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100"
             >
-              <h2 className="text-5xl font-black mb-6">
-                {t('about.vision')}
-              </h2>
-              <p className="text-xl text-gray-600 mb-6 leading-relaxed">
-                {t('about.visionText')}
-              </p>
-              <p className="text-lg text-gray-600 leading-relaxed">
-                {language === 'fr'
-                  ? 'Nous ne nous arrêtons pas à Kinshasa. Notre ambition est de déployer SmartCabb dans toutes les grandes villes de la RDC et, à terme, dans toute l\'Afrique centrale.'
-                  : 'We don\'t stop at Kinshasa. Our ambition is to deploy SmartCabb in all major cities of the DRC and, ultimately, throughout Central Africa.'}
-              </p>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-purple-200/30 rounded-full blur-3xl"></div>
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-pink-200/30 rounded-full blur-3xl"></div>
+              <div className="relative">
+                <div className="w-14 h-14 bg-purple-600 rounded-2xl flex items-center justify-center mb-6">
+                  <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </div>
+                <h2 className="text-4xl font-black mb-6 text-gray-900">
+                  {language === 'fr' ? 'Notre vision' : 'Our vision'}
+                </h2>
+                <p className="text-lg text-gray-700 leading-relaxed">
+                  {language === 'fr'
+                    ? "Devenir le leader du transport intelligent en Afrique centrale, en connectant toutes les grandes villes de la RDC et en créant un écosystème de mobilité moderne et durable."
+                    : 'Become the leader of smart transportation in Central Africa, connecting all major cities in the DRC and creating a modern and sustainable mobility ecosystem.'}
+                </p>
+              </div>
             </motion.div>
 
           </div>
+
+          {/* Image illustrative */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            viewport={{ once: true }}
+            className="mt-10 relative rounded-3xl overflow-hidden shadow-2xl h-80"
+          >
+            <img
+              src="/about-smartcabb.png"
+              alt="SmartCabb en action"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=1200&h=400&fit=crop';
+              }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-900/60 to-transparent flex items-center px-12">
+              <div>
+                <h3 className="text-4xl font-black text-white mb-3">
+                  {language === 'fr' ? 'SmartCabb en action' : 'SmartCabb in action'}
+                </h3>
+                <p className="text-cyan-100 text-lg">
+                  {language === 'fr'
+                    ? 'Le transport intelligent au service des Congolais'
+                    : 'Smart transport serving Congolese people'}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
         </div>
       </section>
 
-      {/* Values */}
+      {/* ✨ Nos Valeurs — avec images + icônes 3D */}
       <section className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
+
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-black mb-4">
-              {t('about.values')}
-            </h2>
+            <h2 className="text-5xl font-black mb-4">{t('about.values')}</h2>
             <p className="text-xl text-gray-600">
               {language === 'fr'
                 ? 'Les principes qui guident notre action au quotidien'
@@ -172,26 +252,73 @@ export function AboutPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {values.map((value, index) => (
               <motion.div
                 key={index}
-                className="p-6 bg-white rounded-2xl shadow-lg text-center hover:shadow-xl transition-all"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
+                className="value-card bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 text-center group"
+                initial={{ opacity: 0, y: 80, scale: 0.8 }}
+                whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{
+                  duration: 0.7,
+                  delay: index * 0.25,
+                  ease: [0.34, 1.56, 0.64, 1],
+                  type: "spring",
+                  stiffness: 100
+                }}
+                viewport={{ once: true, margin: "-50px" }}
               >
-                <div className="text-6xl mb-4">{value.icon}</div>
-                <h3 className="text-xl font-black mb-2">
-                  {language === 'fr' ? value.titleFR : value.titleEN}
-                </h3>
-                <p className="text-gray-600">
-                  {language === 'fr' ? value.descFR : value.descEN}
-                </p>
+                {/* Image en haut */}
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={value.image}
+                    alt={value.titleFR}
+                    className="card-image w-full h-full object-cover"
+                  />
+                  {/* Overlay gradient coloré */}
+                  <div className={`absolute inset-0 bg-gradient-to-t ${value.gradient} opacity-40`}></div>
+
+                  {/* Icône 3D flottante centrée entre image et contenu */}
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-10">
+                    <div
+                      className={`icon-float w-16 h-16 rounded-2xl bg-gradient-to-br ${value.gradient} ${value.shadow} shadow-2xl flex items-center justify-center text-3xl border-4 border-white`}
+                      style={{ animationDelay: `${index * 0.5}s` }}
+                    >
+                      <div className="absolute inset-0 rounded-2xl bg-white/20 animate-pulse"></div>
+                      <span className="relative z-10" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))' }}>
+                        {value.icon}
+                      </span>
+                      <div className="absolute -inset-1 rounded-2xl border-2 border-white/30 animate-ping opacity-20"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contenu bas */}
+                <div className="pt-12 pb-8 px-6">
+                  {/* Ligne colorée centrée */}
+                  <div className={`w-12 h-1 mx-auto rounded-full bg-gradient-to-r ${value.gradient} mb-4`}></div>
+
+                  <h3 className="text-2xl font-black text-gray-900 mb-3">
+                    {language === 'fr' ? value.titleFR : value.titleEN}
+                  </h3>
+                  <p className="text-gray-600 text-sm leading-relaxed">
+                    {language === 'fr' ? value.descFR : value.descEN}
+                  </p>
+
+                  {/* Ligne animée au hover */}
+                  <div className={`mt-6 h-1 w-16 mx-auto rounded-full bg-gradient-to-r ${value.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500`}></div>
+                </div>
               </motion.div>
             ))}
           </div>
+
+          {/* Astuce remplacer images */}
+          <div className="mt-10 p-4 bg-cyan-50 border border-cyan-200 rounded-2xl text-center">
+            <p className="text-cyan-700 text-sm font-semibold">
+            💡 Pour remplacer une image : mets ta photo dans <code className="bg-cyan-100 px-2 py-1 rounded">public/</code> et modifie la ligne <code className="bg-cyan-100 px-2 py-1 rounded">image:</code> correspondante dans le tableau <code className="bg-cyan-100 px-2 py-1 rounded">values</code>
+            </p>
+          </div>
+
         </div>
       </section>
 
@@ -222,9 +349,7 @@ export function AboutPage() {
         </div>
       </section>
 
-      {/* Footer */}
       <ProfessionalFooter />
-
       <ChatWidget />
     </div>
   );

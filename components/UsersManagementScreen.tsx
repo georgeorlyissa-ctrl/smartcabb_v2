@@ -33,7 +33,6 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'Passager' | 'Conducteur' | 'Administrateur'>('all');
-  const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({});
   const [stats, setStats] = useState({ passengers: 0, drivers: 0, admins: 0 });
   const { setCurrentScreen } = useAppState();
 
@@ -64,7 +63,8 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
         setUsers(data.users);
         setFilteredUsers(data.users);
         setStats(data.stats);
-        toast.success(`${data.total} utilisateurs chargés`);
+        // ✅ FIX: Supprimé le toast de succès qui s'affichait à chaque chargement
+        // toast.success(`${data.total} utilisateurs chargés`);
       } else {
         console.error('❌ Erreur:', data.error);
         toast.error(data.error || 'Erreur lors du chargement');
@@ -112,14 +112,13 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
 
   // Exporter en CSV
   const exportToCSV = () => {
-    const headers = ['Rôle', 'Nom', 'Téléphone', 'Email', 'Mot de passe', 'Solde', 'Type de compte', 'Véhicule', 'Statut', 'Date création'];
+    const headers = ['Rôle', 'Nom', 'Téléphone', 'Email', 'Solde', 'Type de compte', 'Véhicule', 'Statut', 'Date création'];  // ✅ SUPPRIMÉ 'Mot de passe'
     
     const rows = filteredUsers.map(user => [
       user.role,
       user.name,
       user.phone,
       user.email,
-      user.password,
       user.balance || '',
       user.accountType || '',
       user.vehicleCategory || '',
@@ -139,14 +138,6 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
     link.click();
     
     toast.success('Fichier CSV téléchargé !');
-  };
-
-  // Toggle affichage mot de passe
-  const togglePasswordVisibility = (userId: string) => {
-    setShowPasswords(prev => ({
-      ...prev,
-      [userId]: !prev[userId]
-    }));
   };
 
   // Supprimer tous les passagers
@@ -445,7 +436,17 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
                   <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase tracking-wider">Nom</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase tracking-wider">Téléphone</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase tracking-wider">Email</th>
-                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase tracking-wider">Mot de passe</th>
+                  <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase tracking-wider">
+                    <div className="flex items-center gap-2">
+                      <span>Mot de passe</span>
+                      <button
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        title="Masquer tous les mots de passe"
+                      >
+                        <EyeOff className="w-4 h-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </th>
                   <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase tracking-wider">Solde</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase tracking-wider">Infos supplémentaires</th>
                   <th className="px-4 py-3 text-left text-xs text-gray-600 uppercase tracking-wider">Date création</th>
@@ -513,18 +514,13 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <code className="bg-gray-100 px-2 py-1 rounded text-sm">
-                            {showPasswords[user.id] ? user.password : '••••••••'}
+                            ••••••••
                           </code>
                           <button
-                            onClick={() => togglePasswordVisibility(user.id)}
                             className="p-1 hover:bg-gray-100 rounded transition-colors"
-                            title={showPasswords[user.id] ? 'Masquer' : 'Afficher'}
+                            title="Masquer"
                           >
-                            {showPasswords[user.id] ? (
-                              <EyeOff className="w-4 h-4 text-gray-400" />
-                            ) : (
-                              <Eye className="w-4 h-4 text-gray-400" />
-                            )}
+                            <EyeOff className="w-4 h-4 text-gray-400" />
                           </button>
                           <button
                             onClick={() => copyToClipboard(user.password, 'Mot de passe')}

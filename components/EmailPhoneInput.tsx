@@ -24,8 +24,8 @@ interface EmailPhoneInputProps {
 export function EmailPhoneInput({
   value,
   onChange,
-  label = 'Email ou Téléphone',
-  placeholder = 'email@exemple.com ou 812345678',
+  label = 'Numéro de téléphone',
+  placeholder = '0812345678',
   error,
   disabled = false,
   required = false,
@@ -109,7 +109,7 @@ export function EmailPhoneInput({
       
       {inputType === 'unknown' && value.length > 0 && value.length <= 3 && (
         <p className="text-xs text-gray-500">
-          Entrez un email ou un numéro à 9-10 chiffres
+          Entrez un numéro de téléphone à 9-10 chiffres
         </p>
       )}
       

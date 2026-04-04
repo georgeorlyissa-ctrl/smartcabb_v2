@@ -237,13 +237,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setCurrentScreen = useCallback((screen: string) => {
     console.log('🔄 setCurrentScreen appelé avec:', screen);
-    console.log('📍 Ancien currentScreen:', state.currentScreen);
     setState(prev => {
+      console.log('📍 Ancien currentScreen:', prev.currentScreen);
       const newState = { ...prev, currentScreen: screen };
       console.log('✅ Nouveau state.currentScreen:', newState.currentScreen);
       return newState;
     });
-  }, [state.currentScreen]);
+  }, []); // ✅ FIX: Aucune dépendance, utilise setState avec prev
 
   const setIsAdmin = useCallback((isAdmin: boolean) => {
     setState(prev => ({ ...prev, isAdmin }));
@@ -430,6 +430,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateAdminSettings
   }), [
     state,
+    // Les setters/callbacks sont stables (useCallback), pas besoin de les inclure
     setCurrentUser,
     setCurrentDriver,
     setCurrentRide,
@@ -443,11 +444,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updatePickup,
     updateDestination,
     setPickupInstructions,
+    // Les données dérivées changent rarement
     drivers,
     rides,
     passengers,
     promoCodes,
     campaigns,
+    // Les callbacks sont stables
     updateDriver,
     addDriver,
     createRide,

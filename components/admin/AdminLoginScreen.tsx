@@ -74,18 +74,41 @@ export function AdminLoginScreen() {
       const result = await authService.signIn({ identifier: email, password });
 
       if (!result.success) {
-        console.error('❌ Erreur authentification:', result.error || 'Erreur inconnue');
+        // ✅ FIX: Convertir l'erreur en string pour éviter [object Object]
+        let errorMsg = 'Erreur inconnue';
+        if (result.error) {
+          if (typeof result.error === 'string') {
+            errorMsg = result.error;
+          } else if (typeof result.error === 'object') {
+            errorMsg = result.error.message || JSON.stringify(result.error);
+          }
+        }
+        
+        console.error('❌ Erreur authentification:', errorMsg);
         
         // Si c'est une erreur d'identifiants invalides, proposer la synchronisation
-        if (result.error && (
-          result.error.includes('Invalid login credentials') ||
-          result.error.includes('Email ou mot de passe incorrect') ||
-          result.error.includes('incorrect')
-        )) {
-          toast.error('Identifiants incorrects. Vérifiez votre email et mot de passe.');
+        if (errorMsg.includes('Invalid login credentials') ||
+            errorMsg.includes('Email ou mot de passe incorrect') ||
+            errorMsg.includes('incorrect')) {
+          toast.error(
+            '❌ Aucun compte admin trouvé\n\n' +
+            'Ces identifiants ne correspondent à aucun compte administrateur.\n\n' +
+            '🧪 Besoin de comptes de test ?\n' +
+            'Créez 3 utilisateurs de test en 1 clic !',
+            {
+              duration: 20000,
+              position: 'top-center',
+              action: {
+                label: '🧪 Créer comptes test',
+                onClick: () => {
+                  window.location.href = '/admin/create-test-users';
+                }
+              }
+            }
+          );
           setShowSyncLink(true); // Afficher le lien de synchronisation
         } else {
-          toast.error(result.error || 'Email ou mot de passe incorrect');
+          toast.error(errorMsg);
         }
         
         setLoading(false);
@@ -93,6 +116,14 @@ export function AdminLoginScreen() {
       }
 
       console.log('✅ Authentification réussie, vérification du rôle admin...');
+
+      // ✅ Vérifier que le profil existe
+      if (!result.profile) {
+        console.error('❌ Profil non trouvé dans le KV store');
+        toast.error('Profil utilisateur non trouvé. Veuillez contacter le support.');
+        setLoading(false);
+        return;
+      }
 
       // Vérifier que c'est bien un admin
       if (result.profile.role !== 'admin') {
@@ -238,7 +269,6 @@ export function AdminLoginScreen() {
           <div className="text-center">
             <button 
               type="button"
-
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -260,11 +290,6 @@ export function AdminLoginScreen() {
                 }
                 
                 console.log('🔗 ========================================');
-
-              onClick={() => {
-                console.log('🔗 Clic sur "Mot de passe oublié"');
-                console.log('🔗 Redirection vers /admin/forgot-password');
-                navigate('/admin/forgot-password');
               }}
               className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
               disabled={loading}
@@ -278,7 +303,6 @@ export function AdminLoginScreen() {
               Pas de compte admin ?{' '}
               <button 
                 type="button"
-
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -305,11 +329,6 @@ export function AdminLoginScreen() {
                   }
                   
                   console.log('🔗 ========================================');
-
-                onClick={() => {
-                  console.log('🔗 Clic sur "Créer un compte"');
-                  console.log('🔗 Redirection vers /admin/signup');
-                  navigate('/admin/signup');
                 }}
                 className="text-purple-600 hover:text-purple-700 font-semibold"
                 disabled={loading}

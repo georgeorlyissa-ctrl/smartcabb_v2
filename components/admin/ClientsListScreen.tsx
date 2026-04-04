@@ -44,6 +44,11 @@ export function ClientsListScreen({ onBack }: ClientsListScreenProps) {
   const { getPassengers, rides, loading, refresh } = useSupabaseData();
   const passengers = getPassengers();
   
+  // ✅ DEBUG: Logger les passagers reçus
+  useEffect(() => {
+    console.log('🔍 [ClientsListScreen] Passagers reçus:', passengers?.length || 0, passengers);
+  }, [passengers]);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'rides' | 'date'>('name');
   const [selectedPassenger, setSelectedPassenger] = useState<Profile | null>(null);
@@ -350,7 +355,7 @@ export function ClientsListScreen({ onBack }: ClientsListScreenProps) {
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-lg font-semibold">{passenger.full_name}</h3>
                           <Badge variant="secondary" className="text-xs">
-                            Client #{passenger.id.slice(-4)}
+                            Client #{passenger.id?.slice(-4) || 'N/A'}
                           </Badge>
                           {passenger.is_blocked && (
                             <Badge variant="destructive" className="text-xs">

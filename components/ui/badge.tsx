@@ -30,13 +30,8 @@ function Badge({
   ...props
 }: React.ComponentProps<"span"> &
   VariantProps<typeof badgeVariants>) {
-  return (
-    <span
-      data-slot="badge"
-      className={cn(badgeVariants({ variant }), className)}
-      {...props}
-    />
-  );
+  // ❌ DÉSACTIVÉ: Ne plus afficher les badges
+  return null;
 }
 
 export { Badge, badgeVariants };

@@ -51,10 +51,10 @@ export async function signUpDriver(driverData: {
     }
     
     // Appeler l'endpoint serveur (Admin API) pour TOUS les cas
-    console.log('🌐 Appel endpoint serveur /signup-driver');
+    console.log('🌐 Appel endpoint serveur /drivers/signup');
     
     const response = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/signup-driver`,
+      `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/signup`,
       {
         method: 'POST',
         headers: {
@@ -62,7 +62,7 @@ export async function signUpDriver(driverData: {
           'Authorization': `Bearer ${publicAnonKey}`
         },
         body: JSON.stringify({
-          fullName,
+          full_name: fullName,
           email: email?.trim() || null,
           phone: normalizedPhone,
           password,
@@ -95,31 +95,19 @@ export async function signUpDriver(driverData: {
       };
     }
 
-    console.log('✅ Inscription serveur réussie, connexion automatique...');
+    console.log('✅ Inscription serveur réussie:', serverData);
+    console.log('📧 Email utilisateur:', serverData.user?.email);
+    console.log('👤 Profil:', serverData.profile);
 
-    // Se connecter immédiatement avec les credentials
-    const tempEmail = serverData.credentials.tempEmail;
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: tempEmail,
-      password
-    });
-
-    // ✅ FIX: Vérifier authData.access_token au lieu de authData.session
-    if (authError || !authData.access_token) {
-      console.error('❌ Erreur connexion:', authError);
-      return {
-        success: false,
-        error: 'Compte créé mais erreur de connexion. Essayez de vous connecter manuellement.'
-      };
-    }
-
-    console.log('✅ Conducteur créé et connecté:', serverData.profile.full_name);
+    // ❌ NE PAS connecter automatiquement le conducteur non approuvé
+    // Il doit attendre l'approbation de l'admin
+    console.log('⏳ Compte créé, en attente d\'approbation admin');
     
     return {
       success: true,
-      user: authData.user,
-      profile: serverData.profile,
-      accessToken: authData.access_token // ✅ FIX: Utiliser authData.access_token directement
+      user: serverData.user,
+      profile: serverData.profile
+      // Pas d'accessToken = pas de connexion automatique
     };
 
   } catch (error) {

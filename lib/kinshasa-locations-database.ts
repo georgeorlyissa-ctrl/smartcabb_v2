@@ -545,3 +545,45 @@ export function getLocationTypeLabel(type: string): string {
   };
   return labels[type] || '📍 Lieu';
 }
+
+/**
+ * 📏 CALCULER LA DISTANCE ENTRE DEUX POINTS GPS (en km)
+ * Formule de Haversine
+ */
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371; // Rayon de la Terre en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * 🎯 TROUVER LE LIEU LE PLUS PROCHE
+ * Retourne le lieu le plus proche avec sa distance
+ */
+export function findNearestLocation(lat: number, lng: number): (Location & { distance: number }) | null {
+  if (!KINSHASA_LOCATIONS || KINSHASA_LOCATIONS.length === 0) {
+    return null;
+  }
+
+  let nearestLocation: (Location & { distance: number }) | null = null;
+  let minDistance = Infinity;
+
+  for (const location of KINSHASA_LOCATIONS) {
+    const distance = calculateDistance(lat, lng, location.lat, location.lng);
+    
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestLocation = { ...location, distance };
+    }
+  }
+
+  return nearestLocation;
+}

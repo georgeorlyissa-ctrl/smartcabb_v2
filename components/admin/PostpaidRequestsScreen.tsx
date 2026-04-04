@@ -285,7 +285,7 @@ export function PostpaidRequestsScreen({ onBack }: PostpaidRequestsScreenProps) 
     const csvData = [
       ['ID', 'Passager', 'Email', 'Téléphone', 'Conducteur', 'Montant de base (CDF)', 'Taux intérêt (%)', 'Montant intérêt (CDF)', 'Montant total (CDF)', 'Statut', 'Date demande', 'Date échéance', 'Notes admin'],
       ...filteredRequests.map(request => [
-        request.id.slice(-8),
+        request.id?.slice(-8) || 'N/A',
         request.passenger_name || 'N/A',
         request.passenger_email || 'N/A',
         request.passenger_phone || 'N/A',

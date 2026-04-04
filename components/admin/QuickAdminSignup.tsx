@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+import { useState } from 'react'; // ✅ Ajout import React
+import { Button } from '../ui/button'; // ✅ Ajout import Button
+import { Input } from '../ui/input'; // ✅ Ajout import Input
+import { Label } from '../ui/label'; // ✅ Ajout import Label
 import { toast } from '../../lib/toast';
 import { useNavigate } from '../../lib/simple-router';
-import { createAdmin } from '../../lib/auth-service.tsx';
+import { createAdmin } from '../../lib/auth-service'; // ✅ Correction : enlever .tsx
 
 /**
  * 🚀 INSCRIPTION ADMIN - MODE BACKEND
@@ -176,8 +176,4 @@ export function QuickAdminSignup() {
       </div>
     </div>
   );
-
 }
-
-}
-

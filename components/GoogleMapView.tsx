@@ -115,35 +115,15 @@ const loadGoogleMapsScript = async (): Promise<void> => {
       const originalConsoleError = console.error;
       const errorListener = (event: ErrorEvent | any) => {
         const errorMsg = event?.message || event?.error?.message || '';
-
-        
-        // ✅ BLOQUER SILENCIEUSEMENT les "Script error" (erreurs cross-origin)
-        if (errorMsg === 'Script error.' || errorMsg === 'Script error') {
-          event.preventDefault && event.preventDefault();
-          event.stopPropagation && event.stopPropagation();
-          event.stopImmediatePropagation && event.stopImmediatePropagation();
-          return;
-        }
-        
         if (errorMsg.includes('RefererNotAllowedMapError') || 
             errorMsg.includes('ApiNotActivatedMapError') ||
             errorMsg.includes('InvalidKeyMapError')) {
           console.warn('⚠️ Erreur Google Maps API détectée:', errorMsg);
           console.warn('🔄 L\'application basculera vers OpenStreetMap');
-
           // L'erreur sera gérée dans le composant
         }
       };
       window.addEventListener('error', errorListener);
-
-          event.preventDefault && event.preventDefault();
-          event.stopPropagation && event.stopPropagation();
-          event.stopImmediatePropagation && event.stopImmediatePropagation();
-          // L'erreur sera gérée dans le composant
-        }
-      };
-      window.addEventListener('error', errorListener, true); // true = capture phase
-
 
       // Créer une fonction callback globale pour l'initialisation
       const callbackName = 'initGoogleMaps_' + Date.now();
@@ -561,24 +541,12 @@ export function GoogleMapView({
       return;
     }
 
-    // ✅ PROTECTION: Vérifier que Google Maps est chargé
-    if (!window.google?.maps?.DirectionsService) {
-      console.warn('⚠️ Google Maps pas encore chargé pour afficher l\'itinéraire');
-      return;
-    }
-
     // 🆕 UTILISER LE PROXY BACKEND au lieu de DirectionsService direct
     // Cela évite les erreurs UNKNOWN_ERROR si la clé API frontend est invalide
     
     // Fonction helper pour créer les marqueurs départ/destination
     const createRouteMarkers = (start: Location, end: Location) => {
       if (!mapInstanceRef.current) return;
-      
-      // ✅ PROTECTION: Vérifier que Google Maps est chargé
-      if (!window.google?.maps?.Marker || !window.google?.maps?.Size || !window.google?.maps?.Point) {
-        console.warn('⚠️ Google Maps Marker API pas chargée');
-        return;
-      }
       
       // Supprimer les anciens marqueurs
       if (routeMarkersRef.current.start) {
@@ -720,14 +688,6 @@ export function GoogleMapView({
     
     // Fonction fallback : Utiliser Directions API frontend
     const fallbackToFrontendDirections = () => {
-
-      // ✅ PROTECTION: Vérifier que Google Maps est complètement chargé
-      if (!window.google?.maps?.DirectionsService || !window.google?.maps?.TravelMode) {
-        console.warn('⚠️ Google Maps pas encore chargé pour fallback directions');
-        return;
-      }
-      
-
       const directionsService = new window.google.maps.DirectionsService();
       
       if (!directionsRendererRef.current) {
@@ -1146,8 +1106,4 @@ export function GoogleMapView({
       )}
     </div>
   );
-
 }
-
-}
-

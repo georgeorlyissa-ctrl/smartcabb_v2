@@ -57,24 +57,8 @@ export function MapView(props: MapViewProps) {
   useEffect(() => {
     // Écouter les erreurs Google Maps globales
     const errorListener = (event: ErrorEvent | any) => {
-
       const errorMsg = event?.message || event?.error?.message || String(event);
       
-
-      // Protection contre les erreurs undefined
-      if (!event) return;
-      
-      const errorMsg = event?.message || event?.error?.message || String(event);
-      
-      // ✅ BLOQUER SILENCIEUSEMENT les "Script error" (erreurs cross-origin)
-      if (errorMsg === 'Script error.' || errorMsg === 'Script error') {
-        event.preventDefault && event.preventDefault();
-        event.stopPropagation && event.stopPropagation();
-        event.stopImmediatePropagation && event.stopImmediatePropagation();
-        return;
-      }
-      
-
       if (errorMsg.includes('RefererNotAllowedMapError') || 
           errorMsg.includes('ApiNotActivatedMapError') ||
           errorMsg.includes('InvalidKeyMapError') ||
@@ -85,29 +69,15 @@ export function MapView(props: MapViewProps) {
         
         setGoogleMapsError(errorMsg);
         setUseOpenStreetMap(true);
-
       }
     };
 
     // Écouter les erreurs globales
     window.addEventListener('error', errorListener);
 
-        
-        // Empêcher la propagation de l'erreur
-        event.preventDefault && event.preventDefault();
-        event.stopPropagation && event.stopPropagation();
-        event.stopImmediatePropagation && event.stopImmediatePropagation();
-      }
-    };
-
-    // Écouter les erreurs globales - AVEC CAPTURE POUR BLOQUER AVANT LES AUTRES
-    window.addEventListener('error', errorListener, true); // true = capture phase
-
-
     // Intercepter console.error pour détecter les erreurs Google Maps
     const originalConsoleError = console.error;
     console.error = (...args: any[]) => {
-
       const errorStr = args.join(' ');
       if (errorStr.includes('Google Maps') && 
           (errorStr.includes('RefererNotAllowedMapError') || 
@@ -121,26 +91,6 @@ export function MapView(props: MapViewProps) {
 
     return () => {
       window.removeEventListener('error', errorListener);
-
-      try {
-        const errorStr = args.join(' ');
-        if (errorStr.includes('Google Maps') && 
-            (errorStr.includes('RefererNotAllowedMapError') || 
-             errorStr.includes('ApiNotActivatedMapError') ||
-             errorStr.includes('InvalidKeyMapError'))) {
-          console.warn('⚠️ Erreur Google Maps détectée via console.error');
-          setUseOpenStreetMap(true);
-        }
-        originalConsoleError.apply(console, args);
-      } catch (err) {
-        // Protection en cas d'erreur dans le gestionnaire
-        originalConsoleError.apply(console, args);
-      }
-    };
-
-    return () => {
-      window.removeEventListener('error', errorListener, true); // true = capture phase
-
       console.error = originalConsoleError;
     };
   }, []);

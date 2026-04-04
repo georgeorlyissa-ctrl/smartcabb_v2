@@ -234,6 +234,24 @@ class AdminAppErrorBoundary extends React.Component<
     console.error('❌ AdminApp Error:', error, errorInfo);
     console.error('❌ Stack:', error.stack);
     console.error('❌ Component Stack:', errorInfo?.componentStack);
+    
+    // 🔍 Détecter si c'est une erreur de module dynamique (chunk loading)
+    const isDynamicImportError = 
+      error.message?.includes('Failed to fetch dynamically imported module') ||
+      error.message?.includes('error loading dynamically imported module') ||
+      error.message?.includes('Loading chunk') ||
+      error.message?.includes('ChunkLoadError');
+    
+    if (isDynamicImportError) {
+      console.log('🔄 Erreur de chargement de module détectée - Rechargement automatique dans 500ms...');
+      
+      // ✅ RECHARGEMENT AUTOMATIQUE après un court délai (pour éviter les loops)
+      setTimeout(() => {
+        if (this.mounted) {
+          window.location.reload();
+        }
+      }, 500);
+    }
   }
 
   render() {

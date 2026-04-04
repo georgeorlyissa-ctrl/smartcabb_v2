@@ -141,11 +141,12 @@ export function ProfessionalFooter() {
                   {t('nav.privacy')}
                 </Link>
               </li>
-              <li>
+              {/* ❌ DÉSACTIVÉ: Mentions légales pour raisons de sécurité */}
+              {/* <li>
                 <Link to="/legal" className="text-gray-400 hover:text-cyan-400 transition-colors">
                   {t('nav.legal')}
                 </Link>
-              </li>
+              </li> */}
               <li>
                 <Link to="/drivers" className="text-gray-400 hover:text-cyan-400 transition-colors">
                   {t('nav.drivers')}
@@ -160,12 +161,9 @@ export function ProfessionalFooter() {
       {/* Barre du bas */}
       <div className="border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-400 text-sm text-center md:text-left">
+          <div className="flex flex-col md:flex-row justify-center items-center gap-4">
+            <p className="text-gray-400 text-sm text-center">
               © 2026 SmartCabb. {t('footer.rights')}
-            </p>
-            <p className="text-gray-400 text-sm flex items-center gap-2">
-              {t('footer.madeInCongo')}
             </p>
           </div>
         </div>

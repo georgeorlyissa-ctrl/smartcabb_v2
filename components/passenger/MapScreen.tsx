@@ -178,20 +178,11 @@ export function MapScreen() {
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     console.log('🖱️ Clic sur carte:', lat, lng);
     
-    // Afficher les coordonnées immédiatement
-    const tempLocation = {
-      lat,
-      lng,
-      address: `${Math.abs(lat).toFixed(6)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lng).toFixed(6)}°${lng < 0 ? 'W' : 'E'}`
-    };
-    
-    setPickupLocation(tempLocation);
-    if (updatePickup) {
-      updatePickup(tempLocation);
-    }
-    
-    // Obtenir le nom de lieu en arrière-plan
+    // ❌ NE PAS afficher les coordonnées immédiatement
+    // ✅ Afficher "Recherche du nom..." pendant la recherche
     setLoadingAddress(true);
+    
+    // Obtenir le nom de lieu immédiatement
     try {
       const address = await reverseGeocode(lat, lng);
       console.log('📍 Nom de lieu obtenu:', address);
@@ -203,6 +194,13 @@ export function MapScreen() {
       }
     } catch (error) {
       console.error('❌ Erreur geocoding:', error);
+      // En cas d'erreur, afficher le nom de quartier par défaut
+      const fallbackAddress = 'Position sélectionnée';
+      const location = { lat, lng, address: fallbackAddress };
+      setPickupLocation(location);
+      if (updatePickup) {
+        updatePickup(location);
+      }
     } finally {
       setLoadingAddress(false);
     }

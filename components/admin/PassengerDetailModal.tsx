@@ -231,7 +231,7 @@ export function PassengerDetailModal({
               </div>
               <div>
                 <h2 className="text-xl">{passenger.full_name}</h2>
-                <p className="text-sm text-gray-500">ID: {passenger.id.slice(-8)}</p>
+                <p className="text-sm text-gray-500">ID: {passenger.id?.slice(-8) || 'N/A'}</p>
               </div>
             </DialogTitle>
             <DialogDescription className="sr-only">

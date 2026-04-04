@@ -1,30 +1,25 @@
-import { Routes, Route, useNavigate, useLocation } from '../lib/simple-router';
+import { RideInProgressScreen } from '../components/passenger/RideInProgressScreen';
+import { DriverApproachingScreen } from '../components/passenger/DriverApproachingScreen';
+import { useEffect, useMemo } from 'react';
+import { setupFCMForUser } from '../src/utils/firebase';
 import { useAppState } from '../hooks/useAppState';
-import { RLSFixModal } from '../components/RLSFixModal';
+import { useNavigate, useLocation, Routes, Route } from '../lib/simple-router';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { RLSBlockingScreen } from '../components/RLSBlockingScreen';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { LandingScreen } from '../components/LandingScreen';
 import { UserSelectionScreen } from '../components/UserSelectionScreen';
 import { WelcomeBackScreen } from '../components/WelcomeBackScreen';
-import { ErrorBoundary } from '../components/ErrorBoundary';
-
-// Import direct sans lazy loading pour debug
 import { LoginScreen } from '../components/passenger/LoginScreen';
 import { RegisterScreen } from '../components/passenger/RegisterScreen';
-import { ForgotPasswordScreen } from '../components/ForgotPasswordScreen';
-import { ResetPasswordOTPScreen } from '../components/ResetPasswordOTPScreen';
 import { MapScreen } from '../components/passenger/MapScreen';
-import { MapScreenSimple } from '../components/passenger/MapScreenSimple'; // 🔍 VERSION DIAGNOSTIC
-import { EstimateScreen } from '../components/passenger/EstimateScreen';
-import { RideScreen } from '../components/passenger/RideScreen';
-import { DriverFoundScreen } from '../components/passenger/DriverFoundScreen';
-import { LiveTrackingMap } from '../components/passenger/LiveTrackingMap';
-import { LiveTrackingScreen } from '../components/passenger/LiveTrackingScreen';
-import { RideTrackingScreen } from '../components/passenger/RideTrackingScreen';
-import { RideCompletedScreen } from '../components/passenger/RideCompletedScreen';
-import { PaymentReceiptScreen } from '../components/passenger/PaymentReceiptScreen';
 import { PaymentScreen } from '../components/passenger/PaymentScreen';
 import { RatingScreen } from '../components/passenger/RatingScreen';
+import { RLSFixModal } from '../components/RLSFixModal';
+import { ForgotPasswordScreen } from '../components/ForgotPasswordScreen';
+import { ResetPasswordOTPScreen } from '../components/ResetPasswordOTPScreen';
+import { RideCompletedScreen } from '../components/passenger/RideCompletedScreen';
+import { PaymentReceiptScreen } from '../components/passenger/PaymentReceiptScreen';
 import { SettingsScreen } from '../components/passenger/SettingsScreen';
 import { ProfileScreen } from '../components/passenger/ProfileScreen';
 import { RideHistoryScreen } from '../components/passenger/RideHistoryScreen';
@@ -34,9 +29,13 @@ import { PrivacySettingsScreen } from '../components/passenger/PrivacySettingsSc
 import { PaymentMethodScreen } from '../components/passenger/PaymentMethodScreen';
 import { PaymentSettingsScreen } from '../components/passenger/PaymentSettingsScreen';
 import { SupportScreen } from '../components/passenger/SupportScreen';
-import { RideInProgressScreen } from '../components/passenger/RideInProgressScreen';
-import { DriverApproachingScreen } from '../components/passenger/DriverApproachingScreen';
-import { useEffect, useMemo } from 'react';
+import { MapScreenSimple } from '../components/passenger/MapScreenSimple';
+import { EstimateScreen } from '../components/passenger/EstimateScreen';
+import { RideScreen } from '../components/passenger/RideScreen';
+import { DriverFoundScreen } from '../components/passenger/DriverFoundScreen';
+import { LiveTrackingMap } from '../components/passenger/LiveTrackingMap';
+import { RideTrackingScreen } from '../components/passenger/RideTrackingScreen';
+import { LiveTrackingScreen } from '../components/passenger/LiveTrackingScreen';
 
 function PassengerAppContent() {
   const { state, setCurrentScreen, setCurrentView } = useAppState();
@@ -103,6 +102,61 @@ function PassengerAppContent() {
       setCurrentScreen('map');
     }
   }, [location.pathname, currentScreen, state.currentView, state.currentUser, user, setCurrentView, setCurrentScreen]); // Toutes les dépendances
+
+  // ✅ FCM : Initialiser les notifications push pour le passager
+  useEffect(() => {
+    // Ne rien faire si pas d'utilisateur connecté
+    if (!state.currentUser || !state.currentUser.id) {
+      console.log('⏭️ FCM : Pas d\'utilisateur connecté, skip');
+      return;
+    }
+
+    // Vérifier que c'est bien un passager
+    if (state.currentView !== 'passenger') {
+      console.log('⏭️ FCM : Pas un passager, skip');
+      return;
+    }
+
+    console.log('🔥 Initialisation FCM pour passager:', state.currentUser.id);
+
+    // Configuration FCM complète
+    setupFCMForUser(state.currentUser.id, 'passenger', (payload) => {
+      console.log('🔔 Notification passager reçue:', payload);
+      
+      const { title, body } = payload.notification || {};
+      const data = payload.data || {};
+
+      // Gérer selon le type de notification
+      switch (data.type) {
+        case 'ride_accepted':
+          console.log('✅ Course acceptée !', { title, body });
+          // TODO : Afficher un toast de succès
+          break;
+
+        case 'driver_arriving':
+          console.log('🚗 Conducteur arrive !', { title, body });
+          // TODO : Jouer un son d'alerte
+          break;
+
+        case 'ride_started':
+          console.log('🚀 Course démarrée !', { title, body });
+          break;
+
+        case 'ride_completed':
+          console.log('✅ Course terminée !', { title, body });
+          // TODO : Rediriger vers paiement
+          break;
+
+        case 'ride_cancelled':
+          console.log('❌ Course annulée', { title, body, reason: data.reason });
+          // TODO : Afficher alerte d'annulation
+          break;
+
+        default:
+          console.log('🔔 Notification générique:', { title, body, data });
+      }
+    });
+  }, [state.currentUser?.id, state.currentView]);
 
   // ✅ Gérer le cas où currentScreen est vide PENDANT le render
   const screenToShow = useMemo(() => {

@@ -11,10 +11,16 @@ import { BackendSyncProvider } from './components/BackendSyncProvider';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
-import { BUILD_VERSION, BUILD_TIMESTAMP } from './BUILD_VERSION';
+import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
+// ✅ BUILD VERSION - Défini directement ici pour éviter les erreurs d'import
+const BUILD_VERSION = '518.3.0'; // ✅ Incrémenté (v3.0.5 - ajout purge utilisateur)
+const BUILD_TIMESTAMP = new Date().toISOString();
+
 import { startUpdateDetection } from './utils/updateDetector';
 import { checkForUpdate } from './utils/cacheManager';
 import { initConfigSync } from './lib/config-sync';
+// ✅ FIX BUILD: Import conditionnel pour Firebase Service Worker
+// import { initializeFirebaseServiceWorker } from './lib/init-firebase-sw';
 
 // ⚡ BUILD v518.0 - OPTIMISATIONS PERFORMANCES MAJEURES
 console.log('');
@@ -85,6 +91,15 @@ import { AdminQuickSetup } from './components/admin/AdminQuickSetup';
 import { AdminAccountSync } from './components/admin/AdminAccountSync';
 import { QuickAdminSignup } from './components/admin/QuickAdminSignup';
 import { AdminForgotPasswordScreen } from './components/admin/AdminForgotPasswordScreen';
+// ✅ Page de création d'utilisateurs de test (pour résoudre "Invalid login credentials")
+// import { CreateTestUsers } from './components/admin/CreateTestUsers';
+// 🔧 Page de réparation des emails malformés
+import { FixEmailsPage } from './components/admin/FixEmailsPage';
+// 🗑️ Page de purge d'utilisateur (pour libérer les emails bloqués)
+import { PurgeUserPage } from './components/admin/PurgeUserPage';
+
+// 🔍 Driver Diagnostic
+import { DriverSignupDiagnostic } from './components/driver/DriverSignupDiagnostic';
 
 // 🔧 Loading fallback
 const SuspenseFallback = () => {
@@ -176,32 +191,6 @@ function App() {
       if (checkForUpdate()) {
         console.log('🔄 Nouvelle version détectée - Cache rafraîchi');
       }
-
-      // 🚫 BLOQUER LES "Script error" CROSS-ORIGIN GLOBALEMENT
-      const globalErrorHandler = (event: ErrorEvent) => {
-        const errorMsg = event?.message || '';
-        
-        // ✅ Bloquer silencieusement les erreurs cross-origin (Google Maps, Firebase, etc.)
-        if (errorMsg === 'Script error.' || errorMsg === 'Script error' || errorMsg === '') {
-          // Bloquer sans logger pour garder la console propre
-          event.preventDefault();
-          event.stopPropagation();
-          return true;
-        }
-        
-        return false;
-      };
-      
-      window.addEventListener('error', globalErrorHandler, true);
-      
-      // Bloquer aussi les promesses non catchées silencieusement
-      window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
-        const reason = event?.reason?.message || String(event?.reason || '');
-        if (reason.includes('Script error') || reason === '') {
-          // Bloquer sans logger
-          event.preventDefault();
-        }
-      });
 
       // 🧹 NETTOYAGE DU LOCALSTORAGE : Détecter et supprimer les données corrompues
       try {
@@ -474,6 +463,15 @@ function App() {
                   <Route path="/admin/signup" element={<QuickAdminSignup />} />
                   <Route path="/admin/forgot-password" element={<AdminForgotPasswordScreen />} />
                   <Route path="/admin/clean-system" element={<AdminCleanSystem />} />
+                  {/* ✅ Page de création d'utilisateurs de test (pour résoudre "Invalid login credentials") */}
+                  {/* <Route path="/admin/create-test-users" element={<CreateTestUsers />} /> */}
+                  {/* 🔧 Page de réparation des emails malformés */}
+                  <Route path="/admin/fix-emails" element={<FixEmailsPage />} />
+                  {/* 🗑️ Page de purge d'utilisateur (pour libérer les emails bloqués) */}
+                  <Route path="/admin/purge-user" element={<PurgeUserPage />} />
+                  
+                  {/* 🔍 Driver Diagnostic Route */}
+                  <Route path="/driver/signup-diagnostic" element={<DriverSignupDiagnostic />} />
                   
                   {/* Admin Panel - Route générique APRÈS les routes spécifiques */}
                   <Route path="/admin/*" element={<AdminApp />} />

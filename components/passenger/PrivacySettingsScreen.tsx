@@ -5,6 +5,7 @@ import { motion } from '../../lib/motion';
 import { Button } from '../ui/button'; // ✅ FIX: Import manquant
 import { Card, CardContent } from '../ui/card'; // ✅ FIX: Import manquant
 import { Switch } from '../ui/switch'; // ✅ FIX: Import manquant
+import { UnifiedPolicyModal } from '../shared/UnifiedPolicyModal'; // ✅ FIX: Import modal
 import { 
   ArrowLeft, 
   Shield, 
@@ -21,6 +22,10 @@ import {
 
 export function PrivacySettingsScreen() {
   const { setCurrentScreen } = useAppState();
+  
+  // État pour afficher les modals de politique/conditions
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [policyMode, setPolicyMode] = useState<'privacy' | 'terms'>('privacy');
   
   // États des paramètres de confidentialité (sauvegardés dans localStorage)
   const [settings, setSettings] = useState({
@@ -283,7 +288,13 @@ export function PrivacySettingsScreen() {
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Documents légaux</h2>
           
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              setPolicyMode('privacy');
+              setShowPolicyModal(true);
+            }}
+          >
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-blue-600">Politique de confidentialité</span>
@@ -292,7 +303,13 @@ export function PrivacySettingsScreen() {
             </CardContent>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => {
+              setPolicyMode('terms');
+              setShowPolicyModal(true);
+            }}
+          >
             <CardContent className="p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-blue-600">Conditions d'utilisation</span>
@@ -302,6 +319,15 @@ export function PrivacySettingsScreen() {
           </Card>
         </div>
       </div>
+
+      {/* Modal de politique/conditions */}
+      <UnifiedPolicyModal
+        isOpen={showPolicyModal}
+        onClose={() => setShowPolicyModal(false)}
+        mode={policyMode}
+        readOnly={true}
+        userType="passenger"
+      />
     </motion.div>
   );
 }

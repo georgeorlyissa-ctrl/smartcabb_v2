@@ -24,14 +24,14 @@ export function ForgotPasswordScreen({ onBack, userType = 'passenger' }: ForgotP
     const identifierStr = String(identifier || '').trim();
     
     if (!identifierStr) {
-      toast.error('Veuillez entrer votre email ou numéro de téléphone');
+      toast.error('Veuillez entrer votre numéro de téléphone');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Déterminer si c'est un email ou un numéro de téléphone
+      // Déterminer si c'est un numéro de téléphone
       const isPhone = /^(\+243|0)?[0-9]{9}$/.test(identifierStr);
 
       if (isPhone) {
@@ -297,7 +297,7 @@ export function ForgotPasswordScreen({ onBack, userType = 'passenger' }: ForgotP
           </div>
           <h2 className="text-2xl mb-4">Récupération du compte</h2>
           <p className="text-gray-600">
-            Entrez votre email ou numéro de téléphone pour recevoir un lien de réinitialisation.
+            Entrez votre numéro de téléphone pour recevoir un code de réinitialisation.
           </p>
         </motion.div>
 
@@ -310,15 +310,14 @@ export function ForgotPasswordScreen({ onBack, userType = 'passenger' }: ForgotP
           <EmailPhoneInput
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
-            label="Email ou Téléphone"
-            placeholder="email@exemple.com ou 812345678"
+            label="Numéro de téléphone"
+            placeholder="0812345678"
             required
           />
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <p className="text-sm text-blue-800">
-              <strong>Note :</strong> Un email sera envoyé à l'adresse associée à votre compte.
-              Si vous avez utilisé un numéro de téléphone, un SMS avec un code sera envoyé (délai : 5-60 secondes).
+              <strong>Note :</strong> Un SMS avec un code de vérification sera envoyé à votre numéro (délai : 5-60 secondes).
             </p>
           </div>
         </motion.div>

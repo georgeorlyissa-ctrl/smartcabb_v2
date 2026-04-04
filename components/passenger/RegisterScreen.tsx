@@ -30,7 +30,6 @@ export function RegisterScreen() {
   const { setCurrentScreen, setCurrentUser, setCurrentView } = useAppState();
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
     phone: '',
     password: '',
     confirmPassword: ''
@@ -112,20 +111,26 @@ export function RegisterScreen() {
         // Continuer même si le nettoyage échoue
       }
       
+      console.log('📱 Début inscription avec:', { 
+        phone: formData.phone, 
+        name: formData.name 
+      });
+      
       // Inscription avec Supabase
       const result = await signUp({
-        email: formData.email || undefined, // ✅ Passer l'email s'il est fourni
         phone: formData.phone,
         password: formData.password,
         fullName: formData.name,
         role: 'passenger'
       });
       
+      console.log('📊 Résultat inscription:', result);
+      
       if (result.success && result.profile) {
+        console.log('✅ Inscription réussie!');
         setCurrentUser({
           id: result.profile.id,
           name: result.profile.full_name,
-          email: result.profile.email,
           phone: result.profile.phone || formData.phone
         });
         
@@ -151,23 +156,38 @@ export function RegisterScreen() {
         }, 500);
       } else {
         // 🔍 Détecter si l'utilisateur existe déjà
-        const errorMessage = result.error || 'Erreur lors de l\'inscription';
+        // ✅ FIX: Convertir l'erreur en string pour éviter [object Object]
+        let errorMessage = 'Erreur lors de l\'inscription';
+        if (result.error) {
+          if (typeof result.error === 'string') {
+            errorMessage = result.error;
+          } else if (typeof result.error === 'object') {
+            errorMessage = result.error.message || JSON.stringify(result.error);
+          }
+        }
+        
+        console.error('❌ Erreur inscription:', errorMessage);
         
         if (errorMessage.toLowerCase().includes('already been registered') || 
             errorMessage.toLowerCase().includes('déjà enregistré') ||
-            errorMessage.toLowerCase().includes('already exists')) {
+            errorMessage.toLowerCase().includes('already exists') ||
+            errorMessage.toLowerCase().includes('user with this email already exists')) {
           setErrorMsg('Ce numéro de téléphone est déjà inscrit. Connectez-vous plutôt.');
           
           // Rediriger automatiquement vers l'écran de connexion après 3 secondes
           setTimeout(() => {
             setCurrentScreen('login');
           }, 3000);
+        } else if (errorMessage.toLowerCase().includes('database error')) {
+          setErrorMsg('Erreur serveur. Veuillez réessayer dans quelques instants.');
         } else {
           setErrorMsg(errorMessage);
         }
       }
     } catch (error) {
       console.error('❌ Erreur inattendue lors de l\'inscription:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Erreur inconnue';
+      console.error('❌ Détails erreur:', errorMsg);
       setErrorMsg('Erreur lors de l\'inscription. Vérifiez votre connexion Internet.');
     }
     
@@ -254,24 +274,6 @@ export function RegisterScreen() {
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="words"
-                  spellCheck="false"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <div className="mt-2">
-                <Input
-                  id="register-email"
-                  type="email"
-                  placeholder="exemple@email.com"
-                  value={formData.email}
-                  onChange={(e) => updateFormData('email', e.target.value)}
-                  className="px-4 h-12 bg-gray-50 border-0 rounded-xl text-base"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
                   spellCheck="false"
                 />
               </div>

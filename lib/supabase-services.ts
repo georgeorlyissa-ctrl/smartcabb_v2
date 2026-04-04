@@ -279,11 +279,11 @@ export const driverService = {
   async updateDriver(driverId: string, updates: Partial<Driver>): Promise<Driver | null> {
     // Utiliser l'API KV store au lieu de la table Supabase
     try {
-      console.log('🔥🔥🔥 ========== FRONTEND: DÉBUT UPDATE DRIVER ==========');
+      console.log('🔥🔥��� ========== FRONTEND: DÉBUT UPDATE DRIVER ==========');
       console.log('🔄 Updating driver in KV store:', driverId);
       console.log('📝 Updates:', JSON.stringify(updates, null, 2));
       
-      const url = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/update/${driverId}`;
+      const url = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${driverId}`;
       console.log('🌐 URL complète:', url);
       console.log('🔑 Authorization:', `Bearer ${publicAnonKey.substring(0, 20)}...`);
       

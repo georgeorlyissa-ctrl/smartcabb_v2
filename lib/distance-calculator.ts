@@ -1,12 +1,13 @@
 import { calculateDuration } from './duration-calculator';
+import * as GoogleMapsService from './google-maps-service';
 
 /**
- * 📏 CALCUL DE DISTANCE ET ITINÉRAIRE AVEC OSRM
+ * 📏 CALCUL DE DISTANCE ET ITINÉRAIRE AVEC GOOGLE MAPS API
  * 
  * Ce module gère :
- * - Calcul d'itinéraire avec OSRM (vraies routes)
+ * - Calcul d'itinéraire avec Google Directions API (vraies routes + trafic)
  * - Fallback intelligent avec distance à vol d'oiseau × facteur urbain
- * - Calibration sur Google Maps pour Kinshasa
+ * - Calibration précise pour Kinshasa
  */
 
 // Types
@@ -24,7 +25,7 @@ interface RouteCalculation {
 
 /**
  * 📐 FORMULE DE HAVERSINE : Distance à vol d'oiseau
- * Utilisée comme fallback quand OSRM échoue
+ * Utilisée comme fallback quand Google Maps échoue
  */
 export function calculateDistanceHaversine(
   lat1: number,
@@ -54,40 +55,33 @@ function toRad(degrees: number): number {
 }
 
 /**
- * 🛣️ CALCUL D'ITINÉRAIRE AVEC OSRM (Open Source Routing Machine)
- * Retourne la distance et durée réelles sur les routes
+ * 🗺️ CALCUL D'ITINÉRAIRE AVEC GOOGLE DIRECTIONS API
+ * Retourne la distance et durée RÉELLES avec le trafic actuel
+ * ✅ Même technologie que Yango/Uber/Google Maps
  */
-async function calculateOSRMRoute(
+async function calculateGoogleRoute(
   from: Location,
   to: Location
 ): Promise<{ distance: number; duration: number }> {
-  const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`;
+  console.log('🗺️ Calcul itinéraire Google Directions API...');
   
-  const response = await fetch(url);
+  const route = await GoogleMapsService.getDirections(from, to);
   
-  if (!response.ok) {
-    throw new Error(`OSRM error: ${response.status}`);
+  if (!route) {
+    throw new Error('Google Directions API returned no routes');
   }
   
-  const data = await response.json();
-  
-  if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-    throw new Error('OSRM returned no routes');
-  }
-  
-  const route = data.routes[0];
-  const distanceKm = route.distance / 1000; // Convertir m en km
-  const durationMin = route.duration / 60;  // Convertir s en min
+  console.log(`✅ Google Directions: ${route.distance.toFixed(1)} km, ${Math.round(route.duration)} min`);
   
   return {
-    distance: distanceKm,
-    duration: durationMin
+    distance: route.distance,  // déjà en km
+    duration: route.duration   // déjà en minutes
   };
 }
 
 /**
- * 🚗 CALCUL COMPLET DE L'ITINÉRAIRE AVEC OSRM
- * ✅ VERSION ASYNC - Utilise les vraies routes
+ * 🚗 CALCUL COMPLET DE L'ITINÉRAIRE AVEC GOOGLE MAPS
+ * ✅ VERSION ASYNC - Utilise les vraies routes avec trafic
  * Retourne distance et durée formatées
  */
 export async function calculateRoute(
@@ -99,27 +93,27 @@ export async function calculateRoute(
   try {
     console.log(`🧮 Calcul itinéraire: (${fromLat}, ${fromLng}) → (${toLat}, ${toLng})`);
     
-    // ✅ ESSAYER D'ABORD AVEC OSRM (vrais itinéraires)
-    const osrmRoute = await calculateOSRMRoute(
+    // ✅ ESSAYER D'ABORD AVEC GOOGLE DIRECTIONS API (vrais itinéraires + trafic)
+    const googleRoute = await calculateGoogleRoute(
       { lat: fromLat, lng: fromLng },
       { lat: toLat, lng: toLng }
     );
     
     // 🎯 CORRECTION : Ne PAS multiplier par un facteur
-    // OSRM retourne déjà la durée optimiste, on utilise calculateDuration() calibré sur Google Maps
-    const adjustedDuration = calculateDuration(osrmRoute.distance);
+    // Google Directions API retourne déjà la durée optimiste, on utilise calculateDuration() calibré sur Google Maps
+    const adjustedDuration = calculateDuration(googleRoute.distance);
     
-    console.log(`✅ OSRM: ${osrmRoute.distance.toFixed(1)}km en ${Math.round(osrmRoute.duration)}min (brut)`);
+    console.log(`✅ Google Directions: ${googleRoute.distance.toFixed(1)}km en ${Math.round(googleRoute.duration)}min (brut)`);
     console.log(`🎯 Ajusté pour trafic réel Kinshasa (comme Google Maps): ${adjustedDuration}min`);
     
     // Formater la distance
     let distanceText: string;
-    if (osrmRoute.distance < 1) {
-      distanceText = `${Math.round(osrmRoute.distance * 1000)} m`;
-    } else if (osrmRoute.distance < 10) {
-      distanceText = `${osrmRoute.distance.toFixed(1)} km`;
+    if (googleRoute.distance < 1) {
+      distanceText = `${Math.round(googleRoute.distance * 1000)} m`;
+    } else if (googleRoute.distance < 10) {
+      distanceText = `${googleRoute.distance.toFixed(1)} km`;
     } else {
-      distanceText = `${Math.round(osrmRoute.distance)} km`;
+      distanceText = `${Math.round(googleRoute.distance)} km`;
     }
     
     // Formater la durée AJUSTÉE
@@ -137,14 +131,14 @@ export async function calculateRoute(
     }
     
     return {
-      distance: osrmRoute.distance,
+      distance: googleRoute.distance,
       duration: adjustedDuration,  // 🎯 CORRECTION : Utiliser calculateDuration() calibré Google Maps
       distanceText,
       durationText
     };
     
   } catch (error) {
-    console.warn('⚠️ OSRM échoué, utilisation fallback intelligent:', error);
+    console.warn('⚠️ Google Directions échoué, utilisation fallback intelligent:', error);
     
     // 🔙 FALLBACK INTELLIGENT : Distance à vol d'oiseau × facteur de détour urbain
     const distanceStraightLine = calculateDistanceHaversine(fromLat, fromLng, toLat, toLng);

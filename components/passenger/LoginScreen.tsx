@@ -69,7 +69,28 @@ export function LoginScreen() {
       if (!result.success) {
         console.error('❌ Erreur de connexion:', result.error);
         
-        // 🆕 CAS SPÉCIAL : Profil orphelin détecté
+        // ✅ CAS 1 : Erreur réseau (serveur non accessible)
+        if (result.error?.includes('Impossible de contacter le serveur')) {
+          setErrorMsg('');
+          
+          toast.error(
+            '🌐 Problème de connexion\n\n' +
+            'Impossible de contacter le serveur d\'authentification Supabase.\n\n' +
+            'Solutions possibles :\n' +
+            '• Vérifiez votre connexion internet\n' +
+            '• Vérifiez que Supabase est accessible\n' +
+            '• Consultez la console développeur (F12)',
+            {
+              duration: 10000,
+              position: 'top-center'
+            }
+          );
+          
+          setLoading(false);
+          return;
+        }
+        
+        // 🆕 CAS 2 : Profil orphelin détecté
         if (result.error === 'ORPHAN_PROFILE' && (result as any).orphanProfile) {
           const orphanProfile = (result as any).orphanProfile;
           console.log('⚠️ Profil orphelin détecté:', orphanProfile);
@@ -77,21 +98,18 @@ export function LoginScreen() {
           setErrorMsg('');
           
           toast.error(
-            <div className="space-y-2">
-              <p className="font-semibold">Compte incomplet détecté</p>
-              <p className="text-sm">Votre profil existe mais votre compte d'authentification n'a pas été créé.</p>
-              <button
-                onClick={() => {
-                  window.location.href = '/auth/create-auth-from-profile';
-                }}
-                className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 w-full"
-              >
-                Activer mon compte maintenant
-              </button>
-            </div>,
+            '⚠️ Compte incomplet détecté\n\n' +
+            'Votre profil existe mais votre compte d\'authentification n\'a pas été créé.\n\n' +
+            'Cliquez sur le bouton ci-dessous pour activer votre compte.',
             {
-              duration: 10000, // 10 secondes
-              position: 'top-center'
+              duration: 10000,
+              position: 'top-center',
+              action: {
+                label: 'Activer mon compte',
+                onClick: () => {
+                  window.location.href = '/auth/create-auth-from-profile';
+                }
+              }
             }
           );
           
@@ -115,9 +133,30 @@ export function LoginScreen() {
           console.error('🐛 Debug info:', (result as any).debug);
         }
         
-        toast.error(fullMessage, {
-          duration: 6000 // Plus long pour lire le message
-        });
+        // 🆕 CAS 3 : Si le compte n'existe pas, proposer de s'inscrire OU de créer un compte de test
+        if (errorMessage.includes('Identifiants incorrects') || errorMessage.includes('Invalid login credentials')) {
+          toast.error(
+            '❌ Aucun compte trouvé\n\n' +
+            'Ces identifiants ne correspondent à aucun compte existant.\n\n' +
+            '🧪 Besoin de comptes de test ?\n' +
+            'Créez 3 utilisateurs de test en 1 clic !',
+            {
+              duration: 20000,
+              position: 'top-center',
+              action: {
+                label: '🧪 Créer comptes test',
+                onClick: () => {
+                  window.location.href = '/admin/create-test-users';
+                }
+              }
+            }
+          );
+        } else {
+          toast.error(fullMessage, {
+            duration: 6000
+          });
+        }
+        
         setLoading(false);
         return;
       }
@@ -125,36 +164,68 @@ export function LoginScreen() {
       console.log('✅ Connexion réussie, récupération du profil...');
 
       // 🔥 Récupérer le profil depuis le backend (auto-création si nécessaire)
-      const profileResponse = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${result.user.id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
+      let profileData;
+      let profile;
+      
+      try {
+        const profileResponse = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${result.user.id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${publicAnonKey}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!profileResponse.ok) {
+          const errorData = await profileResponse.json().catch(() => ({ error: 'Erreur inconnue' }));
+          console.error('❌ Erreur récupération profil depuis le backend:', errorData);
+          
+          // ✅ Si le backend n'est pas disponible, utiliser le profil de l'auth
+          console.log('⚠️ Backend non disponible, utilisation du profil d\'authentification');
+          profile = {
+            id: result.user.id,
+            email: result.user.email,
+            full_name: result.user.user_metadata?.full_name || 'Utilisateur',
+            phone: result.user.user_metadata?.phone || '',
+            role: 'passenger',
+            created_at: result.user.created_at
+          };
+        } else {
+          profileData = await profileResponse.json();
+          
+          if (!profileData.success || !profileData.passenger) {
+            console.error('❌ Profil introuvable dans la réponse du backend:', profileData);
+            
+            // Fallback : utiliser les données de l'auth
+            profile = {
+              id: result.user.id,
+              email: result.user.email,
+              full_name: result.user.user_metadata?.full_name || 'Utilisateur',
+              phone: result.user.user_metadata?.phone || '',
+              role: 'passenger',
+              created_at: result.user.created_at
+            };
+          } else {
+            profile = profileData.passenger;
           }
         }
-      );
-
-      if (!profileResponse.ok) {
-        const errorData = await profileResponse.json().catch(() => ({ error: 'Erreur inconnue' }));
-        console.error('❌ Erreur récupération profil depuis le backend:', errorData);
-        setErrorMsg('Impossible de récupérer votre profil. Veuillez réessayer.');
-        toast.error('Impossible de récupérer votre profil. Veuillez réessayer.');
-        setLoading(false);
-        return;
+      } catch (fetchError) {
+        console.error('❌ Erreur fetch profil:', fetchError);
+        
+        // Fallback : utiliser les données de l'auth
+        console.log('⚠️ Utilisation du profil d\'authentification comme fallback');
+        profile = {
+          id: result.user.id,
+          email: result.user.email,
+          full_name: result.user.user_metadata?.full_name || 'Utilisateur',
+          phone: result.user.user_metadata?.phone || '',
+          role: 'passenger',
+          created_at: result.user.created_at
+        };
       }
 
-      const profileData = await profileResponse.json();
-      
-      if (!profileData.success || !profileData.passenger) {
-        console.error('❌ Profil introuvable dans la réponse du backend:', profileData);
-        setErrorMsg('Profil introuvable');
-        toast.error('Profil introuvable');
-        setLoading(false);
-        return;
-      }
-
-      const profile = profileData.passenger;
       console.log('✅ Profil récupéré depuis le backend:', profile);
 
       // 🔒 VÉRIFICATION DE SÉCURITÉ : Vérifier le rôle depuis les données du backend
@@ -245,6 +316,14 @@ export function LoginScreen() {
       console.error('❌ Erreur pendant le login:', error);
       setLoading(false);
       setErrorMsg('Erreur lors de la connexion');
+      
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error(
+        `❌ Erreur inattendue\n\n${errorMessage}\n\nConsultez la console (F12) pour plus de détails`,
+        {
+          duration: 8000
+        }
+      );
     }
   };
 
@@ -300,7 +379,7 @@ export function LoginScreen() {
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck="false"
-                label="Email ou Téléphone"
+                label="Numéro de téléphone"
               />
             </div>
 

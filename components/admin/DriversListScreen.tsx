@@ -35,6 +35,11 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
   const { setCurrentScreen } = useAppState();
   const { drivers, rides, loading, refresh, vehicleService } = useSupabaseData();
   
+  // ✅ DEBUG: Logger les drivers reçus du hook
+  useEffect(() => {
+    console.log('🔍 [DriversListScreen] Drivers reçus du hook:', drivers?.length || 0, drivers);
+  }, [drivers]);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline' | 'pending'>('all');
   const [selectedDriver, setSelectedDriver] = useState<EnrichedDriver | null>(null);
@@ -56,9 +61,21 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
     const matchesFilter = filterStatus === 'all' || 
                          (filterStatus === 'online' && driver.is_available) ||
                          (filterStatus === 'offline' && !driver.is_available) ||
-                         (filterStatus === 'pending' && driver.status === 'pending');
+                         (filterStatus === 'pending' && !driver.isApproved); // ✅ FIX: isApproved === false = pending
     return matchesSearch && matchesFilter;
   });
+  
+  // ✅ Calculer les statistiques basées sur le filtre actif
+  const stats = {
+    total: filterStatus === 'pending' 
+      ? filteredDrivers.length  // Si filtre "En attente", afficher le nombre filtré
+      : (drivers || []).length, // Sinon, afficher tous les conducteurs
+    totalRides: (drivers || []).reduce((total, driver) => total + (driver.total_rides || 0), 0),
+    activeDrivers: (drivers || []).filter(d => d.is_available).length,
+    averageRating: (drivers || []).length > 0 
+      ? ((drivers || []).reduce((sum, d) => sum + (d.rating || 0), 0) / (drivers || []).length).toFixed(1)
+      : '0.0'
+  };
 
   const handleOpenDriverDetails = async (driver: EnrichedDriver) => {
     setSelectedDriver(driver);
@@ -109,7 +126,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
 
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/cleanup/invalid-drivers`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/clean-invalid-drivers`,
         {
           method: 'DELETE',
           headers: {
@@ -122,8 +139,8 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
         const data = await response.json();
         console.log('✅ Nettoyage réussi:', data);
         
-        // Le serveur renvoie data.data au lieu de data.details
-        const deletedCount = data.data?.drivers || data.details?.drivers || 0;
+        // Le serveur renvoie data.count
+        const deletedCount = data.count || 0;
         toast.success(`${deletedCount} conducteur(s) invalide(s) supprimé(s) avec succès !`);
         
         // Rafraîchir la liste
@@ -131,7 +148,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
       } else {
         const errorData = await response.json();
         console.error('❌ Erreur nettoyage:', errorData);
-        toast.error(errorData.message || 'Erreur lors du nettoyage');
+        toast.error(errorData.error || 'Erreur lors du nettoyage');
       }
     } catch (error) {
       console.error('❌ Erreur nettoyage:', error);
@@ -203,7 +220,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
       toast.success('💥 Suppression en cours... Cela peut prendre quelques secondes...');
 
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/cleanup/delete-all-drivers`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/delete-all-drivers`,
         {
           method: 'DELETE',
           headers: {
@@ -216,7 +233,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
         const data = await response.json();
         console.log('✅ Suppression nucléaire réussie:', data);
         
-        const deletedCount = data.data?.drivers || 0;
+        const deletedCount = data.count || 0;
         toast.success(`💥 ${deletedCount} conducteur(s) supprimé(s) avec succès ! Base de données nettoyée.`);
         
         // Rafraîchir la liste
@@ -224,7 +241,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
       } else {
         const errorData = await response.json();
         console.error('❌ Erreur suppression:', errorData);
-        toast.error(errorData.message || 'Erreur lors de la suppression');
+        toast.error(errorData.error || 'Erreur lors de la suppression');
       }
     } catch (error) {
       console.error('❌ Erreur suppression:', error);
@@ -408,7 +425,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Total conducteurs</p>
-                <p className="text-2xl font-bold">{(drivers || []).length}</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
               </div>
             </div>
           </Card>
@@ -421,7 +438,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
               <div>
                 <p className="text-sm text-gray-600">Courses totales</p>
                 <p className="text-2xl font-bold">
-                  {(drivers || []).reduce((total, driver) => total + (driver.total_rides || 0), 0)}
+                  {stats.totalRides}
                 </p>
               </div>
             </div>
@@ -435,7 +452,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
               <div>
                 <p className="text-sm text-gray-600">Conducteurs actifs</p>
                 <p className="text-2xl font-bold">
-                  {(drivers || []).filter(d => d.is_available).length}
+                  {stats.activeDrivers}
                 </p>
               </div>
             </div>
@@ -449,10 +466,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
               <div>
                 <p className="text-sm text-gray-600">Note moyenne</p>
                 <p className="text-2xl font-bold">
-                  {(drivers || []).length > 0 
-                    ? ((drivers || []).reduce((sum, d) => sum + (d.rating || 0), 0) / (drivers || []).length).toFixed(1)
-                    : '0.0'
-                  }
+                  {stats.averageRating}
                 </p>
               </div>
             </div>

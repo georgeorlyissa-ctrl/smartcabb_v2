@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📤 Test Envoi Notification - SmartCabb</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 600px;
+      width: 100%;
+      padding: 40px;
+    }
+    
+    h1 {
+      color: #2d3748;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #718096;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      color: #4a5568;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    input, textarea, select {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 15px;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      width: 100%;
+      margin-top: 10px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .log-container {
+      background: #f7fafc;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .log-line {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      padding: 6px 10px;
+      margin: 4px 0;
+      border-radius: 4px;
+      border-left: 3px solid #cbd5e0;
+    }
+    
+    .log-line.success {
+      border-left-color: #48bb78;
+      background: #f0fff4;
+    }
+    
+    .log-line.error {
+      border-left-color: #f56565;
+      background: #fff5f5;
+    }
+    
+    .log-line.info {
+      border-left-color: #4299e1;
+      background: #ebf8ff;
+    }
+    
+    .info-box {
+      background: #ebf8ff;
+      border-left: 4px solid #4299e1;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+    
+    .info-box code {
+      background: #2d3748;
+      color: #fbd38d;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📤 Test Envoi Notification</h1>
+    <p class="subtitle">SmartCabb - Tester l'envoi de notifications push via le backend</p>
+    
+    <div class="info-box">
+      💡 <strong>Info:</strong> Cette page permet de tester l'envoi de notifications push via l'API backend SmartCabb. 
+      Assurez-vous que le conducteur a d'abord enregistré son token FCM via le dashboard.
+    </div>
+    
+    <form id="notificationForm">
+      <div class="form-group">
+        <label for="driverId">🚗 ID Conducteur (UUID)</label>
+        <input 
+          type="text" 
+          id="driverId" 
+          placeholder="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          required
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="title">📝 Titre de la notification</label>
+        <input 
+          type="text" 
+          id="title" 
+          placeholder="Nouvelle course disponible !"
+          value="🚕 Nouvelle course disponible !"
+          required
+        >
+      </div>
+      
+      <div class="form-group">
+        <label for="body">📄 Message</label>
+        <textarea 
+          id="body" 
+          placeholder="Un passager vous attend à Gombe..."
+          required
+        >Un passager vous attend à Gombe, destination Kintambo. Distance: 5.2 km. Estimation: 3 500 FC</textarea>
+      </div>
+      
+      <div class="form-group">
+        <label for="rideId">🎫 ID Course (optionnel)</label>
+        <input 
+          type="text" 
+          id="rideId" 
+          placeholder="ride-uuid-here"
+        >
+      </div>
+      
+      <button type="submit" id="sendBtn">
+        📤 Envoyer la notification
+      </button>
+    </form>
+    
+    <div class="log-container" id="logs"></div>
+    
+    <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e2e8f0;">
+      <h3 style="color: #4a5568; margin-bottom: 10px; font-size: 16px;">🧪 Tests rapides</h3>
+      <button onclick="testPing()" style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); margin-top: 5px;">
+        🏓 Ping Backend
+      </button>
+      <button onclick="testFCMRoute()" style="background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); margin-top: 5px;">
+        🔍 Vérifier Route FCM
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const BACKEND_URL = 'https://zserjtqchmxqbixfkfkg.supabase.co/functions/v1/make-server-2eb02e52';
+    const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpzc3JqdHFjaG14cWJpeGZrZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQwOTQzODgsImV4cCI6MjA0OTY3MDM4OH0.E20FVB8Pb3G1HE_Wl1mDmIJ-b4oOJCHdLy96U17V5ds';
+    
+    // Logging
+    function log(message, type = 'info') {
+      const container = document.getElementById('logs');
+      const line = document.createElement('div');
+      line.className = `log-line ${type}`;
+      
+      const timestamp = new Date().toLocaleTimeString('fr-FR');
+      line.textContent = `[${timestamp}] ${message}`;
+      
+      container.appendChild(line);
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    // Test Ping
+    window.testPing = async function() {
+      log('🏓 Ping du backend...', 'info');
+      
+      try {
+        const response = await fetch(`${BACKEND_URL}/test/ping`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${ANON_KEY}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          log(`✅ Backend accessible: ${JSON.stringify(data)}`, 'success');
+        } else {
+          log(`❌ Backend erreur: ${response.status} ${response.statusText}`, 'error');
+        }
+      } catch (error) {
+        log(`❌ Erreur réseau: ${error.message}`, 'error');
+      }
+    };
+    
+    // Test Route FCM
+    window.testFCMRoute = async function() {
+      const driverId = document.getElementById('driverId').value.trim();
+      
+      if (!driverId) {
+        log('⚠️ Veuillez d\'abord entrer un ID conducteur', 'error');
+        return;
+      }
+      
+      log(`🔍 Vérification route FCM pour driver ${driverId}...`, 'info');
+      
+      try {
+        const response = await fetch(`${BACKEND_URL}/drivers/${driverId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${ANON_KEY}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.driver && data.driver.fcmToken) {
+            log(`✅ Token FCM trouvé pour ${data.driver.full_name || data.driver.name}`, 'success');
+            log(`   Token: ${data.driver.fcmToken.substring(0, 30)}...`, 'info');
+            log(`   Enregistré le: ${data.driver.fcmTokenUpdatedAt || 'N/A'}`, 'info');
+          } else {
+            log(`⚠️ Aucun token FCM enregistré pour ce conducteur`, 'error');
+            log(`   Le conducteur doit d'abord ouvrir son dashboard et accepter les notifications`, 'error');
+          }
+        } else {
+          log(`❌ Conducteur non trouvé: ${response.status}`, 'error');
+        }
+      } catch (error) {
+        log(`❌ Erreur: ${error.message}`, 'error');
+      }
+    };
+    
+    // Envoi de notification
+    document.getElementById('notificationForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const driverId = document.getElementById('driverId').value.trim();
+      const title = document.getElementById('title').value.trim();
+      const body = document.getElementById('body').value.trim();
+      const rideId = document.getElementById('rideId').value.trim();
+      
+      const sendBtn = document.getElementById('sendBtn');
+      sendBtn.disabled = true;
+      sendBtn.textContent = '⏳ Envoi en cours...';
+      
+      log('📤 Envoi de la notification...', 'info');
+      log(`   → Conducteur: ${driverId}`, 'info');
+      log(`   → Titre: ${title}`, 'info');
+      log(`   → Message: ${body}`, 'info');
+      
+      try {
+        // ⚠️ IMPORTANT: Cette route doit être créée dans le backend
+        // Pour l'instant, on utilise une approche de test
+        
+        const response = await fetch(`${BACKEND_URL}/drivers/${driverId}/send-notification`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${ANON_KEY}`
+          },
+          body: JSON.stringify({
+            title,
+            body,
+            data: rideId ? { rideId } : {}
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          log('✅ Notification envoyée avec succès !', 'success');
+          log(`   Message: ${result.message}`, 'success');
+        } else {
+          log(`❌ Erreur: ${result.error}`, 'error');
+          
+          if (result.error.includes('Token FCM non enregistré')) {
+            log('💡 Le conducteur doit d\'abord:', 'info');
+            log('   1. Ouvrir son dashboard conducteur', 'info');
+            log('   2. Accepter les permissions de notifications', 'info');
+            log('   3. Attendre que le token FCM soit enregistré', 'info');
+          }
+        }
+      } catch (error) {
+        log(`❌ Erreur réseau: ${error.message}`, 'error');
+        log(`💡 Vérifiez que le backend est déployé et accessible`, 'error');
+        
+        // Afficher une erreur plus détaillée
+        if (error.message.includes('Failed to fetch')) {
+          log('💡 Causes possibles:', 'info');
+          log('   - Backend non déployé sur Supabase', 'info');
+          log('   - Route /drivers/:id/send-notification non implémentée', 'info');
+          log('   - Problème CORS', 'info');
+        }
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = '📤 Envoyer la notification';
+      }
+    });
+    
+    // Message initial
+    log('✅ Page de test chargée', 'success');
+    log('📋 Backend: ' + BACKEND_URL, 'info');
+  </script>
+</body>
+</html>

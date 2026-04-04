@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔥 Test FCM SmartCabb - Vérification Configuration</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 800px;
+      width: 100%;
+      padding: 40px;
+    }
+    
+    h1 {
+      color: #2d3748;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+    
+    .subtitle {
+      color: #718096;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    
+    .test-section {
+      background: #f7fafc;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-left: 4px solid #4299e1;
+    }
+    
+    .test-section h2 {
+      color: #2d3748;
+      font-size: 18px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: auto;
+    }
+    
+    .status.success {
+      background: #c6f6d5;
+      color: #22543d;
+    }
+    
+    .status.error {
+      background: #fed7d7;
+      color: #742a2a;
+    }
+    
+    .status.pending {
+      background: #feebc8;
+      color: #744210;
+    }
+    
+    .log-line {
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      padding: 8px 12px;
+      margin: 5px 0;
+      border-radius: 6px;
+      background: white;
+      border-left: 3px solid #cbd5e0;
+    }
+    
+    .log-line.success {
+      border-left-color: #48bb78;
+      background: #f0fff4;
+    }
+    
+    .log-line.error {
+      border-left-color: #f56565;
+      background: #fff5f5;
+    }
+    
+    .log-line.warning {
+      border-left-color: #ed8936;
+      background: #fffaf0;
+    }
+    
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      margin-right: 10px;
+      margin-top: 10px;
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .code-block {
+      background: #2d3748;
+      color: #a0aec0;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin: 10px 0;
+    }
+    
+    .code-block .key {
+      color: #81e6d9;
+    }
+    
+    .code-block .string {
+      color: #fbd38d;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔥 Test Configuration Firebase FCM</h1>
+    <p class="subtitle">SmartCabb - Vérification Push Notifications</p>
+    
+    <!-- TEST 1: Configuration Firebase -->
+    <div class="test-section">
+      <h2>
+        Test 1 : Configuration Firebase
+        <span class="status pending" id="status-config">En attente</span>
+      </h2>
+      <div id="logs-config"></div>
+      <button onclick="testFirebaseConfig()">🔍 Vérifier Config</button>
+    </div>
+    
+    <!-- TEST 2: Service Worker -->
+    <div class="test-section">
+      <h2>
+        Test 2 : Service Worker Firebase
+        <span class="status pending" id="status-sw">En attente</span>
+      </h2>
+      <div id="logs-sw"></div>
+      <button onclick="testServiceWorker()">⚙️ Vérifier Service Worker</button>
+    </div>
+    
+    <!-- TEST 3: Permission Notifications -->
+    <div class="test-section">
+      <h2>
+        Test 3 : Permissions Navigateur
+        <span class="status pending" id="status-perm">En attente</span>
+      </h2>
+      <div id="logs-perm"></div>
+      <button onclick="testPermissions()">🔔 Demander Permissions</button>
+    </div>
+    
+    <!-- TEST 4: Génération Token FCM -->
+    <div class="test-section">
+      <h2>
+        Test 4 : Génération Token FCM
+        <span class="status pending" id="status-token">En attente</span>
+      </h2>
+      <div id="logs-token"></div>
+      <button onclick="testFCMToken()">🔑 Générer Token FCM</button>
+    </div>
+    
+    <!-- RÉSULTATS FINAUX -->
+    <div class="test-section" style="border-left-color: #9f7aea;">
+      <h2>📊 Résumé des tests</h2>
+      <div id="summary"></div>
+      <button onclick="runAllTests()" style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">
+        ▶️ Lancer tous les tests
+      </button>
+      <button onclick="clearLogs()">🗑️ Effacer les logs</button>
+    </div>
+  </div>
+
+  <script type="module">
+    // Configuration Firebase (doit correspondre à /lib/firebase-config.ts)
+    const EXPECTED_CONFIG = {
+      apiKey: "AIzaSyBaQo0fy37kfP5qLCsEHhVY44Ah3PpCbEw",
+      authDomain: "smartcabb.firebaseapp.com",
+      projectId: "smartcabb",
+      storageBucket: "smartcabb.firebasestorage.app",
+      messagingSenderId: "396618257088",
+      appId: "1:396618257088:web:f97c8aa8a239072ec82cf7",
+      measurementId: "G-PQZC05N17H"
+    };
+    
+    const VAPID_KEY = "BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekIOWUiJ6vHvO06yaXXnyp0i_1Muc";
+    
+    let firebaseApp = null;
+    let messaging = null;
+    
+    // Fonctions de logging
+    function log(section, message, type = 'info') {
+      const container = document.getElementById(`logs-${section}`);
+      const line = document.createElement('div');
+      line.className = `log-line ${type}`;
+      
+      const timestamp = new Date().toLocaleTimeString('fr-FR');
+      line.textContent = `[${timestamp}] ${message}`;
+      
+      container.appendChild(line);
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    function setStatus(section, status) {
+      const statusEl = document.getElementById(`status-${section}`);
+      statusEl.className = `status ${status}`;
+      statusEl.textContent = status === 'success' ? '✅ Réussi' : 
+                             status === 'error' ? '❌ Échoué' : 
+                             '⏳ En cours...';
+    }
+    
+    // TEST 1: Configuration Firebase
+    window.testFirebaseConfig = async function() {
+      setStatus('config', 'pending');
+      log('config', '🔍 Vérification de la configuration Firebase...', 'info');
+      
+      try {
+        // Import Firebase dynamiquement
+        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        
+        // Vérifier si déjà initialisé
+        const apps = getApps();
+        if (apps.length > 0) {
+          log('config', '⚠️ Firebase déjà initialisé, réinitialisation...', 'warning');
+        }
+        
+        // Initialiser Firebase
+        firebaseApp = initializeApp(EXPECTED_CONFIG);
+        
+        log('config', '✅ Firebase initialisé avec succès', 'success');
+        log('config', `📋 Project ID: ${EXPECTED_CONFIG.projectId}`, 'success');
+        log('config', `📋 API Key: ${EXPECTED_CONFIG.apiKey.substring(0, 20)}...`, 'success');
+        log('config', `📋 Messaging Sender ID: ${EXPECTED_CONFIG.messagingSenderId}`, 'success');
+        
+        setStatus('config', 'success');
+      } catch (error) {
+        log('config', `❌ Erreur: ${error.message}`, 'error');
+        log('config', `💡 Détails: ${error.stack}`, 'error');
+        setStatus('config', 'error');
+      }
+    };
+    
+    // TEST 2: Service Worker
+    window.testServiceWorker = async function() {
+      setStatus('sw', 'pending');
+      log('sw', '⚙️ Vérification du Service Worker...', 'info');
+      
+      if (!('serviceWorker' in navigator)) {
+        log('sw', '❌ Service Worker non supporté par ce navigateur', 'error');
+        setStatus('sw', 'error');
+        return;
+      }
+      
+      try {
+        // Vérifier les Service Workers existants
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        log('sw', `📋 ${registrations.length} Service Worker(s) trouvé(s)`, 'info');
+        
+        registrations.forEach((reg, i) => {
+          log('sw', `  ${i + 1}. Scope: ${reg.scope}`, 'info');
+          log('sw', `     État: ${reg.active ? 'active' : 'inactif'}`, 'info');
+        });
+        
+        // Enregistrer le Service Worker Firebase
+        log('sw', '📝 Enregistrement du Service Worker Firebase...', 'info');
+        
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+          scope: '/'
+        });
+        
+        log('sw', `✅ Service Worker enregistré: ${registration.scope}`, 'success');
+        
+        // Attendre qu'il soit actif
+        await navigator.serviceWorker.ready;
+        log('sw', '✅ Service Worker prêt et actif', 'success');
+        
+        // Envoyer la config Firebase au SW
+        if (registration.active) {
+          registration.active.postMessage({
+            type: 'INIT_FIREBASE',
+            config: EXPECTED_CONFIG
+          });
+          log('sw', '✅ Configuration Firebase envoyée au Service Worker', 'success');
+        }
+        
+        setStatus('sw', 'success');
+      } catch (error) {
+        log('sw', `❌ Erreur: ${error.message}`, 'error');
+        setStatus('sw', 'error');
+      }
+    };
+    
+    // TEST 3: Permissions
+    window.testPermissions = async function() {
+      setStatus('perm', 'pending');
+      log('perm', '🔔 Vérification des permissions...', 'info');
+      
+      if (!('Notification' in window)) {
+        log('perm', '❌ Notifications non supportées par ce navigateur', 'error');
+        setStatus('perm', 'error');
+        return;
+      }
+      
+      log('perm', `📋 Permission actuelle: ${Notification.permission}`, 'info');
+      
+      if (Notification.permission === 'granted') {
+        log('perm', '✅ Permission déjà accordée', 'success');
+        setStatus('perm', 'success');
+        return;
+      }
+      
+      if (Notification.permission === 'denied') {
+        log('perm', '❌ Permission refusée - Réinitialiser dans les paramètres du navigateur', 'error');
+        setStatus('perm', 'error');
+        return;
+      }
+      
+      try {
+        log('perm', '📱 Demande de permission...', 'info');
+        const permission = await Notification.requestPermission();
+        
+        if (permission === 'granted') {
+          log('perm', '✅ Permission accordée !', 'success');
+          setStatus('perm', 'success');
+        } else {
+          log('perm', '❌ Permission refusée par l\'utilisateur', 'error');
+          setStatus('perm', 'error');
+        }
+      } catch (error) {
+        log('perm', `❌ Erreur: ${error.message}`, 'error');
+        setStatus('perm', 'error');
+      }
+    };
+    
+    // TEST 4: Token FCM
+    window.testFCMToken = async function() {
+      setStatus('token', 'pending');
+      log('token', '🔑 Génération du token FCM...', 'info');
+      
+      try {
+        // Vérifier que Firebase est initialisé
+        if (!firebaseApp) {
+          log('token', '⚠️ Firebase non initialisé, initialisation...', 'warning');
+          await testFirebaseConfig();
+        }
+        
+        // Vérifier permission
+        if (Notification.permission !== 'granted') {
+          log('token', '⚠️ Permission requise, demande...', 'warning');
+          await testPermissions();
+        }
+        
+        if (Notification.permission !== 'granted') {
+          log('token', '❌ Permission refusée, impossible de générer le token', 'error');
+          setStatus('token', 'error');
+          return;
+        }
+        
+        // Import Firebase Messaging
+        const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js');
+        
+        messaging = getMessaging(firebaseApp);
+        log('token', '✅ Firebase Messaging initialisé', 'success');
+        
+        // Attendre que le Service Worker soit prêt
+        const registration = await navigator.serviceWorker.ready;
+        log('token', '✅ Service Worker prêt', 'success');
+        
+        // Générer le token
+        log('token', '⏳ Génération du token en cours...', 'info');
+        
+        const token = await getToken(messaging, {
+          vapidKey: VAPID_KEY,
+          serviceWorkerRegistration: registration
+        });
+        
+        if (token) {
+          log('token', '✅ TOKEN FCM OBTENU !', 'success');
+          log('token', `📋 Token (30 premiers caractères): ${token.substring(0, 30)}...`, 'success');
+          log('token', `📋 Longueur: ${token.length} caractères`, 'success');
+          
+          // Copier dans le presse-papier
+          try {
+            await navigator.clipboard.writeText(token);
+            log('token', '📋 Token copié dans le presse-papier !', 'success');
+          } catch (e) {
+            log('token', '⚠️ Impossible de copier dans le presse-papier', 'warning');
+          }
+          
+          setStatus('token', 'success');
+        } else {
+          log('token', '❌ Aucun token généré', 'error');
+          setStatus('token', 'error');
+        }
+      } catch (error) {
+        log('token', `❌ Erreur: ${error.message}`, 'error');
+        log('token', `💡 Stack: ${error.stack}`, 'error');
+        setStatus('token', 'error');
+      }
+    };
+    
+    // Lancer tous les tests
+    window.runAllTests = async function() {
+      await testFirebaseConfig();
+      await new Promise(r => setTimeout(r, 500));
+      await testServiceWorker();
+      await new Promise(r => setTimeout(r, 500));
+      await testPermissions();
+      await new Promise(r => setTimeout(r, 500));
+      await testFCMToken();
+      
+      updateSummary();
+    };
+    
+    // Effacer les logs
+    window.clearLogs = function() {
+      ['config', 'sw', 'perm', 'token'].forEach(section => {
+        document.getElementById(`logs-${section}`).innerHTML = '';
+        setStatus(section, 'pending');
+      });
+      document.getElementById('summary').innerHTML = '';
+    };
+    
+    // Mise à jour du résumé
+    function updateSummary() {
+      const summary = document.getElementById('summary');
+      const statuses = ['config', 'sw', 'perm', 'token'].map(s => {
+        const el = document.getElementById(`status-${s}`);
+        return el.className.includes('success');
+      });
+      
+      const successCount = statuses.filter(s => s).length;
+      const total = statuses.length;
+      
+      summary.innerHTML = `
+        <div class="log-line ${successCount === total ? 'success' : 'warning'}">
+          ✅ ${successCount}/${total} tests réussis
+        </div>
+        ${successCount === total ? 
+          '<div class="log-line success">🎉 Toutes les vérifications ont réussi ! Les push notifications sont prêtes.</div>' :
+          '<div class="log-line error">⚠️ Certains tests ont échoué. Vérifiez les logs ci-dessus.</div>'
+        }
+      `;
+    }
+  </script>
+</body>
+</html>

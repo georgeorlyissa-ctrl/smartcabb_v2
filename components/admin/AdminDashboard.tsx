@@ -18,6 +18,7 @@ import { CancellationsScreen } from './CancellationsScreen';
 import { SMSBalanceCard } from './SMSBalanceCard';
 import { NotificationTester } from './NotificationTester';
 import FCMTestPanel from './FCMTestPanel';
+import { SMSInsufficientBalanceBanner } from './SMSInsufficientBalanceBanner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { supabase } from '../../lib/supabase';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -58,21 +59,27 @@ export function AdminDashboard() {
   const { state, setCurrentScreen, setCurrentView, setIsAdmin, setCurrentUser } = useAppState();
   const navigate = useNavigate();
 
-  // ✅ PROTECTION : Vérifier que l'admin est authentifié
+  // ✅ Vérification d'authentification au montage
   useEffect(() => {
-    console.log('🔒 AdminDashboard - Vérification authentification...');
-    console.log('🔒 isAdmin:', state.isAdmin);
-    console.log('🔒 currentUser:', state.currentUser);
+    // Petit délai pour laisser l'état se charger depuis localStorage
+    const timer = setTimeout(() => {
+      console.log('🔐 Vérification authentification admin...', { 
+        isAdmin: state.isAdmin, 
+        hasUser: !!state.currentUser,
+        currentScreen: state.currentScreen 
+      });
+      
+      if (!state.isAdmin || !state.currentUser) {
+        console.log('❌ Accès non autorisé - Redirection vers login');
+        setCurrentScreen('admin-login');
+        toast.error('Veuillez vous connecter pour accéder au dashboard');
+      } else {
+        console.log('✅ Authentification confirmée');
+      }
+    }, 100); // Petit délai de 100ms pour laisser l'état se charger
     
-    if (!state.isAdmin || !state.currentUser) {
-      console.log('❌ Accès non autorisé - Redirection vers login');
-      setCurrentScreen('admin-login');
-      toast.error('Veuillez vous connecter pour accéder au dashboard');
-      return;
-    }
-    
-    console.log('✅ Authentification confirmée');
-  }, []); // ✅ Tableau de dépendances vide = exécution uniquement au montage
+    return () => clearTimeout(timer);
+  }, [state.isAdmin, state.currentUser, setCurrentScreen]); // ✅ FIX: Dépendances correctes
 
   const { 
     drivers, // EnrichedDriver[]
@@ -203,7 +210,12 @@ export function AdminDashboard() {
   const activeRides = rides.filter(r => r.status === 'started').length;
   const completedRides = rides.filter(r => r.status === 'completed');
   const onlineDrivers = drivers.filter(d => d.is_available).length;
-  const pendingDrivers = drivers.filter(d => d.status === 'pending'); // ✅ Conducteurs en attente
+  
+  // ✅ FIX: Filtrer par status ET isApproved pour les conducteurs en attente
+  const pendingDrivers = drivers.filter(d => 
+    (d.status === 'pending' || !d.isApproved || d.isApproved === false)
+  );
+  
   const totalRevenue = stats.totalRevenue;
   
   const averageRating = drivers.length > 0
@@ -272,20 +284,16 @@ export function AdminDashboard() {
     }
   };
 
-  // Fonction pour supprimer tous les passagers et conducteurs
-  const handleDeleteAllAccounts = async () => {
-    setDeletingAccounts(true);
-    
+  // 🔍 NOUVELLE FONCTION: Diagnostic détaillé des conducteurs
+  const handleDebugDrivers = async () => {
     try {
-      console.log('🗑️ Suppression de tous les comptes passagers et conducteurs...');
+      console.log('🔍 🚗 Diagnostic détaillé des conducteurs...');
 
-      // Appeler l'API backend
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/delete-all-accounts`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/debug/drivers`,
         {
-          method: 'POST',
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${publicAnonKey}`
           }
         }
@@ -293,26 +301,252 @@ export function AdminDashboard() {
 
       const result = await response.json();
 
-      if (!result.success) {
-        throw new Error(result.error || 'Erreur lors de la suppression');
+      if (result.success) {
+        console.log('📊 DIAGNOSTIC CONDUCTEURS DÉTAILLÉ:', result);
+        console.log('📋 Nombre total:', result.count);
+        console.log('📋 Liste des conducteurs:');
+        console.table(result.drivers);
+        console.log('📋 Données brutes complètes:', result.raw_drivers);
+        
+        // Compter les statuts
+        const pending = result.drivers.filter((d: any) => d.status === 'pending').length;
+        const approved = result.drivers.filter((d: any) => d.status === 'approved' || d.is_approved).length;
+        const rejected = result.drivers.filter((d: any) => d.status === 'rejected').length;
+        
+        console.log(`📊 STATUTS: ${pending} pending, ${approved} approved, ${rejected} rejected`);
+        
+        toast.success(`🚗 ${result.count} conducteur(s) trouvé(s)`, {
+          description: `${pending} en attente, ${approved} approuvés (voir console F12)`
+        });
+      } else {
+        toast.error(result.error || 'Erreur diagnostic');
       }
-
-      console.log('✅ Résultat:', result);
-
-      // Rafraîchir les données
-      await refresh();
-
-      toast.success(result.message, {
-        description: `${result.details.profiles} profils, ${result.details.drivers} conducteurs, ${result.details.rides} courses supprimés.`
-      });
-
-      setShowDeleteAccountsModal(false);
-
     } catch (error) {
-      console.error('❌ Erreur lors de la suppression:', error);
+      console.error('❌ Erreur diagnostic conducteurs:', error);
+      toast.error('Erreur lors du diagnostic');
+    }
+  };
+
+  // 🔍 DIAGNOSTIC COMPLET: Auth + KV + Routes
+  const handleFullDiagnostic = async () => {
+    try {
+      console.log('🔍🔍🔍 DIAGNOSTIC COMPLET...');
+      
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/debug/full-diagnostic`,
+        {
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        const d = result.diagnostic;
+        console.log('╔══════════════════════════════════════╗');
+        console.log('║   🔍 DIAGNOSTIC COMPLET             ║');
+        console.log('╠══════════════════════════════════════╣');
+        console.log(`║ Auth: ${d.auth.drivers} conducteurs`);
+        console.log(`║ KV: ${d.kv.drivers} conducteurs`);
+        console.log(`║ ${d.summary}`);
+        console.log('╚══════════════════════════════════════╝');
+        console.log('\n📋 Conducteurs Auth:');
+        console.table(d.driversAuth);
+        console.log('\n📦 Conducteurs KV:');
+        console.table(d.driversKV);
+        
+        toast.success('Diagnostic terminé', {
+          description: `Auth: ${d.auth.drivers}, KV: ${d.kv.drivers} (voir console F12)`
+        });
+      } else {
+        toast.error(result.error || 'Erreur');
+      }
+    } catch (error) {
+      console.error('❌ Erreur:', error);
+      toast.error('Erreur diagnostic');
+    }
+  };
+
+  // 🔄 NOUVELLE FONCTION: Synchroniser les conducteurs depuis Auth vers KV
+  const handleSyncDrivers = async () => {
+    try {
+      console.log('🔄 Synchronisation conducteurs Auth → KV...');
+      toast.info('Synchronisation en cours...');
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/sync-drivers`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('✅ SYNCHRONISATION TERMINÉE:', result);
+        toast.success(`✅ Synchronisation réussie !`, {
+          description: `${result.synced} conducteur(s) ajouté(s), ${result.skipped} déjà existant(s)`
+        });
+        
+        // Rafraîchir les données
+        refresh();
+      } else {
+        toast.error(result.error || 'Erreur synchronisation');
+      }
+    } catch (error) {
+      console.error('❌ Erreur synchronisation:', error);
+      toast.error('Erreur lors de la synchronisation');
+    }
+  };
+
+  // 🔍 NOUVELLE FONCTION: Prévisualiser les données de test qui seront supprimées
+  const handlePreviewTestData = async () => {
+    try {
+      console.log('🔍 Prévisualisation des données de test...');
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/cleanup/test-data/preview`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('📊 PRÉVISUALISATION NETTOYAGE:', result.preview);
+        console.log('🗑️ PASSAGERS À SUPPRIMER:', result.preview.passengers.to_delete);
+        console.table(result.preview.passengers.list_to_delete);
+        console.log('✅ PASSAGERS À CONSERVER:', result.preview.passengers.to_keep);
+        console.table(result.preview.passengers.list_to_keep);
+        console.log('🗑️ CONDUCTEURS À SUPPRIMER:', result.preview.drivers.to_delete);
+        console.table(result.preview.drivers.list_to_delete);
+        console.log('✅ CONDUCTEURS À CONSERVER:', result.preview.drivers.to_keep);
+        console.table(result.preview.drivers.list_to_keep);
+        
+        toast.success(`Prévisualisation terminée (voir console F12)`, {
+          description: `${result.preview.passengers.to_delete} passagers et ${result.preview.drivers.to_delete} conducteurs seront supprimés`
+        });
+      } else {
+        toast.error(result.error || 'Erreur prévisualisation');
+      }
+    } catch (error) {
+      console.error('❌ Erreur prévisualisation:', error);
+      toast.error('Erreur lors de la prévisualisation');
+    }
+  };
+
+  // 🧹 NOUVELLE FONCTION: Nettoyer toutes les données de test
+  const handleCleanTestData = async () => {
+    if (!confirm('⚠️ ATTENTION !\n\nCette action va supprimer TOUTES les données de test :\n- Passagers avec "Client N/A", "Non renseigné"\n- Conducteurs "Conducteur inconnu"\n- Courses orphelines\n- Emails @smartcabb.app\n\nCette action est IRRÉVERSIBLE.\n\nContinuer ?')) {
+      return;
+    }
+
+    try {
+      console.log('🧹 Nettoyage des données de test...');
+      toast.info('Nettoyage en cours...', { duration: 2000 });
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/cleanup/test-data`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        console.log('✅ NETTOYAGE TERMINÉ:', result);
+        console.log('📊 Statistiques:', result.stats);
+        
+        toast.success(result.message, {
+          description: `${result.stats.passengers_deleted} passagers, ${result.stats.drivers_deleted} conducteurs, ${result.stats.rides_deleted} courses supprimés`
+        });
+
+        // Rafraîchir les données
+        await refresh();
+      } else {
+        toast.error(result.error || 'Erreur lors du nettoyage');
+      }
+    } catch (error) {
+      console.error('❌ Erreur nettoyage:', error);
+      toast.error('Erreur lors du nettoyage des données de test');
+    }
+  };
+
+  // Fonction pour supprimer tous les passagers et conducteurs
+  const handleDeleteAllAccounts = async () => {
+    setDeletingAccounts(true);
+    
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/delete-all-accounts`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(data.message || 'Tous les comptes ont été supprimés avec succès');
+        setShowDeleteAccountsModal(false);
+        refresh(); // Rafraîchir les données
+      } else {
+        toast.error(data.error || 'Erreur lors de la suppression des comptes');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression des comptes:', error);
       toast.error('Erreur lors de la suppression des comptes');
     } finally {
       setDeletingAccounts(false);
+    }
+  };
+
+  // 🔧 Fonction pour migrer tous les profils avec le bon préfixe
+  const handleMigrateProfiles = async () => {
+    try {
+      toast.info('🔧 Migration en cours...');
+      
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/migration/fix-prefixes`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success(`✅ Migration réussie ! ${data.migrated} profil(s) migré(s)`);
+        console.log('📊 Détails migration:', data);
+        refresh(); // Rafraîchir les données
+      } else {
+        toast.error(data.error || 'Erreur lors de la migration');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la migration:', error);
+      toast.error('Erreur lors de la migration des profils');
     }
   };
 
@@ -354,6 +588,53 @@ export function AdminDashboard() {
     } catch (error) {
       console.error('❌ Erreur lors du nettoyage:', error);
       toast.error('Erreur lors du nettoyage des auth users');
+    } finally {
+      setDeletingAccounts(false);
+    }
+  };
+
+  // 🔄 NOUVELLE FONCTION : Migrer les conducteurs de Postgres vers KV store
+  const handleMigrateDriversToKV = async () => {
+    if (!confirm('Voulez-vous synchroniser les conducteurs de Postgres vers le KV store ? Cela ne supprimera aucune donnée.')) {
+      return;
+    }
+
+    setDeletingAccounts(true); // Réutiliser cet état pour le loading
+    
+    try {
+      console.log('🔄 Migration des conducteurs Postgres → KV store...');
+
+      // Appeler la nouvelle route de migration
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/migrate-drivers-to-kv`,
+        {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`
+          }
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Erreur lors de la migration');
+      }
+
+      console.log('✅ Résultat migration:', result);
+
+      // Afficher les stats de migration
+      const stats = result.stats;
+      toast.success(result.message, {
+        description: `${stats.migrated} conducteur(s) migré(s), ${stats.skipped} déjà présent(s). Total KV: ${stats.kv_total_after}`
+      });
+
+      // Rafraîchir les données pour afficher les conducteurs
+      await refresh();
+
+    } catch (error) {
+      console.error('❌ Erreur lors de la migration:', error);
+      toast.error('Erreur lors de la migration des conducteurs');
     } finally {
       setDeletingAccounts(false);
     }
@@ -589,6 +870,26 @@ export function AdminDashboard() {
       color: 'from-gray-500 to-slate-500'
     },
     {
+      id: 'action-debug-drivers',
+      title: '🔍 Diagnostic Conducteurs',
+      description: 'Voir les détails des conducteurs (console F12)',
+      icon: Car,
+      action: handleDebugDrivers,
+      count: null,
+      highlight: true,
+      color: 'from-blue-500 to-indigo-500'
+    },
+    {
+      id: 'action-full-diagnostic',
+      title: '🔍🔍🔍 DIAGNOSTIC COMPLET',
+      description: 'Auth vs KV vs Routes (console F12)',
+      icon: Search,
+      action: handleFullDiagnostic,
+      count: null,
+      highlight: true,
+      color: 'from-red-500 to-pink-500'
+    },
+    {
       id: 'action-sms-settings',
       title: 'Paramètres SMS',
       description: 'Configuration Africa\'s Talking SMS',
@@ -626,6 +927,56 @@ export function AdminDashboard() {
       count: null,
       highlight: true,
       color: 'from-orange-500 to-red-500'
+    },
+    {
+      id: 'action-preview-test-data',
+      title: '🔍 Prévisualiser les données de test',
+      description: 'Voir les données qui seront supprimées',
+      icon: Search,
+      action: handlePreviewTestData,
+      count: null,
+      highlight: true,
+      color: 'from-gray-500 to-slate-500'
+    },
+    {
+      id: 'action-clean-test-data',
+      title: '🧹 Nettoyer les données de test',
+      description: 'Supprimer les données de test',
+      icon: Trash2,
+      action: handleCleanTestData,
+      count: null,
+      highlight: true,
+      color: 'from-red-500 to-pink-500'
+    },
+    {
+      id: 'action-migrate-drivers-to-kv',
+      title: '🔄 Migrer conducteurs vers KV',
+      description: 'Synchroniser les conducteurs de Postgres vers le KV store',
+      icon: Database,
+      action: handleMigrateDriversToKV,
+      count: null,
+      highlight: true,
+      color: 'from-blue-500 to-indigo-500'
+    },
+    {
+      id: 'action-sync-drivers-auth-kv',
+      title: '🔄 Sync Auth → KV',
+      description: 'Synchroniser les conducteurs depuis Auth vers KV',
+      icon: RefreshCw,
+      action: handleSyncDrivers,
+      count: null,
+      highlight: true,
+      color: 'from-green-500 to-emerald-500'
+    },
+    {
+      id: 'action-migrate-profiles',
+      title: '🔧 Migrer profils',
+      description: 'Corriger les préfixes des profils',
+      icon: Database,
+      action: handleMigrateProfiles,
+      count: null,
+      highlight: true,
+      color: 'from-blue-500 to-indigo-500'
     }
   ];
 
@@ -718,6 +1069,9 @@ export function AdminDashboard() {
 
         {!loading && !error && (
           <>
+            {/* ⚠️ Bannière d'alerte SMS insuffisant */}
+            <SMSInsufficientBalanceBanner />
+            
             {/* Panel de notifications */}
             {showNotifications && (
               <motion.div
@@ -950,7 +1304,7 @@ export function AdminDashboard() {
                       <div className="flex items-center space-x-3">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                         <div>
-                          <p className="text-sm font-medium">Course #{ride.id.slice(-4)}</p>
+                          <p className="text-sm font-medium">Course #{ride.id?.slice(-4) || 'N/A'}</p>
                           <p className="text-xs text-gray-600">{ride.pickup.address}</p>
                         </div>
                       </div>

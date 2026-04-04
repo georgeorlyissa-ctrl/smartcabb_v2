@@ -72,8 +72,4 @@ export function RideNotificationSound({ shouldPlay, rideDetails, onSoundComplete
 
   // Ce composant ne rend rien visuellement
   return null;
-
 }
-
-}
-

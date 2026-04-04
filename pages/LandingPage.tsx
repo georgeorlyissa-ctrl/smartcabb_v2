@@ -71,7 +71,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;600;700;800&display=swap');
         
         * {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -156,9 +156,13 @@ export function LandingPage() {
             <Link to="/" className="flex items-center gap-3 group">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                <div className="relative w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl">
-                  SC
-                </div>
+                <div className="relative w-12 h-12">
+  <img 
+    src="/logo-smartcabb.jpeg"  // ← mets le nom exact de ton fichier logo ici
+    alt="SmartCabb Logo"
+    className="w-full h-full object-contain"
+  />
+</div>
               </div>
               <div className="flex flex-col">
                 <span className="text-2xl font-black tracking-tight">
@@ -235,7 +239,42 @@ export function LandingPage() {
       {/* Hero Section Ultra Moderne */}
       <section id="home" className="relative pt-32 pb-20 overflow-hidden">
         {/* Background avec dégradé cyan professionnel */}
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-50 via-white to-blue-50"></div>
+        {/* Carrousel d'arrière-plan automatique */}
+{(() => {
+  const [currentBg, setCurrentBg] = useState(0);
+  const backgrounds = [
+    '/photo2_smartcabb.jpeg',
+    '/Images_2.jpeg',  // ← ajoute tes autres images ici
+    '/fille_smartcabb.png',  // ← même nom que dans ton dossier public
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentBg(prev => (prev + 1) % backgrounds.length);
+    }, 4000); // change toutes les 4 secondes
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <>
+      {backgrounds.map((bg, index) => (
+        <div
+          key={index}
+          className="absolute inset-0 transition-opacity duration-1000"
+          style={{
+            backgroundImage: `url(${bg})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: currentBg === index ? 1 : 0,
+          }}
+        />
+      ))}
+      {/* Overlay */}
+      <div className="absolute inset-0 bg-white/75"></div>
+    </>
+  );
+})()}
         
         {/* Formes décoratives animées */}
         <div className="absolute top-20 right-0 w-96 h-96 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
@@ -245,19 +284,17 @@ export function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Contenu gauche */}
             <div className="fade-in-up">
-              <div className="inline-block px-4 py-2 bg-cyan-100 rounded-full text-cyan-700 font-semibold text-sm mb-6">
-                {t('hero.badge')}
-              </div>
+              {/* 🚫 BADGE SUPPRIMÉ */}
               
               <h1 className="text-6xl lg:text-7xl font-black mb-6 leading-tight">
                 {t('hero.title1')}<br/>
                 <span className="gradient-text">{t('hero.title2')}</span>
               </h1>
               
-              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                {t('hero.description')}
+              <p style={{ fontFamily: "'Playfair Display', serif", fontWeight: '700' }} 
+   className="text-xl text-gray-800 mb-8 leading-relaxed tracking-wide">
+  {t('hero.description')}
               </p>
-
               {/* CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
                 <Link 
@@ -352,44 +389,109 @@ export function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                number: '01',
-                icon: '📍',
-                title: t('how.step1.title'),
-                description: t('how.step1.description')
-              },
-              {
-                number: '02',
-                icon: '🚗',
-                title: t('how.step2.title'),
-                description: t('how.step2.description')
-              },
-              {
-                number: '03',
-                icon: '✨',
-                title: t('how.step3.title'),
-                description: t('how.step3.description')
-              }
-            ].map((step, index) => (
-              <motion.div
-                key={index}
-                className="relative p-8 bg-gradient-to-br from-cyan-50 to-blue-50 rounded-3xl hover-lift"
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.2 }}
-                viewport={{ once: true }}
-              >
-                <div className="text-8xl font-black text-cyan-100 absolute top-4 right-4 opacity-50">
-                  {step.number}
-                </div>
-                <div className="relative">
-                  <div className="text-6xl mb-6">{step.icon}</div>
-                  <h3 className="text-2xl font-bold mb-3">{step.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{step.description}</p>
-                </div>
-              </motion.div>
+            {(() => {
+  const [vehiculeIndex, setVehiculeIndex] = useState(0);
+  const vehicules = [
+    '/Stadard_5.png',  // ← ton image véhicule 1
+    '/TOYOTA NOAH_2.png',  // ← ton image véhicule 2
+    '/Confort_4.png',  // ← ton image véhicule 3
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setVehiculeIndex(prev => (prev + 1) % vehicules.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const steps = [
+    {
+      number: '01',
+      image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=400&fit=crop',
+      badge: '📍 GPS Temps réel',
+      title: t('how.step1.title'),
+      description: t('how.step1.description'),
+      color: 'from-cyan-500 to-blue-500',
+      isCarousel: false
+    },
+    {
+      number: '02',
+      image: vehicules[vehiculeIndex],
+      badge: '🚗 Votre choix',
+      title: t('how.step2.title'),
+      description: t('how.step2.description'),
+      color: 'from-blue-500 to-indigo-500',
+      isCarousel: true
+    },
+    {
+      number: '03',
+      image: '/fille_smartcabb.png',
+      badge: '⭐ Expérience Premium',
+      title: t('how.step3.title'),
+      description: t('how.step3.description'),
+      color: 'from-indigo-500 to-cyan-500',
+      isCarousel: false
+    }
+  ];
+
+  return steps.map((step, index) => (
+    <motion.div
+      key={index}
+      className="relative rounded-3xl overflow-hidden shadow-2xl hover-lift group"
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.2 }}
+      viewport={{ once: true }}
+    >
+      {/* Image */}
+      <div className="relative h-56 overflow-hidden">
+        <img 
+          src={step.image}
+          alt={step.title}
+          className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
+        />
+        {/* Overlay */}
+        <div className={`absolute inset-0 bg-gradient-to-t ${step.color} opacity-60`}></div>
+
+        {/* Numéro */}
+        <div className="absolute top-4 left-4 text-7xl font-black text-white/20">
+          {step.number}
+        </div>
+
+        {/* Badge */}
+        <div className="absolute bottom-4 left-4 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-sm font-semibold border border-white/30">
+          {step.badge}
+        </div>
+
+        {/* Points indicateurs carrousel */}
+        {step.isCarousel && (
+          <div className="absolute bottom-4 right-4 flex gap-2">
+            {vehicules.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setVehiculeIndex(i)}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                  vehiculeIndex === i ? 'bg-white w-5' : 'bg-white/50'
+                }`}
+              />
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Contenu */}
+      <div className="p-6 bg-white">
+        <div className={`w-12 h-1 rounded-full bg-gradient-to-r ${step.color} mb-4`}></div>
+        <h3 className="text-2xl font-black text-gray-900 mb-2">{step.title}</h3>
+        <p className="text-gray-600 leading-relaxed">{step.description}</p>
+        <div className={`mt-4 inline-flex items-center gap-2 text-sm font-bold bg-gradient-to-r ${step.color} bg-clip-text text-transparent`}>
+          En savoir plus
+          <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
+        </div>
+      </div>
+    </motion.div>
+  ));
+})()}
           </div>
         </div>
       </section>
@@ -404,14 +506,55 @@ export function LandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: '⚡', title: t('why.fast'), description: t('why.fastDesc') },
-              { icon: '🔒', title: t('why.secure'), description: t('why.secureDesc') },
-              { icon: '💰', title: t('why.affordable'), description: t('why.affordableDesc') },
-              { icon: '📱', title: t('why.simple'), description: t('why.simpleDesc') },
-              { icon: '⭐', title: t('why.quality'), description: t('why.qualityDesc') },
-              { icon: '🌍', title: t('why.local'), description: t('why.localDesc') },
-              { icon: '💳', title: t('why.flexible'), description: t('why.flexibleDesc') },
-              { icon: '🎯', title: t('why.reliable'), description: t('why.reliableDesc') }
+              {
+  icon: '🚀',
+  gradient: 'from-orange-400 to-red-500',
+  shadow: 'shadow-orange-200',
+  title: t('why.fast'),
+  description: t('why.fastDesc')
+},
+{
+  icon: '🛡️',
+  gradient: 'from-blue-400 to-blue-600',
+  shadow: 'shadow-blue-200',
+  title: t('why.secure'),
+  description: t('why.secureDesc')
+},
+{
+  icon: '💎',
+  gradient: 'from-cyan-400 to-cyan-600',
+  shadow: 'shadow-cyan-200',
+  title: t('why.affordable'),
+  description: t('why.affordableDesc')
+},
+{
+  icon: '📲',
+  gradient: 'from-purple-400 to-purple-600',
+  shadow: 'shadow-purple-200',
+  title: t('why.simple'),
+  description: t('why.simpleDesc')
+},
+{
+  icon: '🏆',
+  gradient: 'from-yellow-400 to-orange-500',
+  shadow: 'shadow-yellow-200',
+  title: t('why.quality'),
+  description: t('why.qualityDesc')
+},
+{
+  icon: '💳',
+  gradient: 'from-green-400 to-emerald-600',
+  shadow: 'shadow-green-200',
+  title: t('why.flexible'),
+  description: t('why.flexibleDesc')
+},
+{
+  icon: '🎯',
+  gradient: 'from-pink-400 to-rose-600',
+  shadow: 'shadow-pink-200',
+  title: t('why.reliable'),
+  description: t('why.reliableDesc')
+}
             ].map((feature, index) => (
               <motion.div
                 key={index}
@@ -480,17 +623,10 @@ export function LandingPage() {
                 {/* Quote icon */}
                 <div className="absolute top-6 right-6 text-6xl text-cyan-200 opacity-50">"</div>
                 
-                {/* Photo et infos */}
-                <div className="flex items-center gap-4 mb-6 relative z-10">
-                  <img 
-                    src={testimonial.image} 
-                    alt={testimonial.name}
-                    className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg"
-                  />
-                  <div>
-                    <div className="font-bold text-gray-900">{testimonial.name}</div>
-                    <div className="text-sm text-gray-600">{testimonial.role}</div>
-                  </div>
+                {/* 🚫 Photo supprimée - Infos uniquement */}
+                <div className="mb-6 relative z-10">
+                  <div className="font-bold text-gray-900">{testimonial.name}</div>
+                  <div className="text-sm text-gray-600">{testimonial.role}</div>
                 </div>
 
                 {/* Rating */}

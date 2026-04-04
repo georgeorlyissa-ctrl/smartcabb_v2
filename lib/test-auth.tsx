@@ -25,7 +25,7 @@ try {
 // Test 2: Import du service driver signup
 try {
   console.log('\n2️⃣ Test import signUpDriver...');
-  const driverModule = await import('./auth-service-driver-signup.tsx');
+  const driverModule = await import('./auth-service-driver-signup.ts');
   const signUpDriver = driverModule.default || driverModule.signUpDriver;
   
   console.log('✅ signUpDriver importé:', typeof signUpDriver === 'function');

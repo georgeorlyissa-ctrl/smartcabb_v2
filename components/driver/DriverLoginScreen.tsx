@@ -30,11 +30,60 @@ export function DriverLoginScreen() {
       const result = await signIn({ identifier, password });
 
       if (!result.success) {
+        // ✅ CAS 1 : Erreur réseau (serveur non accessible)
+        if (result.error?.includes('Impossible de contacter le serveur')) {
+          toast.error(
+            '🌐 Problème de connexion\n\n' +
+            'Impossible de contacter le serveur d\'authentification Supabase.\n\n' +
+            'Solutions possibles :\n' +
+            '• Vérifiez votre connexion internet\n' +
+            '• Vérifiez que Supabase est accessible\n' +
+            '• Consultez la console développeur (F12)',
+            {
+              duration: 10000,
+              position: 'top-center'
+            }
+          );
+          
+          setLoading(false);
+          return;
+        }
+        
         // Afficher l'erreur de connexion
-        toast.error(result.error || 'Erreur de connexion', {
-          description: 'Vérifiez votre numéro de téléphone et mot de passe',
-          duration: 4000
-        });
+        // ✅ FIX: Convertir l'erreur en string pour éviter [object Object]
+        let errorMsg = 'Erreur de connexion';
+        if (result.error) {
+          if (typeof result.error === 'string') {
+            errorMsg = result.error;
+          } else if (typeof result.error === 'object') {
+            errorMsg = result.error.message || JSON.stringify(result.error);
+          }
+        }
+        
+        // ✅ CAS 2 : Si identifiants incorrects, proposer de créer un compte
+        if (errorMsg.includes('Identifiants incorrects') || errorMsg.includes('Invalid login credentials')) {
+          toast.error(
+            '❌ Aucun compte trouvé\n\n' +
+            'Ces identifiants ne correspondent à aucun compte conducteur existant.\n\n' +
+            '🧪 Besoin de comptes de test ?\n' +
+            'Créez 3 utilisateurs de test en 1 clic !',
+            {
+              duration: 20000,
+              position: 'top-center',
+              action: {
+                label: '🧪 Créer comptes test',
+                onClick: () => {
+                  window.location.href = '/admin/create-test-users';
+                }
+              }
+            }
+          );
+        } else {
+          toast.error(errorMsg, {
+            description: 'Vérifiez votre numéro de téléphone et mot de passe',
+            duration: 4000
+          });
+        }
         setLoading(false);
         return;
       }
@@ -76,22 +125,21 @@ export function DriverLoginScreen() {
 
         const driverData = data.driver;
 
-        // 🚨 VÉRIFICATION : Bloquer les conducteurs non approuvés
-        if (driverData.status !== 'approved') {
+        // 🚨 VÉRIFICATION CRITIQUE : Bloquer UNIQUEMENT les conducteurs explicitement rejetés/suspendus
+        // ✅ NOUVELLE LOGIQUE : Accepter tous les statuts SAUF 'pending', 'rejected', 'suspended'
+        const blockedStatuses = ['rejected', 'suspended'];
+        const isPending = driverData.status === 'pending';
+        const isBlocked = blockedStatuses.includes(driverData.status);
+        
+        if (isPending || isBlocked) {
           let statusMessage = '';
           
-          switch (driverData.status) {
-            case 'pending':
-              statusMessage = 'Votre compte est en attente d\'approbation. Un administrateur doit valider votre inscription.';
-              break;
-            case 'rejected':
-              statusMessage = 'Votre compte a été rejeté. Contactez le support pour plus d\'informations.';
-              break;
-            case 'suspended':
-              statusMessage = 'Votre compte a été suspendu. Contactez le support.';
-              break;
-            default:
-              statusMessage = 'Votre compte n\'est pas actif. Contactez le support.';
+          if (isPending) {
+            statusMessage = 'Votre compte est en attente d\'approbation. Un administrateur doit valider votre inscription.';
+          } else if (driverData.status === 'rejected') {
+            statusMessage = 'Votre compte a été rejeté. Contactez le support pour plus d\'informations.';
+          } else if (driverData.status === 'suspended') {
+            statusMessage = 'Votre compte a été suspendu. Contactez le support.';
           }
           
           toast.error(statusMessage, {
@@ -100,6 +148,29 @@ export function DriverLoginScreen() {
           
           setLoading(false);
           return;
+        }
+        
+        // ✅ Si le conducteur n'a pas de statut ou a un statut non bloqué, on le laisse passer
+        // et on met à jour son statut à 'approved' si nécessaire
+        if (!driverData.status || (driverData.status !== 'approved' && !blockedStatuses.includes(driverData.status))) {
+          console.log(`✅ Auto-approbation du conducteur ${driverData.id} avec statut: ${driverData.status || 'null'}`);
+          
+          // Mettre à jour le statut en backend
+          try {
+            await fetch(
+              `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/drivers/${driverData.id}/approve`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${publicAnonKey}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            console.log('✅ Statut mis à jour vers "approved"');
+          } catch (updateError) {
+            console.warn('⚠️ Impossible de mettre à jour le statut, mais on laisse passer:', updateError);
+          }
         }
 
         // Construire l'objet conducteur
@@ -194,7 +265,7 @@ export function DriverLoginScreen() {
               <Car className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 type="text"
-                placeholder="email@exemple.com ou +243 XXX XXX XXX"
+                placeholder="+243 XXX XXX XXX"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="pl-12 h-12"

@@ -11,29 +11,42 @@ import { useAppState } from '../../hooks/useAppState';
 interface Cancellation {
   id: string;
   rideId: string;
-  userId: string;
-  userType: 'passenger' | 'driver';
-  userName: string;
-  userPhone: string;
-  reason: string;
   cancelledAt: string;
-  pickup: {
-    address: string;
-  };
-  destination: {
-    address: string;
-  };
+  cancelledBy: 'passenger' | 'driver';
+  reason: string;
+  
+  // Informations de la course
+  pickup: any;
+  destination: any;
   estimatedPrice: number;
+  distance: number;
   vehicleType: string;
-  rideStatus: string;
-  penaltyAmount?: number;
-  penaltyApplied?: boolean;
+  status: string;
+  
+  // Informations passager
+  passengerId: string;
+  passengerName: string;
+  passengerPhone: string;
+  
+  // Informations conducteur
+  driverId: string | null;
+  driverName: string | null;
+  driverPhone: string | null;
+  
+  // Métadonnées
+  createdAt: string;
+  acceptedAt: string | null;
+  startedAt: string | null;
+  
+  // Pénalité
+  hasPenalty: boolean;
+  penaltyAmount: number;
 }
 
 interface CancellationStats {
   total: number;
-  byPassengers: number;
-  byDrivers: number;
+  byPassenger: number;
+  byDriver: number;
   withPenalty: number;
   totalPenalties: number;
 }
@@ -43,8 +56,8 @@ export function CancellationsScreen() {
   const [cancellations, setCancellations] = useState<Cancellation[]>([]);
   const [stats, setStats] = useState<CancellationStats>({
     total: 0,
-    byPassengers: 0,
-    byDrivers: 0,
+    byPassenger: 0,
+    byDriver: 0,
     withPenalty: 0,
     totalPenalties: 0
   });
@@ -77,8 +90,8 @@ export function CancellationsScreen() {
           setCancellations(data.cancellations || []);
           setStats(data.stats || {
             total: 0,
-            byPassengers: 0,
-            byDrivers: 0,
+            byPassenger: 0,
+            byDriver: 0,
             withPenalty: 0,
             totalPenalties: 0
           });
@@ -96,7 +109,7 @@ export function CancellationsScreen() {
 
   const filteredCancellations = cancellations.filter(c => {
     // Filtre par type
-    if (filterType !== 'all' && c.userType !== filterType) {
+    if (filterType !== 'all' && c.cancelledBy !== filterType) {
       return false;
     }
     
@@ -104,8 +117,8 @@ export function CancellationsScreen() {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       return (
-        c.userName.toLowerCase().includes(search) ||
-        c.userPhone.includes(search) ||
+        c.passengerName.toLowerCase().includes(search) ||
+        c.passengerPhone.includes(search) ||
         c.reason.toLowerCase().includes(search) ||
         c.rideId.toLowerCase().includes(search)
       );
@@ -171,7 +184,7 @@ export function CancellationsScreen() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Par passagers</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.byPassengers}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.byPassenger}</p>
             </div>
           </div>
         </Card>
@@ -183,7 +196,7 @@ export function CancellationsScreen() {
             </div>
             <div>
               <p className="text-sm text-gray-600">Par conducteurs</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.byDrivers}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.byDriver}</p>
             </div>
           </div>
         </Card>
@@ -245,14 +258,14 @@ export function CancellationsScreen() {
               onClick={() => setFilterType('passenger')}
               size="sm"
             >
-              Passagers ({stats.byPassengers})
+              Passagers ({stats.byPassenger})
             </Button>
             <Button
               variant={filterType === 'driver' ? 'default' : 'outline'}
               onClick={() => setFilterType('driver')}
               size="sm"
             >
-              Conducteurs ({stats.byDrivers})
+              Conducteurs ({stats.byDriver})
             </Button>
           </div>
           <input
@@ -286,20 +299,20 @@ export function CancellationsScreen() {
                     {/* Utilisateur */}
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${
-                        cancellation.userType === 'passenger' 
+                        cancellation.cancelledBy === 'passenger' 
                           ? 'bg-blue-100' 
                           : 'bg-purple-100'
                       }`}>
                         <User className={`w-5 h-5 ${
-                          cancellation.userType === 'passenger'
+                          cancellation.cancelledBy === 'passenger'
                             ? 'text-blue-600'
                             : 'text-purple-600'
                         }`} />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{cancellation.userName}</p>
+                        <p className="font-semibold text-gray-900">{cancellation.cancelledBy === 'passenger' ? cancellation.passengerName : cancellation.driverName}</p>
                         <p className="text-sm text-gray-600">
-                          {cancellation.userType === 'passenger' ? 'Passager' : 'Conducteur'} • {cancellation.userPhone}
+                          {cancellation.cancelledBy === 'passenger' ? 'Passager' : 'Conducteur'} • {cancellation.cancelledBy === 'passenger' ? cancellation.passengerPhone : cancellation.driverPhone}
                         </p>
                       </div>
                     </div>
@@ -346,14 +359,14 @@ export function CancellationsScreen() {
                     <p className="text-sm text-gray-600">
                       {cancellation.estimatedPrice.toLocaleString('fr-FR')} CDF
                     </p>
-                    {cancellation.penaltyApplied && (
+                    {cancellation.hasPenalty && (
                       <div className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs font-medium">
                         <AlertTriangle className="w-3 h-3" />
                         Pénalité: {cancellation.penaltyAmount?.toLocaleString('fr-FR')} CDF
                       </div>
                     )}
                     <p className="text-xs text-gray-500">
-                      État: {cancellation.rideStatus}
+                      État: {cancellation.status}
                     </p>
                   </div>
                 </div>

@@ -8,19 +8,24 @@
  * ⚠️ CHARGEMENT DYNAMIQUE : Firebase est chargé de manière asynchrone
  * pour éviter les erreurs de build SSR
  * 
- * @version 3.0.0 - Utilisation des packages npm
- * @date 2026-01-27
+ * @version 3.1.0 - Configuration unifiée avec fcm-driver
+ * @date 2026-02-28
  */
 
 // 🔑 Configuration Firebase SmartCabb (Production)
+// ⚠️ UNIFIÉE avec /lib/fcm-driver.tsx pour éviter les conflits
+// 🔐 IMPORTANT : Ces valeurs doivent correspondre exactement à votre projet Firebase Console
+// 🔑 Configuration Firebase SmartCabb (Production)
+// ⚠️ UNIFIÉE avec /lib/fcm-driver.tsx pour éviter les conflits
+// 🔐 IMPORTANT : Ces valeurs doivent correspondre exactement à votre projet Firebase Console
 const firebaseConfig = {
-  apiKey: "AIzaSyATn8o24PvSwg1LHCFeFdteAA_fGte-Tqs",
-  authDomain: "smartcabb-bed00.firebaseapp.com",
-  projectId: "smartcabb-bed00",
-  storageBucket: "smartcabb-bed00.firebasestorage.app",
-  messagingSenderId: "855559530237",
-  appId: "1:855559530237:web:5ea0fa4232bb08196f4094",
-  measurementId: "G-8QY9ZYGC7B"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyC0Kq6QgnfVna4bEWUj0J3VknU0ZHMAaWU",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "smartcabb-bed00.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "smartcabb-bed00",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "smartcabb-bed00.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "855559530237",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:855559530237:web:5ea0fa4232bb08196f4094",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-8QY9ZYGC7B"
 };
 
 // Types Firebase (définis localement pour éviter import sync)
@@ -50,17 +55,7 @@ async function loadFirebaseModules() {
   try {
     console.log('📦 Chargement des modules Firebase...');
     
-    // ⚠️ DÉSACTIVÉ COMPLÈTEMENT : Firebase imports causent des erreurs de build
-    // Les packages firebase/* ne sont pas disponibles dans l'environnement de build
-    console.warn('⚠️ Firebase DÉSACTIVÉ - packages non disponibles dans cet environnement');
-    console.warn('⚠️ Les notifications push ne fonctionneront qu\'après configuration Firebase en production');
-    
-    // Retourner null pour que l'app continue sans Firebase
-    return null;
-    
-    /* 
-    // ✅ CODE ORIGINAL FIREBASE (À RÉACTIVER EN PRODUCTION SI BESOIN) :
-    
+    // Charger les modules Firebase dynamiquement
     const [appModule, analyticsModule, messagingModule] = await Promise.all([
       import('firebase/app').catch(() => null),
       import('firebase/analytics').catch(() => null),
@@ -82,7 +77,6 @@ async function loadFirebaseModules() {
 
     console.log('✅ Modules Firebase chargés avec succès');
     return firebaseModules;
-    */
   } catch (error) {
     console.error('❌ Erreur chargement Firebase:', error);
     console.warn('⚠️ Firebase non disponible - notifications push désactivées');
@@ -105,6 +99,13 @@ export async function initializeFirebase(): Promise<FirebaseApp | null> {
   }
 
   try {
+    // 🔍 LOG DE DÉBOGAGE : Vérifier la clé API
+    console.log('🔑 Configuration Firebase:', {
+      apiKey: firebaseConfig.apiKey.substring(0, 20) + '...',
+      projectId: firebaseConfig.projectId,
+      messagingSenderId: firebaseConfig.messagingSenderId
+    });
+    
     // Charger les modules
     const modules = await loadFirebaseModules();
     if (!modules) {

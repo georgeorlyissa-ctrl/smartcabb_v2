@@ -1,460 +1,398 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🔔 Test Notifications FCM - SmartCabb</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
-      padding: 20px;
-    }
-    
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 16px;
-      padding: 32px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    }
-    
-    h1 {
-      color: #2d3748;
-      margin-bottom: 24px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    
-    .section {
-      margin-bottom: 32px;
-      padding: 20px;
-      background: #f7fafc;
-      border-radius: 8px;
-      border-left: 4px solid #4299e1;
-    }
-    
-    .section h2 {
-      color: #2d3748;
-      margin-bottom: 16px;
-      font-size: 18px;
-    }
-    
-    .status {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px;
-      background: white;
-      border-radius: 6px;
-      margin-bottom: 8px;
-    }
-    
-    .status-icon {
-      font-size: 24px;
-    }
-    
-    .status-text {
-      flex: 1;
-    }
-    
-    .status-label {
-      font-weight: 600;
-      color: #4a5568;
-    }
-    
-    .status-value {
-      color: #718096;
-      font-size: 14px;
-    }
-    
-    button {
-      background: #4299e1;
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      width: 100%;
-      margin-bottom: 12px;
-    }
-    
-    button:hover {
-      background: #3182ce;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
-    }
-    
-    button:disabled {
-      background: #cbd5e0;
-      cursor: not-allowed;
-      transform: none;
-    }
-    
-    .log {
-      background: #1a202c;
-      color: #a0aec0;
-      padding: 16px;
-      border-radius: 8px;
-      font-family: 'Courier New', monospace;
-      font-size: 13px;
-      max-height: 300px;
-      overflow-y: auto;
-      margin-top: 16px;
-    }
-    
-    .log-entry {
-      margin-bottom: 8px;
-      line-height: 1.5;
-    }
-    
-    .log-entry.success { color: #48bb78; }
-    .log-entry.error { color: #f56565; }
-    .log-entry.warning { color: #ed8936; }
-    .log-entry.info { color: #4299e1; }
-    
-    .config-display {
-      background: #2d3748;
-      color: #e2e8f0;
-      padding: 16px;
-      border-radius: 8px;
-      font-family: 'Courier New', monospace;
-      font-size: 12px;
-      overflow-x: auto;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartCabb - Test Notifications</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .test-section h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .result.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        .status-badge.success { background: #28a745; color: white; }
+        .status-badge.error { background: #dc3545; color: white; }
+        .status-badge.warning { background: #ffc107; color: #000; }
+        .input-group {
+            margin: 15px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 600;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            text-align: center;
+        }
+        .summary-card h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .summary-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>
-      <span>🔔</span>
-      Test Notifications FCM SmartCabb
-    </h1>
-    
-    <!-- Configuration Firebase -->
-    <div class="section">
-      <h2>🔑 Configuration Firebase</h2>
-      <div id="firebase-config" class="config-display">Chargement...</div>
-    </div>
-    
-    <!-- Statuts -->
-    <div class="section">
-      <h2>📊 Statuts du Système</h2>
-      
-      <div class="status">
-        <span class="status-icon" id="service-worker-icon">⏳</span>
-        <div class="status-text">
-          <div class="status-label">Service Worker</div>
-          <div class="status-value" id="service-worker-status">Vérification...</div>
-        </div>
-      </div>
-      
-      <div class="status">
-        <span class="status-icon" id="permission-icon">⏳</span>
-        <div class="status-text">
-          <div class="status-label">Permission Notifications</div>
-          <div class="status-value" id="permission-status">Vérification...</div>
-        </div>
-      </div>
-      
-      <div class="status">
-        <span class="status-icon" id="firebase-icon">⏳</span>
-        <div class="status-text">
-          <div class="status-label">Firebase Initialisé</div>
-          <div class="status-value" id="firebase-status">Vérification...</div>
-        </div>
-      </div>
-      
-      <div class="status">
-        <span class="status-icon" id="token-icon">⏳</span>
-        <div class="status-text">
-          <div class="status-label">Token FCM</div>
-          <div class="status-value" id="token-status">Vérification...</div>
-        </div>
-      </div>
-      
-      <div class="status">
-        <span class="status-icon" id="backend-icon">⏳</span>
-        <div class="status-text">
-          <div class="status-label">Backend FCM</div>
-          <div class="status-value" id="backend-status">Vérification...</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Actions -->
-    <div class="section">
-      <h2>🎮 Actions de Test</h2>
-      <button id="btn-permission">1️⃣ Demander Permission Notifications</button>
-      <button id="btn-init-firebase">2️⃣ Initialiser Firebase</button>
-      <button id="btn-get-token">3️⃣ Obtenir Token FCM</button>
-      <button id="btn-test-backend">4️⃣ Tester Backend FCM</button>
-      <button id="btn-send-test">5️⃣ Envoyer Notification Test</button>
-      <button id="btn-clear-logs">🗑️ Effacer Logs</button>
-    </div>
-    
-    <!-- Logs -->
-    <div class="section">
-      <h2>📝 Logs en Direct</h2>
-      <div id="logs" class="log"></div>
-    </div>
-  </div>
+    <div class="container">
+        <h1>🚗 SmartCabb - Test Notifications Conducteurs</h1>
+        <p class="subtitle">Diagnostiquez rapidement pourquoi les notifications ne fonctionnent pas</p>
 
-  <script type="module">
-    // Configuration Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyC0Kq6QgnfVna4bEWUj0J3VknU0ZHMAaWU",
-      authDomain: "smartcabb-bed00.firebaseapp.com",
-      projectId: "smartcabb-bed00",
-      storageBucket: "smartcabb-bed00.firebasestorage.app",
-      messagingSenderId: "855559530237",
-      appId: "1:855559530237:web:5ea0fa4232bb08196f4094",
-      measurementId: "G-8QY9ZYGC7B"
-    };
-    
-    const VAPID_KEY = "BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekIOWUiJ6vHvO06yaXXnyp0i_1Muc";
-    
-    // Variables globales
-    let firebaseApp = null;
-    let messaging = null;
-    let currentToken = null;
-    
-    // Afficher la configuration
-    document.getElementById('firebase-config').textContent = JSON.stringify(firebaseConfig, null, 2);
-    
-    // Fonctions de log
-    function addLog(message, type = 'info') {
-      const logsDiv = document.getElementById('logs');
-      const entry = document.createElement('div');
-      entry.className = `log-entry ${type}`;
-      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-      logsDiv.appendChild(entry);
-      logsDiv.scrollTop = logsDiv.scrollHeight;
-      console.log(`[${type.toUpperCase()}]`, message);
-    }
-    
-    function updateStatus(elementId, icon, text) {
-      document.getElementById(elementId + '-icon').textContent = icon;
-      document.getElementById(elementId + '-status').textContent = text;
-    }
-    
-    // Vérification initiale
-    async function checkInitialStatus() {
-      addLog('🔍 Vérification du statut initial...', 'info');
-      
-      // Service Worker
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        if (registrations.length > 0) {
-          updateStatus('service-worker', '✅', `${registrations.length} service worker(s) enregistré(s)`);
-          addLog(`✅ Service Worker trouvé : ${registrations[0].scope}`, 'success');
-        } else {
-          updateStatus('service-worker', '❌', 'Aucun service worker');
-          addLog('❌ Aucun Service Worker enregistré', 'error');
+        <div class="summary">
+            <div class="summary-card">
+                <h3>État Backend</h3>
+                <div class="value" id="backend-status">⏳</div>
+            </div>
+            <div class="summary-card">
+                <h3>Conducteurs Totaux</h3>
+                <div class="value" id="total-drivers">-</div>
+            </div>
+            <div class="summary-card">
+                <h3>Conducteurs En Ligne</h3>
+                <div class="value" id="online-drivers">-</div>
+            </div>
+            <div class="summary-card">
+                <h3>Conducteurs Éligibles</h3>
+                <div class="value" id="eligible-drivers">-</div>
+            </div>
+        </div>
+
+        <!-- Test 1: Backend Ping -->
+        <div class="test-section">
+            <h2>✅ Test 1: Vérifier que le Backend est Déployé</h2>
+            <button onclick="testBackendPing()">🔍 Tester le Backend</button>
+            <div id="ping-result"></div>
+        </div>
+
+        <!-- Test 2: Liste Conducteurs -->
+        <div class="test-section">
+            <h2>👥 Test 2: Lister les Conducteurs Disponibles</h2>
+            <button onclick="testListDrivers()">📋 Lister les Conducteurs</button>
+            <div id="drivers-result"></div>
+        </div>
+
+        <!-- Test 3: Debug Matching -->
+        <div class="test-section">
+            <h2>🔍 Test 3: Diagnostiquer une Course</h2>
+            <div class="input-group">
+                <label for="ride-id">ID de la Course (rideId):</label>
+                <input type="text" id="ride-id" placeholder="ride_1708012345_abc123">
+            </div>
+            <button onclick="testDebugMatching()">🧪 Analyser la Course</button>
+            <div id="debug-result"></div>
+        </div>
+
+        <!-- Test 4: Créer Course Test -->
+        <div class="test-section">
+            <h2>🚕 Test 4: Créer une Course de Test</h2>
+            <p style="margin-bottom: 15px; color: #666;">Cela créera une vraie course dans le système pour tester le matching.</p>
+            <button onclick="testCreateRide()">🚀 Créer Course Test</button>
+            <div id="create-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://zaerjchqxecablflug.supabase.co/functions/v1/make-server-2eb02e52';
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZXJqY2hxeGVjYWJsZmx1ZyIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzMzMTU3NDEwLCJleHAiOjIwNDg3MzM0MTB9.OT0A8B2Ioc6NKe0LgEuEGfD5YhQa8OGcyNMx4Z-4Cj8';
+
+        function showResult(elementId, data, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
         }
-      } else {
-        updateStatus('service-worker', '❌', 'Non supporté');
-        addLog('❌ Service Workers non supportés', 'error');
-      }
-      
-      // Permission
-      if ('Notification' in window) {
-        const permission = Notification.permission;
-        if (permission === 'granted') {
-          updateStatus('permission', '✅', 'Accordée');
-          addLog('✅ Permission notifications accordée', 'success');
-        } else if (permission === 'denied') {
-          updateStatus('permission', '❌', 'Refusée');
-          addLog('❌ Permission notifications refusée', 'error');
-        } else {
-          updateStatus('permission', '⚠️', 'Non demandée');
-          addLog('⚠️ Permission notifications non demandée', 'warning');
-        }
-      } else {
-        updateStatus('permission', '❌', 'Non supporté');
-        addLog('❌ Notifications non supportées', 'error');
-      }
-      
-      // Tester le backend
-      try {
-        const response = await fetch('https://georgeuylsaa-ctrh-s-org.supabase.co/functions/v1/make-server-2eb02e52/fcm/diagnostic');
-        if (response.ok) {
-          const data = await response.json();
-          updateStatus('backend', '✅', 'Configuré');
-          addLog(`✅ Backend FCM configuré : ${JSON.stringify(data)}`, 'success');
-        } else {
-          updateStatus('backend', '❌', `Erreur ${response.status}`);
-          addLog(`❌ Backend FCM erreur ${response.status}`, 'error');
-        }
-      } catch (error) {
-        updateStatus('backend', '❌', 'Inaccessible');
-        addLog(`❌ Backend FCM inaccessible : ${error.message}`, 'error');
-      }
-    }
-    
-    // 1. Demander permission
-    document.getElementById('btn-permission').addEventListener('click', async () => {
-      addLog('📱 Demande de permission notifications...', 'info');
-      
-      if (!('Notification' in window)) {
-        addLog('❌ Notifications non supportées', 'error');
-        return;
-      }
-      
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          updateStatus('permission', '✅', 'Accordée');
-          addLog('✅ Permission accordée !', 'success');
-        } else {
-          updateStatus('permission', '❌', 'Refusée');
-          addLog('❌ Permission refusée', 'error');
-        }
-      } catch (error) {
-        addLog(`❌ Erreur demande permission : ${error.message}`, 'error');
-      }
-    });
-    
-    // 2. Initialiser Firebase
-    document.getElementById('btn-init-firebase').addEventListener('click', async () => {
-      addLog('🔥 Initialisation de Firebase...', 'info');
-      
-      try {
-        const { initializeApp, getApps } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        const { getMessaging, isSupported } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js');
-        
-        const apps = getApps();
-        if (apps.length > 0) {
-          firebaseApp = apps[0];
-          addLog('✅ Firebase déjà initialisé', 'success');
-        } else {
-          firebaseApp = initializeApp(firebaseConfig);
-          addLog('✅ Firebase initialisé', 'success');
-        }
-        
-        const supported = await isSupported();
-        if (!supported) {
-          updateStatus('firebase', '❌', 'Messaging non supporté');
-          addLog('❌ Firebase Messaging non supporté', 'error');
-          return;
-        }
-        
-        messaging = getMessaging(firebaseApp);
-        updateStatus('firebase', '✅', 'Initialisé');
-        addLog('✅ Firebase Messaging initialisé', 'success');
-        
-      } catch (error) {
-        updateStatus('firebase', '❌', 'Erreur initialisation');
-        addLog(`❌ Erreur Firebase : ${error.message}`, 'error');
-      }
-    });
-    
-    // 3. Obtenir token
-    document.getElementById('btn-get-token').addEventListener('click', async () => {
-      if (!messaging) {
-        addLog('❌ Firebase Messaging non initialisé', 'error');
-        return;
-      }
-      
-      addLog('🎫 Demande de token FCM...', 'info');
-      
-      try {
-        const { getToken } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js');
-        
-        currentToken = await getToken(messaging, { 
-          vapidKey: VAPID_KEY,
-          serviceWorkerRegistration: await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' })
-        });
-        
-        if (currentToken) {
-          updateStatus('token', '✅', currentToken.substring(0, 20) + '...');
-          addLog(`✅ Token FCM obtenu : ${currentToken.substring(0, 50)}...`, 'success');
-        } else {
-          updateStatus('token', '❌', 'Impossible d\'obtenir');
-          addLog('❌ Impossible d\'obtenir le token', 'error');
-        }
-      } catch (error) {
-        updateStatus('token', '❌', 'Erreur');
-        addLog(`❌ Erreur obtention token : ${error.message}`, 'error');
-      }
-    });
-    
-    // 4. Tester backend
-    document.getElementById('btn-test-backend').addEventListener('click', async () => {
-      addLog('🔧 Test du backend FCM...', 'info');
-      
-      try {
-        const response = await fetch('https://georgeuylsaa-ctrh-s-org.supabase.co/functions/v1/make-server-2eb02e52/fcm/diagnostic');
-        const data = await response.json();
-        
-        if (response.ok) {
-          addLog(`✅ Backend répond : ${JSON.stringify(data, null, 2)}`, 'success');
-        } else {
-          addLog(`❌ Backend erreur ${response.status} : ${JSON.stringify(data)}`, 'error');
-        }
-      } catch (error) {
-        addLog(`❌ Erreur test backend : ${error.message}`, 'error');
-      }
-    });
-    
-    // 5. Envoyer notification test
-    document.getElementById('btn-send-test').addEventListener('click', async () => {
-      if (!currentToken) {
-        addLog('❌ Pas de token FCM. Obtenez-en un d\'abord.', 'error');
-        return;
-      }
-      
-      addLog('📤 Envoi notification test...', 'info');
-      
-      try {
-        const response = await fetch('https://georgeuylsaa-ctrh-s-org.supabase.co/functions/v1/make-server-2eb02e52/fcm/send', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdlb3JnZXV5bHNhYS1jdHJoLXMtb3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU3Mzc3MjQsImV4cCI6MjA1MTMxMzcyNH0.wzb_f4A4f2a6bL99Ul3VKvPd-q1iBf_2dSUoUEcEUwY'
-          },
-          body: JSON.stringify({
-            token: currentToken,
-            title: '🧪 Test SmartCabb',
-            body: 'Notification test envoyée depuis la page de diagnostic !',
-            data: {
-              type: 'test',
-              timestamp: new Date().toISOString()
+
+        async function testBackendPing() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Test en cours...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/rides/ping`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    showResult('ping-result', data, 'success');
+                    document.getElementById('backend-status').textContent = '✅';
+                    document.getElementById('backend-status').style.color = '#28a745';
+                } else {
+                    showResult('ping-result', data, 'error');
+                    document.getElementById('backend-status').textContent = '❌';
+                    document.getElementById('backend-status').style.color = '#dc3545';
+                }
+            } catch (error) {
+                showResult('ping-result', `❌ Erreur: ${error.message}`, 'error');
+                document.getElementById('backend-status').textContent = '❌';
+                document.getElementById('backend-status').style.color = '#dc3545';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔍 Tester le Backend';
             }
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-          addLog(`✅ Notification envoyée ! ${JSON.stringify(data)}`, 'success');
-        } else {
-          addLog(`❌ Erreur envoi : ${JSON.stringify(data)}`, 'error');
         }
-      } catch (error) {
-        addLog(`❌ Erreur envoi notification : ${error.message}`, 'error');
-      }
-    });
-    
-    // Clear logs
-    document.getElementById('btn-clear-logs').addEventListener('click', () => {
-      document.getElementById('logs').innerHTML = '';
-      addLog('🗑️ Logs effacés', 'info');
-    });
-    
-    // Lancer la vérification initiale
-    checkInitialStatus();
-  </script>
-</bod
+
+        async function testListDrivers() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Chargement...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/rides/test-drivers`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const drivers = data.drivers || [];
+                    const onlineDrivers = drivers.filter(d => d.isOnline).length;
+                    const withGPS = drivers.filter(d => d.location && d.location.lat).length;
+                    
+                    document.getElementById('total-drivers').textContent = drivers.length;
+                    document.getElementById('online-drivers').textContent = onlineDrivers;
+                    document.getElementById('eligible-drivers').textContent = withGPS;
+                    
+                    showResult('drivers-result', data, 'success');
+                } else {
+                    showResult('drivers-result', data, 'error');
+                }
+            } catch (error) {
+                showResult('drivers-result', `❌ Erreur: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📋 Lister les Conducteurs';
+            }
+        }
+
+        async function testDebugMatching() {
+            const rideId = document.getElementById('ride-id').value.trim();
+            
+            if (!rideId) {
+                showResult('debug-result', '❌ Veuillez entrer un ID de course', 'error');
+                return;
+            }
+            
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Analyse...';
+            
+            try {
+                const response = await fetch(`${BACKEND_URL}/rides/debug-matching/${rideId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    let summary = `✅ DIAGNOSTIC COMPLET\n\n`;
+                    summary += `📊 Résumé:\n`;
+                    summary += `- Total conducteurs: ${data.totalDrivers}\n`;
+                    summary += `- Éligibles: ${data.eligibleCount}\n`;
+                    summary += `- Rejetés: ${data.rejectedCount}\n\n`;
+                    
+                    if (data.eligible && data.eligible.length > 0) {
+                        summary += `✅ CONDUCTEURS ÉLIGIBLES:\n`;
+                        data.eligible.forEach((driver, i) => {
+                            summary += `${i + 1}. ${driver.name} - ${driver.distance} - FCM: ${driver.hasFCMToken ? 'OUI' : 'NON'}\n`;
+                        });
+                        summary += `\n`;
+                    }
+                    
+                    if (data.rejected && data.rejected.length > 0) {
+                        summary += `❌ CONDUCTEURS REJETÉS:\n`;
+                        data.rejected.forEach((driver, i) => {
+                            summary += `${i + 1}. ${driver.name} - RAISON: ${driver.rejectionReason}\n`;
+                            summary += `   - En ligne: ${driver.isOnline ? 'OUI' : 'NON'}\n`;
+                            summary += `   - GPS: ${driver.hasGPS ? 'OUI' : 'NON'}\n`;
+                            summary += `   - Catégorie: ${driver.driverCategory} (demandé: ${driver.requestedCategory})\n`;
+                        });
+                    }
+                    
+                    summary += `\n📋 DONNÉES COMPLÈTES:\n${JSON.stringify(data, null, 2)}`;
+                    
+                    showResult('debug-result', summary, data.eligibleCount > 0 ? 'success' : 'error');
+                } else {
+                    showResult('debug-result', data, 'error');
+                }
+            } catch (error) {
+                showResult('debug-result', `❌ Erreur: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🧪 Analyser la Course';
+            }
+        }
+
+        async function testCreateRide() {
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '⏳ Création...';
+            
+            try {
+                const testRide = {
+                    passengerId: 'test-user-' + Date.now(),
+                    passengerName: 'Test Passager',
+                    passengerPhone: '+243999999999',
+                    pickup: {
+                        lat: -4.3217,
+                        lng: 15.3125,
+                        address: 'Avenue Tombalbaye, Kinshasa, RDC'
+                    },
+                    destination: {
+                        lat: -4.3297,
+                        lng: 15.3206,
+                        address: 'Boulevard du 30 Juin, Gombe, Kinshasa'
+                    },
+                    vehicleType: 'smart_standard',
+                    estimatedPrice: 15000,
+                    estimatedDuration: 15,
+                    distance: 5.2,
+                    passengerCount: 1
+                };
+                
+                const response = await fetch(`${BACKEND_URL}/rides/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ANON_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testRide)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.rideId) {
+                    document.getElementById('ride-id').value = data.rideId;
+                    
+                    let result = `✅ COURSE CRÉÉE AVEC SUCCÈS!\n\n`;
+                    result += `🆔 Ride ID: ${data.rideId}\n\n`;
+                    result += `📋 Vous pouvez maintenant:\n`;
+                    result += `1. Utiliser le Test 3 ci-dessus pour analyser cette course\n`;
+                    result += `2. Vérifier les logs Supabase pour voir le matching en action\n`;
+                    result += `3. Vérifier que le conducteur reçoit la notification\n\n`;
+                    result += `📊 Données complètes:\n${JSON.stringify(data, null, 2)}`;
+                    
+                    showResult('create-result', result, 'success');
+                } else {
+                    showResult('create-result', data, 'error');
+                }
+            } catch (error) {
+                showResult('create-result', `❌ Erreur: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Créer Course Test';
+            }
+        }
+
+        // Auto-test au chargement
+        window.addEventListener('load', () => {
+            console.log('🚗 SmartCabb Test Suite chargé');
+            testBackendPing();
+            setTimeout(testListDrivers, 1000);
+        });
+    </script>
+</body>
+</html>

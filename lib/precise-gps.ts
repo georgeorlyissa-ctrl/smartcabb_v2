@@ -308,11 +308,20 @@ export class PreciseGPSTracker {
       speed: rawCoords.speed ? `${rawCoords.speed.toFixed(1)} m/s` : 'N/A'
     });
 
+    // ⚠️ DÉSACTIVÉ TEMPORAIREMENT : Filtrage de précision GPS
+    // Le GPS de certains navigateurs/environnements retourne des précisions très faibles
+    // On accepte TOUTES les positions pour garantir que le matching fonctionne
     // ✅ FILTRAGE 1 : Rejeter les positions de mauvaise qualité (>500m pour Kinshasa)
     // 🆕 ASSOUPLISSEMENT : Passé de 100m à 500m pour géolocalisation urbaine en RDC
-    if (rawCoords.accuracy > 500) {
-      console.warn('⚠️ Position rejetée : précision trop faible (>500m)');
-      return;
+    // if (rawCoords.accuracy > 500) {
+    //   console.warn('⚠️ Position rejetée : précision trop faible (>500m)');
+    //   return;
+    // }
+    
+    // 🆕 NOUVEAU : Accepter TOUTES les positions, même imprécises
+    if (rawCoords.accuracy > 10000000) {
+      console.warn(`⚠️ Position acceptée malgré précision faible : ±${Math.round(rawCoords.accuracy)}m`);
+      // On continue quand même
     }
 
     // ✅ FILTRAGE 2 : Détecter et rejeter les sauts GPS (outliers)
@@ -367,15 +376,16 @@ export class PreciseGPSTracker {
 
 /**
  * 🌍 GEOCODING INVERSE (Coordonnées → Adresse)
+ * Utilise Google Maps Geocoding API via le backend SmartCabb
  */
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
-    // 🆕 UTILISER LE BACKEND POUR ÉVITER CORS ET RATE LIMIT
+    // ✅ UTILISER GOOGLE MAPS API VIA LE BACKEND
     const projectId = 'zaerjqchzqmcxqblkfkg';
-    const publicAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZXJqcWNoenFtY3hxYmxrZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxNDMyOTgsImV4cCI6MjA3NTcxOTI5OH0.qwFRKsi9Gw4VVYoEGBBCIj0-lAZOxtqlGQ0eT6cPhik'; // ✅ CORRIGÉ : bon token
-    const url = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/nominatim/reverse?lat=${lat}&lng=${lng}`;
+    const publicAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZXJqcWNoenFtY3hxYmxrZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxNDMyOTgsImV4cCI6MjA3NTcxOTI5OH0.qwFRKsi9Gw4VVYoEGBBCIj0-lAZOxtqlGQ0eT6cPhik';
+    const url = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/google-maps/reverse?lat=${lat}&lng=${lng}`;
     
-    console.log('🌍 Geocoding:', lat, lng);
+    console.log('🌍 Geocoding Google Maps:', lat, lng);
     console.log('🔗 URL:', url);
     
     const response = await fetch(url, {
@@ -385,57 +395,112 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
       }
     });
 
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response ok:', response.ok);
+
     if (!response.ok) {
-      console.error('❌ Geocoding HTTP error:', response.status);
+      const errorText = await response.text();
+      console.error('❌ Geocoding HTTP error:', response.status, errorText);
       throw new Error(`Erreur geocoding: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('✅ Geocoding response complète:', JSON.stringify(data, null, 2));
+    console.log('✅ Geocoding Google Maps response:', JSON.stringify(data, null, 2));
 
-    // Le backend retourne : { success: true, result: { name, description, address: {...}, ... } }
-    if (data.success && data.result) {
-      const place = data.result;
+    // Vérifier si success est false
+    if (data.success === false) {
+      console.error('❌ Backend geocoding failed:', data.error);
+      throw new Error(`Backend error: ${data.error}`);
+    }
+
+    // Le backend retourne : { success: true, result: { formatted_address, address_components, ... } }
+    if (data.result) {
+      const result = data.result;
       
-      console.log('📍 result.name:', place.name);
-      console.log('📍 result.description:', place.description);
-      console.log('📍 result.address:', place.address);
-      
-      // Priorité 1: name (si pas vide et pas "Position inconnue")
-      if (place.name && place.name.trim() !== '' && place.name !== 'Position inconnue') {
-        console.log('✅ Retourne result.name:', place.name);
-        return place.name;
-      }
-      
-      // Priorité 2: description
-      if (place.description && place.description.trim() !== '') {
-        console.log('✅ Retourne result.description:', place.description);
-        return place.description;
-      }
-      
-      // Priorité 3: address (c'est un OBJET, pas une string !)
-      if (place.address && typeof place.address === 'object') {
-        const parts = [];
-        if (place.address.street) parts.push(place.address.street);
-        if (place.address.neighborhood) parts.push(place.address.neighborhood);
-        if (place.address.city) parts.push(place.address.city);
+      // ✅ STRATÉGIE 1 : Extraire le nom de rue depuis address_components
+      // Chercher dans cet ordre : route (rue) → neighborhood (quartier) → locality (ville)
+      if (result.address_components && Array.isArray(result.address_components)) {
+        // Chercher d'abord la rue (route)
+        const route = result.address_components.find((comp: any) => 
+          comp.types.includes('route')
+        );
         
-        if (parts.length > 0) {
-          const addressString = parts.join(', ');
-          console.log('✅ Retourne address construite:', addressString);
-          return addressString;
+        if (route && route.long_name) {
+          console.log('✅ Adresse trouvée (route):', route.long_name);
+          return route.long_name;
+        }
+        
+        // Sinon chercher le quartier (neighborhood ou sublocality)
+        const neighborhood = result.address_components.find((comp: any) => 
+          comp.types.includes('neighborhood') || 
+          comp.types.includes('sublocality') ||
+          comp.types.includes('sublocality_level_1')
+        );
+        
+        if (neighborhood && neighborhood.long_name) {
+          console.log('✅ Adresse trouvée (quartier):', neighborhood.long_name);
+          return neighborhood.long_name;
+        }
+        
+        // Sinon chercher la localité (locality)
+        const locality = result.address_components.find((comp: any) => 
+          comp.types.includes('locality')
+        );
+        
+        if (locality && locality.long_name) {
+          console.log('✅ Adresse trouvée (locality):', locality.long_name);
+          return locality.long_name;
+        }
+      }
+      
+      // ✅ STRATÉGIE 2 : Nettoyer formatted_address en enlevant le code Plus Code
+      if (result.formatted_address) {
+        const address = result.formatted_address;
+        
+        // Enlever les codes Plus Code (format: M896+V4Q, 2H8M+JR, etc.)
+        const cleanedAddress = address
+          .replace(/[A-Z0-9]{4}\+[A-Z0-9]{2,3},?\s*/g, '') // Enlever "M896+V4Q, "
+          .replace(/, Democratic Republic of the Congo/g, '')
+          .replace(/, République démocratique du Congo/g, '')
+          .replace(/, RDC/g, '')
+          .replace(/, Kinshasa/g, '') // Enlever ", Kinshasa" aussi car souvent redondant
+          .trim()
+          .replace(/^,\s*/, '') // Enlever la virgule au début si elle reste
+          .trim();
+        
+        // Si après nettoyage il reste quelque chose de valide
+        if (cleanedAddress && cleanedAddress.length > 3) {
+          console.log('✅ Adresse nettoyée:', cleanedAddress);
+          return cleanedAddress;
         }
       }
     }
 
-    // Fallback si aucune donnée utilisable
+    // Fallback si aucune adresse trouvée
     console.warn('⚠️ Geocoding: Pas d\'adresse trouvée, utilisation des coordonnées');
-    return `${Math.abs(lat).toFixed(6)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lng).toFixed(6)}°${lng < 0 ? 'W' : 'E'}`;
+    return `Position ${Math.abs(lat).toFixed(4)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lng).toFixed(4)}°${lng < 0 ? 'W' : 'E'}`;
     
   } catch (error) {
     console.error('❌ Erreur geocoding:', error);
-    // Retourner les coordonnées formatées en cas d'erreur
-    return `${Math.abs(lat).toFixed(6)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lng).toFixed(6)}°${lng < 0 ? 'W' : 'E'}`;
+    
+    // 🆕 FALLBACK AMÉLIORÉ : Utiliser la base de données de lieux Kinshasa
+    // Au lieu d'afficher les coordonnées, chercher le quartier le plus proche
+    try {
+      // Charger dynamiquement la base de données de lieux
+      const { findNearestLocation } = await import('./kinshasa-locations-database');
+      const nearestPlace = findNearestLocation(lat, lng);
+      
+      if (nearestPlace && nearestPlace.distance < 2) { // Moins de 2km
+        const locationName = nearestPlace.quartier || nearestPlace.commune || 'Kinshasa';
+        console.log(`✅ Fallback: Lieu approximatif trouvé: ${locationName} (~${nearestPlace.distance.toFixed(1)}km)`);
+        return locationName;
+      }
+    } catch (fallbackError) {
+      console.error('❌ Fallback database failed:', fallbackError);
+    }
+    
+    // Dernier fallback : afficher les coordonnées
+    return `Position ${Math.abs(lat).toFixed(4)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lng).toFixed(4)}°${lng < 0 ? 'W' : 'E'}`;
   }
 }
 

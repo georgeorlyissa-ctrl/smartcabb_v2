@@ -1,8 +1,8 @@
 {
   "name": "smartcabb-production",
-  "version": "518.1.1",
+  "version": "518.1.4",
   "type": "module",
-  "description": "SmartCabb - Fix ImageCarousel + Route admin signup + Mode standalone",
+  "description": "SmartCabb - Fix regex syntax vite.config",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -64,6 +64,7 @@
     "vite": "^5.0.0",
     "typescript": "^5.0.0",
     "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.31"
+    "postcss": "^8.4.31",
+    "baseline-browser-mapping": "latest"
   }
 }

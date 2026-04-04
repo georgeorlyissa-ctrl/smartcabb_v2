@@ -407,8 +407,4 @@ ${data.status.drivers.details.length > 0 ? '\n📋 DÉTAILS DES CONDUCTEURS:\n' 
       </div>
     </div>
   );
-
 }
-
-}
-

@@ -6,6 +6,9 @@ import { useAppState } from '../../hooks/useAppState';
 import { convertUSDtoCDF, convertCDFtoUSD, getExchangeRate } from '../../lib/pricing';
 
 // Icônes SVG inline
+// Icônes SVG inline
+// Icônes SVG inline
+// Icônes SVG inline
 const MapPin = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>);
 const Clock = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>);
 const DollarSign = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>);
@@ -88,7 +91,6 @@ export function RideInProgressScreen() {
 
     console.log('🔄 Démarrage du polling pour la course:', currentRide.id);
 
-
     const pollRideStatus = async () => {
       try {
         const response = await fetch(
@@ -122,115 +124,20 @@ export function RideInProgressScreen() {
 
       } catch (error) {
         console.error('❌ Erreur lors du polling:', error);
-
-    
-    let isActive = true; // Flag pour éviter les mises à jour après unmount
-
-    const pollRideStatus = async () => {
-      // ✅ PROTECTION: Ne pas continuer si le composant est démonté
-      if (!isActive) return;
-      
-      try {
-        // ✅ PROTECTION: Vérifier que les variables nécessaires existent
-        if (!projectId || !publicAnonKey) {
-          console.error('❌ Configuration Supabase manquante');
-          return;
-        }
-        
-        const url = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/${currentRide.id}`;
-        console.log('📡 Polling URL:', url);
-        
-        // ✅ Créer un timeout manuel (AbortSignal.timeout() n'est pas supporté partout)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 secondes max
-        
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          signal: controller.signal
-        }).catch(err => {
-          clearTimeout(timeoutId);
-          // ✅ Capturer spécifiquement les erreurs fetch
-          if (err.name === 'AbortError') {
-            console.warn('⚠️ Timeout du polling (5s dépassées)');
-          } else {
-            console.warn('⚠️ Erreur réseau lors du polling:', err.name);
-          }
-          return null; // Retourner null au lieu de laisser l'erreur se propager
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response) {
-          // Requête échouée (timeout, erreur réseau, etc.)
-          return;
-        }
-
-        if (!response.ok) {
-          console.error('❌ Erreur HTTP polling:', response.status, response.statusText);
-          return;
-        }
-
-        const updatedRide = await response.json().catch(err => {
-          console.error('❌ Erreur parsing JSON:', err);
-          return null;
-        });
-
-        if (!updatedRide) return;
-
-        console.log('📥 Mise à jour reçue:', {
-          status: updatedRide?.status,
-          billingStartTime: updatedRide?.billingStartTime,
-          billingElapsedTime: updatedRide?.billingElapsedTime
-        });
-
-        // ✅ Mettre à jour le ride dans le contexte (avec protection)
-        if (isActive && updatedRide && updatedRide.id) {
-          updateRide(updatedRide.id, updatedRide);
-        }
-
-      } catch (error: any) {
-        // ✅ NE PAS logger les erreurs "Script error" qui polluent la console
-        if (error?.message && error.message !== 'Script error.') {
-          console.error('❌ Erreur lors du polling:', {
-            name: error?.name,
-            message: error?.message
-          });
-        }
-        // Ignorer silencieusement les autres erreurs pour éviter la pollution
-
       }
     };
 
     // Polling toutes les 3 secondes
-
     const interval = setInterval(pollRideStatus, 3000);
-
-    const interval = setInterval(() => {
-      if (isActive) {
-        pollRideStatus();
-      }
-    }, 3000);
-
 
     // Premier polling immédiat
     pollRideStatus();
 
     return () => {
       console.log('🛑 Arrêt du polling');
-
       clearInterval(interval);
     };
   }, [currentRide?.id]);
-
-      isActive = false;
-      clearInterval(interval);
-    };
-  }, [currentRide?.id]); // ✅ Seulement currentRide.id comme dépendance
-
 
   // Mettre à jour l'heure du jour toutes les minutes
   useEffect(() => {

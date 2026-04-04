@@ -39,31 +39,28 @@ async function loadFCMFunctions() {
   try {
     console.log('📦 Chargement dynamique des fonctions Firebase Messaging...');
     
-    // ⚠️ DÉSACTIVÉ COMPLÈTEMENT : Import CDN Firebase Messaging cause des erreurs de build
-    console.warn('⚠️ FCM DÉSACTIVÉ - Firebase Messaging non disponible dans cet environnement');
-    console.warn('⚠️ Les notifications push ne fonctionneront qu\'après configuration en production');
-    
-    // Retourner null pour que l'app continue sans FCM
-    return null;
-    
-    /*
-    // ✅ CODE ORIGINAL FCM (À RÉACTIVER EN PRODUCTION SI BESOIN) :
-    
-    const messagingModule = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js').catch(() => null);
-    
-    if (!messagingModule) {
-      console.warn('⚠️ Module Firebase Messaging non disponible');
+    // ✅ RÉACTIVÉ : Chargement dynamique de Firebase Messaging
+    const [appModule, messagingModule] = await Promise.all([
+      import('firebase/app').catch(() => null),
+      import('firebase/messaging').catch(() => null)
+    ]);
+
+    if (!appModule || !messagingModule) {
+      console.warn('⚠️ Modules Firebase non disponibles');
       return null;
     }
-    
+
     fcmFunctions = {
+      initializeApp: appModule.initializeApp,
+      getApps: appModule.getApps,
+      getMessaging: messagingModule.getMessaging,
       getToken: messagingModule.getToken,
-      onMessage: messagingModule.onMessage
+      onMessage: messagingModule.onMessage,
+      isSupported: messagingModule.isSupported
     };
-    
+
     console.log('✅ Fonctions FCM chargées avec succès');
     return fcmFunctions;
-    */
   } catch (error) {
     console.error('❌ Erreur chargement FCM functions:', error);
     return null;

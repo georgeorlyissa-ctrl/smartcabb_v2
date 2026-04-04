@@ -68,8 +68,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
     console.error('❌ Component Stack:', errorInfo.componentStack);
     
     // 🔍 Détecter si c'est une erreur de module dynamique
-    const isDynamicImportError = error.message?.includes('Failed to fetch dynamically imported module') ||
-                                 error.message?.includes('error loading dynamically imported module');
+    const isDynamicImportError = 
+      error.message?.includes('Failed to fetch dynamically imported module') ||
+      error.message?.includes('error loading dynamically imported module') ||
+      error.message?.includes('Loading chunk') ||
+      error.message?.includes('ChunkLoadError');
     
     // 🌐 Vérifier l'état de la connexion de manière plus fiable
     let isActuallyOffline = false;
@@ -90,6 +93,17 @@ export class ErrorBoundary extends React.Component<Props, State> {
         } else {
           console.log('✅ Navigator.onLine = true - Connexion détectée');
           console.log('⚠️ Erreur de module, mais connexion active - Probablement un problème de build/cache');
+          console.log('🔄 Rechargement automatique dans 500ms...');
+          
+          // ✅ RECHARGEMENT AUTOMATIQUE après un court délai
+          setTimeout(() => {
+            if (this.mounted) {
+              window.location.reload();
+            }
+          }, 500);
+          
+          // Ne pas afficher l'erreur, juste recharger
+          return;
         }
       }
     }

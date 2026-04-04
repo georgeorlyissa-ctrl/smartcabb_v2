@@ -290,7 +290,4 @@ export function ActiveRideNavigationScreen() {
       </div>
     </div>
   );
-
 }
-}
-

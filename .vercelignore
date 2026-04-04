@@ -1,0 +1,7 @@
+# Backend Supabase (Deno)
+supabase/functions/server/
+supabase/functions/server/**
+
+# Documentation
+*.md
+!README.md

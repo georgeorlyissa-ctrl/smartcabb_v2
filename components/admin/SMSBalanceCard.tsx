@@ -38,41 +38,51 @@ interface SMSBalanceData {
 }
 
 export function SMSBalanceCard() {
-  const [data, setData] = useState<SMSBalanceData | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [currency, setCurrency] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [insufficientBalance, setInsufficientBalance] = useState(false);
 
   const fetchBalance = async () => {
     setLoading(true);
     setError(null);
-    
+    setInsufficientBalance(false);
+
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/sms/balance`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/sms/balance`,
         {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${publicAnonKey}`
           }
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      const data = await response.json();
 
-      const result = await response.json();
-      
-      if (result.success) {
-        setData(result);
+      if (data.success && data.balance !== undefined) {
+        setBalance(data.balance);
+        setCurrency(data.currency || 'USD');
+        
+        // ⚠️ Détecter si le solde est insuffisant (< $1)
+        if (data.balance < 1) {
+          setInsufficientBalance(true);
+        }
       } else {
-        setError(result.error || 'Erreur inconnue');
+        // ⚠️ Gestion de l'erreur InsufficientBalance
+        if (data.error && data.error.includes('InsufficientBalance')) {
+          setInsufficientBalance(true);
+          setError('⚠️ Solde SMS insuffisant');
+          setBalance(0);
+        } else {
+          setError(data.error || 'Impossible de récupérer le solde');
+        }
       }
-    } catch (err: any) {
-      console.error('❌ Erreur récupération balance SMS:', err);
-      setError(err.message || 'Erreur de connexion');
-      toast.error('Impossible de récupérer la balance SMS');
+    } catch (err) {
+      console.error('Erreur récupération balance SMS:', err);
+      setError('Erreur de connexion');
     } finally {
       setLoading(false);
     }
@@ -86,7 +96,7 @@ export function SMSBalanceCard() {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading && !data) {
+  if (loading && !balance) {
     return (
       <Card className="p-6">
         <div className="flex items-center gap-3">
@@ -102,7 +112,7 @@ export function SMSBalanceCard() {
     );
   }
 
-  if (error && !data) {
+  if (error && !balance) {
     return (
       <Card className="p-6 border-red-200 bg-red-50">
         <div className="flex items-center gap-3">
@@ -126,9 +136,8 @@ export function SMSBalanceCard() {
     );
   }
 
-  if (!data) return null;
+  if (!balance) return null;
 
-  const balanceAmount = data.balance.amount;
   const remainingSms = data.estimation.remainingSms;
   const successRate = parseFloat(data.usage.successRate);
 

@@ -257,8 +257,10 @@ export function AdvancedAnalyticsDashboard({ onBack }: AdvancedAnalyticsDashboar
     );
   }
 
+  // ✅ FIX: Vérifier data AVANT de faire les calculs
   if (!data) return null;
 
+  // ✅ FIX: Calculs APRÈS la vérification de data
   const maxRevenue = Math.max(...data.revenueByDay.map(d => d.revenue), 1);
   const maxRides = Math.max(...data.revenueByDay.map(d => d.rides), 1);
   const maxHourlyRides = Math.max(...data.hourlyDistribution.map(d => d.rides), 1);

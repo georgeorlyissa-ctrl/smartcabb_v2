@@ -35,7 +35,7 @@ export function DriverRegistrationScreen() {
   
   const navigate = useNavigate();
   
-  const { setCurrentScreen } = useAppState();
+  const { setCurrentScreen, setCurrentDriver } = useAppState();
     
   const [step, setStep] = useState(1);
   
@@ -123,8 +123,9 @@ export function DriverRegistrationScreen() {
 
   // Fonction pour obtenir la catégorie du véhicule
   const getVehicleCategory = (vehicleType: string) => {
+    if (!vehicleType) return '';
     const type = vehicleTypes.find(t => t.value === vehicleType);
-    return type ? type.category : '';
+    return type?.category || '';
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -248,6 +249,16 @@ export function DriverRegistrationScreen() {
         toast.info('Votre candidature est en attente d\'approbation par un administrateur.');
         toast.info('Vous serez notifié par SMS une fois vos documents validés.');
         
+        // ❌ NE PAS sauvegarder le profil conducteur dans l'état
+        // ❌ NE PAS permettre l'accès au dashboard avant approbation
+        
+        // 🧹 NETTOYER COMPLÈTEMENT LE STATE ET LE LOCALSTORAGE
+        // Pour éviter qu'un ancien profil conducteur soit détecté et charge le dashboard
+        console.log('🧹 Nettoyage complet du state conducteur...');
+        localStorage.removeItem('smartcab_current_driver');
+        localStorage.removeItem('smartcab_current_user');
+        setCurrentDriver(null);
+        
         // 📱 Envoyer SMS de confirmation d'inscription
         if (formData.phone) {
           try {
@@ -258,14 +269,15 @@ export function DriverRegistrationScreen() {
             });
             console.log('✅ SMS de confirmation inscription conducteur envoyé');
           } catch (error) {
-            console.error('❌ Erreur envoi SMS inscription conducteur:', error);
+            // ⚠️ Ne pas afficher d'erreur à l'utilisateur si le SMS échoue
+            // L'inscription a réussi, c'est juste le SMS qui n'a pas été envoyé
+            console.warn('⚠️ SMS de confirmation non envoyé (pas d\'impact sur l\'inscription):', error);
           }
         }
         
-        // Rediriger vers l'écran d'accueil conducteur après 2 secondes
-        setTimeout(() => {
-          setCurrentScreen('driver-welcome');
-        }, 2000);
+        // ✅ FIX FINAL: Rediriger IMMÉDIATEMENT vers l'écran de connexion
+        // Ne PAS attendre 2 secondes pour éviter toute détection du profil
+        setCurrentScreen('driver-login');
       } else {
         toast.error(result.error || 'Erreur lors de l\'inscription');
       }
@@ -449,7 +461,7 @@ export function DriverRegistrationScreen() {
                       handleInputChange('vehicleMake', selectedVehicle.make);
                       handleInputChange('vehicleModel', selectedVehicle.model);
                       handleInputChange('vehicleType', selectedVehicle.type);
-                      toast.success(`Type automatique : ${vehicleTypes.find(t => t.value === selectedVehicle.type)?.label}`);
+                      toast.success(`Type automatique : ${vehicleTypes.find(t => t.value === selectedVehicle.type)?.label || 'Type inconnu'}`);
                     }
                   }
                 }}

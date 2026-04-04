@@ -10,11 +10,16 @@ export function DriversLandingPage() {
   const { t, language } = useLanguage();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  // 📸 IMAGES DES CHAUFFEURS - Stockées dans GitHub /public/drivers/
+  // ⚠️ INSTRUCTIONS POUR AJOUTER VOS IMAGES :
+  // 1. Créez un dossier "drivers" dans votre dossier "public" sur GitHub
+  // 2. Téléchargez vos 4 images JPEG dans ce dossier
+  // 3. Nommez-les : driver1.jpg, driver2.jpg, driver3.jpg, driver4.jpg
+  // 4. Le code ci-dessous les utilisera automatiquement
   const driverImages = [
-    'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
-    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&q=80'
+    '/drivers/driver1.png', // ✅ Votre image 1
+    '/drivers/driver2.png', // ✅ Votre image 2
+    '/drivers/driver3.jpeg', // ✅ Votre image 3
   ];
 
   useEffect(() => {
@@ -25,11 +30,27 @@ export function DriversLandingPage() {
   }, []);
 
   const requirements = [
-    { icon: '🪪', textFR: 'Permis de conduire valide', textEN: 'Valid driver\'s license' },
-    { icon: '🚗', textFR: 'Véhicule en bon état', textEN: 'Vehicle in good condition' },
-    { icon: '📋', textFR: 'Casier judiciaire vierge', textEN: 'Clean criminal record' },
-    { icon: '🎂', textFR: 'Âge minimum 21 ans', textEN: 'Minimum age 21 years' }
-  ];
+  { 
+    image: 'https://cdn-icons-png.flaticon.com/512/2991/2991586.png',
+    textFR: 'Permis de conduire valide', 
+    textEN: "Valid driver's license" 
+  },
+  { 
+    image: 'https://cdn-icons-png.flaticon.com/512/3774/3774278.png',
+    textFR: 'Véhicule en bon état', 
+    textEN: 'Vehicle in good condition' 
+  },
+  { 
+    image: 'https://cdn-icons-png.flaticon.com/512/1/1484.png',
+    textFR: 'Casier judiciaire vierge', 
+    textEN: 'Clean criminal record' 
+  },
+  { 
+    image: 'https://cdn-icons-png.flaticon.com/512/1077/1077012.png',
+    textFR: 'Âge minimum 21 ans', 
+    textEN: 'Minimum age 21 years' 
+  }
+];
 
   const benefits = [
     { icon: '💰', textFR: 'Revenus attractifs', textEN: 'Attractive income' },
@@ -109,9 +130,8 @@ export function DriversLandingPage() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <div className="inline-block px-4 py-2 bg-cyan-100 rounded-full text-cyan-700 font-semibold text-sm mb-6">
-                💰 {language === 'fr' ? 'Gagnez plus avec SmartCabb' : 'Earn more with SmartCabb'}
-              </div>
+              {/* 🚫 BADGE SUPPRIMÉ */}
+              
               <h1 className="text-6xl font-black mb-6">
                 {t('drivers.title')}
               </h1>
@@ -171,7 +191,14 @@ export function DriversLandingPage() {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
               >
-                <div className="text-5xl mb-4">{req.icon}</div>
+                <div className="w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+  <img 
+    src={req.image} 
+    alt={req.textFR}
+    className="w-full h-full object-contain drop-shadow-lg"
+    style={{ filter: 'drop-shadow(0 4px 8px rgba(6,182,212,0.3))' }}
+  />
+</div>
                 <p className="font-bold text-gray-800">
                   {language === 'fr' ? req.textFR : req.textEN}
                 </p>

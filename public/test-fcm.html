@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔔 Test Notifications FCM - SmartCabb</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      color: #2d3748;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .section {
+      margin-bottom: 32px;
+      padding: 20px;
+      background: #f7fafc;
+      border-radius: 8px;
+      border-left: 4px solid #4299e1;
+    }
+    
+    .section h2 {
+      color: #2d3748;
+      margin-bottom: 16px;
+      font-size: 18px;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: white;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    
+    .status-icon {
+      font-size: 24px;
+    }
+    
+    .status-text {
+      flex: 1;
+    }
+    
+    .status-label {
+      font-weight: 600;
+      color: #4a5568;
+    }
+    
+    .status-value {
+      color: #718096;
+      font-size: 14px;
+    }
+    
+    button {
+      background: #4299e1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+      margin-bottom: 12px;
+    }
+    
+    button:hover {
+      background: #3182ce;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+    }
+    
+    button:disabled {
+      background: #cbd5e0;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .log {
+      background: #1a202c;
+      color: #a0aec0;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 16px;
+    }
+    
+    .log-entry {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    
+    .log-entry.success { color: #48bb78; }
+    .log-entry.error { color: #f56565; }
+    .log-entry.warning { color: #ed8936; }
+    .log-entry.info { color: #4299e1; }
+    
+    .config-display {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <span>🔔</span>
+      Test Notifications FCM SmartCabb
+    </h1>
+    
+    <!-- Configuration Firebase -->
+    <div class="section">
+      <h2>🔑 Configuration Firebase</h2>
+      <div id="firebase-config" class="config-display">Chargement...</div>
+    </div>
+    
+    <!-- Statuts -->
+    <div class="section">
+      <h2>📊 Statuts du Système</h2>
+      
+      <div class="status">
+        <span class="status-icon" id="service-worker-icon">⏳</span>
+        <div class="status-text">
+          <div class="status-label">Service Worker</div>
+          <div class="status-value" id="service-worker-status">Vérification...</div>
+        </div>
+      </div>
+      
+      <div class="status">
+        <span class="status-icon" id="permission-icon">⏳</span>
+        <div class="status-text">
+          <div class="status-label">Permission Notifications</div>
+          <div class="status-value" id="permission-status">Vérification...</div>
+        </div>
+      </div>
+      
+      <div class="status">
+        <span class="status-icon" id="firebase-icon">⏳</span>
+        <div class="status-text">
+          <div class="status-label">Firebase Initialisé</div>
+          <div class="status-value" id="firebase-status">Vérification...</div>
+        </div>
+      </div>
+      
+      <div class="status">
+        <span class="status-icon" id="token-icon">⏳</span>
+        <div class="status-text">
+          <div class="status-label">Token FCM</div>
+          <div class="status-value" id="token-status">Vérification...</div>
+        </div>
+      </div>
+      
+      <div class="status">
+        <span class="status-icon" id="backend-icon">⏳</span>
+        <div class="status-text">
+          <div class="status-label">Backend FCM</div>
+          <div class="status-value" id="backend-status">Vérification...</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="section">
+      <h2>🎮 Actions de Test</h2>
+      <button id="btn-permission">1️⃣ Demander Permission Notifications</button>
+      <button id="btn-init-firebase">2️⃣ Initialiser Firebase</button>
+      <button id="btn-get-token">3️⃣ Obtenir Token FCM</button>
+      <button id="btn-test-backend">4️⃣ Tester Backend FCM</button>
+      <button id="btn-send-test">5️⃣ Envoyer Notification Test</button>
+      <button id="btn-clear-logs">🗑️ Effacer Logs</button>
+    </div>
+    
+    <!-- Logs -->
+    <div class="section">
+      <h2>📝 Logs en Direct</h2>
+      <div id="logs" class="log"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/test-fcm.js"></script>
+</body>
+</html>

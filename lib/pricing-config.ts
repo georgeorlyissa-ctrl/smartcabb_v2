@@ -153,7 +153,7 @@ export function getDisplayPrice(
  * Le conducteur doit avoir au moins ce montant pour pouvoir se mettre en ligne
  */
 export function getMinimumCreditForCategory(category: VehicleCategory): number {
-  return MINIMUM_CREDITS_BY_CATEGORY[category] || 20000; // Default: 20 000 CDF
+  return MINIMUM_CREDITS_BY_CATEGORY[category] || 5000; // Default: 5 000 CDF (réduit pour l'accessibilité)
 }
 
 /**
