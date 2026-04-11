@@ -13,6 +13,12 @@ export function AboutPage() {
   // 2. Remplace l'URL Unsplash par '/nom-de-ton-image.jpg'
   // Exemple : image: '/excellence-smartcabb.jpg'
   // ============================================================
+  // ============================================================
+  // ✅ POUR REMPLACER UNE IMAGE :
+  // 1. Mets ta photo dans le dossier public/
+  // 2. Remplace l'URL Unsplash par '/nom-de-ton-image.jpg'
+  // Exemple : image: '/excellence-smartcabb.jpg'
+  // ============================================================
   const values = [
     {
       image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=400&h=300&fit=crop',
