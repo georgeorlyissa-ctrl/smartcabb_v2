@@ -134,11 +134,7 @@ export function AboutPage() {
             <h1 className="text-6xl font-black mb-6">
               {language === 'fr' ? 'À propos de SmartCabb' : 'About SmartCabb'}
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              {language === 'fr'
-                ? 'La première plateforme congolaise de transport intelligent, créée par des Congolais pour les Congolais'
-                : 'The first Congolese smart transportation platform, created by Congolese for Congolese'}
-            </p>
+            
           </motion.div>
         </div>
       </section>
@@ -312,13 +308,7 @@ export function AboutPage() {
             ))}
           </div>
 
-          {/* Astuce remplacer images */}
-          <div className="mt-10 p-4 bg-cyan-50 border border-cyan-200 rounded-2xl text-center">
-            <p className="text-cyan-700 text-sm font-semibold">
-            💡 Pour remplacer une image : mets ta photo dans <code className="bg-cyan-100 px-2 py-1 rounded">public/</code> et modifie la ligne <code className="bg-cyan-100 px-2 py-1 rounded">image:</code> correspondante dans le tableau <code className="bg-cyan-100 px-2 py-1 rounded">values</code>
-            </p>
-          </div>
-
+          
         </div>
       </section>
 

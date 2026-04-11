@@ -10,44 +10,30 @@ import { ImageCarousel } from '../components/ImageCarousel';
 export function ServicesPage() {
   const { t, language } = useLanguage();
   const [currentBg, setCurrentBg] = useState(0);
+  const [activeService, setActiveService] = useState(0);
   const [visibleServices, setVisibleServices] = useState<number[]>([]);
   const serviceRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // Arrière-plans hero comme LandingPage
-  const backgrounds = [
-    '/photo2_smartcabb.jpeg',
-    '/Images_2.jpeg',
-    '/driver3.jpeg',
-  ];
+  const backgrounds = ['/photo2_smartcabb.jpeg', '/Images_2.jpeg', '/driver3.jpeg'];
 
-  // Carrousel arrière-plan
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBg(prev => (prev + 1) % backgrounds.length);
-    }, 4000);
+    const timer = setInterval(() => setCurrentBg(p => (p + 1) % backgrounds.length), 4000);
     return () => clearInterval(timer);
   }, []);
 
-  // IntersectionObserver pour animer chaque service card
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
-
     serviceRefs.current.forEach((ref, index) => {
       if (!ref) return;
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            setVisibleServices(prev =>
-              prev.includes(index) ? prev : [...prev, index]
-            );
-          }
-        },
-        { threshold: 0.15 }
-      );
+      const observer = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleServices(prev => prev.includes(index) ? prev : [...prev, index]);
+          setActiveService(index);
+        }
+      }, { threshold: 0.2 });
       observer.observe(ref);
       observers.push(observer);
     });
-
     return () => observers.forEach(o => o.disconnect());
   }, []);
 
@@ -55,17 +41,15 @@ export function ServicesPage() {
     {
       id: 'standard',
       name: 'SmartCabb Standard',
-      badge: 'SMARTCABB STANDARD',
-      emoji: '🚗',
+      badge: 'STANDARD',
+      tagline: language === 'fr' ? "L'essentiel du confort" : 'Essential comfort',
       subtitleFR: 'Solution économique et climatisée pour vos déplacements quotidiens. Idéal pour 3 personnes.',
       subtitleEN: 'Economical and air-conditioned solution for your daily trips. Ideal for 3 people.',
-      color: 'cyan',
-      badgeColor: 'bg-cyan-500',
-      borderColor: 'border-cyan-200',
-      bgColor: 'bg-cyan-50/50',
+      accentColor: '#0891b2',
+      lightBg: '#f0f9ff',
+      lightBorder: '#bae6fd',
       gradientFrom: 'from-cyan-500',
       gradientTo: 'to-blue-500',
-      glowColor: 'rgba(6,182,212,0.3)',
       images: [
         '/vehicles/smartcabb_standard/Standard_2.png',
         '/vehicles/smartcabb_standard/Standard_3.png',
@@ -74,32 +58,33 @@ export function ServicesPage() {
       ],
       vehicules: 'Toyota IST, Suzuki Swift, Toyota Vitz, Toyota Blade, Toyota Ractis, Toyota Runx',
       featuresFR: [
-        { icon: '👥', text: '3 places' },
-        { icon: '❄️', text: 'Climatisé' },
-        { icon: '🛡️', text: 'Sécurisé' }
+        { text: '3 places', detail: 'Confortable' },
+        { text: 'Climatisé', detail: "Toute l'année" },
+        { text: 'Sécurisé', detail: 'GPS inclus' },
+        { text: 'Rapide', detail: '< 5 minutes' },
       ],
       featuresEN: [
-        { icon: '👥', text: '3 seats' },
-        { icon: '❄️', text: 'Air-conditioned' },
-        { icon: '🛡️', text: 'Secured' }
+        { text: '3 seats', detail: 'Comfortable' },
+        { text: 'Air-conditioned', detail: 'Year round' },
+        { text: 'Secured', detail: 'GPS included' },
+        { text: 'Fast', detail: '< 5 minutes' },
       ],
-      priceFR: 'À partir de 15 000 FC',
-      priceEN: 'From 15,000 FC'
+      priceFR: '15 000 FC',
+      priceEN: '15,000 FC',
+      popular: false,
     },
     {
       id: 'confort',
       name: 'SmartCabb Confort',
-      badge: 'SMARTCABB CONFORT',
-      emoji: '✨',
+      badge: 'CONFORT',
+      tagline: language === 'fr' ? 'Premium & connecté' : 'Premium & connected',
       subtitleFR: 'Confort premium avec connexion Data gratuit. Véhicules modernes pour 3 personnes.',
       subtitleEN: 'Premium comfort with free Data connection. Modern vehicles for 3 people.',
-      color: 'blue',
-      badgeColor: 'bg-blue-500',
-      borderColor: 'border-blue-200',
-      bgColor: 'bg-blue-50/50',
+      accentColor: '#2563eb',
+      lightBg: '#eff6ff',
+      lightBorder: '#bfdbfe',
       gradientFrom: 'from-blue-500',
       gradientTo: 'to-indigo-500',
-      glowColor: 'rgba(59,130,246,0.3)',
       images: [
         '/vehicles/smartcabb_confort/confort 1.png',
         '/vehicles/smartcabb_confort/Confort_2.png',
@@ -107,34 +92,33 @@ export function ServicesPage() {
       ],
       vehicules: 'Toyota Mark, Toyota Crown, Mercedes C-Class, Harrier, Toyota Vanguard, Nissan Juke',
       featuresFR: [
-        { icon: '👥', text: '3 places' },
-        { icon: '❄️', text: 'Climatisé' },
-        { icon: '📡', text: 'Data gratuit' },
-        { icon: '🛡️', text: 'Sécurisé' }
+        { text: '3 places', detail: 'Spacieux' },
+        { text: 'Climatisé', detail: 'Premium' },
+        { text: 'Data gratuit', detail: 'Haut débit' },
+        { text: 'Sécurisé', detail: 'Assuré' },
       ],
       featuresEN: [
-        { icon: '👥', text: '3 seats' },
-        { icon: '❄️', text: 'Air-conditioned' },
-        { icon: '📡', text: 'Free Data' },
-        { icon: '🛡️', text: 'Secured' }
+        { text: '3 seats', detail: 'Spacious' },
+        { text: 'Air-conditioned', detail: 'Premium' },
+        { text: 'Free Data', detail: 'High speed' },
+        { text: 'Secured', detail: 'Insured' },
       ],
-      priceFR: 'À partir de 33 000 FC',
-      priceEN: 'From 33,000 FC'
+      priceFR: '33 000 FC',
+      priceEN: '33,000 FC',
+      popular: true,
     },
     {
       id: 'business',
       name: 'SmartCabb Business',
-      badge: 'SMARTCABB BUSINESS',
-      emoji: '💎',
+      badge: 'BUSINESS',
+      tagline: language === 'fr' ? 'Le summum du luxe' : 'The height of luxury',
       subtitleFR: 'Service VIP 4 places avec rafraîchissement et Data gratuit. Le summum du luxe.',
       subtitleEN: 'VIP 4-seat service with refreshments and free Data. The height of luxury.',
-      color: 'orange',
-      badgeColor: 'bg-orange-500',
-      borderColor: 'border-orange-200',
-      bgColor: 'bg-orange-50/50',
+      accentColor: '#c2410c',
+      lightBg: '#fff7ed',
+      lightBorder: '#fed7aa',
       gradientFrom: 'from-orange-500',
       gradientTo: 'to-red-500',
-      glowColor: 'rgba(249,115,22,0.3)',
       images: [
         '/vehicles/smartcabb_business/Bussiness_1.png',
         '/vehicles/smartcabb_business/Bussiness_2.png',
@@ -145,213 +129,154 @@ export function ServicesPage() {
       ],
       vehicules: 'Prado, Fortuner',
       featuresFR: [
-        { icon: '👥', text: '4 places' },
-        { icon: '🥤', text: 'Rafraîchissement' },
-        { icon: '📡', text: 'Data gratuit' },
-        { icon: '🛡️', text: 'Sécurisé' }
+        { text: '4 places', detail: 'VIP' },
+        { text: 'Rafraîchissement', detail: 'Offert' },
+        { text: 'Data gratuit', detail: 'Premium' },
+        { text: 'Sécurisé', detail: 'Escorte' },
       ],
       featuresEN: [
-        { icon: '👥', text: '4 seats' },
-        { icon: '🥤', text: 'Refreshments' },
-        { icon: '📡', text: 'Free Data' },
-        { icon: '🛡️', text: 'Secured' }
+        { text: '4 seats', detail: 'VIP' },
+        { text: 'Refreshments', detail: 'Included' },
+        { text: 'Free Data', detail: 'Premium' },
+        { text: 'Secured', detail: 'Escort' },
       ],
-      priceFR: 'À partir de 352 000 FC',
-      priceEN: 'From 352,000 FC'
+      priceFR: '352 000 FC',
+      priceEN: '352,000 FC',
+      popular: false,
     },
     {
       id: 'familia',
       name: 'SmartCabb Familia',
-      badge: 'SMARTCABB FAMILIA',
-      emoji: '👨‍👩‍👧‍👦',
+      badge: 'FAMILIA',
+      tagline: language === 'fr' ? 'Pour toute la famille' : 'For the whole family',
       subtitleFR: '7 places avec connexion Data gratuit. Véhicules spacieux pour familles et groupes.',
       subtitleEN: '7 seats with free Data connection. Spacious vehicles for families and groups.',
-      color: 'green',
-      badgeColor: 'bg-emerald-500',
-      borderColor: 'border-emerald-200',
-      bgColor: 'bg-emerald-50/50',
+      accentColor: '#15803d',
+      lightBg: '#f0fdf4',
+      lightBorder: '#bbf7d0',
       gradientFrom: 'from-emerald-500',
       gradientTo: 'to-green-600',
-      glowColor: 'rgba(16,185,129,0.3)',
       images: [
         '/vehicles/smartcabb_familiale/Familiale_1.png',
         '/vehicles/smartcabb_familiale/Familiale_2.png',
         '/vehicles/smartcabb_familiale/Familiale_3.png',
-        //'/vehicles/smartcabb_familiale/Familiale_4.png',
       ],
       vehicules: 'Noah, Alphard, Voxy',
       featuresFR: [
-        { icon: '👥', text: '7 places' },
-        { icon: '❄️', text: 'Climatisé' },
-        { icon: '📡', text: 'Data gratuit' },
-        { icon: '🛡️', text: 'Sécurisé' }
+        { text: '7 places', detail: 'Grand espace' },
+        { text: 'Climatisé', detail: 'Double zone' },
+        { text: 'Data gratuit', detail: 'Partagé' },
+        { text: 'Sécurisé', detail: 'Famille' },
       ],
       featuresEN: [
-        { icon: '👥', text: '7 seats' },
-        { icon: '❄️', text: 'Air-conditioned' },
-        { icon: '📡', text: 'Free Data' },
-        { icon: '🛡️', text: 'Secured' }
+        { text: '7 seats', detail: 'Large space' },
+        { text: 'Air-conditioned', detail: 'Dual zone' },
+        { text: 'Free Data', detail: 'Shared' },
+        { text: 'Secured', detail: 'Family' },
       ],
-      priceFR: 'À partir de 33 000 FC',
-      priceEN: 'From 33,000 FC'
-    }
+      priceFR: '33 000 FC',
+      priceEN: '33,000 FC',
+      popular: false,
+    },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div style={{ minHeight: '100vh', background: 'white' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { font-family: 'Inter', sans-serif !important; }
 
-        .gradient-text {
-          background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-
-        .shimmer {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-          animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
+        .section-label {
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: #0891b2;
+          margin-bottom: 12px;
         }
 
         @keyframes slideInLeft {
-          from { opacity: 0; transform: translateX(-80px); }
+          from { opacity: 0; transform: translateX(-48px); }
           to { opacity: 1; transform: translateX(0); }
         }
-
         @keyframes slideInRight {
-          from { opacity: 0; transform: translateX(80px); }
+          from { opacity: 0; transform: translateX(48px); }
           to { opacity: 1; transform: translateX(0); }
         }
-
         @keyframes slideInUp {
-          from { opacity: 0; transform: translateY(60px); }
+          from { opacity: 0; transform: translateY(32px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        .anim-left { animation: slideInLeft 0.6s ease forwards; }
+        .anim-right { animation: slideInRight 0.6s ease forwards; }
+        .anim-up { animation: slideInUp 0.6s ease forwards; }
 
-        @keyframes fadeScale {
-          from { opacity: 0; transform: scale(0.85); }
-          to { opacity: 1; transform: scale(1); }
-        }
+        .service-card { transition: box-shadow 0.3s ease; }
+        .service-card:hover { box-shadow: 0 8px 40px rgba(0,0,0,0.1); }
 
-        .animate-slide-left {
-          animation: slideInLeft 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        .feature-item {
+          padding: 14px 16px;
+          border: 1px solid #e5e7eb;
+          border-radius: 10px;
+          transition: all 0.2s;
         }
+        .feature-item:hover { border-color: #0891b2; background: #f0f9ff; }
 
-        .animate-slide-right {
-          animation: slideInRight 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
+        .card-hidden { opacity: 0; transform: translateY(40px); }
+        .card-visible { opacity: 1; transform: translateY(0); transition: all 0.6s ease; }
 
-        .animate-slide-up {
-          animation: slideInUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        .nav-pill {
+          padding: 8px 20px;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          text-decoration: none;
+          transition: all 0.2s;
+          border: 1px solid #e5e7eb;
+          color: #374151;
+          background: white;
         }
-
-        .animate-fade-scale {
-          animation: fadeScale 0.6s ease-out forwards;
-        }
-
-        .service-card {
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .service-card:hover {
-          transform: translateY(-6px);
-        }
-
-        .feature-chip {
-          transition: all 0.3s ease;
-        }
-
-        .feature-chip:hover {
-          transform: scale(1.05);
-        }
-
-        .price-glow {
-          text-shadow: 0 0 20px currentColor;
-        }
-
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-
-        .float-anim {
-          animation: float 4s ease-in-out infinite;
-        }
-
-        .card-hidden {
-          opacity: 0;
-          transform: translateY(60px);
-        }
-
-        .card-visible {
-          opacity: 1;
-          transform: translateY(0);
-          transition: all 0.8s cubic-bezier(0.34, 1.2, 0.64, 1);
-        }
+        .nav-pill:hover { border-color: #0891b2; color: #0891b2; }
+        .nav-pill.active { background: #0891b2; color: white; border-color: #0891b2; }
       `}</style>
 
       <SiteNavigation />
 
-      {/* ✨ HERO avec carrousel arrière-plan */}
-      <section className="relative pt-32 pb-24 overflow-hidden">
-
-        {/* Carrousel arrière-plan */}
-        {backgrounds.map((bg, index) => (
-          <div
-            key={index}
-            className="absolute inset-0 transition-opacity duration-1000"
-            style={{
-              backgroundImage: `url(${bg})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: currentBg === index ? 1 : 0,
-            }}
-          />
+      {/* HERO */}
+      <section style={{ paddingTop: '100px', paddingBottom: '64px', position: 'relative', overflow: 'hidden' }}>
+        {backgrounds.map((bg, i) => (
+          <div key={i} style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center',
+            opacity: currentBg === i ? 1 : 0, transition: 'opacity 1s ease',
+          }} />
         ))}
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-white/80"></div>
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.92)' }} />
 
-        {/* Formes décoratives */}
-        <div className="absolute top-20 right-0 w-96 h-96 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            {/* Badge animé */}
-            <div className="inline-flex items-center gap-2 px-5 py-2 bg-cyan-100 border border-cyan-200 rounded-full text-cyan-700 font-semibold text-sm mb-8 shadow-lg">
-              <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
-               {t('services.title')}
-            </div>
-
-            <h1 className="text-6xl lg:text-7xl font-black mb-6 leading-tight">
-              {t('services.title')}{' '}
-              <span className="gradient-text">SmartCabb</span>
-            </h1>
-
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-10">
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            
+            <h1 style={{ fontSize: '48px', fontWeight: '900', color: '#111827', lineHeight: '1.1', marginBottom: '16px' }}>
+  {language === 'fr' ? 'Choisissez votre' : 'Choose your'}<br />
+  <span style={{ color: '#0891b2' }}>
+    {language === 'fr' ? 'expérience' : 'experience'}
+  </span>
+</h1>
+            <p style={{ fontSize: '18px', color: '#6b7280', lineHeight: '1.7', maxWidth: '520px', marginBottom: '40px' }}>
               {t('services.subtitle')}
             </p>
 
-            {/* Pills des catégories */}
-            <div className="flex flex-wrap justify-center gap-3">
+            {/* Navigation pills — sans emoji */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               {services.map((s, i) => (
-                <a
-                  key={i}
-                  href={`#${s.id}`}
-                  className={`px-5 py-2 ${s.badgeColor} text-white rounded-full text-sm font-bold hover:scale-105 hover:shadow-lg transition-all`}
-                >
-                  {s.emoji} {s.name}
+                <a key={i} href={`#${s.id}`}
+                  onClick={() => setActiveService(i)}
+                  className={`nav-pill ${activeService === i ? 'active' : ''}`}
+                  style={s.popular && activeService !== i ? { borderColor: '#fbbf24' } : {}}>
+                  {s.popular && activeService !== i && (
+                    <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b', marginRight: '6px', verticalAlign: 'middle' }} />
+                  )}
+                  {s.name}
                 </a>
               ))}
             </div>
@@ -359,121 +284,104 @@ export function ServicesPage() {
         </div>
       </section>
 
-      {/*  SERVICES - Animations ultra wow */}
-      <section className="py-20">
+      {/* SERVICES */}
+      <section style={{ padding: '64px 0 96px' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid gap-16">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
             {services.map((service, index) => {
               const isVisible = visibleServices.includes(index);
               const isEven = index % 2 === 0;
+              const features = language === 'fr' ? service.featuresFR : service.featuresEN;
 
               return (
-                <div
-                  key={service.id}
-                  id={service.id}
+                <div key={service.id} id={service.id}
                   ref={el => serviceRefs.current[index] = el}
                   className={`card-hidden ${isVisible ? 'card-visible' : ''}`}
-                  style={{ transitionDelay: `${index * 0.1}s` }}
-                >
-                  <div
-                    className="service-card relative p-1 rounded-3xl overflow-hidden shadow-2xl"
-                    style={{
-                      background: `linear-gradient(135deg, ${service.glowColor}, transparent, ${service.glowColor})`,
-                    }}
-                  >
-                    {/* Carte intérieure */}
-                    <div className="bg-white rounded-3xl p-8 relative overflow-hidden">
+                  style={{ transitionDelay: `${index * 0.05}s` }}>
 
-                      {/* Fond décoratif */}
-                      <div
-                        className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-10"
-                        style={{ background: `radial-gradient(circle, ${service.glowColor}, transparent)` }}
-                      ></div>
+                  <div className="service-card" style={{
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    background: 'white',
+                    borderTop: `3px solid ${service.accentColor}`,
+                  }}>
+                    <div style={{ padding: '40px 40px 40px 40px', position: 'relative' }}>
 
-                      {/* Numéro décoratif */}
-                      <div
-                        className="absolute bottom-4 right-8 text-9xl font-black opacity-5"
-                        style={{ color: service.glowColor }}
-                      >
-                        0{index + 1}
+                      {/* Numéro déco */}
+                      <div style={{
+                        position: 'absolute', bottom: '24px', right: '32px',
+                        fontSize: '96px', fontWeight: '900', color: service.lightBg,
+                        lineHeight: '1', userSelect: 'none', zIndex: 0,
+                      }}>
+                        {String(index + 1).padStart(2, '0')}
                       </div>
 
-                      <div className={`grid lg:grid-cols-2 gap-10 items-center`}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '48px', alignItems: 'center', position: 'relative', zIndex: 1 }}
+                        className="lg:grid-cols-2">
 
-                        {/* IMAGE — alterne gauche/droite */}
-                        <div className={`${isEven ? 'lg:order-1' : 'lg:order-2'} ${isVisible ? (isEven ? 'animate-slide-left' : 'animate-slide-right') : 'opacity-0'}`}>
-                          <div className="relative">
-                            {/* Glow derrière l'image */}
-                            <div
-                              className="absolute -inset-4 rounded-3xl blur-2xl opacity-20"
-                              style={{ background: `linear-gradient(135deg, ${service.glowColor}, transparent)` }}
-                            ></div>
-                            <div className="relative">
-                              <ImageCarousel images={service.images} serviceName={service.name} />
-                            </div>
+                        {/* IMAGE */}
+                        <div className={isVisible ? (isEven ? 'anim-left' : 'anim-right') : ''} style={{ order: isEven ? 1 : 2 }}>
+                          <div style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid #f3f4f6' }}>
+                            <ImageCarousel images={service.images} serviceName={service.name} />
                           </div>
+                          {service.popular && (
+                            <div style={{ marginTop: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', background: service.lightBg, border: `1px solid ${service.lightBorder}`, borderRadius: '8px', fontSize: '12px', fontWeight: '700', color: service.accentColor }}>
+                              Le plus populaire
+                            </div>
+                          )}
                         </div>
 
                         {/* INFOS */}
-                        <div className={`${isEven ? 'lg:order-2' : 'lg:order-1'} ${isVisible ? 'animate-slide-up' : 'opacity-0'}`}>
+                        <div className={isVisible ? 'anim-up' : ''} style={{ order: isEven ? 2 : 1 }}>
 
-                          {/* Badge */}
-                          <div className={`inline-flex items-center gap-2 px-4 py-2 ${service.badgeColor} text-white rounded-full text-xs font-black mb-5 shadow-lg`}>
-                            <span>{service.emoji}</span>
+                          <div style={{ display: 'inline-block', padding: '4px 12px', background: service.lightBg, border: `1px solid ${service.lightBorder}`, borderRadius: '6px', fontSize: '11px', fontWeight: '800', color: service.accentColor, letterSpacing: '0.08em', marginBottom: '16px' }}>
                             {service.badge}
                           </div>
 
-                          {/* Titre */}
-                          <h2 className="text-4xl font-black mb-4 text-gray-900">
-                            {service.name}
-                          </h2>
-
-                          {/* Description */}
-                          <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                          <h2 style={{ fontSize: '30px', fontWeight: '900', color: '#111827', marginBottom: '6px' }}>{service.name}</h2>
+                          <p style={{ fontSize: '14px', fontWeight: '600', color: service.accentColor, marginBottom: '16px' }}>{service.tagline}</p>
+                          <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: '1.7', marginBottom: '28px' }}>
                             {language === 'fr' ? service.subtitleFR : service.subtitleEN}
                           </p>
 
-                          {/* Features chips */}
-                          <div className="grid grid-cols-2 gap-3 mb-6">
-                            {(language === 'fr' ? service.featuresFR : service.featuresEN).map((feature, idx) => (
-                              <div
-                                key={idx}
-                                className={`feature-chip flex items-center gap-3 p-3 ${service.bgColor} border ${service.borderColor} rounded-2xl`}
-                                style={{ animationDelay: `${idx * 0.1}s` }}
-                              >
-                                <span className="text-2xl">{feature.icon}</span>
-                                <span className="font-bold text-sm text-gray-800">{feature.text}</span>
+                          {/* Features */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
+                            {features.map((f, idx) => (
+                              <div key={idx} className="feature-item">
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{f.text}</div>
+                                <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{f.detail}</div>
                               </div>
                             ))}
                           </div>
 
                           {/* Véhicules */}
-                          <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <p className="text-xs font-black text-gray-400 mb-2 tracking-widest">
-                              {language === 'fr' ? '🚗 VÉHICULES DISPONIBLES' : '🚗 AVAILABLE VEHICLES'}
-                            </p>
-                            <p className="text-sm text-gray-700 font-semibold">{service.vehicules}</p>
+                          <div style={{ padding: '14px 18px', background: '#fafafa', border: '1px solid #f3f4f6', borderRadius: '10px', marginBottom: '24px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                              {language === 'fr' ? 'Véhicules' : 'Vehicles'}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#4b5563', fontWeight: '500' }}>{service.vehicules}</div>
                           </div>
 
                           {/* Prix + CTA */}
-                          <div className="flex items-center justify-between">
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '20px', borderTop: '1px solid #f3f4f6' }}>
                             <div>
-                              <p className="text-xs text-gray-400 font-semibold mb-1">
-                                {language === 'fr' ? 'TARIF' : 'PRICE'}
-                              </p>
-                              <p
-                                className={`text-xl font-black bg-gradient-to-r ${service.gradientFrom} ${service.gradientTo} bg-clip-text text-transparent`}
-                              >
+                              <div style={{ fontSize: '11px', fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>
+                                {language === 'fr' ? 'À partir de' : 'From'}
+                              </div>
+                              <div style={{ fontSize: '22px', fontWeight: '900', color: service.accentColor, whiteSpace: 'nowrap' }}>
                                 {language === 'fr' ? service.priceFR : service.priceEN}
-                              </p>
+                              </div>
                             </div>
-
-                            <Link
-                              to="/app/passenger"
-                              className={`relative group px-7 py-4 bg-gradient-to-r ${service.gradientFrom} ${service.gradientTo} text-white font-black rounded-full hover:shadow-2xl hover:scale-105 transition-all overflow-hidden`}
-                            >
-                              <span className="relative z-10">{t('services.bookNow')} →</span>
-                              <div className="absolute inset-0 shimmer"></div>
+                            <Link to="/app/passenger" style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '8px',
+                              padding: '12px 24px', background: service.accentColor,
+                              color: 'white', fontWeight: '700', fontSize: '14px',
+                              borderRadius: '8px', textDecoration: 'none',
+                              transition: 'all 0.2s', boxShadow: `0 4px 16px ${service.accentColor}40`,
+                            }}>
+                              {t('services.bookNow')}
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
                             </Link>
                           </div>
 
@@ -488,27 +396,17 @@ export function ServicesPage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-24 bg-gradient-to-br from-cyan-600 to-cyan-700 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-1/4 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-5xl font-black text-white mb-6">{t('cta.title')}</h2>
-            <p className="text-xl text-cyan-100 mb-10">{t('cta.subtitle')}</p>
+      {/* CTA */}
+      <section style={{ padding: '80px 0', background: '#0891b2' }}>
+        <div className="max-w-4xl mx-auto px-6" style={{ textAlign: 'center' }}>
+          <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} viewport={{ once: true }}>
+            <h2 style={{ fontSize: '42px', fontWeight: '900', color: 'white', marginBottom: '16px', lineHeight: '1.2' }}>{t('cta.title')}</h2>
+            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.8)', marginBottom: '36px' }}>{t('cta.subtitle')}</p>
             <Link
               to="/app/passenger"
-              className="inline-block px-10 py-5 bg-white text-cyan-600 font-black text-lg rounded-full hover:shadow-2xl hover:scale-105 transition-all"
+              className="inline-block px-8 py-4 bg-white text-cyan-600 font-bold rounded-full hover:shadow-2xl hover:scale-105 transition-all text-lg"
             >
-              {t('cta.startNow')} 
+              {t('cta.startNow')}
             </Link>
           </motion.div>
         </div>

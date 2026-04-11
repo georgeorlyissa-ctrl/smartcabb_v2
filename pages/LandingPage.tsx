@@ -5,721 +5,555 @@ import { ProfessionalFooter } from '../components/ProfessionalFooter';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LanguageSelector } from '../components/LanguageSelector';
 
-// Images de témoignages - Visages africains professionnels
-const testimonialImages = [
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80',
-  'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=200&q=80'
-];
-
-// Lazy load des composants non critiques
-const SocialFooter = lazy(() => import('../components/SocialFooter').then(module => ({ default: module.SocialFooter })));
 const ChatWidget = lazy(() => import('../components/ChatWidget').then(module => ({ default: module.ChatWidget })));
 
 export function LandingPage() {
   const [activeSection, setActiveSection] = useState('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
-  const { t } = useLanguage();
+  const [currentBg, setCurrentBg] = useState(0);
+  const [heroImg, setHeroImg] = useState(0);
+  const [vehiculeIndex, setVehiculeIndex] = useState(0);
+  const { t, language } = useLanguage();
 
-  // Effet parallaxe au scroll
+  const backgrounds = ['/photo2_smartcabb.jpeg', '/Images_2.jpeg', '/fille_smartcabb.png'];
+  const heroImages = ['/hero-smartcabb.png', '/fille_smartcabb.png'];
+  const vehicules = ['/Stadard_5.png', '/TOYOTA NOAH_2.png', '/Confort_4.png'];
+
+  // ✅ Point 2 : 5 moyens de paiement avec image cash
+  const paymentMethods = [
+    { src: '/logos/airtel-money.jpg', label: 'Airtel Money' },
+    { src: '/logos/mpesa.png', label: 'M-Pesa' },
+    { src: '/logos/orange-money.png', label: 'Orange Money' },
+    { src: '/logos/logo-afrimoney.png', label: 'Afrimoney' },
+    { src: '/logos/cash.png', label: 'Cash' }, // ← met ton image cash ici, sinon fallback texte
+  ];
+
+  useEffect(() => {
+    const t1 = setInterval(() => setCurrentBg(p => (p + 1) % backgrounds.length), 4000);
+    return () => clearInterval(t1);
+  }, []);
+
+  useEffect(() => {
+    const t2 = setInterval(() => setHeroImg(p => (p + 1) % heroImages.length), 4500);
+    return () => clearInterval(t2);
+  }, []);
+
+  useEffect(() => {
+    const t3 = setInterval(() => setVehiculeIndex(p => (p + 1) % vehicules.length), 3000);
+    return () => clearInterval(t3);
+  }, []);
+
   useEffect(() => {
     const handleScroll = () => {
-      setScrollY(window.scrollY);
-      const sections = ['home', 'how', 'why', 'testimonials', 'cta'];
-      const current = sections.find(section => {
-        const element = document.getElementById(section);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          return rect.top <= 100 && rect.bottom >= 100;
+      const sections = ['home', 'how', 'why', 'trust', 'testimonials', 'africa', 'cta'];
+      const current = sections.find(s => {
+        const el = document.getElementById(s);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          return r.top <= 100 && r.bottom >= 100;
         }
         return false;
       });
       if (current) setActiveSection(current);
     };
-
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Animation des statistiques
   useEffect(() => {
-    const animateValue = (element: HTMLElement, target: number, suffix: string) => {
+    const animateValue = (el: HTMLElement, target: number, suffix: string) => {
       let current = 0;
-      const increment = target / 50;
+      const inc = target / 60;
       const timer = setInterval(() => {
-        current += increment;
-        if (current >= target) {
-          element.textContent = target + suffix;
-          clearInterval(timer);
-        } else {
-          element.textContent = Math.floor(current) + suffix;
-        }
+        current += inc;
+        if (current >= target) { el.textContent = target + suffix; clearInterval(timer); }
+        else el.textContent = Math.floor(current) + suffix;
       }, 30);
     };
-
-    const stats = document.querySelectorAll('.stat-number');
-    stats.forEach((stat) => {
-      const element = stat as HTMLElement;
-      const target = parseInt(element.getAttribute('data-target') || '0');
-      const suffix = element.getAttribute('data-suffix') || '';
-      animateValue(element, target, suffix);
+    document.querySelectorAll('.stat-number').forEach(stat => {
+      const el = stat as HTMLElement;
+      animateValue(el, parseInt(el.getAttribute('data-target') || '0'), el.getAttribute('data-suffix') || '');
     });
   }, []);
 
+  const steps = [
+    { number: '01', image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=400&fit=crop', title: t('how.step1.title'), description: t('how.step1.description'), isCarousel: false },
+    { number: '02', image: vehicules[vehiculeIndex], title: t('how.step2.title'), description: t('how.step2.description'), isCarousel: true },
+    { number: '03', image: '/fille_smartcabb.png', title: t('how.step3.title'), description: t('how.step3.description'), isCarousel: false },
+  ];
+
+  // ✅ Point 3 : pays avec traduction
+  const africanCountries = [
+    { code: 'cg', nameFR: 'Congo-Brazza', nameEN: 'Congo-Brazza', cityFR: 'Brazzaville', cityEN: 'Brazzaville' },
+    { code: 'ao', nameFR: 'Angola', nameEN: 'Angola', cityFR: 'Luanda', cityEN: 'Luanda' },
+    { code: 'rw', nameFR: 'Rwanda', nameEN: 'Rwanda', cityFR: 'Kigali', cityEN: 'Kigali' },
+    { code: 'ke', nameFR: 'Kenya', nameEN: 'Kenya', cityFR: 'Nairobi', cityEN: 'Nairobi' },
+    { code: 'cm', nameFR: 'Cameroun', nameEN: 'Cameroon', cityFR: 'Douala', cityEN: 'Douala' },
+    { code: 'sn', nameFR: 'Sénégal', nameEN: 'Senegal', cityFR: 'Dakar', cityEN: 'Dakar' },
+    { code: 'ug', nameFR: 'Uganda', nameEN: 'Uganda', cityFR: 'Kampala', cityEN: 'Kampala' },
+    { code: 'tz', nameFR: 'Tanzanie', nameEN: 'Tanzania', cityFR: 'Dar es Salaam', cityEN: 'Dar es Salaam' },
+  ];
+
+  const africaStats = [
+    { val: '54', suf: language === 'fr' ? ' pays' : ' countries', labelFR: 'Pays africains ciblés', labelEN: 'African countries targeted' },
+    { val: '1.4', suf: 'Md', labelFR: 'Personnes à connecter', labelEN: 'People to connect' },
+    { val: '80', suf: '%', labelFR: 'Marché non couvert', labelEN: 'Uncovered market' },
+    { val: '1', suf: language === 'fr' ? 'er' : 'st', labelFR: 'Réseau panafricain', labelEN: 'Pan-African network' },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
+    <div style={{ minHeight: '100vh', background: 'white' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;600;700;800&display=swap');
-        
-        * {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
+        html { scroll-behavior: smooth; }
+
+        .nav-link {
+          font-size: 15px; font-weight: 500; color: #374151;
+          transition: color 0.2s; text-decoration: none;
+        }
+        .nav-link:hover, .nav-link.active { color: #0891b2; }
+
+        /* ✅ Point 4 : boutons bien cliquables */
+        .btn-primary {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 15px 36px;
+          background: white;
+          color: #0891b2;
+          font-weight: 800;
+          font-size: 16px;
+          border-radius: 8px;
+          transition: all 0.2s;
+          text-decoration: none;
+          cursor: pointer;
+          white-space: nowrap;
+          border: none;
+        }
+        .btn-primary:hover {
+          background: #f0f9ff;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
         }
 
-        html {
-          scroll-behavior: smooth;
+        .btn-secondary {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 15px 36px;
+          background: transparent;
+          color: white;
+          font-weight: 800;
+          font-size: 16px;
+          border-radius: 8px;
+          border: 2px solid rgba(255,255,255,0.7);
+          transition: all 0.2s;
+          text-decoration: none;
+          cursor: pointer;
+          white-space: nowrap;
+        }
+        .btn-secondary:hover {
+          background: rgba(255,255,255,0.15);
+          border-color: white;
+          transform: translateY(-2px);
         }
 
-        .gradient-text {
-          background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+        .btn-hero-primary {
+          display: inline-flex;
+          align-items: center;
+          padding: 14px 32px;
+          background: #0891b2;
+          color: white;
+          font-weight: 700;
+          font-size: 15px;
+          border-radius: 8px;
+          transition: all 0.2s;
+          text-decoration: none;
+          cursor: pointer;
+        }
+        .btn-hero-primary:hover { background: #0e7490; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(8,145,178,0.3); }
+
+        .btn-hero-secondary {
+          display: inline-flex;
+          align-items: center;
+          padding: 14px 32px;
+          background: white;
+          color: #0891b2;
+          font-weight: 700;
+          font-size: 15px;
+          border-radius: 8px;
+          border: 2px solid #0891b2;
+          transition: all 0.2s;
+          text-decoration: none;
+          cursor: pointer;
+        }
+        .btn-hero-secondary:hover { background: #f0f9ff; }
+
+        .section-label {
+          font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
+          text-transform: uppercase; color: #0891b2; margin-bottom: 12px;
+          display: block;
         }
 
-        .glass-effect {
-          background: rgba(255, 255, 255, 0.7);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+        .card {
+          background: white; border: 1px solid #e5e7eb;
+          border-radius: 16px; transition: all 0.25s;
+        }
+        .card:hover {
+          border-color: #0891b2;
+          box-shadow: 0 8px 32px rgba(8,145,178,0.1);
+          transform: translateY(-3px);
         }
 
-        .hover-lift {
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        .step-number {
+          font-size: 72px; font-weight: 900; color: #f0f9ff;
+          position: absolute; top: 16px; right: 20px;
+          line-height: 1; user-select: none;
         }
 
-        .hover-lift:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 40px rgba(6, 182, 212, 0.2);
+        /* ✅ Point 2 : ticker animé continu */
+        @keyframes ticker {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
         }
-
-        .floating {
-          animation: floating 6s ease-in-out infinite;
+        .ticker-track {
+          animation: ticker 12s linear infinite;
+          width: max-content;
+          display: flex;
         }
+        .ticker-track:hover { animation-play-state: paused; }
 
-        @keyframes floating {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-20px); }
+        @keyframes ping-dot {
+          0%, 100% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(1.8); opacity: 0; }
         }
+        .ping-dot { animation: ping-dot 2s ease-out infinite; }
 
-        .fade-in-up {
-          animation: fadeInUp 0.8s ease-out forwards;
+        .country-card {
+          display: flex; align-items: center; gap: 10px;
+          padding: 10px 16px; background: white;
+          border: 1px solid #e5e7eb; border-radius: 12px;
+          transition: all 0.2s;
         }
+        .country-card:hover { border-color: #0891b2; box-shadow: 0 4px 12px rgba(8,145,178,0.1); }
 
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .shimmer {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-          animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-
-        .pulse-slow {
-          animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
+        .stat-box {
+          padding: 20px; background: #f0f9ff;
+          border: 1px solid #bae6fd; border-radius: 12px;
         }
       `}</style>
 
-      {/* Navigation Ultra Moderne */}
-      <nav className="fixed top-0 w-full glass-effect z-50 border-b border-white/20">
+      {/* NAV */}
+      <nav style={{ position: 'fixed', top: 0, width: '100%', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #e5e7eb', zIndex: 50 }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            {/* Logo Premium */}
-            <Link to="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                <div className="relative w-12 h-12">
-  <img 
-    src="/logo-smartcabb.jpeg"  // ← mets le nom exact de ton fichier logo ici
-    alt="SmartCabb Logo"
-    className="w-full h-full object-contain"
-  />
-</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '72px' }}>
+
+            {/* ✅ Point 1 : logo aligné, sans "Transport intelligent" */}
+            <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
+                <img src="/logo-smartcabb.jpeg" alt="SmartCabb" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-black tracking-tight">
-                  SMART<span className="gradient-text">CABB</span>
-                </span>
-                <span className="text-xs text-gray-500 -mt-1">Transport intelligent</span>
-              </div>
+              <span style={{ fontSize: '20px', fontWeight: '900', color: '#111827', letterSpacing: '-0.02em', lineHeight: '1' }}>
+                SMART<span style={{ color: '#0891b2' }}>CABB</span>
+              </span>
             </Link>
 
-            {/* Desktop Menu */}
-            <div className="hidden lg:flex items-center gap-8">
-              <a href="#home" className={`font-semibold transition-all ${activeSection === 'home' ? 'text-cyan-600' : 'text-gray-700 hover:text-cyan-600'}`}>
-                {t('nav.home')}
-              </a>
-              <a href="#how" className={`font-semibold transition-all ${activeSection === 'how' ? 'text-cyan-600' : 'text-gray-700 hover:text-cyan-600'}`}>
-                {t('nav.howItWorks')}
-              </a>
-              <a href="#why" className={`font-semibold transition-all ${activeSection === 'why' ? 'text-cyan-600' : 'text-gray-700 hover:text-cyan-600'}`}>
-                {t('nav.whyUs')}
-              </a>
-              <a href="#testimonials" className={`font-semibold transition-all ${activeSection === 'testimonials' ? 'text-cyan-600' : 'text-gray-700 hover:text-cyan-600'}`}>
-                {t('nav.testimonials')}
-              </a>
-              <Link to="/contact" className="font-semibold text-gray-700 hover:text-cyan-600 transition-all">
-                {t('nav.contact')}
-              </Link>
-              
-              {/* Language Selector */}
+            <div className="hidden lg:flex items-center" style={{ gap: '32px' }}>
+              {[
+                { href: '#home', label: t('nav.home'), id: 'home' },
+                { href: '#how', label: t('nav.howItWorks'), id: 'how' },
+                { href: '#why', label: t('nav.whyUs'), id: 'why' },
+                { href: '#testimonials', label: t('nav.testimonials'), id: 'testimonials' },
+              ].map(item => (
+                <a key={item.id} href={item.href} className={`nav-link ${activeSection === item.id ? 'active' : ''}`}>{item.label}</a>
+              ))}
+              <Link to="/contact" className="nav-link">{t('nav.contact')}</Link>
               <LanguageSelector />
-              
-              <Link 
-                to="/app/passenger"
-                className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold rounded-full hover:shadow-xl hover:scale-105 transition-all"
-              >
+              <Link to="/app/passenger" className="btn-hero-primary" style={{ padding: '10px 22px', fontSize: '14px' }}>
                 {t('nav.login')}
               </Link>
             </div>
 
-            {/* Mobile Menu Button */}
-            <button 
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100"
-            >
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden" style={{ padding: '8px', background: 'none', border: 'none', cursor: 'pointer' }}>
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#374151" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
               </svg>
             </button>
           </div>
 
-          {/* Mobile Menu */}
           {isMenuOpen && (
-            <div className="lg:hidden py-4 border-t border-white/20">
-              <div className="flex flex-col gap-3">
-                <a href="#home" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.home')}</a>
-                <a href="#how" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.howItWorks')}</a>
-                <a href="#why" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.whyUs')}</a>
-                <a href="#testimonials" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.testimonials')}</a>
-                <Link to="/contact" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.contact')}</Link>
-                
-                {/* Language Selector Mobile */}
-                <div className="py-2">
-                  <LanguageSelector />
-                </div>
-                
-                <Link to="/app" className="mt-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold rounded-full text-center">
-                  {t('nav.login')}
-                </Link>
-              </div>
+            <div style={{ padding: '16px 0', borderTop: '1px solid #e5e7eb' }}>
+              {[
+                { href: '#home', label: t('nav.home') },
+                { href: '#how', label: t('nav.howItWorks') },
+                { href: '#why', label: t('nav.whyUs') },
+                { href: '#testimonials', label: t('nav.testimonials') },
+              ].map((item, i) => (
+                <a key={i} href={item.href} className="nav-link" style={{ display: 'block', padding: '10px 0' }}>{item.label}</a>
+              ))}
+              <Link to="/contact" className="nav-link" style={{ display: 'block', padding: '10px 0' }}>{t('nav.contact')}</Link>
+              <div style={{ padding: '10px 0' }}><LanguageSelector /></div>
+              <Link to="/app/passenger" className="btn-hero-primary" style={{ display: 'block', textAlign: 'center', marginTop: '8px' }}>{t('nav.login')}</Link>
             </div>
           )}
         </div>
       </nav>
 
-      {/* Hero Section Ultra Moderne */}
-      <section id="home" className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background avec dégradé cyan professionnel */}
-        {/* Carrousel d'arrière-plan automatique */}
-{(() => {
-  const [currentBg, setCurrentBg] = useState(0);
-  const backgrounds = [
-    '/photo2_smartcabb.jpeg',
-    '/Images_2.jpeg',  // ← ajoute tes autres images ici
-    '/fille_smartcabb.png',  // ← même nom que dans ton dossier public
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBg(prev => (prev + 1) % backgrounds.length);
-    }, 4000); // change toutes les 4 secondes
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <>
-      {backgrounds.map((bg, index) => (
-        <div
-          key={index}
-          className="absolute inset-0 transition-opacity duration-1000"
-          style={{
-            backgroundImage: `url(${bg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            opacity: currentBg === index ? 1 : 0,
-          }}
-        />
-      ))}
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-white/75"></div>
-    </>
-  );
-})()}
-        
-        {/* Formes décoratives animées */}
-        <div className="absolute top-20 right-0 w-96 h-96 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-20 left-0 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
+      {/* HERO */}
+      <section id="home" style={{ paddingTop: '120px', paddingBottom: '80px', position: 'relative', overflow: 'hidden' }}>
+        {backgrounds.map((bg, i) => (
+          <div key={i} style={{
+            position: 'absolute', inset: 0,
+            backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center',
+            opacity: currentBg === i ? 1 : 0, transition: 'opacity 1s ease',
+          }} />
+        ))}
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.88)' }} />
 
         <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Contenu gauche */}
-            <div className="fade-in-up">
-              {/* 🚫 BADGE SUPPRIMÉ */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               
-              <h1 className="text-6xl lg:text-7xl font-black mb-6 leading-tight">
-                {t('hero.title1')}<br/>
-                <span className="gradient-text">{t('hero.title2')}</span>
-              </h1>
               
-              <p style={{ fontFamily: "'Playfair Display', serif", fontWeight: '700' }} 
-   className="text-xl text-gray-800 mb-8 leading-relaxed tracking-wide">
-  {t('hero.description')}
+              <p style={{ fontSize: '18px', color: '#4b5563', lineHeight: '1.7', marginBottom: '32px', maxWidth: '480px' }}>
+                {t('hero.description')}
               </p>
-              {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-12">
-                <Link 
-                  to="/app/passenger"
-                  className="group relative px-8 py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold rounded-full hover:shadow-2xl transition-all overflow-hidden"
-                >
-                  <span className="relative z-10">{t('hero.bookRide')}</span>
-                  <div className="absolute inset-0 shimmer"></div>
-                </Link>
-                
-                <Link 
-                  to="/drivers"
-                  className="px-8 py-4 bg-white text-cyan-600 font-bold rounded-full border-2 border-cyan-500 hover:bg-cyan-50 transition-all"
-                >
-                  {t('hero.becomeDriver')}
-                </Link>
+
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '48px' }}>
+                <Link to="/app/passenger" className="btn-hero-primary">{t('hero.bookRide')}</Link>
+                <Link to="/drivers" className="btn-hero-secondary">{t('hero.becomeDriver')}</Link>
               </div>
 
-              {/* Stats modernes */}
-              <div className="grid grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-4xl font-black gradient-text stat-number" data-target="150" data-suffix="+">0</div>
-                  <div className="text-sm text-gray-600 mt-1">{t('hero.activeDrivers')}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-black gradient-text stat-number" data-target="1000" data-suffix="+">0</div>
-                  <div className="text-sm text-gray-600 mt-1">{t('hero.happyClients')}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-4xl font-black gradient-text stat-number" data-target="24" data-suffix="/7">0</div>
-                  <div className="text-sm text-gray-600 mt-1">{t('hero.available')}</div>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px' }}>
+                {[
+                  { target: 150, suffix: '+', label: t('hero.activeDrivers') },
+                  { target: 1000, suffix: '+', label: t('hero.happyClients') },
+                  { target: 24, suffix: '/7', label: t('hero.available') },
+                ].map((s, i) => (
+                  <div key={i} style={{ borderLeft: '3px solid #0891b2', paddingLeft: '16px' }}>
+                    <div className="stat-number" data-target={s.target} data-suffix={s.suffix}
+                      style={{ fontSize: '32px', fontWeight: '900', color: '#0891b2' }}>0</div>
+                    <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>{s.label}</div>
+                  </div>
+                ))}
               </div>
-            </div>
+            </motion.div>
 
-            {/* Carrousel d'images droit */}
             <div className="relative hidden lg:block">
-              <div className="relative">
-                {/* Image principale SmartCabb */}
-                <motion.div
-                  className="relative h-[600px] rounded-3xl overflow-hidden shadow-2xl"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.8 }}
-                >
-                  <img 
-                    src="/hero-smartcabb.png"
-                    alt="SmartCabb App - Carte, téléphone et taxi"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback vers une image Unsplash si l'image locale n'existe pas
-                      e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                </motion.div>
+              <motion.div
+                style={{ position: 'relative', height: '480px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.12)' }}
+                initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7 }}>
+                {heroImages.map((img, i) => (
+                  <img key={i} src={img} alt="SmartCabb"
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
+                    onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }} />
+                ))}
+                <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 10 }}>
+                  {heroImages.map((_, i) => (
+                    <button key={i} onClick={() => setHeroImg(i)}
+                      style={{ height: '6px', borderRadius: '3px', border: 'none', cursor: 'pointer', background: heroImg === i ? 'white' : 'rgba(255,255,255,0.4)', width: heroImg === i ? '24px' : '6px', transition: 'all 0.3s' }} />
+                  ))}
+                </div>
+              </motion.div>
 
-                {/* Badges flottants */}
-                <motion.div 
-                  className="absolute -top-6 -right-6 px-6 py-3 bg-white rounded-2xl shadow-xl"
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="font-bold text-gray-900">50+ en ligne</span>
-                  </div>
-                </motion.div>
+              <motion.div
+                style={{ position: 'absolute', top: '-20px', right: '-20px', background: 'white', borderRadius: '14px', padding: '14px 20px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', display: 'flex', alignItems: 'center', gap: '10px' }}
+                animate={{ y: [0, -8, 0] }} transition={{ duration: 3, repeat: Infinity }}>
+                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e' }}></div>
+                <span style={{ fontWeight: '700', fontSize: '14px', color: '#111827' }}>50+ {language === 'fr' ? 'en ligne' : 'online'}</span>
+              </motion.div>
 
-                <motion.div 
-                  className="absolute -bottom-6 -left-6 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-2xl shadow-xl"
-                  animate={{ y: [0, 10, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, delay: 1 }}
-                >
-                  <div className="text-center">
-                    <div className="text-2xl font-black">4.9⭐</div>
-                    <div className="text-xs">Note moyenne</div>
-                  </div>
-                </motion.div>
-              </div>
+              <motion.div
+                style={{ position: 'absolute', bottom: '-20px', left: '-20px', background: '#0891b2', borderRadius: '14px', padding: '14px 20px', boxShadow: '0 8px 32px rgba(8,145,178,0.3)', color: 'white', textAlign: 'center' }}
+                animate={{ y: [0, 8, 0] }} transition={{ duration: 3, repeat: Infinity, delay: 1 }}>
+                <div style={{ fontSize: '22px', fontWeight: '900' }}>4.9 / 5</div>
+                <div style={{ fontSize: '11px', opacity: 0.85 }}>{language === 'fr' ? 'Note moyenne' : 'Average rating'}</div>
+              </motion.div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Comment ça marche - Design épuré */}
-      <section id="how" className="py-24 bg-white">
+      {/* COMMENT CA MARCHE */}
+      <section id="how" style={{ padding: '96px 0', background: '#fafafa', borderTop: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-black mb-4">{t('how.title1')} <span className="gradient-text">{t('how.title2')}</span></h2>
-            <p className="text-xl text-gray-600">{t('how.subtitle')}</p>
+          <div style={{ marginBottom: '64px' }}>
+            
+            <h2 style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
+              {t('how.title1')} <span style={{ color: '#0891b2' }}>{t('how.title2')}</span>
+            </h2>
+            <p style={{ fontSize: '18px', color: '#6b7280', maxWidth: '480px' }}>{t('how.subtitle')}</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {(() => {
-  const [vehiculeIndex, setVehiculeIndex] = useState(0);
-  const vehicules = [
-    '/Stadard_5.png',  // ← ton image véhicule 1
-    '/TOYOTA NOAH_2.png',  // ← ton image véhicule 2
-    '/Confort_4.png',  // ← ton image véhicule 3
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setVehiculeIndex(prev => (prev + 1) % vehicules.length);
-    }, 3000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const steps = [
-    {
-      number: '01',
-      image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=400&fit=crop',
-      badge: '📍 GPS Temps réel',
-      title: t('how.step1.title'),
-      description: t('how.step1.description'),
-      color: 'from-cyan-500 to-blue-500',
-      isCarousel: false
-    },
-    {
-      number: '02',
-      image: vehicules[vehiculeIndex],
-      badge: '🚗 Votre choix',
-      title: t('how.step2.title'),
-      description: t('how.step2.description'),
-      color: 'from-blue-500 to-indigo-500',
-      isCarousel: true
-    },
-    {
-      number: '03',
-      image: '/fille_smartcabb.png',
-      badge: '⭐ Expérience Premium',
-      title: t('how.step3.title'),
-      description: t('how.step3.description'),
-      color: 'from-indigo-500 to-cyan-500',
-      isCarousel: false
-    }
-  ];
-
-  return steps.map((step, index) => (
-    <motion.div
-      key={index}
-      className="relative rounded-3xl overflow-hidden shadow-2xl hover-lift group"
-      initial={{ opacity: 0, y: 50 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.2 }}
-      viewport={{ once: true }}
-    >
-      {/* Image */}
-      <div className="relative h-56 overflow-hidden">
-        <img 
-          src={step.image}
-          alt={step.title}
-          className="w-full h-full object-cover group-hover:scale-110 transition-all duration-700"
-        />
-        {/* Overlay */}
-        <div className={`absolute inset-0 bg-gradient-to-t ${step.color} opacity-60`}></div>
-
-        {/* Numéro */}
-        <div className="absolute top-4 left-4 text-7xl font-black text-white/20">
-          {step.number}
-        </div>
-
-        {/* Badge */}
-        <div className="absolute bottom-4 left-4 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-sm font-semibold border border-white/30">
-          {step.badge}
-        </div>
-
-        {/* Points indicateurs carrousel */}
-        {step.isCarousel && (
-          <div className="absolute bottom-4 right-4 flex gap-2">
-            {vehicules.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setVehiculeIndex(i)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  vehiculeIndex === i ? 'bg-white w-5' : 'bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Contenu */}
-      <div className="p-6 bg-white">
-        <div className={`w-12 h-1 rounded-full bg-gradient-to-r ${step.color} mb-4`}></div>
-        <h3 className="text-2xl font-black text-gray-900 mb-2">{step.title}</h3>
-        <p className="text-gray-600 leading-relaxed">{step.description}</p>
-        <div className={`mt-4 inline-flex items-center gap-2 text-sm font-bold bg-gradient-to-r ${step.color} bg-clip-text text-transparent`}>
-          En savoir plus
-          <span className="group-hover:translate-x-2 transition-transform duration-300">→</span>
-        </div>
-      </div>
-    </motion.div>
-  ));
-})()}
-          </div>
-        </div>
-      </section>
-
-      {/* Pourquoi SmartCabb - Grid moderne */}
-      <section id="why" className="py-24 bg-gradient-to-b from-white to-slate-50">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-black mb-4">{t('why.title1')} <span className="gradient-text">{t('why.title2')}</span></h2>
-            <p className="text-xl text-gray-600">{t('why.subtitle')}</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-  icon: '🚀',
-  gradient: 'from-orange-400 to-red-500',
-  shadow: 'shadow-orange-200',
-  title: t('why.fast'),
-  description: t('why.fastDesc')
-},
-{
-  icon: '🛡️',
-  gradient: 'from-blue-400 to-blue-600',
-  shadow: 'shadow-blue-200',
-  title: t('why.secure'),
-  description: t('why.secureDesc')
-},
-{
-  icon: '💎',
-  gradient: 'from-cyan-400 to-cyan-600',
-  shadow: 'shadow-cyan-200',
-  title: t('why.affordable'),
-  description: t('why.affordableDesc')
-},
-{
-  icon: '📲',
-  gradient: 'from-purple-400 to-purple-600',
-  shadow: 'shadow-purple-200',
-  title: t('why.simple'),
-  description: t('why.simpleDesc')
-},
-{
-  icon: '🏆',
-  gradient: 'from-yellow-400 to-orange-500',
-  shadow: 'shadow-yellow-200',
-  title: t('why.quality'),
-  description: t('why.qualityDesc')
-},
-{
-  icon: '💳',
-  gradient: 'from-green-400 to-emerald-600',
-  shadow: 'shadow-green-200',
-  title: t('why.flexible'),
-  description: t('why.flexibleDesc')
-},
-{
-  icon: '🎯',
-  gradient: 'from-pink-400 to-rose-600',
-  shadow: 'shadow-pink-200',
-  title: t('why.reliable'),
-  description: t('why.reliableDesc')
-}
-            ].map((feature, index) => (
-              <motion.div
-                key={index}
-                className="p-6 bg-white rounded-2xl shadow-lg hover-lift border border-gray-100"
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <div className="text-5xl mb-4">{feature.icon}</div>
-                <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-                <p className="text-gray-600 text-sm">{feature.description}</p>
+            {steps.map((step, i) => (
+              <motion.div key={i} className="card" style={{ overflow: 'hidden', position: 'relative' }}
+                initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.15 }} viewport={{ once: true }}>
+                <div style={{ height: '220px', overflow: 'hidden', position: 'relative' }}>
+                  <img src={step.image} alt={step.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
+                    onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.05)')}
+                    onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')} />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,145,178,0.7), transparent)' }} />
+                  <div style={{ position: 'absolute', bottom: '16px', left: '20px', color: 'white', fontSize: '13px', fontWeight: '700' }}>
+                    {language === 'fr' ? 'Étape' : 'Step'} {step.number}
+                  </div>
+                  {step.isCarousel && (
+                    <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '6px' }}>
+                      {vehicules.map((_, j) => (
+                        <button key={j} onClick={() => setVehiculeIndex(j)}
+                          style={{ height: '6px', border: 'none', cursor: 'pointer', borderRadius: '3px', background: vehiculeIndex === j ? 'white' : 'rgba(255,255,255,0.4)', width: vehiculeIndex === j ? '20px' : '6px', transition: 'all 0.3s' }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: '24px', position: 'relative' }}>
+                  <div className="step-number">{step.number}</div>
+                  <div style={{ width: '32px', height: '3px', background: '#0891b2', borderRadius: '2px', marginBottom: '14px' }} />
+                  <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '10px' }}>{step.title}</h3>
+                  <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: '1.6' }}>{step.description}</p>
+                </div>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Témoignages avec photos - Section Premium */}
-      <section id="testimonials" className="py-24 bg-white">
+      {/* POURQUOI SMARTCABB */}
+      <section id="why" style={{ padding: '96px 0', background: 'white', borderTop: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-black mb-4">{t('testimonials.title1')} <span className="gradient-text">{t('testimonials.title2')}</span></h2>
-            <p className="text-xl text-gray-600">{t('testimonials.subtitle')}</p>
+          <div className="grid lg:grid-cols-2 gap-16 items-start">
+            <div>
+              
+              <h2 style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
+                {t('why.title1')} <span style={{ color: '#0891b2' }}>{t('why.title2')}</span>
+              </h2>
+              <p style={{ fontSize: '18px', color: '#6b7280', marginBottom: '32px', maxWidth: '480px' }}>{t('why.subtitle')}</p>
+              <Link to="/app/passenger" className="btn-hero-primary">{t('hero.bookRide')}</Link>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {[
+                { title: t('why.fast'), desc: t('why.fastDesc') },
+                { title: t('why.secure'), desc: t('why.secureDesc') },
+                { title: t('why.affordable'), desc: t('why.affordableDesc') },
+                { title: t('why.simple'), desc: t('why.simpleDesc') },
+                { title: t('why.quality'), desc: t('why.qualityDesc') },
+                { title: t('why.flexible'), desc: t('why.flexibleDesc') },
+                { title: t('why.reliable'), desc: t('why.reliableDesc') },
+              ].map((f, i) => (
+                <motion.div key={i} className="card" style={{ padding: '20px' }}
+                  initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.07 }} viewport={{ once: true }}>
+                  <div style={{ width: '32px', height: '3px', background: '#0891b2', borderRadius: '2px', marginBottom: '12px' }} />
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#111827', marginBottom: '6px' }}>{f.title}</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: '1.5' }}>{f.desc}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CONFIANCE */}
+      <section id="trust" style={{ padding: '96px 0', background: '#fafafa', borderTop: '1px solid #f3f4f6' }}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div style={{ marginBottom: '64px' }}>
+            
+            <h2 style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
+              {language === 'fr' ? 'Pourquoi nous ' : 'Why '}<span style={{ color: '#0891b2' }}>{language === 'fr' ? 'faire confiance ?' : 'trust us?'}</span>
+            </h2>
+            <p style={{ fontSize: '18px', color: '#6b7280', maxWidth: '480px' }}>
+              {language === 'fr' ? 'SmartCabb met la sécurité de chaque trajet au premier plan.' : 'SmartCabb puts the safety of every ride first.'}
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                name: t('testimonials.client1.name'),
-                role: t('testimonials.client1.role'),
-                image: testimonialImages[0],
-                rating: 5,
-                text: t('testimonials.client1.text')
+                titleFR: 'Chauffeurs vérifiés', titleEN: 'Verified drivers',
+                descFR: 'Chaque chauffeur est vérifié, formé et noté. Vous voyez sa photo, son nom et son numéro de plaque avant la course.',
+                descEN: 'Each driver is verified, trained and rated. You see their photo, name and plate number before the ride.',
+                tagFR: '100% vérifiés', tagEN: '100% verified',
               },
               {
-                name: t('testimonials.client2.name'),
-                role: t('testimonials.client2.role'),
-                image: testimonialImages[1],
-                rating: 5,
-                text: t('testimonials.client2.text')
+                titleFR: 'Suivi GPS en temps réel', titleEN: 'Real-time GPS tracking',
+                descFR: "Partagez votre trajet à un proche d'un seul clic. Votre famille sait où vous êtes à tout moment.",
+                descEN: 'Share your ride with a loved one in one click. Your family knows where you are at all times.',
+                tagFR: 'Partage instantané', tagEN: 'Instant sharing',
               },
               {
-                name: t('testimonials.client3.name'),
-                role: t('testimonials.client3.role'),
-                image: testimonialImages[2],
-                rating: 5,
-                text: t('testimonials.client3.text')
+                titleFR: "Bouton SOS d'urgence", titleEN: 'Emergency SOS button',
+                descFR: "En cas de problème, notre bouton SOS alerte immédiatement notre équipe et vos contacts d'urgence.",
+                descEN: 'In case of a problem, our SOS button immediately alerts our team and your emergency contacts.',
+                tagFR: 'Disponible 24/7', tagEN: 'Available 24/7',
               },
-              {
-                name: t('testimonials.client4.name'),
-                role: t('testimonials.client4.role'),
-                image: testimonialImages[3],
-                rating: 5,
-                text: t('testimonials.client4.text')
-              }
-            ].map((testimonial, index) => (
-              <motion.div
-                key={index}
-                className="relative p-8 bg-gradient-to-br from-white to-gray-50 rounded-3xl shadow-xl hover-lift border border-gray-100"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.15 }}
-                viewport={{ once: true }}
-              >
-                {/* Quote icon */}
-                <div className="absolute top-6 right-6 text-6xl text-cyan-200 opacity-50">"</div>
-                
-                {/* 🚫 Photo supprimée - Infos uniquement */}
-                <div className="mb-6 relative z-10">
-                  <div className="font-bold text-gray-900">{testimonial.name}</div>
-                  <div className="text-sm text-gray-600">{testimonial.role}</div>
+            ].map((item, i) => (
+              <motion.div key={i} className="card" style={{ padding: '32px' }}
+                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.15 }} viewport={{ once: true }}>
+                <div style={{ display: 'inline-block', padding: '4px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '12px', fontWeight: '700', color: '#0891b2', marginBottom: '20px' }}>
+                  {language === 'fr' ? item.tagFR : item.tagEN}
                 </div>
-
-                {/* Rating */}
-                <div className="flex gap-1 mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <span key={i} className="text-yellow-400 text-xl">⭐</span>
-                  ))}
-                </div>
-
-                {/* Témoignage */}
-                <p className="text-gray-700 leading-relaxed italic">
-                  "{testimonial.text}"
+                <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>
+                  {language === 'fr' ? item.titleFR : item.titleEN}
+                </h3>
+                <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: '1.6' }}>
+                  {language === 'fr' ? item.descFR : item.descEN}
                 </p>
               </motion.div>
             ))}
           </div>
 
-          {/* Trust badges */}
-          <div className="mt-16 flex flex-wrap justify-center items-center gap-8">
-            <div className="text-center">
-              <div className="text-3xl font-black text-cyan-600">1000+</div>
-              <div className="text-sm text-gray-600">{t('testimonials.reviews5Stars')}</div>
-            </div>
-            <div className="w-px h-12 bg-gray-300"></div>
-            <div className="text-center">
-              <div className="text-3xl font-black text-cyan-600">98%</div>
-              <div className="text-sm text-gray-600">{t('testimonials.satisfaction')}</div>
-            </div>
-            <div className="w-px h-12 bg-gray-300"></div>
-            <div className="text-center">
-              <div className="text-3xl font-black text-cyan-600">4.9/5</div>
-              <div className="text-sm text-gray-600">{t('testimonials.avgRating')}</div>
-            </div>
-          </div>
-        </div>
-      </section>
+          {/* Prix transparents */}
+          <motion.div style={{ marginTop: '48px', padding: '40px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px' }}
+            initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} viewport={{ once: true }}>
 
-      {/* CTA Final - Ultra attractif */}
-      <section id="cta" className="py-24 bg-gradient-to-br from-cyan-600 to-cyan-700 relative overflow-hidden">
-        {/* Patterns décoratifs */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-1/4 w-72 h-72 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative max-w-4xl mx-auto px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-5xl lg:text-6xl font-black text-white mb-6">
-              {t('cta.title')}
-            </h2>
-            <p className="text-xl text-cyan-100 mb-10">
-              {t('cta.subtitle')}
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link 
-                to="/app/passenger"
-                className="group relative px-10 py-5 bg-white text-cyan-600 font-black text-lg rounded-full hover:shadow-2xl transition-all overflow-hidden"
-              >
-                <span className="relative z-10">{t('cta.startNow')}</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              </Link>
-              
-              <Link 
-                to="/drivers"
-                className="px-10 py-5 bg-transparent text-white font-black text-lg rounded-full border-3 border-white hover:bg-white hover:text-cyan-600 transition-all"
-              >
-                {t('cta.becomePartner')}
-              </Link>
-            </div>
-
-            {/* App badges */}
-            <div className="mt-12 flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <div className="px-6 py-3 bg-white/10 backdrop-blur-lg rounded-xl border border-white/20">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">📱</span>
-                  <div className="text-left">
-                    <div className="text-xs text-cyan-200">{t('cta.availableOn')}</div>
-                    <div className="font-bold text-white">{t('cta.iosAndroid')}</div>
-                  </div>
-                </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '32px', marginBottom: '32px' }}>
+              <div style={{ maxWidth: '480px' }}>
+                <h3 style={{ fontSize: '26px', fontWeight: '800', color: '#111827', marginBottom: '10px' }}>
+                  {language === 'fr' ? 'Prix transparents en Franc Congolais' : 'Transparent prices in Congolese Franc'}
+                </h3>
+                <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: '1.6' }}>
+                  {language === 'fr'
+                    ? <span>Le prix est affiché <strong style={{ color: '#111827' }}>avant</strong> de confirmer votre course. Zéro surprise, zéro négociation.</span>
+                    : <span>The price is displayed <strong style={{ color: '#111827' }}>before</strong> confirming your ride. Zero surprise, zero negotiation.</span>}
+                </p>
               </div>
-              <div className="px-6 py-3 bg-white/10 backdrop-blur-lg rounded-xl border border-white/20">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">💳</span>
-                  <div className="text-left">
-                    <div className="text-xs text-cyan-200">{t('cta.payment')}</div>
-                    <div className="font-bold text-white">{t('cta.cashMobile')}</div>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                {[
+                  { val: 'FC', sub: language === 'fr' ? 'Franc Congolais' : 'Congolese Franc', color: '#0891b2' },
+                  { val: '0', sub: language === 'fr' ? 'Frais cachés' : 'Hidden fees', color: '#16a34a' },
+                  { val: '100%', sub: language === 'fr' ? 'Transparent' : 'Transparent', color: '#0891b2' },
+                ].map((b, i) => (
+                  <div key={i} style={{ textAlign: 'center', padding: '16px 20px', border: '1px solid #e5e7eb', borderRadius: '12px', minWidth: '80px' }}>
+                    <div style={{ fontSize: '22px', fontWeight: '900', color: b.color }}>{b.val}</div>
+                    <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px' }}>{b.sub}</div>
                   </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ✅ Point 2 : ticker 5 images en continu */}
+            <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '28px' }}>
+              <p style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9ca3af', textAlign: 'center', marginBottom: '20px' }}>
+                {language === 'fr' ? 'Moyens de paiement acceptés' : 'Accepted payment methods'}
+              </p>
+              <div style={{ position: 'relative', overflow: 'hidden' }}>
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '48px', background: 'linear-gradient(to right, white, transparent)', zIndex: 1 }} />
+                <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '48px', background: 'linear-gradient(to left, white, transparent)', zIndex: 1 }} />
+
+                {/* Série dupliquée pour boucle infinie */}
+                <div className="ticker-track">
+                  {[...paymentMethods, ...paymentMethods].map((p, i) => (
+                    <div key={i} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 24px', border: '1px solid #e5e7eb', borderRadius: '10px', background: '#fafafa', marginRight: '16px' }}>
+                      <img src={p.src} alt={p.label}
+                        style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
+                        onError={e => { e.currentTarget.style.display = 'none'; }} />
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#374151', whiteSpace: 'nowrap' }}>{p.label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -727,13 +561,167 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Footer Professionnel */}
-      <ProfessionalFooter />
+      {/* TEMOIGNAGES */}
+      <section id="testimonials" style={{ padding: '96px 0', background: 'white', borderTop: '1px solid #f3f4f6' }}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div style={{ marginBottom: '64px' }}>
+            
+            <h2 style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
+              {t('testimonials.title1')} <span style={{ color: '#0891b2' }}>{t('testimonials.title2')}</span>
+            </h2>
+            <p style={{ fontSize: '18px', color: '#6b7280', maxWidth: '480px' }}>{t('testimonials.subtitle')}</p>
+          </div>
 
-      {/* Chat Widget */}
-      <Suspense fallback={null}>
-        <ChatWidget />
-      </Suspense>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { name: t('testimonials.client1.name'), role: t('testimonials.client1.role'), text: t('testimonials.client1.text') },
+              { name: t('testimonials.client2.name'), role: t('testimonials.client2.role'), text: t('testimonials.client2.text') },
+              { name: t('testimonials.client3.name'), role: t('testimonials.client3.role'), text: t('testimonials.client3.text') },
+              { name: t('testimonials.client4.name'), role: t('testimonials.client4.role'), text: t('testimonials.client4.text') },
+            ].map((t2, i) => (
+              <motion.div key={i} className="card" style={{ padding: '28px' }}
+                initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
+                <div style={{ fontSize: '48px', lineHeight: '1', color: '#bae6fd', marginBottom: '16px', fontFamily: 'Georgia, serif' }}>"</div>
+                <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: '1.7', fontStyle: 'italic', marginBottom: '20px' }}>{t2.text}</p>
+                <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{t2.name}</div>
+                  <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{t2.role}</div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: '56px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '48px', padding: '32px', background: '#fafafa', borderRadius: '16px', border: '1px solid #f3f4f6' }}>
+            {[
+              { val: '1000+', labelFR: t('testimonials.reviews5Stars'), labelEN: t('testimonials.reviews5Stars') },
+              { val: '98%', labelFR: t('testimonials.satisfaction'), labelEN: t('testimonials.satisfaction') },
+              { val: '4.9/5', labelFR: t('testimonials.avgRating'), labelEN: t('testimonials.avgRating') },
+            ].map((s, i) => (
+              <div key={i} style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '32px', fontWeight: '900', color: '#0891b2' }}>{s.val}</div>
+                <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>{language === 'fr' ? s.labelFR : s.labelEN}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ✅ Point 3 : AFRIQUE entièrement traduite */}
+      <section id="africa" style={{ padding: '96px 0', background: '#fafafa', borderTop: '1px solid #f3f4f6' }}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div style={{ marginBottom: '64px' }}>
+            
+            <h2 style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
+              {language === 'fr' ? 'SmartCabb est présent en ' : 'SmartCabb is present in '}
+              <span style={{ color: '#0891b2' }}>{language === 'fr' ? 'Afrique' : 'Africa'}</span>
+            </h2>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div style={{ position: 'relative' }}>
+              <img src="/carte-afrique.png" alt="Carte Afrique SmartCabb"
+                style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
+                onError={e => { e.currentTarget.style.display = 'none'; }} />
+              <div style={{ position: 'absolute', top: '52%', left: '55%' }}>
+                <div style={{ position: 'relative' }}>
+                  <div className="ping-dot" style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', background: 'rgba(8,145,178,0.3)' }} />
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#0891b2', border: '3px solid white', boxShadow: '0 4px 12px rgba(8,145,178,0.5)', position: 'relative', zIndex: 1 }} />
+                  <div style={{ position: 'absolute', top: '22px', left: '50%', transform: 'translateX(-50%)', background: '#0891b2', color: 'white', fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '6px', whiteSpace: 'nowrap', zIndex: 2 }}>
+                    Kinshasa
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '36px', fontWeight: '900', color: '#111827', marginBottom: '20px', lineHeight: '1.2' }}>
+                {language === 'fr' ? '1 pays actif,' : '1 active country,'}
+                <br /><span style={{ color: '#0891b2' }}>{language === 'fr' ? '54 pays ciblés' : '54 countries targeted'}</span>
+              </h3>
+              <p style={{ fontSize: '16px', color: '#6b7280', lineHeight: '1.7', marginBottom: '32px' }}>
+                {language === 'fr'
+                  ? "Né à Kinshasa, SmartCabb ambitionne de connecter toute l'Afrique avec un transport sûr, abordable et local."
+                  : 'Born in Kinshasa, SmartCabb aims to connect all of Africa with safe, affordable and local transport.'}
+              </p>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '32px' }}>
+                {africanCountries.map((p, i) => (
+                  <div key={i} className="country-card">
+                    <img src={`https://flagcdn.com/w40/${p.code}.png`} alt={p.nameFR}
+                      style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px' }} />
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#111827', lineHeight: '1.2' }}>
+                        {language === 'fr' ? p.nameFR : p.nameEN}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: '1.2' }}>
+                        {language === 'fr' ? p.cityFR : p.cityEN}
+                      </div>
+                    </div>
+                    <div style={{ padding: '2px 8px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '11px', fontWeight: '700', color: '#92400e' }}>
+                      {language === 'fr' ? 'Bientôt' : 'Soon'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {africaStats.map((s, i) => (
+                  <motion.div key={i} className="stat-box"
+                    initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }} viewport={{ once: true }}>
+                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#0891b2' }}>
+                      {s.val}<span style={{ fontSize: '16px' }}>{s.suf}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                      {language === 'fr' ? s.labelFR : s.labelEN}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ✅ Point 4 : CTA avec boutons bien visibles et cliquables */}
+      <section id="cta" style={{ padding: '96px 0', background: '#0891b2' }}>
+        <div className="max-w-4xl mx-auto px-6" style={{ textAlign: 'center' }}>
+          <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+            <h2 style={{ fontSize: '48px', fontWeight: '900', color: 'white', marginBottom: '20px', lineHeight: '1.15' }}>
+              {t('cta.title')}
+            </h2>
+            <p style={{ fontSize: '18px', color: 'rgba(255,255,255,0.8)', marginBottom: '40px', lineHeight: '1.6' }}>
+              {t('cta.subtitle')}
+            </p>
+
+            {/* ✅ Boutons bien cliquables */}
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '48px' }}>
+              <Link to="/app/passenger" className="btn-primary">
+                {t('cta.startNow')}
+              </Link>
+              <Link to="/drivers" className="btn-secondary">
+                {t('cta.becomePartner')}
+              </Link>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              {[
+                { label: t('cta.availableOn'), val: t('cta.iosAndroid') },
+                { label: t('cta.payment'), val: t('cta.cashMobile') },
+              ].map((b, i) => (
+                <div key={i} style={{ padding: '14px 24px', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '10px', background: 'rgba(255,255,255,0.1)' }}>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.65)', marginBottom: '4px' }}>{b.label}</div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: 'white' }}>{b.val}</div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      <ProfessionalFooter />
+      <Suspense fallback={null}><ChatWidget /></Suspense>
     </div>
   );
 }
