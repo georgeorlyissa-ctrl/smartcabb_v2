@@ -35,6 +35,8 @@ export function ActiveRideScreenWithOSM() {
       setElapsedTime(prev => prev + 1);
       
       // Calcul du coût basé sur le temps (exemple: 500 CDF/min)
+      // Calcul du coût basé sur le temps (exemple: 500 CDF/min)
+      // Calcul du coût basé sur le temps (exemple: 500 CDF/min)
       const costPerMinute = 500;
       setCurrentCost(prev => prev + (costPerMinute / 60));
     }, 1000);
