@@ -111,15 +111,15 @@ export function LandingPage() {
   ];
 
   const africanCountries = [
-    { code: 'cg', nameFR: 'Congo-Brazza', nameEN: 'Congo-Brazza', cityFR: 'Brazzaville', cityEN: 'Brazzaville' },
-    { code: 'ao', nameFR: 'Angola', nameEN: 'Angola', cityFR: 'Luanda', cityEN: 'Luanda' },
-    { code: 'rw', nameFR: 'Rwanda', nameEN: 'Rwanda', cityFR: 'Kigali', cityEN: 'Kigali' },
-    { code: 'ke', nameFR: 'Kenya', nameEN: 'Kenya', cityFR: 'Nairobi', cityEN: 'Nairobi' },
-    { code: 'cm', nameFR: 'Cameroun', nameEN: 'Cameroon', cityFR: 'Douala', cityEN: 'Douala' },
-    { code: 'sn', nameFR: 'Senegal', nameEN: 'Senegal', cityFR: 'Dakar', cityEN: 'Dakar' },
-    { code: 'ug', nameFR: 'Uganda', nameEN: 'Uganda', cityFR: 'Kampala', cityEN: 'Kampala' },
-    { code: 'tz', nameFR: 'Tanzanie', nameEN: 'Tanzania', cityFR: 'Dar es Salaam', cityEN: 'Dar es Salaam' },
-  ];
+  { flag: '🇨🇬', nameFR: 'Congo-Brazza', nameEN: 'Congo-Brazza', cityFR: 'Brazzaville', cityEN: 'Brazzaville' },
+  { flag: '🇦🇴', nameFR: 'Angola', nameEN: 'Angola', cityFR: 'Luanda', cityEN: 'Luanda' },
+  { flag: '🇷🇼', nameFR: 'Rwanda', nameEN: 'Rwanda', cityFR: 'Kigali', cityEN: 'Kigali' },
+  { flag: '🇰🇪', nameFR: 'Kenya', nameEN: 'Kenya', cityFR: 'Nairobi', cityEN: 'Nairobi' },
+  { flag: '🇨🇲', nameFR: 'Cameroun', nameEN: 'Cameroon', cityFR: 'Douala', cityEN: 'Douala' },
+  { flag: '🇸🇳', nameFR: 'Senegal', nameEN: 'Senegal', cityFR: 'Dakar', cityEN: 'Dakar' },
+  { flag: '🇺🇬', nameFR: 'Uganda', nameEN: 'Uganda', cityFR: 'Kampala', cityEN: 'Kampala' },
+  { flag: '🇹🇿', nameFR: 'Tanzanie', nameEN: 'Tanzania', cityFR: 'Dar es Salaam', cityEN: 'Dar es Salaam' },
+];
 
   const africaStats = [
     { val: '54', suf: language === 'fr' ? ' pays' : ' countries', labelFR: 'Pays africains ciblés', labelEN: 'African countries targeted' },
@@ -568,15 +568,7 @@ export function LandingPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '32px' }}>
                 {africanCountries.map((p, i) => (
                   <div key={i} className="country-card" style={{ opacity: africaInView ? 1 : 0, transform: africaInView ? 'scale(1)' : 'scale(0.8)', transition: `all 0.4s cubic-bezier(0.22,1,0.36,1) ${0.2 + i * 0.05}s` }}>
-                    <img
-                      src={`https://flagcdn.com/w80/${p.code}.png`}
-                      alt={p.nameFR}
-                      loading="lazy"
-                      width={28}
-                      height={18}
-                      style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px', display: 'block', flexShrink: 0 }}
-                      onError={e => { e.currentTarget.style.display = 'none'; }}
-                    />
+                    <span style={{ fontSize: '22px', lineHeight: '1', flexShrink: 0, display: 'block' }}>{p.flag}</span>
                     <div>
                       <div style={{ fontSize: '12px', fontWeight: '700', color: '#111827', lineHeight: '1.2' }}>{language === 'fr' ? p.nameFR : p.nameEN}</div>
                       <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: '1.2' }}>{language === 'fr' ? p.cityFR : p.cityEN}</div>
