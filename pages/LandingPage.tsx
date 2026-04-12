@@ -198,7 +198,7 @@ export function LandingPage() {
         @keyframes floatP { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-18px) rotate(180deg); } }
         .particle { position: absolute; border-radius: 50%; background: rgba(8,145,178,0.12); pointer-events: none; }
 
-        .country-card { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; transition: all 0.25s; }
+        .country-card { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; transition: all 0.25s; min-width: 0; }
         .country-card:hover { border-color: #0891b2; box-shadow: 0 4px 16px rgba(8,145,178,0.12); transform: translateY(-2px); }
 
         .stat-box { padding: 20px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; transition: all 0.25s; }
@@ -580,7 +580,7 @@ export function LandingPage() {
               <p style={{ fontSize: '16px', color: '#6b7280', lineHeight: '1.7', marginBottom: '32px' }}>
                 {language === 'fr' ? "Ne a Kinshasa, SmartCabb ambitionne de connecter toute l'Afrique avec un transport sur, abordable et local." : 'Born in Kinshasa, SmartCabb aims to connect all of Africa with safe, affordable and local transport.'}
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '32px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px', marginBottom: '32px' }}>
                 {africanCountries.map((p, i) => (
                   <div key={i} className="country-card" style={{ opacity: africaInView ? 1 : 0, transform: africaInView ? 'scale(1)' : 'scale(0.8)', transition: `all 0.4s cubic-bezier(0.22,1,0.36,1) ${0.2 + i * 0.05}s` }}>
                     <FlagBadge code={p.code} />
