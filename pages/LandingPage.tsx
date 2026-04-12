@@ -273,7 +273,30 @@ export function LandingPage() {
               </motion.div>
             </div>
 
-            <div className="relative hidden lg:block">
+            <div className="relative lg:hidden" style={{ marginBottom: '32px', borderRadius: '16px', overflow: 'hidden', height: '260px' }}>
+  {heroImages.map((img, i) => (
+    <img
+      key={i}
+      src={img}
+      alt="SmartCabb"
+      style={{
+        position: 'absolute', inset: 0, width: '100%', height: '100%',
+        objectFit: 'cover',
+        opacity: heroImg === i ? 1 : 0,
+        transition: 'opacity 1s ease',
+      }}
+      onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }}
+    />
+  ))}
+  <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 10 }}>
+    {heroImages.map((_, i) => (
+      <button key={i} onClick={() => setHeroImg(i)}
+        style={{ height: '6px', borderRadius: '3px', border: 'none', cursor: 'pointer', background: heroImg === i ? 'white' : 'rgba(255,255,255,0.4)', width: heroImg === i ? '24px' : '6px', transition: 'all 0.3s' }} />
+    ))}
+  </div>
+</div>
+
+<div className="relative hidden lg:block">
               <motion.div style={{ position: 'relative', height: '480px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.12)' }}
                 initial={{ opacity: 0, scale: 0.92, x: 40 }} animate={{ opacity: 1, scale: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.25, ease }}>
@@ -523,7 +546,14 @@ export function LandingPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '32px' }}>
                 {africanCountries.map((p, i) => (
                   <div key={i} className="country-card" style={{ opacity: africaInView ? 1 : 0, transform: africaInView ? 'scale(1)' : 'scale(0.8)', transition: `all 0.4s cubic-bezier(0.22,1,0.36,1) ${0.2 + i * 0.05}s` }}>
-                    <img src={`https://flagcdn.com/w40/${p.code}.png`} alt={p.nameFR} style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px' }} />
+                    <img
+  src={`https://flagcdn.com/w80/${p.code}.png`}
+  alt={p.nameFR}
+  style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px', display: 'block' }}
+  onError={e => {
+    e.currentTarget.style.display = 'none';
+  }}
+/>
                     <div>
                       <div style={{ fontSize: '12px', fontWeight: '700', color: '#111827', lineHeight: '1.2' }}>{language === 'fr' ? p.nameFR : p.nameEN}</div>
                       <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: '1.2' }}>{language === 'fr' ? p.cityFR : p.cityEN}</div>
