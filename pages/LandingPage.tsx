@@ -7,7 +7,7 @@ import { LanguageSelector } from '../components/LanguageSelector';
 
 const ChatWidget = lazy(() => import('../components/ChatWidget').then(module => ({ default: module.ChatWidget })));
 
-// ─── Hook IntersectionObserver maison (remplace useInView) ───
+// Hook IntersectionObserver maison
 function useInViewCustom(threshold = 0.15) {
   const ref = useRef<HTMLElement>(null);
   const [inView, setInView] = useState(false);
@@ -44,17 +44,27 @@ export function LandingPage() {
     { src: '/logos/cash.png', label: 'Cash' },
   ];
 
+  // Precharger uniquement les images critiques above the fold
   useEffect(() => {
-    const t1 = setInterval(() => setCurrentBg(p => (p + 1) % backgrounds.length), 4000);
-    return () => clearInterval(t1);
+    const preload = ['/hero-smartcabb.png', '/photo2_smartcabb.jpeg'];
+    preload.forEach(src => {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = src;
+      document.head.appendChild(link);
+    });
   }, []);
+
+  // Tous les carousels dans un seul useEffect, après le premier paint
   useEffect(() => {
-    const t2 = setInterval(() => setHeroImg(p => (p + 1) % heroImages.length), 4500);
-    return () => clearInterval(t2);
-  }, []);
-  useEffect(() => {
-    const t3 = setInterval(() => setVehiculeIndex(p => (p + 1) % vehicules.length), 3000);
-    return () => clearInterval(t3);
+    const rafId = requestAnimationFrame(() => {
+      const t1 = setInterval(() => setCurrentBg(p => (p + 1) % backgrounds.length), 4000);
+      const t2 = setInterval(() => setHeroImg(p => (p + 1) % heroImages.length), 4500);
+      const t3 = setInterval(() => setVehiculeIndex(p => (p + 1) % vehicules.length), 3000);
+      return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3); };
+    });
+    return () => cancelAnimationFrame(rafId);
   }, []);
 
   useEffect(() => {
@@ -106,7 +116,7 @@ export function LandingPage() {
     { code: 'rw', nameFR: 'Rwanda', nameEN: 'Rwanda', cityFR: 'Kigali', cityEN: 'Kigali' },
     { code: 'ke', nameFR: 'Kenya', nameEN: 'Kenya', cityFR: 'Nairobi', cityEN: 'Nairobi' },
     { code: 'cm', nameFR: 'Cameroun', nameEN: 'Cameroon', cityFR: 'Douala', cityEN: 'Douala' },
-    { code: 'sn', nameFR: 'Sénégal', nameEN: 'Senegal', cityFR: 'Dakar', cityEN: 'Dakar' },
+    { code: 'sn', nameFR: 'Senegal', nameEN: 'Senegal', cityFR: 'Dakar', cityEN: 'Dakar' },
     { code: 'ug', nameFR: 'Uganda', nameEN: 'Uganda', cityFR: 'Kampala', cityEN: 'Kampala' },
     { code: 'tz', nameFR: 'Tanzanie', nameEN: 'Tanzania', cityFR: 'Dar es Salaam', cityEN: 'Dar es Salaam' },
   ];
@@ -123,7 +133,6 @@ export function LandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'white' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
         html { scroll-behavior: smooth; }
 
@@ -147,7 +156,6 @@ export function LandingPage() {
 
         .step-number { font-size: 72px; font-weight: 900; color: #f0f9ff; position: absolute; top: 16px; right: 20px; line-height: 1; user-select: none; }
 
-        /* ── Reveal animations via CSS ── */
         .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1); }
         .reveal.in { opacity: 1; transform: translateY(0); }
         .reveal-left { opacity: 0; transform: translateX(-48px); transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1); }
@@ -155,29 +163,23 @@ export function LandingPage() {
         .reveal-right { opacity: 0; transform: translateX(48px); transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1); }
         .reveal-right.in { opacity: 1; transform: translateX(0); }
 
-        /* Délais cascade */
         .d0 { transition-delay: 0s; } .d1 { transition-delay: 0.07s; } .d2 { transition-delay: 0.14s; }
         .d3 { transition-delay: 0.21s; } .d4 { transition-delay: 0.28s; } .d5 { transition-delay: 0.36s; }
         .d6 { transition-delay: 0.44s; } .d7 { transition-delay: 0.52s; } .d8 { transition-delay: 0.6s; }
 
-        /* Ticker paiement */
         @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .ticker-track { animation: ticker 12s linear infinite; width: max-content; display: flex; }
         .ticker-track:hover { animation-play-state: paused; }
 
-        /* Pulse GPS */
         @keyframes ping-dot { 0%, 100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.8); opacity: 0; } }
         .ping-dot { animation: ping-dot 2s ease-out infinite; }
 
-        /* Shimmer badge confiance */
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
         .trust-tag { background: linear-gradient(90deg, #f0f9ff 25%, #bae6fd 50%, #f0f9ff 75%); background-size: 200% auto; animation: shimmer 3s linear infinite; display: inline-block; padding: 4px 12px; border: 1px solid #bae6fd; border-radius: 6px; font-size: 12px; font-weight: 700; color: #0891b2; margin-bottom: 20px; }
 
-        /* Glow bouton CTA */
         @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); } 50% { box-shadow: 0 0 0 14px rgba(255,255,255,0); } }
         .cta-glow { animation: pulseGlow 2.5s ease infinite; }
 
-        /* Particules héro */
         @keyframes floatP { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-18px) rotate(180deg); } }
         .particle { position: absolute; border-radius: 50%; background: rgba(8,145,178,0.12); pointer-events: none; }
 
@@ -191,7 +193,7 @@ export function LandingPage() {
         .accent-line { height: 4px; background: linear-gradient(90deg,#0891b2,#06b6d4); border-radius: 2px; margin-bottom: 20px; max-width: 64px; }
       `}</style>
 
-      {/* ══════ NAV ══════ */}
+      {/* NAV */}
       <motion.nav
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -201,7 +203,7 @@ export function LandingPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '72px' }}>
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
-                <img src="/logo-smartcabb.jpeg" alt="SmartCabb" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img src="/logo-smartcabb.jpeg" alt="SmartCabb" width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
               <span style={{ fontSize: '20px', fontWeight: '900', color: '#111827', letterSpacing: '-0.02em' }}>
                 SMART<span style={{ color: '#0891b2' }}>CABB</span>
@@ -234,11 +236,14 @@ export function LandingPage() {
         </div>
       </motion.nav>
 
-      {/* ══════ HERO ══════ */}
+      {/* HERO */}
       <section id="home" style={{ paddingTop: '120px', paddingBottom: '80px', position: 'relative', overflow: 'hidden' }}>
-        {backgrounds.map((bg, i) => (
-          <div key={i} style={{ position: 'absolute', inset: 0, backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: currentBg === i ? 1 : 0, transition: 'opacity 1.2s ease' }} />
-        ))}
+        {/* Background carousel — ne rend que l'image active et la suivante */}
+        {backgrounds.map((bg, i) =>
+          currentBg === i || currentBg === (i + 1) % backgrounds.length ? (
+            <div key={i} style={{ position: 'absolute', inset: 0, backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: currentBg === i ? 1 : 0, transition: 'opacity 1.2s ease' }} />
+          ) : null
+        )}
         <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.88)' }} />
         {[{ w: 80, h: 80, top: '15%', left: '8%', d: '5s', dl: '0s' }, { w: 40, h: 40, top: '60%', left: '4%', d: '7s', dl: '1s' }, { w: 60, h: 60, top: '30%', right: '6%', d: '6s', dl: '0.5s' }, { w: 30, h: 30, top: '75%', right: '10%', d: '4s', dl: '2s' }].map((p, i) => (
           <div key={i} className="particle" style={{ width: p.w, height: p.h, top: p.top, left: (p as any).left, right: (p as any).right, animation: `floatP ${p.d} ease-in-out ${p.dl} infinite` }} />
@@ -247,7 +252,6 @@ export function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              
               <motion.h1 initial={{ opacity: 0, y: 36 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.7, ease }}
                 style={{ fontSize: 'clamp(38px, 5vw, 60px)', fontWeight: '900', color: '#111827', lineHeight: '1.1', marginBottom: '24px', letterSpacing: '-0.02em' }}>
                 {language === 'fr' ? <>Votre trajet,<br /><span style={{ color: '#0891b2' }}>votre choix</span></> : <>Your ride,<br /><span style={{ color: '#0891b2' }}>your choice</span></>}
@@ -273,38 +277,48 @@ export function LandingPage() {
               </motion.div>
             </div>
 
+            {/* Hero image carousel — mobile (visible uniquement sur mobile) */}
             <div className="relative lg:hidden" style={{ marginBottom: '32px', borderRadius: '16px', overflow: 'hidden', height: '260px' }}>
-  {heroImages.map((img, i) => (
-    <img
-      key={i}
-      src={img}
-      alt="SmartCabb"
-      style={{
-        position: 'absolute', inset: 0, width: '100%', height: '100%',
-        objectFit: 'cover',
-        opacity: heroImg === i ? 1 : 0,
-        transition: 'opacity 1s ease',
-      }}
-      onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }}
-    />
-  ))}
-  <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 10 }}>
-    {heroImages.map((_, i) => (
-      <button key={i} onClick={() => setHeroImg(i)}
-        style={{ height: '6px', borderRadius: '3px', border: 'none', cursor: 'pointer', background: heroImg === i ? 'white' : 'rgba(255,255,255,0.4)', width: heroImg === i ? '24px' : '6px', transition: 'all 0.3s' }} />
-    ))}
-  </div>
-</div>
+              {heroImages.map((img, i) =>
+                heroImg === i || heroImg === (i + 1) % heroImages.length ? (
+                  <img
+                    key={i}
+                    src={img}
+                    alt="SmartCabb"
+                    width={600}
+                    height={260}
+                    style={{
+                      position: 'absolute', inset: 0, width: '100%', height: '100%',
+                      objectFit: 'cover',
+                      opacity: heroImg === i ? 1 : 0,
+                      transition: 'opacity 1s ease',
+                    }}
+                    onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }}
+                  />
+                ) : null
+              )}
+              <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 10 }}>
+                {heroImages.map((_, i) => (
+                  <button key={i} onClick={() => setHeroImg(i)}
+                    style={{ height: '6px', borderRadius: '3px', border: 'none', cursor: 'pointer', background: heroImg === i ? 'white' : 'rgba(255,255,255,0.4)', width: heroImg === i ? '24px' : '6px', transition: 'all 0.3s' }} />
+                ))}
+              </div>
+            </div>
 
-<div className="relative hidden lg:block">
+            {/* Hero image carousel — desktop */}
+            <div className="relative hidden lg:block">
               <motion.div style={{ position: 'relative', height: '480px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.12)' }}
                 initial={{ opacity: 0, scale: 0.92, x: 40 }} animate={{ opacity: 1, scale: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.25, ease }}>
-                {heroImages.map((img, i) => (
-                  <img key={i} src={img} alt="SmartCabb"
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
-                    onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }} />
-                ))}
+                {heroImages.map((img, i) =>
+                  heroImg === i || heroImg === (i + 1) % heroImages.length ? (
+                    <img key={i} src={img} alt="SmartCabb"
+                      width={800}
+                      height={480}
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
+                      onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }} />
+                  ) : null
+                )}
                 <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 10 }}>
                   {heroImages.map((_, i) => (
                     <button key={i} onClick={() => setHeroImg(i)}
@@ -327,11 +341,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ══════ COMMENT ÇA MARCHE ══════ */}
+      {/* COMMENT CA MARCHE */}
       <section id="how" ref={howRef as any} style={{ padding: '96px 0', background: '#fafafa', borderTop: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '64px' }}>
-            
             <div className={`accent-line reveal d1 ${howInView ? 'in' : ''}`} />
             <h2 className={`reveal d2 ${howInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
               {t('how.title1')} <span style={{ color: '#0891b2' }}>{t('how.title2')}</span>
@@ -342,12 +355,19 @@ export function LandingPage() {
             {steps.map((step, i) => (
               <div key={i} className={`card reveal ${howInView ? 'in' : ''}`} style={{ overflow: 'hidden', position: 'relative', transitionDelay: `${0.18 + i * 0.18}s` }}>
                 <div style={{ height: '220px', overflow: 'hidden', position: 'relative' }}>
-                  <img src={step.image} alt={step.title} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s' }}
+                  <img
+                    src={step.image}
+                    alt={step.title}
+                    loading="lazy"
+                    width={600}
+                    height={220}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s', display: 'block' }}
                     onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.08)')}
-                    onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')} />
+                    onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')}
+                  />
                   <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,145,178,0.7), transparent)' }} />
                   <div style={{ position: 'absolute', bottom: '16px', left: '20px', color: 'white', fontSize: '13px', fontWeight: '700' }}>
-                    {language === 'fr' ? 'Étape' : 'Step'} {step.number}
+                    {language === 'fr' ? 'Etape' : 'Step'} {step.number}
                   </div>
                   {step.isCarousel && (
                     <div style={{ position: 'absolute', bottom: '16px', right: '16px', display: 'flex', gap: '6px' }}>
@@ -370,12 +390,11 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ══════ POURQUOI ══════ */}
+      {/* POURQUOI */}
       <section id="why" ref={whyRef as any} style={{ padding: '96px 0', background: 'white', borderTop: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <div>
-              
               <div className={`accent-line reveal-left d1 ${whyInView ? 'in' : ''}`} />
               <h2 className={`reveal-left d2 ${whyInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
                 {t('why.title1')} <span style={{ color: '#0891b2' }}>{t('why.title2')}</span>
@@ -401,27 +420,25 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ══════ CONFIANCE ══════ */}
+      {/* CONFIANCE */}
       <section id="trust" ref={trustRef as any} style={{ padding: '96px 0', background: '#fafafa', borderTop: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '64px' }}>
-            
             <div className={`accent-line reveal d1 ${trustInView ? 'in' : ''}`} />
             <h2 className={`reveal d2 ${trustInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
               {language === 'fr' ? 'Pourquoi nous ' : 'Why '}<span style={{ color: '#0891b2' }}>{language === 'fr' ? 'faire confiance ?' : 'trust us?'}</span>
             </h2>
             <p className={`reveal d3 ${trustInView ? 'in' : ''}`} style={{ fontSize: '18px', color: '#6b7280', maxWidth: '480px' }}>
-              {language === 'fr' ? 'SmartCabb met la sécurité de chaque trajet au premier plan.' : 'SmartCabb puts the safety of every ride first.'}
+              {language === 'fr' ? 'SmartCabb met la securite de chaque trajet au premier plan.' : 'SmartCabb puts the safety of every ride first.'}
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { titleFR: 'Chauffeurs vérifiés', titleEN: 'Verified drivers', descFR: 'Chaque chauffeur est vérifié, formé et noté. Vous voyez sa photo, son nom et son numéro de plaque avant la course.', descEN: 'Each driver is verified, trained and rated. You see their photo, name and plate number before the ride.', tagFR: '100% vérifiés', tagEN: '100% verified', icon: '' },
-              { titleFR: 'Suivi GPS en temps réel', titleEN: 'Real-time GPS tracking', descFR: "Partagez votre trajet à un proche d'un seul clic. Votre famille sait où vous êtes à tout moment.", descEN: 'Share your ride with a loved one in one click. Your family knows where you are at all times.', tagFR: 'Partage instantané', tagEN: 'Instant sharing', icon: '' },
-              { titleFR: "Bouton SOS d'urgence", titleEN: 'Emergency SOS button', descFR: "En cas de problème, notre bouton SOS alerte immédiatement notre équipe et vos contacts d'urgence.", descEN: 'Our SOS button immediately alerts our team and your emergency contacts.', tagFR: 'Disponible 24/7', tagEN: 'Available 24/7', icon: '' },
+              { titleFR: 'Chauffeurs verifies', titleEN: 'Verified drivers', descFR: 'Chaque chauffeur est verifie, forme et note. Vous voyez sa photo, son nom et son numero de plaque avant la course.', descEN: 'Each driver is verified, trained and rated. You see their photo, name and plate number before the ride.', tagFR: '100% verifies', tagEN: '100% verified' },
+              { titleFR: 'Suivi GPS en temps reel', titleEN: 'Real-time GPS tracking', descFR: "Partagez votre trajet a un proche d'un seul clic. Votre famille sait ou vous etes a tout moment.", descEN: 'Share your ride with a loved one in one click. Your family knows where you are at all times.', tagFR: 'Partage instantane', tagEN: 'Instant sharing' },
+              { titleFR: "Bouton SOS d'urgence", titleEN: 'Emergency SOS button', descFR: "En cas de probleme, notre bouton SOS alerte immediatement notre equipe et vos contacts d'urgence.", descEN: 'Our SOS button immediately alerts our team and your emergency contacts.', tagFR: 'Disponible 24/7', tagEN: 'Available 24/7' },
             ].map((item, i) => (
               <div key={i} className={`card reveal ${trustInView ? 'in' : ''}`} style={{ padding: '32px', transitionDelay: `${0.1 + i * 0.15}s` }}>
-                <div style={{ fontSize: '32px', marginBottom: '12px' }}>{item.icon}</div>
                 <div className="trust-tag">{language === 'fr' ? item.tagFR : item.tagEN}</div>
                 <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#111827', marginBottom: '12px' }}>{language === 'fr' ? item.titleFR : item.titleEN}</h3>
                 <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: '1.6' }}>{language === 'fr' ? item.descFR : item.descEN}</p>
@@ -429,18 +446,19 @@ export function LandingPage() {
             ))}
           </div>
 
-          <div className={`reveal d5 ${trustInView ? 'in' : ''}`} style={{ marginTop: '48px', padding: '40px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px' }}>
+          <div className={`reveal d5 ${trustInView ? 'in' : ''}`}
+            style={{ marginTop: '48px', padding: '40px', background: 'white', border: '1px solid #e5e7eb', borderRadius: '20px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '32px', marginBottom: '32px' }}>
               <div style={{ maxWidth: '480px' }}>
                 <h3 style={{ fontSize: '26px', fontWeight: '800', color: '#111827', marginBottom: '10px' }}>
                   {language === 'fr' ? 'Prix transparents en Franc Congolais' : 'Transparent prices in Congolese Franc'}
                 </h3>
                 <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: '1.6' }}>
-                  {language === 'fr' ? <span>Le prix est affiché <strong style={{ color: '#111827' }}>avant</strong> de confirmer. Zéro surprise.</span> : <span>The price is displayed <strong style={{ color: '#111827' }}>before</strong> confirming. Zero surprise.</span>}
+                  {language === 'fr' ? <span>Le prix est affiche <strong style={{ color: '#111827' }}>avant</strong> de confirmer. Zero surprise.</span> : <span>The price is displayed <strong style={{ color: '#111827' }}>before</strong> confirming. Zero surprise.</span>}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '16px' }}>
-                {[{ val: 'FC', sub: language === 'fr' ? 'Franc Congolais' : 'Congolese Franc', color: '#0891b2' }, { val: '0', sub: language === 'fr' ? 'Frais cachés' : 'Hidden fees', color: '#16a34a' }, { val: '100%', sub: 'Transparent', color: '#0891b2' }].map((b, i) => (
+                {[{ val: 'FC', sub: language === 'fr' ? 'Franc Congolais' : 'Congolese Franc', color: '#0891b2' }, { val: '0', sub: language === 'fr' ? 'Frais caches' : 'Hidden fees', color: '#16a34a' }, { val: '100%', sub: 'Transparent', color: '#0891b2' }].map((b, i) => (
                   <div key={i} style={{ textAlign: 'center', padding: '16px 20px', border: '1px solid #e5e7eb', borderRadius: '12px', minWidth: '80px', transition: 'all 0.2s', cursor: 'default' }}
                     onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#0891b2'; el.style.transform = 'scale(1.06)'; }}
                     onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#e5e7eb'; el.style.transform = 'scale(1)'; }}>
@@ -452,7 +470,7 @@ export function LandingPage() {
             </div>
             <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '28px' }}>
               <p style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9ca3af', textAlign: 'center', marginBottom: '20px' }}>
-                {language === 'fr' ? 'Moyens de paiement acceptés' : 'Accepted payment methods'}
+                {language === 'fr' ? 'Moyens de paiement acceptes' : 'Accepted payment methods'}
               </p>
               <div style={{ position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '48px', background: 'linear-gradient(to right, white, transparent)', zIndex: 1 }} />
@@ -460,7 +478,7 @@ export function LandingPage() {
                 <div className="ticker-track">
                   {[...paymentMethods, ...paymentMethods].map((p, i) => (
                     <div key={i} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 24px', border: '1px solid #e5e7eb', borderRadius: '10px', background: '#fafafa', marginRight: '16px' }}>
-                      <img src={p.src} alt={p.label} style={{ height: '28px', width: 'auto', objectFit: 'contain' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+                      <img src={p.src} alt={p.label} loading="lazy" height={28} style={{ height: '28px', width: 'auto', objectFit: 'contain', display: 'block' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
                       <span style={{ fontSize: '13px', fontWeight: '700', color: '#374151', whiteSpace: 'nowrap' }}>{p.label}</span>
                     </div>
                   ))}
@@ -471,11 +489,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ══════ TÉMOIGNAGES ══════ */}
+      {/* TEMOIGNAGES */}
       <section id="testimonials" ref={testimonialsRef as any} style={{ padding: '96px 0', background: 'white', borderTop: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '64px' }}>
-            
             <div className={`accent-line reveal d1 ${testimonialsInView ? 'in' : ''}`} />
             <h2 className={`reveal d2 ${testimonialsInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
               {t('testimonials.title1')} <span style={{ color: '#0891b2' }}>{t('testimonials.title2')}</span>
@@ -513,20 +530,25 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ══════ AFRIQUE ══════ */}
+      {/* AFRIQUE */}
       <section id="africa" ref={africaRef as any} style={{ padding: '96px 0', background: '#fafafa', borderTop: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '64px' }}>
-            
             <div className={`accent-line reveal d1 ${africaInView ? 'in' : ''}`} />
             <h2 className={`reveal d2 ${africaInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#111827', marginBottom: '16px' }}>
-              {language === 'fr' ? 'SmartCabb est présent en ' : 'SmartCabb is present in '}
+              {language === 'fr' ? 'SmartCabb est present en ' : 'SmartCabb is present in '}
               <span style={{ color: '#0891b2' }}>{language === 'fr' ? 'Afrique' : 'Africa'}</span>
             </h2>
           </div>
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className={`reveal-left ${africaInView ? 'in' : ''}`} style={{ position: 'relative' }}>
-              <img src="/carte-afrique.png" alt="Carte Afrique" style={{ width: '100%', height: 'auto', objectFit: 'contain' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
+              <img
+                src="/carte-afrique.png"
+                alt="Carte Afrique"
+                loading="lazy"
+                style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block' }}
+                onError={e => { e.currentTarget.style.display = 'none'; }}
+              />
               <div style={{ position: 'absolute', top: '52%', left: '55%' }}>
                 <div style={{ position: 'relative' }}>
                   <div className="ping-dot" style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', background: 'rgba(8,145,178,0.3)' }} />
@@ -538,27 +560,28 @@ export function LandingPage() {
             <div className={`reveal-right ${africaInView ? 'in' : ''}`}>
               <h3 style={{ fontSize: '36px', fontWeight: '900', color: '#111827', marginBottom: '20px', lineHeight: '1.2' }}>
                 {language === 'fr' ? '1 pays actif,' : '1 active country,'}<br />
-                <span style={{ color: '#0891b2' }}>{language === 'fr' ? '54 pays ciblés' : '54 countries targeted'}</span>
+                <span style={{ color: '#0891b2' }}>{language === 'fr' ? '54 pays cibles' : '54 countries targeted'}</span>
               </h3>
               <p style={{ fontSize: '16px', color: '#6b7280', lineHeight: '1.7', marginBottom: '32px' }}>
-                {language === 'fr' ? "Né à Kinshasa, SmartCabb ambitionne de connecter toute l'Afrique avec un transport sûr, abordable et local." : 'Born in Kinshasa, SmartCabb aims to connect all of Africa with safe, affordable and local transport.'}
+                {language === 'fr' ? "Ne a Kinshasa, SmartCabb ambitionne de connecter toute l'Afrique avec un transport sur, abordable et local." : 'Born in Kinshasa, SmartCabb aims to connect all of Africa with safe, affordable and local transport.'}
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '32px' }}>
                 {africanCountries.map((p, i) => (
                   <div key={i} className="country-card" style={{ opacity: africaInView ? 1 : 0, transform: africaInView ? 'scale(1)' : 'scale(0.8)', transition: `all 0.4s cubic-bezier(0.22,1,0.36,1) ${0.2 + i * 0.05}s` }}>
                     <img
-  src={`https://flagcdn.com/w80/${p.code}.png`}
-  alt={p.nameFR}
-  style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px', display: 'block' }}
-  onError={e => {
-    e.currentTarget.style.display = 'none';
-  }}
-/>
+                      src={`https://flagcdn.com/w80/${p.code}.png`}
+                      alt={p.nameFR}
+                      loading="lazy"
+                      width={28}
+                      height={18}
+                      style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px', display: 'block', flexShrink: 0 }}
+                      onError={e => { e.currentTarget.style.display = 'none'; }}
+                    />
                     <div>
                       <div style={{ fontSize: '12px', fontWeight: '700', color: '#111827', lineHeight: '1.2' }}>{language === 'fr' ? p.nameFR : p.nameEN}</div>
                       <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: '1.2' }}>{language === 'fr' ? p.cityFR : p.cityEN}</div>
                     </div>
-                    <div style={{ padding: '2px 8px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '11px', fontWeight: '700', color: '#92400e' }}>{language === 'fr' ? 'Bientôt' : 'Soon'}</div>
+                    <div style={{ padding: '2px 8px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '11px', fontWeight: '700', color: '#92400e' }}>{language === 'fr' ? 'Bientot' : 'Soon'}</div>
                   </div>
                 ))}
               </div>
@@ -575,12 +598,11 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* ══════ CTA ══════ */}
+      {/* CTA */}
       <section id="cta" ref={ctaRef as any} style={{ padding: '96px 0', background: '#0891b2', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-80px', right: '-80px', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-60px', left: '-60px', width: '240px', height: '240px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
         <div className="max-w-4xl mx-auto px-6" style={{ textAlign: 'center', position: 'relative' }}>
-          
           <h2 className={`reveal d2 ${ctaInView ? 'in' : ''}`} style={{ fontSize: '48px', fontWeight: '900', color: 'white', marginBottom: '20px', lineHeight: '1.15' }}>{t('cta.title')}</h2>
           <p className={`reveal d3 ${ctaInView ? 'in' : ''}`} style={{ fontSize: '18px', color: 'rgba(255,255,255,0.8)', marginBottom: '40px', lineHeight: '1.6' }}>{t('cta.subtitle')}</p>
           <div className={`reveal d4 ${ctaInView ? 'in' : ''}`} style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '48px' }}>
