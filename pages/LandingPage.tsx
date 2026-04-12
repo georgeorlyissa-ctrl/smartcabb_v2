@@ -11,14 +11,28 @@ const ChatWidget = lazy(() => import('../components/ChatWidget').then(module => 
 function FlagBadge({ code }: { code: string }) {
   return (
     <div style={{
-      width: '28px', height: '18px', borderRadius: '3px',
-      background: '#0891b2', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', flexShrink: 0,
-    }}>
-      <span style={{ fontSize: '9px', fontWeight: '900', color: 'white', letterSpacing: '0.02em', lineHeight: 1 }}>
-        {code.toUpperCase()}
-      </span>
-    </div>
+  minWidth: '28px',
+  width: '28px',
+  height: '18px',
+  borderRadius: '3px',
+  background: '#0891b2',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+  flexGrow: 0,
+}}>
+  <span style={{
+    fontSize: '9px',
+    fontWeight: '900',
+    color: 'white',
+    letterSpacing: '0.02em',
+    lineHeight: '1',
+    display: 'block',
+  }}>
+    {p.code.toUpperCase()}
+  </span>
+</div>
   );
 }
 
