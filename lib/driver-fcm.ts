@@ -221,13 +221,21 @@ export async function listenToFCMMessages(onMessageReceived: (payload: any) => v
       console.log('Message FCM recu (foreground):', payload);
       onMessageReceived(payload);
 
+      // ✅ DISPATCH de l'événement pour RideNotification
+      const data = payload.data || {};
+      if (data.type === 'new_ride_request' && data.rideId) {
+        console.log('🚗 Nouvelle course FCM - dispatch événement');
+        window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
+      }
+
+      // Notification navigateur en foreground
       if (payload.notification) {
-        const { title, body, icon } = payload.notification;
+        const { title, body } = payload.notification;
         if ('Notification' in window && Notification.permission === 'granted') {
           new Notification(title || 'SmartCabb', {
             body: body || 'Nouvelle notification',
-            icon: icon || '/logo.png',
-            badge: '/logo.png',
+            icon: '/logo-smartcabb.png',
+            badge: '/logo-smartcabb.png',
             tag: 'smartcabb-notification',
             requireInteraction: true
           });

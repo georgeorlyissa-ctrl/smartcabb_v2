@@ -21,6 +21,7 @@ import { reverseGeocodeWithCache } from '../../lib/geocoding';
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { registerDriverFCMToken, listenToFCMMessages } from '../../lib/driver-fcm';
 import { 
   notifyRideConfirmed,
   notifyDriverEnroute,
@@ -198,18 +199,20 @@ export function DriverDashboard() {
 
     // Vérifier si déjà enregistré pour éviter les doublons
     // 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
+// 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
 useEffect(() => {
   if (!driver?.id) return;
 
-  console.log('🔔 Enregistrement FCM au démarrage pour:', driver.id);
   registerDriverFCMToken(driver.id).then(success => {
     if (success) {
       console.log('✅ Token FCM enregistré avec succès');
-    } else {
-      console.warn('⚠️ Échec enregistrement FCM (non bloquant)');
+      // ✅ Démarrer l'écoute des messages FCM en foreground
+      listenToFCMMessages((payload) => {
+        console.log('📬 Message FCM reçu dans dashboard:', payload);
+      });
     }
   }).catch(error => {
-    console.warn('⚠️ Erreur FCM (non bloquant):', error);
+    console.warn('⚠️ Erreur FCM:', error);
   });
 }, [driver?.id]);
 
