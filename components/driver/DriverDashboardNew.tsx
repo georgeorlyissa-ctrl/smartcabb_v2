@@ -244,23 +244,21 @@ export function DriverDashboardNew() {
     if (!driver?.id) return;
 
     // Vérifier si déjà enregistré pour éviter les doublons
-    const isAlreadyRegistered = isDriverFCMTokenRegistered(driver.id);
-    
-    if (!isAlreadyRegistered) {
-      console.log('🔔 Initialisation automatique FCM pour le conducteur:', driver.id);
-      registerDriverFCMToken(driver.id).then(success => {
-        if (success) {
-          console.log('✅ Token FCM enregistré avec succès');
-        } else {
-          console.warn('⚠️ Échec de l\'enregistrement FCM (non bloquant)');
-        }
-      }).catch(error => {
-        console.warn('⚠️ Erreur FCM (non bloquant):', error);
-      });
+    // 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
+useEffect(() => {
+  if (!driver?.id) return;
+
+  console.log('🔔 Enregistrement FCM au démarrage pour:', driver.id);
+  registerDriverFCMToken(driver.id).then(success => {
+    if (success) {
+      console.log('✅ Token FCM enregistré avec succès');
     } else {
-      console.log('ℹ️ Token FCM déjà enregistré pour', driver.id);
+      console.warn('⚠️ Échec enregistrement FCM (non bloquant)');
     }
-  }, [driver?.id]);
+  }).catch(error => {
+    console.warn('⚠️ Erreur FCM (non bloquant):', error);
+  });
+}, [driver?.id]);
 
   // 🆕 Géolocalisation automatique quand le conducteur est EN LIGNE
   useEffect(() => {

@@ -115,7 +115,7 @@ async function findAndNotifyNearbyDrivers(ride: any) {
     const nearbyDrivers = driversWithDistance.slice(0, 5);
     
     console.log(`📍 Top 5 chauffeurs les plus proches:`, 
-      nearbyDrivers.map(d => `${d.name} (${d.distanceToPickup.toFixed(1)} km)`)
+      nearbyDrivers.map(d => `${d.full_name || d.name || d.id} (${d.distanceToPickup.toFixed(1)} km)`)
     );
     
     // Envoyer une notification à chacun
