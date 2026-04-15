@@ -101,31 +101,31 @@ export function ProfessionalFooter() {
           </div>
 
           {/* Services */}
-          <div>
-            <h3 className="text-lg font-bold mb-5 text-white">{t('footer.services')}</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link to="/app/passenger" className="text-gray-400 hover:text-cyan-400 transition-colors">
-                  Standard
-                </Link>
-              </li>
-              <li>
-                <Link to="/app/passenger" className="text-gray-400 hover:text-cyan-400 transition-colors">
-                  Confort
-                </Link>
-              </li>
-              <li>
-                <Link to="/app/passenger" className="text-gray-400 hover:text-cyan-400 transition-colors">
-                  Business
-                </Link>
-              </li>
-              <li>
-                <Link to="/app/passenger" className="text-gray-400 hover:text-cyan-400 transition-colors">
-                  Familia
-                </Link>
-              </li>
-            </ul>
-          </div>
+<div>
+  <h3 className="text-lg font-bold mb-5 text-white">{t('footer.services')}</h3>
+  <ul className="space-y-3">
+    <li>
+      <a href="/services#standard" className="text-gray-400 hover:text-cyan-400 transition-colors">
+        Standard
+      </a>
+    </li>
+    <li>
+      <a href="/services#confort" className="text-gray-400 hover:text-cyan-400 transition-colors">
+        Confort
+      </a>
+    </li>
+    <li>
+      <a href="/services#business" className="text-gray-400 hover:text-cyan-400 transition-colors">
+        Business
+      </a>
+    </li>
+    <li>
+      <a href="/services#familia" className="text-gray-400 hover:text-cyan-400 transition-colors">
+        Familia
+      </a>
+    </li>
+  </ul>
+</div>
 
           {/* Légal */}
           <div>

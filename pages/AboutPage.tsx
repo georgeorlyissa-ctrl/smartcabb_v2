@@ -172,8 +172,8 @@ export function AboutPage() {
                 </h2>
                 <p className="text-lg text-gray-700 leading-relaxed">
                   {language === 'fr'
-                    ? 'Révolutionner le transport en RD Congo en offrant une solution moderne, sûre et accessible à tous les Congolais, avec des tarifs transparents et un service irréprochable.'
-                    : 'Revolutionize transportation in DR Congo by offering a modern, safe and accessible solution to all Congolese, with transparent pricing and impeccable service.'}
+                    ? 'Révolutionner le transport en RD Congo en offrant une solution moderne, sûre et accessible à tous , avec des tarifs transparents et un service irréprochable.'
+                    : 'Revolutionize transportation in DR Congo by offering a modern, safe and accessible solution to all people, with transparent pricing and impeccable service.'}
                 </p>
               </div>
             </motion.div>
@@ -231,8 +231,8 @@ export function AboutPage() {
                 </h3>
                 <p className="text-cyan-100 text-lg">
                   {language === 'fr'
-                    ? 'Le transport intelligent au service des Congolais'
-                    : 'Smart transport serving Congolese people'}
+                    ? 'Le transport intelligent à votre service'
+                    : 'Smart transportation at your service '}
                 </p>
               </div>
             </div>

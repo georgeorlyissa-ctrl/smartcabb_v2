@@ -56,7 +56,7 @@ export function LandingPage() {
     { src: '/logos/mpesa.png', label: 'M-Pesa' },
     { src: '/logos/orange-money.png', label: 'Orange Money' },
     { src: '/logos/logo-afrimoney.png', label: 'Afrimoney' },
-    { src: '/logos/cash.png', label: 'Cash' },
+    { src: '/logos/cash.png', label: 'Frais cash' },
   ];
 
   // Precharger uniquement les images critiques above the fold
@@ -444,14 +444,14 @@ export function LandingPage() {
               {language === 'fr' ? 'Pourquoi nous ' : 'Why '}<span style={{ color: '#0891b2' }}>{language === 'fr' ? 'faire confiance ?' : 'trust us?'}</span>
             </h2>
             <p className={`reveal d3 ${trustInView ? 'in' : ''}`} style={{ fontSize: '18px', color: '#6b7280', maxWidth: '480px' }}>
-              {language === 'fr' ? 'SmartCabb met la securite de chaque trajet au premier plan.' : 'SmartCabb puts the safety of every ride first.'}
+              {language === 'fr' ? 'SmartCabb met la sécurité de chaque trajet au premier plan.' : 'SmartCabb puts the safety of every ride first.'}
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { titleFR: 'Chauffeurs verifies', titleEN: 'Verified drivers', descFR: 'Chaque chauffeur est verifie, forme et note. Vous voyez sa photo, son nom et son numero de plaque avant la course.', descEN: 'Each driver is verified, trained and rated. You see their photo, name and plate number before the ride.', tagFR: '100% verifies', tagEN: '100% verified' },
-              { titleFR: 'Suivi GPS en temps reel', titleEN: 'Real-time GPS tracking', descFR: "Partagez votre trajet a un proche d'un seul clic. Votre famille sait ou vous etes a tout moment.", descEN: 'Share your ride with a loved one in one click. Your family knows where you are at all times.', tagFR: 'Partage instantane', tagEN: 'Instant sharing' },
-              { titleFR: "Bouton SOS d'urgence", titleEN: 'Emergency SOS button', descFR: "En cas de probleme, notre bouton SOS alerte immediatement notre equipe et vos contacts d'urgence.", descEN: 'Our SOS button immediately alerts our team and your emergency contacts.', tagFR: 'Disponible 24/7', tagEN: 'Available 24/7' },
+              { titleFR: 'Chauffeurs verifiés', titleEN: 'Verified drivers', descFR: 'Chaque chauffeur est verifié, formé et enregistré dans le système. Vous voyez sa photo, son nom et son numéro de plaque avant la course.', descEN: 'Each driver is verified, trained and rated. You see their photo, name and plate number before the ride.', tagFR: '100% vérifiés', tagEN: '100% verified' },
+              { titleFR: 'Suivi GPS en temps réel', titleEN: 'Real-time GPS tracking', descFR: "Partagez votre trajet à un proche d'un seul clic. Votre famille sait où vous êtes à tout moment.", descEN: 'Share your ride with a loved one in one click. Your family knows where you are at all times.', tagFR: 'Partage instantané', tagEN: 'Instant sharing' },
+              { titleFR: "Bouton SOS d'urgence", titleEN: 'Emergency SOS button', descFR: "En cas de problème, notre bouton SOS alerte immédiatement notre équipe et vos contacts d'urgence.", descEN: 'Our SOS button immediately alerts our team and your emergency contacts.', tagFR: 'Disponible 24/7', tagEN: 'Available 24/7' },
             ].map((item, i) => (
               <div key={i} className={`card reveal ${trustInView ? 'in' : ''}`} style={{ padding: '32px', transitionDelay: `${0.1 + i * 0.15}s` }}>
                 <div className="trust-tag">{language === 'fr' ? item.tagFR : item.tagEN}</div>
@@ -485,7 +485,7 @@ export function LandingPage() {
             </div>
             <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '28px' }}>
               <p style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#9ca3af', textAlign: 'center', marginBottom: '20px' }}>
-                {language === 'fr' ? 'Moyens de paiement acceptes' : 'Accepted payment methods'}
+                {language === 'fr' ? 'Mode de paiement acceptes' : 'Accepted payment methods'}
               </p>
               <div style={{ position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '48px', background: 'linear-gradient(to right, white, transparent)', zIndex: 1 }} />

@@ -11,12 +11,12 @@ const app = new Hono();
  */
 async function findAndNotifyNearbyDrivers(ride: any) {
   try {
-    console.log(`🔍 Recherche de chauffeurs pour la course ${ride.id}`);
+    console.log(`Recherche de chauffeurs pour la course ${ride.id}`);
     
     // Récupérer tous les chauffeurs en ligne
     const allDrivers = await kv.getByPrefix('driver:');
     
-    console.log(`👥 Total chauffeurs dans la base: ${allDrivers.length}`);
+    console.log(`Total chauffeurs dans la base: ${allDrivers.length}`);
     
     // Filtrer : disponibles + catégorie correspondante + en ligne
     const eligibleDrivers = allDrivers.filter((driver: any) => {
@@ -141,8 +141,8 @@ async function findAndNotifyNearbyDrivers(ride: any) {
         
         // 📱 Envoyer notification push
         const result = await sendFCMNotification(driver.fcmToken, {
-          title: '🚗 Nouvelle course disponible !',
-          body: `${pickupName} → ${destinationName} (${distance.toFixed(1)} km, ${Math.round(estimatedPrice)} FC)`,
+        title: 'SmartCabb - Nouvelle Course',
+        body: `${pickupName} vers ${destinationName} - ${distance.toFixed(1)} km - ${Math.round(estimatedPrice)} FC`,
           data: {
             rideId: ride.id,
             type: 'new_ride_request',

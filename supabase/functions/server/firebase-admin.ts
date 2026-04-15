@@ -27,7 +27,7 @@
  */
 
 // Import crypto pour la signature JWT
-import { create as createJWT, getNumericDate } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
+import { create as createJWT } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 interface FCMNotificationPayload {
   title: string;
@@ -402,4 +402,4 @@ export async function sendRideCancellationToDriver(
       action: 'dismiss_notification'
     }
   });
-}
+}  

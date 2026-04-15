@@ -1,5 +1,5 @@
 import { Hono } from "npm:hono";
-import * as kv from './kv_store.tsx';
+import * as kv from './kv-wrapper.ts';
 import { sendFCMNotification, isFirebaseAdminConfigured } from './firebase-admin.ts';
 
 const app = new Hono();
@@ -364,7 +364,9 @@ app.post("/send-direct", async (c) => {
  * 🔍 Diagnostic FCM serveur
  * GET /fcm/diagnostic
  */
-app.get("/diagnostic", async (c) => {
+// Ajouter cette route dans fcm-routes.ts (après /diagnostic)
+
+app.get("/status", async (c) => {
   try {
     const firebaseConfigured = isFirebaseAdminConfigured();
     const projectId = Deno.env.get('FIREBASE_PROJECT_ID');
@@ -372,18 +374,14 @@ app.get("/diagnostic", async (c) => {
 
     return c.json({
       success: true,
+      status: firebaseConfigured ? 'ok' : 'misconfigured',
       firebaseConfigured,
       projectId: projectId || 'NON CONFIGURÉ',
       hasServiceAccount,
-      environment: 'production',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error("❌ Erreur diagnostic FCM:", error);
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : "Erreur serveur" 
-    }, 500);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
   }
 });
 
