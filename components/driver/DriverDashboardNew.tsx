@@ -300,53 +300,82 @@ useEffect(() => {
 
   // 🔔 Écouter les notifications FCM de nouvelle course
   useEffect(() => {
-    const handleNewRideRequest = (event: any) => {
-      console.log('🔔 Événement FCM nouvelle course reçu:', event.detail);
-      
-      const rideData = event.detail;
-      
-      // Transformer en format RideRequest
-      const rideRequest: RideRequest = {
-        id: rideData.rideId,
-        passengerId: '', // Sera ajouté par le backend
-        passengerName: rideData.passengerName,
-        passengerPhone: rideData.passengerPhone,
-        pickup: {
-          latitude: rideData.pickup.latitude,
-          longitude: rideData.pickup.longitude,
-          address: rideData.pickup.address
-        },
-        dropoff: {
-          latitude: rideData.dropoff.latitude,
-          longitude: rideData.dropoff.longitude,
-          address: rideData.dropoff.address
-        },
-        distance: rideData.distance,
-        estimatedPrice: rideData.estimatedPrice,
-        vehicleCategory: rideData.vehicleCategory,
-        timestamp: rideData.timestamp
-      };
-      
-      console.log('✅ Affichage de la notification de course');
-      setPendingRideRequest(rideRequest);
-      
-      // Jouer un son de notification si possible
-      try {
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuFzvLZiTYIGGS67OihUBELTKXh8bllHAY2jdXxxHwtBSp+zPLaizsKFFux6OyrWBUIRp/h8r91Iw==');
-        audio.play().catch(e => console.log('Son de notification non disponible'));
-      } catch (e) {
-        console.log('Son de notification non disponible');
+  // Écouter les messages du Service Worker (clic sur notification)
+  const handleSWMessage = (event: MessageEvent) => {
+    if (event.data?.type === 'ACCEPT_RIDE' || event.data?.type === 'DECLINE_RIDE') {
+      console.log('📬 Message SW reçu:', event.data);
+    }
+  };
+  navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+
+  // Écouter les notifications FCM en foreground
+  const handleFCMRide = (event: any) => {
+    console.log('🔔 FCM nouvelle course:', event.detail);
+    const d = event.detail;
+    setPendingRideRequest({
+      id: d.rideId,
+      passengerId: '',
+      passengerName: d.passengerName || 'Passager',
+      passengerPhone: d.passengerPhone || '',
+      pickup: {
+        latitude: parseFloat(d.pickupLat) || -4.3276,
+        longitude: parseFloat(d.pickupLng) || 15.3136,
+        address: d.pickupName || 'Point de départ'
+      },
+      dropoff: {
+        latitude: parseFloat(d.destinationLat) || -4.3276,
+        longitude: parseFloat(d.destinationLng) || 15.3136,
+        address: d.destinationName || 'Destination'
+      },
+      distance: parseFloat(d.distance) || 0,
+      estimatedPrice: parseFloat(d.estimatedPrice) || 0,
+      vehicleCategory: d.vehicleCategory,
+      timestamp: Date.now()
+    });
+  };
+  window.addEventListener('fcm-new-ride-request', handleFCMRide);
+
+  // Polling de secours toutes les 10 secondes (si FCM silencieux)
+  const poll = setInterval(async () => {
+    if (!driver?.id || pendingRideRequest) return;
+    try {
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/pending/${driver.id}`,
+        { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+      );
+      const data = await res.json();
+      if (data.success && data.ride) {
+        const ride = data.ride;
+        setPendingRideRequest({
+          id: ride.id,
+          passengerId: ride.passengerId || '',
+          passengerName: ride.passengerName || 'Passager',
+          passengerPhone: ride.passengerPhone || '',
+          pickup: {
+            latitude: ride.pickup?.coordinates?.lat || -4.3276,
+            longitude: ride.pickup?.coordinates?.lng || 15.3136,
+            address: ride.pickup?.name || 'Point de départ'
+          },
+          dropoff: {
+            latitude: ride.destination?.coordinates?.lat || -4.3276,
+            longitude: ride.destination?.coordinates?.lng || 15.3136,
+            address: ride.destination?.name || 'Destination'
+          },
+          distance: ride.distance || 0,
+          estimatedPrice: ride.estimatedPrice || 0,
+          vehicleCategory: ride.vehicleCategory,
+          timestamp: Date.now()
+        });
       }
-    };
-    
-    window.addEventListener('fcm-new-ride-request', handleNewRideRequest);
-    console.log('👂 Écoute des événements FCM activée');
-    
-    return () => {
-      window.removeEventListener('fcm-new-ride-request', handleNewRideRequest);
-      console.log('🛑 Écoute des événements FCM désactivée');
-    };
-  }, []);
+    } catch (e) {}
+  }, 10000);
+
+  return () => {
+    navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
+    window.removeEventListener('fcm-new-ride-request', handleFCMRide);
+    clearInterval(poll);
+  };
+}, [driver?.id, pendingRideRequest]);
 
   // Fonction pour envoyer la position au backend
   const updateDriverLocation = async (driverId: string, location: { lat: number; lng: number }) => {
@@ -910,7 +939,19 @@ useEffect(() => {
       )}
 
       {/* Son de notification */}
-      <RideNotificationSound />
+      <RideNotificationSound 
+  shouldPlay={!!pendingRideRequest}
+  rideDetails={pendingRideRequest ? {
+    passengerName: pendingRideRequest.passengerName,
+    pickup: { 
+      address: pendingRideRequest.pickup?.address,
+      lat: pendingRideRequest.pickup?.latitude,
+      lng: pendingRideRequest.pickup?.longitude
+    },
+    distance: pendingRideRequest.distance,
+    estimatedEarnings: pendingRideRequest.estimatedPrice
+  } : undefined}
+/>
     </div>
   );
 }

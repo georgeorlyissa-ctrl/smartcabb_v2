@@ -502,7 +502,19 @@ useEffect(() => {
       )}
 
       {/* Son de notification */}
-      <RideNotificationSound />
+      <RideNotificationSound 
+  shouldPlay={!!pendingRideRequest}
+  rideDetails={pendingRideRequest ? {
+    passengerName: pendingRideRequest.passengerName,
+    pickup: { 
+      address: pendingRideRequest.pickup?.address,
+      lat: pendingRideRequest.pickup?.latitude,
+      lng: pendingRideRequest.pickup?.longitude
+    },
+    distance: pendingRideRequest.distance,
+    estimatedEarnings: pendingRideRequest.estimatedPrice
+  } : undefined}
+/>
     </div>
   );
 }
