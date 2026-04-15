@@ -239,9 +239,6 @@ export function DriverDashboardNew() {
     loadDriver();
   }, [state.currentDriver?.id]);
 
-  // 🔔 Initialiser FCM pour recevoir les notifications push
-  useEffect(() => {
-    if (!driver?.id) return;
 
     // Vérifier si déjà enregistré pour éviter les doublons
     // 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
