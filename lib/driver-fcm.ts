@@ -205,7 +205,9 @@ export async function saveFCMToken(userId: string, token: string): Promise<boole
   }
 }
 
-export async function listenToFCMMessages(onMessageReceived: (payload: any) => void): Promise<void> {
+export async function listenToFCMMessages(
+  onMessageReceived: (payload: any) => void
+): Promise<void> {
   try {
     if (!messaging) {
       const initialized = await initializeFCM();
@@ -218,42 +220,51 @@ export async function listenToFCMMessages(onMessageReceived: (payload: any) => v
     console.log('Ecoute des messages FCM en foreground...');
 
     modules.onMessage(messaging, (payload: any) => {
-      console.log('Message FCM recu (foreground):', payload);
+      console.log('📩 Message FCM recu (foreground):', payload);
+
+      const data = payload?.data || {};
+
+      // callback principal
       onMessageReceived(payload);
 
-      // ✅ DISPATCH de l'événement pour RideNotification
-      const data = payload.data || {};
-      if (data.type === 'new_ride_request' && data.rideId) {
-        console.log(' Nouvelle course FCM - dispatch événement');
-        window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
+      // ✅ course déjà prise ou annulée
+      if (
+        data.type === 'ride_taken' ||
+        data.type === 'ride_cancelled_by_passenger'
+      ) {
+        console.log('⏹️ Fermeture notification course');
+
+        window.dispatchEvent(
+          new CustomEvent('fcm-ride-dismissed', {
+            detail: data
+          })
+        );
+
+        return;
       }
-      modules.onMessage(messaging, (payload: any) => {
-  const data = payload.data || {};
-  onMessageReceived(payload);
 
-  if (data.type === 'ride_taken' || data.type === 'ride_cancelled_by_passenger') {
-    window.dispatchEvent(new CustomEvent('fcm-ride-dismissed', { detail: data }));
-    return;
-  }
+      // ✅ nouvelle demande de course
+      if (
+        data.type === 'new_ride_request' &&
+        data.rideId
+      ) {
+        console.log('🚕 Nouvelle course FCM');
 
-  if (data.type === 'new_ride_request' && data.rideId) {
-    window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
-  }
-});
-const handleRideDismissed = () => {
-  setPendingRideRequest(null);
-  stopAllNotifications();
-};
-window.addEventListener('fcm-ride-dismissed', handleRideDismissed);
+        window.dispatchEvent(
+          new CustomEvent('fcm-new-ride-request', {
+            detail: data
+          })
+        );
+      }
 
-// Dans le return du cleanup :
-window.removeEventListener('fcm-ride-dismissed', handleRideDismissed);
-
-
-      // Notification navigateur en foreground
+      // ✅ notification navigateur
       if (payload.notification) {
         const { title, body } = payload.notification;
-        if ('Notification' in window && Notification.permission === 'granted') {
+
+        if (
+          'Notification' in window &&
+          Notification.permission === 'granted'
+        ) {
           new Notification(title || 'SmartCabb', {
             body: body || 'Nouvelle notification',
             icon: '/logo-smartcabb.png',
@@ -265,9 +276,9 @@ window.removeEventListener('fcm-ride-dismissed', handleRideDismissed);
       }
     });
 
-    console.log('Listener FCM active');
+    console.log('✅ Listener FCM active');
   } catch (error) {
-    console.error('Erreur listener FCM:', error);
+    console.error('❌ Erreur listener FCM:', error);
   }
 }
 

@@ -15,7 +15,7 @@ import { RideNotification } from './RideNotification';
 import { FCMDiagnostic } from './FCMDiagnostic';
 import { PreciseGPSTracker, reverseGeocode } from '../../lib/precise-gps'; // 🆕 Import GPS tracker
 import { registerDriverFCMToken } from '../../lib/driver-fcm'; // 🔔 Import FCM
-import { registerDriverFCMToken, listenToFCMMessages } from '../../lib/driver-fcm';
+import { listenToFCMMessages } from '../../lib/driver-fcm';
 
 // ✅ Helper inliné pour éviter les problèmes de build Rollup
 function isDriverFCMTokenRegistered(driverId: string): boolean {
@@ -244,20 +244,60 @@ export function DriverDashboardNew() {
     // Vérifier si déjà enregistré pour éviter les doublons
     // 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
 
+  const stopAllNotifications = () => {
+  window.dispatchEvent(new CustomEvent('stop-ride-notification'));
+};
+
 useEffect(() => {
   if (!driver?.id) return;
 
-  registerDriverFCMToken(driver.id).then(success => {
-    if (success) {
+  const initializeFCMListener = async () => {
+    try {
+      const success = await registerDriverFCMToken(driver.id);
+
+      if (!success) {
+        console.warn('⚠️ Échec enregistrement FCM');
+        return;
+      }
+
       console.log('✅ Token FCM enregistré avec succès');
-      // ✅ Démarrer l'écoute des messages FCM en foreground
-      listenToFCMMessages((payload) => {
+
+      await listenToFCMMessages((payload: any) => {
         console.log('📬 Message FCM reçu dans dashboard:', payload);
+
+        const data = payload?.data || {};
+
+        // 🔥 IMPORTANT : course déjà prise / annulée
+        if (
+          data.type === 'ride_taken' ||
+          data.type === 'ride_cancelled_by_passenger'
+        ) {
+          console.log('⏹️ Notification de fermeture reçue');
+
+          setPendingRideRequest(null);
+
+          window.dispatchEvent(
+            new CustomEvent('stop-ride-notification')
+          );
+
+          return;
+        }
+
+        // 🔥 Nouvelle course
+        if (data.type === 'new_ride_request' && data.rideId) {
+          window.dispatchEvent(
+            new CustomEvent('fcm-new-ride-request', {
+              detail: data,
+            })
+          );
+        }
       });
+    } catch (error) {
+      console.error('❌ Erreur initialisation FCM:', error);
     }
-  }).catch(error => {
-    console.warn('⚠️ Erreur FCM:', error);
-  });
+  };
+
+  initializeFCMListener();
 }, [driver?.id]);
 
   // 🆕 Géolocalisation automatique quand le conducteur est EN LIGNE
@@ -310,24 +350,7 @@ useEffect(() => {
     }
   };
   navigator.serviceWorker?.addEventListener('message', handleSWMessage);
-  modules.onMessage(messaging, (payload: any) => {
-  const data = payload.data || {};
-
-  // Course annulée ou déjà prise → fermer la popup
-  if (data.type === 'ride_taken' || data.type === 'ride_cancelled_by_passenger') {
-    console.log('⏹️ Course annulée ou prise, fermeture notification');
-    setPendingRideRequest(null);
-    stopAllNotifications();
-    return;
-  }
-
-  // Nouvelle course
-  if (data.type === 'new_ride_request' && data.rideId) {
-    window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
-  }
-});
   
-
   // Écouter les notifications FCM en foreground
   const handleFCMRide = (event: any) => {
     console.log('🔔 FCM nouvelle course:', event.detail);

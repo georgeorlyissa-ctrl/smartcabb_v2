@@ -21,7 +21,7 @@ import { reverseGeocodeWithCache } from '../../lib/geocoding';
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { registerDriverFCMToken, listenToFCMMessages } from '../../lib/driver-fcm';
+import { listenToFCMMessages } from '../../lib/driver-fcm';
 import { 
   notifyRideConfirmed,
   notifyDriverEnroute,
