@@ -113,47 +113,47 @@ export async function playRideNotification(rideDetails?: {
 }): Promise<void> {
   console.log('🔊 Déclenchement notification de course');
 
-  // 1. Son de notification RÉPÉTÉ 3 fois pour être sûr qu'il soit entendu
+  // Son répété 3 fois
   playNotificationBeep();
   setTimeout(() => playNotificationBeep(), 800);
   setTimeout(() => playNotificationBeep(), 1600);
 
-  // 2. Vibration
+  // Vibration
   vibrate([300, 100, 300, 100, 300]);
 
-  // 3. Message vocal personnalisé et naturel
-  let message = '';
-  
-  if (rideDetails) {
-    message = `Bonjour, vous avez une nouvelle course SmartCabb. `;
-    
-    // Ajouter les adresses si disponibles
-    if (rideDetails.pickup && rideDetails.destination) {
-      message += `Départ : ${rideDetails.pickup}. `;
-      message += `Destination : ${rideDetails.destination}. `;
-    } else if (rideDetails.pickup) {
-      message += `Départ : ${rideDetails.pickup}. `;
-    }
-    
-    message += `Merci de confirmer rapidement.`;
-  } else {
-    // Message générique
-    message = 'Bonjour, vous avez une nouvelle course en attente. Merci de confirmer.';
+  // Message vocal intelligent avec départ et destination réels
+  let message = 'Bonjour, vous avez une nouvelle course SmartCabb. ';
+
+  if (rideDetails?.pickup && rideDetails.pickup !== 'Point de départ') {
+    message += `Départ : ${rideDetails.pickup}. `;
   }
+
+  if (rideDetails?.destination && rideDetails.destination !== 'Destination') {
+    message += `Destination : ${rideDetails.destination}. `;
+  }
+
+  if (rideDetails?.distance && rideDetails.distance > 0) {
+    message += `Distance : ${rideDetails.distance.toFixed(1)} kilomètres. `;
+  }
+
+  if (rideDetails?.estimatedEarnings && rideDetails.estimatedEarnings > 0) {
+    message += `Gain estimé : ${Math.round(rideDetails.estimatedEarnings).toLocaleString('fr-FR')} francs congolais. `;
+  }
+
+  message += 'Merci de confirmer rapidement.';
 
   try {
-    await speakMessage(message);
+    await speakMessage(message, 'fr-FR');
   } catch (error) {
     console.error('Erreur message vocal:', error);
-    // Continuer même si le vocal échoue
   }
 
-  // 4. Notification navigateur
+  // Notification navigateur
   const notifBody = rideDetails
-    ? `📍 ${rideDetails.pickup || 'Position inconnue'}${rideDetails.destination ? ' → ' + rideDetails.destination : ''}\n💰 ${rideDetails.estimatedEarnings || 0} FC\n📏 ${rideDetails.distance || 0} km`
+    ? `${rideDetails.pickup || ''} → ${rideDetails.destination || ''} • ${rideDetails.distance?.toFixed(1) || 0} km • ${Math.round(rideDetails.estimatedEarnings || 0).toLocaleString('fr-FR')} FC`
     : 'Une nouvelle course est disponible';
 
-  await showBrowserNotification('🚖 Nouvelle Course SmartCabb', notifBody, {
+  await showBrowserNotification('SmartCabb - Nouvelle Course', notifBody, {
     tag: 'smartcabb-ride',
     renotify: true,
     data: rideDetails

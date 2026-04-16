@@ -199,7 +199,7 @@ export function DriverDashboard() {
 
     // Vérifier si déjà enregistré pour éviter les doublons
     // 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
-// 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
+
 useEffect(() => {
   if (!driver?.id) return;
 

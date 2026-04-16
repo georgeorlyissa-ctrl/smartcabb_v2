@@ -243,7 +243,7 @@ export function DriverDashboardNew() {
 
     // Vérifier si déjà enregistré pour éviter les doublons
     // 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
-// 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
+
 useEffect(() => {
   if (!driver?.id) return;
 
@@ -310,6 +310,23 @@ useEffect(() => {
     }
   };
   navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+  modules.onMessage(messaging, (payload: any) => {
+  const data = payload.data || {};
+
+  // Course annulée ou déjà prise → fermer la popup
+  if (data.type === 'ride_taken' || data.type === 'ride_cancelled_by_passenger') {
+    console.log('⏹️ Course annulée ou prise, fermeture notification');
+    setPendingRideRequest(null);
+    stopAllNotifications();
+    return;
+  }
+
+  // Nouvelle course
+  if (data.type === 'new_ride_request' && data.rideId) {
+    window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
+  }
+});
+  
 
   // Écouter les notifications FCM en foreground
   const handleFCMRide = (event: any) => {

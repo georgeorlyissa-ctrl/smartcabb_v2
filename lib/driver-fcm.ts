@@ -224,9 +224,31 @@ export async function listenToFCMMessages(onMessageReceived: (payload: any) => v
       // ✅ DISPATCH de l'événement pour RideNotification
       const data = payload.data || {};
       if (data.type === 'new_ride_request' && data.rideId) {
-        console.log('🚗 Nouvelle course FCM - dispatch événement');
+        console.log(' Nouvelle course FCM - dispatch événement');
         window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
       }
+      modules.onMessage(messaging, (payload: any) => {
+  const data = payload.data || {};
+  onMessageReceived(payload);
+
+  if (data.type === 'ride_taken' || data.type === 'ride_cancelled_by_passenger') {
+    window.dispatchEvent(new CustomEvent('fcm-ride-dismissed', { detail: data }));
+    return;
+  }
+
+  if (data.type === 'new_ride_request' && data.rideId) {
+    window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
+  }
+});
+const handleRideDismissed = () => {
+  setPendingRideRequest(null);
+  stopAllNotifications();
+};
+window.addEventListener('fcm-ride-dismissed', handleRideDismissed);
+
+// Dans le return du cleanup :
+window.removeEventListener('fcm-ride-dismissed', handleRideDismissed);
+
 
       // Notification navigateur en foreground
       if (payload.notification) {

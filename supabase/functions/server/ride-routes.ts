@@ -9,185 +9,163 @@ const app = new Hono();
  * 🎯 SYSTÈME DE MATCHING INTELLIGENT
  * Trouve les chauffeurs disponibles à proximité et leur envoie des notifications
  */
+/**
+ * 🎯 MATCHING SÉQUENTIEL - 15 secondes par chauffeur
+ * Driver 1 → 15s → Driver 2 → 15s → etc.
+ */
 async function findAndNotifyNearbyDrivers(ride: any) {
   try {
-    console.log(`Recherche de chauffeurs pour la course ${ride.id}`);
-    
-    // Récupérer tous les chauffeurs en ligne
+    console.log(`🔍 Recherche de chauffeurs pour la course ${ride.id}`);
+
     const allDrivers = await kv.getByPrefix('driver:');
-    
-    console.log(`Total chauffeurs dans la base: ${allDrivers.length}`);
-    
-    // Filtrer : disponibles + catégorie correspondante + en ligne
+    console.log(`👥 Total chauffeurs dans la base: ${allDrivers.length}`);
+
     const eligibleDrivers = allDrivers.filter((driver: any) => {
       const isOnline = driver.status === 'online';
       const isAvailable = driver.available === true || driver.is_available === true;
-      
-      // Supporter toutes les variantes de catégorie
-      const driverCategory = driver.vehicleCategory || 
-                            driver.vehicle_category || 
-                            driver.vehicle_type || 
-                            driver.vehicleType;
-      
+      const driverCategory = driver.vehicleCategory || driver.vehicle_category ||
+                             driver.vehicle_type || driver.vehicleType;
       const categoryMatch = driverCategory === ride.vehicleCategory;
-      
-      // 🔍 NOUVEAU : Log TOUS les drivers pour debug
-      console.log(`🔍 Driver ${driver.full_name || driver.name} (${driver.id?.substring(0, 8)}):`, {
-        status: driver.status,
-        isOnline,
-        available: driver.available,
-        is_available: driver.is_available,
-        isAvailable,
-        driverCategory,
-        rideCategory: ride.vehicleCategory,
-        categoryMatch,
-        fcmToken: driver.fcmToken ? `${driver.fcmToken.substring(0, 20)}...` : null,
-        eligible: isOnline && isAvailable && categoryMatch
-      });
-      
-      const isEligible = isOnline && isAvailable && categoryMatch;
-      
-      // Log détaillé pour debugging
-      if (!isEligible && driver.status) {
-        console.log(`⏭️ Driver ${driver.full_name || driver.name} (${driver.id}): ` +
-          `online=${isOnline}, available=${isAvailable}, ` +
-          `category=${driverCategory} vs ${ride.vehicleCategory} = ${categoryMatch}`);
-      }
-      
-      return isEligible;
+      return isOnline && isAvailable && categoryMatch && driver.fcmToken;
     });
-    
-    console.log(`✅ ${eligibleDrivers.length} chauffeurs éligibles trouvés pour catégorie: ${ride.vehicleCategory}`);
-    
-    // Si aucun chauffeur trouvé, donner plus de détails
+
     if (eligibleDrivers.length === 0) {
-      const onlineDrivers = allDrivers.filter(d => d.status === 'online');
-      const availableDrivers = allDrivers.filter(d => d.available === true || d.is_available === true);
-      
-      console.warn(`��️ Pas de conducteur dans cette catégorie, mais d'autres conducteurs en ligne -- on attend`);
-      console.warn(`   Total online: ${onlineDrivers.length}, Total available: ${availableDrivers.length}`);
-      console.warn(`   Catégorie demandée: ${ride.vehicleCategory}`);
-      
-      // Afficher les catégories disponibles
-      const categoriesAvailable = onlineDrivers
-        .map(d => d.vehicleCategory || d.vehicle_category || d.vehicle_type)
-        .filter(c => c);
-      console.warn(`   Catégories en ligne: ${[...new Set(categoriesAvailable)].join(', ') || 'aucune'}`);
-      
+      console.warn(`⚠️ Aucun chauffeur éligible pour ${ride.vehicleCategory}`);
       return { success: false, reason: 'no_drivers_available' };
     }
-    
-    // Calculer la distance entre le point de départ et chaque chauffeur
+
+    // Trier par distance
+    const pickupLat = ride.pickup?.coordinates?.lat || -4.3276;
+    const pickupLng = ride.pickup?.coordinates?.lng || 15.3136;
+
     const driversWithDistance = eligibleDrivers.map((driver: any) => {
-      // ✅ FIX: Vérifier que pickup et coordinates existent avant d'accéder à lat/lng
-      const pickupLat = ride.pickup?.coordinates?.lat || ride.pickupLocation?.lat || ride.from?.lat;
-      const pickupLng = ride.pickup?.coordinates?.lng || ride.pickupLocation?.lng || ride.from?.lng;
-      
-      // Si pas de coordonnées de pickup, utiliser Kinshasa par défaut
-      const lat = pickupLat || -4.3276;
-      const lng = pickupLng || 15.3136;
-      
-      // 🔥 FIX CRITIQUE: Supporter TOUS les noms de champs de localisation
       const driverLat = driver.currentLocation?.lat || driver.current_location?.lat || driver.location?.lat || -4.3276;
       const driverLng = driver.currentLocation?.lng || driver.current_location?.lng || driver.location?.lng || 15.3136;
-      
-      // 📍 LOG: Afficher la position du conducteur pour debug
-      console.log(`📍 Position conducteur ${driver.full_name || driver.name}:`, {
-        lat: driverLat,
-        lng: driverLng,
-        source: driver.currentLocation ? 'currentLocation' : driver.current_location ? 'current_location' : driver.location ? 'location' : 'default'
-      });
-      
-      const distance = calculateDistance(
-        lat,
-        lng,
-        driverLat,
-        driverLng
-      );
-      
-      return { ...driver, distanceToPickup: distance };
+      return { ...driver, distanceToPickup: calculateDistance(pickupLat, pickupLng, driverLat, driverLng) };
     });
-    
-    // Trier par distance (les plus proches en premier)
+
     driversWithDistance.sort((a, b) => a.distanceToPickup - b.distanceToPickup);
-    
-    // Prendre les 5 chauffeurs les plus proches
     const nearbyDrivers = driversWithDistance.slice(0, 5);
-    
-    console.log(`📍 Top 5 chauffeurs les plus proches:`, 
-      nearbyDrivers.map(d => `${d.full_name || d.name || d.id} (${d.distanceToPickup.toFixed(1)} km)`)
-    );
-    
-    // Envoyer une notification à chacun
-    let notificationsSent = 0;
-    
-    for (const driver of nearbyDrivers) {
-      try {
-        if (!driver.fcmToken) {
-          console.warn(`⚠️ Chauffeur ${driver.name} n'a pas de token FCM`);
-          continue;
-        }
-        
-        // ✅ FIX: Normaliser les données du ride pour les notifications
-        const pickupName = ride.pickup?.name || ride.pickupLocation?.name || ride.from?.name || 'Point de départ';
-        const destinationName = ride.destination?.name || ride.destinationLocation?.name || ride.to?.name || 'Destination';
-        const pickupLat = ride.pickup?.coordinates?.lat || ride.pickupLocation?.lat || ride.from?.lat || -4.3276;
-        const pickupLng = ride.pickup?.coordinates?.lng || ride.pickupLocation?.lng || ride.from?.lng || 15.3136;
-        const destinationLat = ride.destination?.coordinates?.lat || ride.destinationLocation?.lat || ride.to?.lat || -4.3276;
-        const destinationLng = ride.destination?.coordinates?.lng || ride.destinationLocation?.lng || ride.to?.lng || 15.3136;
-        const distance = ride.distance || 0;
-        const duration = ride.duration || 0;
-        const estimatedPrice = ride.estimatedPrice || 0;
-        
-        // 📱 Envoyer notification push
-        const result = await sendFCMNotification(driver.fcmToken, {
-        title: 'SmartCabb - Nouvelle Course',
-        body: `${pickupName} vers ${destinationName} - ${distance.toFixed(1)} km - ${Math.round(estimatedPrice)} FC`,
-          data: {
-            rideId: ride.id,
-            type: 'new_ride_request',
-            pickupLat: pickupLat.toString(),
-            pickupLng: pickupLng.toString(),
-            destinationLat: destinationLat.toString(),
-            destinationLng: destinationLng.toString(),
-            pickupName,
-            destinationName,
-            distance: distance.toString(),
-            duration: duration.toString(),
-            estimatedPrice: estimatedPrice.toString(),
-            vehicleCategory: ride.vehicleCategory,
-            distanceToPickup: driver.distanceToPickup.toFixed(1)
-          }
-        });
-        
-        if (result.success) {
-          notificationsSent++;
-          console.log(`✅ Notification envoyée à ${driver.name} (${driver.distanceToPickup.toFixed(1)} km)`);
-        } else {
-          console.error(`❌ Échec notification à ${driver.name}:`, result.error);
-        }
-      } catch (error) {
-        console.error(`❌ Erreur envoi notification à ${driver.id}:`, error);
-      }
-    }
-    
-    console.log(`📱 ${notificationsSent}/${nearbyDrivers.length} notifications envoyées avec succès`);
-    
+
+    console.log(`📍 ${nearbyDrivers.length} chauffeurs à notifier séquentiellement`);
+
+    // Sauvegarder la file d'attente dans KV
+    await kv.set(`matching:${ride.id}`, {
+      rideId: ride.id,
+      queue: nearbyDrivers.map(d => d.id),
+      currentIndex: 0,
+      startedAt: new Date().toISOString(),
+      status: 'searching'
+    });
+
+    // Notifier le premier chauffeur
+    await notifyDriverAtIndex(ride, nearbyDrivers, 0);
+
     return {
       success: true,
-      driversNotified: notificationsSent,
-      nearestDriver: nearbyDrivers[0],
+      driversNotified: 1,
+      totalEligible: nearbyDrivers.length,
       nearbyDrivers: nearbyDrivers.map(d => ({
         id: d.id,
-        name: d.name,
-        distance: d.distanceToPickup,
-        rating: d.rating
+        name: d.full_name || d.name,
+        distance: d.distanceToPickup
       }))
     };
-    
+
   } catch (error) {
-    console.error('❌ Erreur système de matching:', error);
+    console.error('❌ Erreur matching:', error);
     return { success: false, reason: 'matching_error', error: error.message };
+  }
+}
+
+/**
+ * Notifie un chauffeur et programme le passage au suivant après 15s
+ */
+async function notifyDriverAtIndex(ride: any, drivers: any[], index: number) {
+  if (index >= drivers.length) {
+    console.warn(`⚠️ Tous les chauffeurs ont refusé la course ${ride.id}`);
+    // Marquer la course comme non trouvée
+    const currentRide = await kv.get<any>(`ride:${ride.id}`);
+    if (currentRide && currentRide.status === 'searching') {
+      currentRide.status = 'no_driver_found';
+      currentRide.noDriverFoundAt = new Date().toISOString();
+      await kv.set(`ride:${ride.id}`, currentRide);
+    }
+    await kv.delete(`matching:${ride.id}`);
+    return;
+  }
+
+  // Vérifier que la course est toujours en recherche
+  const currentRide = await kv.get<any>(`ride:${ride.id}`);
+  if (!currentRide || currentRide.status !== 'searching') {
+    console.log(`⏹️ Course ${ride.id} n'est plus en recherche (${currentRide?.status}), arrêt du matching`);
+    await kv.delete(`matching:${ride.id}`);
+    return;
+  }
+
+  const driver = drivers[index];
+  const pickupName = ride.pickup?.name || 'Point de départ';
+  const destinationName = ride.destination?.name || 'Destination';
+  const distance = ride.distance || 0;
+  const estimatedPrice = ride.estimatedPrice || 0;
+  const pickupLat = ride.pickup?.coordinates?.lat || -4.3276;
+  const pickupLng = ride.pickup?.coordinates?.lng || 15.3136;
+  const destinationLat = ride.destination?.coordinates?.lat || -4.3276;
+  const destinationLng = ride.destination?.coordinates?.lng || 15.3136;
+
+  console.log(`📱 Notification driver ${index + 1}/${drivers.length}: ${driver.full_name || driver.name}`);
+
+  const result = await sendFCMNotification(driver.fcmToken, {
+    title: 'SmartCabb - Nouvelle Course',
+    body: `${pickupName} vers ${destinationName} - ${distance.toFixed(1)} km - ${Math.round(estimatedPrice)} FC`,
+    data: {
+      rideId: ride.id,
+      type: 'new_ride_request',
+      pickupLat: pickupLat.toString(),
+      pickupLng: pickupLng.toString(),
+      destinationLat: destinationLat.toString(),
+      destinationLng: destinationLng.toString(),
+      pickupName,
+      destinationName,
+      passengerName: ride.passengerName || 'Passager',
+      distance: distance.toString(),
+      duration: (ride.duration || 0).toString(),
+      estimatedPrice: estimatedPrice.toString(),
+      vehicleCategory: ride.vehicleCategory,
+      distanceToPickup: driver.distanceToPickup.toFixed(1),
+      driverIndex: index.toString(),
+      totalDrivers: drivers.length.toString()
+    }
+  });
+
+  if (result.success) {
+    console.log(`✅ Driver ${driver.full_name || driver.name} notifié - attente 15s`);
+
+    // Mettre à jour l'index courant
+    const matching = await kv.get<any>(`matching:${ride.id}`);
+    if (matching) {
+      matching.currentIndex = index;
+      matching.currentDriverId = driver.id;
+      matching.notifiedAt = new Date().toISOString();
+      await kv.set(`matching:${ride.id}`, matching);
+    }
+
+    // Attendre 15 secondes puis passer au suivant
+    await new Promise(resolve => setTimeout(resolve, 15000));
+
+    // Re-vérifier le statut de la course après 15s
+    const rideAfterWait = await kv.get<any>(`ride:${ride.id}`);
+    if (!rideAfterWait || rideAfterWait.status !== 'searching') {
+      console.log(`✅ Course ${ride.id} acceptée ou annulée pendant l'attente`);
+      await kv.delete(`matching:${ride.id}`);
+      return;
+    }
+
+    // Notifier le driver suivant
+    await notifyDriverAtIndex(ride, drivers, index + 1);
+  } else {
+    console.error(`❌ Échec notification driver ${driver.full_name || driver.name}, passage au suivant`);
+    await notifyDriverAtIndex(ride, drivers, index + 1);
   }
 }
 
@@ -509,58 +487,68 @@ function getCategoryName(category: string): string {
 app.post("/accept", async (c) => {
   try {
     const { rideId, driverId, driverName, driverPhone, driverVehicle, driverRating } = await c.req.json();
-    
+
     if (!isValidUUID(rideId)) {
       return c.json({ success: false, error: "ID course invalide" }, 400);
     }
-    
+
     const ride = await kv.get<any>(`ride:${rideId}`);
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
-    
+
     if (ride.status !== 'pending' && ride.status !== 'searching') {
       return c.json({ success: false, error: "Course déjà acceptée ou terminée" }, 400);
     }
-    
-    // Mettre à jour la course
+
+    // Mettre à jour la course IMMÉDIATEMENT pour bloquer les autres
     ride.status = 'accepted';
     ride.driverId = driverId;
-    ride.driver = {
-      id: driverId,
-      name: driverName,
-      phone: driverPhone,
-      vehicle: driverVehicle,
-      rating: driverRating
-    };
+    ride.driver = { id: driverId, name: driverName, phone: driverPhone, vehicle: driverVehicle, rating: driverRating };
     ride.acceptedAt = new Date().toISOString();
-    
     await kv.set(`ride:${rideId}`, ride);
-    
+
     console.log(`✅ Course ${rideId} acceptée par ${driverName}`);
-    
-    // ✅ Envoyer notification push au passager
+
+    // Nettoyer la file de matching (arrête le séquentiel)
+    await kv.delete(`matching:${rideId}`);
+
+    // Notifier tous les autres drivers de la file que la course est prise
+    // Notifier TOUS les drivers éligibles que la course est annulée
+try {
+  const allDrivers = await kv.getByPrefix('driver:');
+  const eligibleDrivers = allDrivers.filter((d: any) => {
+    const driverCategory = d.vehicleCategory || d.vehicle_category || d.vehicle_type || d.vehicleType;
+    return d.status === 'online' && driverCategory === ride.vehicleCategory && d.fcmToken;
+  });
+
+  for (const driver of eligibleDrivers) {
+    await sendFCMNotification(driver.fcmToken, {
+      title: 'SmartCabb',
+      body: 'Le passager a annulé sa course.',
+      data: { type: 'ride_cancelled_by_passenger', rideId }
+    });
+  }
+  // Nettoyer le matching
+  await kv.delete(`matching:${rideId}`);
+} catch (error) {
+  console.error('❌ Erreur notification annulation:', error);
+}
+
+    // Notifier le passager
     try {
       const passenger = await kv.get<any>(`passenger:${ride.passengerId}`);
       if (passenger?.fcmToken) {
         await sendFCMNotification(passenger.fcmToken, {
-          title: '🚗 Chauffeur trouvé !',
+          title: 'Chauffeur trouvé !',
           body: `${driverName} arrive dans quelques minutes`,
-          data: {
-            rideId: rideId,
-            type: 'ride_accepted',
-            driverId: driverId,
-            driverName: driverName
-          }
+          data: { rideId, type: 'ride_accepted', driverId, driverName }
         });
-        console.log(`📱 Notification envoyée au passager ${ride.passengerId}`);
-      } else {
-        console.warn(`⚠️ Pas de token FCM pour le passager ${ride.passengerId}`);
       }
     } catch (error) {
-      console.error('❌ Erreur envoi notification:', error);
+      console.error('❌ Erreur notification passager:', error);
     }
-    
+
     return c.json({ success: true, ride });
   } catch (error) {
     console.error("❌ Erreur acceptation course:", error);
