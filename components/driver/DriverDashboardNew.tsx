@@ -986,11 +986,8 @@ useEffect(() => {
   shouldPlay={!!pendingRideRequest}
   rideDetails={pendingRideRequest ? {
     passengerName: pendingRideRequest.passengerName,
-    pickup: { 
-      address: pendingRideRequest.pickup?.address,
-      lat: pendingRideRequest.pickup?.latitude,
-      lng: pendingRideRequest.pickup?.longitude
-    },
+    pickup: pendingRideRequest.pickup?.address,
+    destination: pendingRideRequest.dropoff?.address,
     distance: pendingRideRequest.distance,
     estimatedEarnings: pendingRideRequest.estimatedPrice
   } : undefined}
