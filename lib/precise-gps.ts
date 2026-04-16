@@ -149,7 +149,7 @@ export class PreciseGPSTracker {
   
   // Paramètres de qualité
   private readonly TARGET_ACCURACY = 10; // Précision cible : 10 mètres
-  private readonly MAX_JUMP_DISTANCE = 50; // Rejeter les sauts > 50m
+  private readonly MAX_JUMP_DISTANCE = 5000; // 5km - évite de rejeter les vraies positions // Rejeter les sauts > 50m
   private readonly MIN_TIME_BETWEEN_UPDATES = 1000; // 1 seconde minimum
   
   // Callbacks
@@ -379,128 +379,82 @@ export class PreciseGPSTracker {
  * Utilise Google Maps Geocoding API via le backend SmartCabb
  */
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  // Vérifier coordonnées valides et dans la zone RDC/Kinshasa
+  if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+    return 'Kinshasa, RDC';
+  }
+
+  // Vérifier si les coordonnées sont approximativement en RDC
+  // Kinshasa : lat entre -5.5 et -3.5, lng entre 14.5 et 16.5
+  const isInKinshasa = lat >= -5.5 && lat <= -3.5 && lng >= 14.5 && lng <= 16.5;
+  if (!isInKinshasa) {
+    console.warn(`⚠️ Coordonnées hors Kinshasa: ${lat}, ${lng} - utilisation position par défaut`);
+    return 'Kinshasa, RDC';
+  }
+
   try {
-    // ✅ UTILISER GOOGLE MAPS API VIA LE BACKEND
     const projectId = 'zaerjqchzqmcxqblkfkg';
     const publicAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZXJqcWNoenFtY3hxYmxrZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxNDMyOTgsImV4cCI6MjA3NTcxOTI5OH0.qwFRKsi9Gw4VVYoEGBBCIj0-lAZOxtqlGQ0eT6cPhik';
-    const url = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/google-maps/reverse?lat=${lat}&lng=${lng}`;
-    
-    console.log('🌍 Geocoding Google Maps:', lat, lng);
-    console.log('🔗 URL:', url);
-    
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`
+
+    const response = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/google-maps/reverse?lat=${lat}&lng=${lng}`,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${publicAnonKey}`
+        }
       }
-    });
+    );
 
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response ok:', response.ok);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Geocoding HTTP error:', response.status, errorText);
-      throw new Error(`Erreur geocoding: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = await response.json();
-    console.log('✅ Geocoding Google Maps response:', JSON.stringify(data, null, 2));
+    if (!data.result) throw new Error('Pas de résultat');
 
-    // Vérifier si success est false
-    if (data.success === false) {
-      console.error('❌ Backend geocoding failed:', data.error);
-      throw new Error(`Backend error: ${data.error}`);
+    const components = data.result.address_components || [];
+
+    const route = components.find((c: any) => c.types.includes('route'));
+    if (route?.long_name) return route.long_name;
+
+    const neighborhood = components.find((c: any) =>
+      c.types.includes('neighborhood') ||
+      c.types.includes('sublocality') ||
+      c.types.includes('sublocality_level_1')
+    );
+    if (neighborhood?.long_name) return neighborhood.long_name;
+
+    const locality = components.find((c: any) => c.types.includes('locality'));
+    if (locality?.long_name) return locality.long_name;
+
+    if (data.result.formatted_address) {
+      return data.result.formatted_address
+        .replace(/[A-Z0-9]{4}\+[A-Z0-9]{2,3},?\s*/g, '')
+        .replace(/, Democratic Republic of the Congo/g, '')
+        .replace(/, République démocratique du Congo/g, '')
+        .replace(/, RDC/g, '')
+        .trim() || 'Kinshasa, RDC';
     }
 
-    // Le backend retourne : { success: true, result: { formatted_address, address_components, ... } }
-    if (data.result) {
-      const result = data.result;
-      
-      // ✅ STRATÉGIE 1 : Extraire le nom de rue depuis address_components
-      // Chercher dans cet ordre : route (rue) → neighborhood (quartier) → locality (ville)
-      if (result.address_components && Array.isArray(result.address_components)) {
-        // Chercher d'abord la rue (route)
-        const route = result.address_components.find((comp: any) => 
-          comp.types.includes('route')
-        );
-        
-        if (route && route.long_name) {
-          console.log('✅ Adresse trouvée (route):', route.long_name);
-          return route.long_name;
-        }
-        
-        // Sinon chercher le quartier (neighborhood ou sublocality)
-        const neighborhood = result.address_components.find((comp: any) => 
-          comp.types.includes('neighborhood') || 
-          comp.types.includes('sublocality') ||
-          comp.types.includes('sublocality_level_1')
-        );
-        
-        if (neighborhood && neighborhood.long_name) {
-          console.log('✅ Adresse trouvée (quartier):', neighborhood.long_name);
-          return neighborhood.long_name;
-        }
-        
-        // Sinon chercher la localité (locality)
-        const locality = result.address_components.find((comp: any) => 
-          comp.types.includes('locality')
-        );
-        
-        if (locality && locality.long_name) {
-          console.log('✅ Adresse trouvée (locality):', locality.long_name);
-          return locality.long_name;
-        }
-      }
-      
-      // ✅ STRATÉGIE 2 : Nettoyer formatted_address en enlevant le code Plus Code
-      if (result.formatted_address) {
-        const address = result.formatted_address;
-        
-        // Enlever les codes Plus Code (format: M896+V4Q, 2H8M+JR, etc.)
-        const cleanedAddress = address
-          .replace(/[A-Z0-9]{4}\+[A-Z0-9]{2,3},?\s*/g, '') // Enlever "M896+V4Q, "
-          .replace(/, Democratic Republic of the Congo/g, '')
-          .replace(/, République démocratique du Congo/g, '')
-          .replace(/, RDC/g, '')
-          .replace(/, Kinshasa/g, '') // Enlever ", Kinshasa" aussi car souvent redondant
-          .trim()
-          .replace(/^,\s*/, '') // Enlever la virgule au début si elle reste
-          .trim();
-        
-        // Si après nettoyage il reste quelque chose de valide
-        if (cleanedAddress && cleanedAddress.length > 3) {
-          console.log('✅ Adresse nettoyée:', cleanedAddress);
-          return cleanedAddress;
-        }
-      }
-    }
-
-    // Fallback si aucune adresse trouvée
-    console.warn('⚠️ Geocoding: Pas d\'adresse trouvée, utilisation des coordonnées');
-    return `Position ${Math.abs(lat).toFixed(4)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lng).toFixed(4)}°${lng < 0 ? 'W' : 'E'}`;
-    
+    return 'Kinshasa, RDC';
   } catch (error) {
     console.error('❌ Erreur geocoding:', error);
-    
-    // 🆕 FALLBACK AMÉLIORÉ : Utiliser la base de données de lieux Kinshasa
-    // Au lieu d'afficher les coordonnées, chercher le quartier le plus proche
+
+    // Fallback Nominatim
     try {
-      // Charger dynamiquement la base de données de lieux
-      const { findNearestLocation } = await import('./kinshasa-locations-database');
-      const nearestPlace = findNearestLocation(lat, lng);
-      
-      if (nearestPlace && nearestPlace.distance < 2) { // Moins de 2km
-        const locationName = nearestPlace.quartier || nearestPlace.commune || 'Kinshasa';
-        console.log(`✅ Fallback: Lieu approximatif trouvé: ${locationName} (~${nearestPlace.distance.toFixed(1)}km)`);
-        return locationName;
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+      const response = await fetch(url, {
+        headers: { 'User-Agent': 'SmartCabb-RDC/1.0' }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const address = data.address;
+        if (address) {
+          return address.suburb || address.city_district || address.city || 'Kinshasa, RDC';
+        }
       }
-    } catch (fallbackError) {
-      console.error('❌ Fallback database failed:', fallbackError);
-    }
-    
-    // Dernier fallback : afficher les coordonnées
-    return `Position ${Math.abs(lat).toFixed(4)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lng).toFixed(4)}°${lng < 0 ? 'W' : 'E'}`;
+    } catch (e) {}
+
+    return 'Kinshasa, RDC';
   }
 }
 

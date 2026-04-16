@@ -16,12 +16,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
 const FIREBASE_CONFIG = {
-  apiKey: "VOTRE_API_KEY",
-  authDomain: "VOTRE_PROJECT.firebaseapp.com",
-  projectId: "VOTRE_PROJECT_ID",
-  storageBucket: "VOTRE_PROJECT.appspot.com",
-  messagingSenderId: "VOTRE_SENDER_ID",
-  appId: "VOTRE_APP_ID"
+  apiKey: "AIzaSyC0Kq6QgnfVna4bEWUj0J3VknU0ZHMAaWU",
+  authDomain: "smartcabb-bed00.firebaseapp.com",
+  projectId: "smartcabb-bed00",
+  storageBucket: "smartcabb-bed00.firebasestorage.app",
+  messagingSenderId: "855559530237",
+  appId: "1:855559530237:web:5ea0fa4232bb08196f4094"
 };
 
 if (!firebase.apps.length) {
@@ -31,63 +31,62 @@ if (!firebase.apps.length) {
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
-  const notificationTitle = payload.notification?.title || 'SmartCabb';
+  console.log('[SW] Message reçu en arrière-plan:', payload);
+
+  const data = payload.data || {};
+
+  // Ne pas afficher de notification si course prise ou annulée
+  if (data.type === 'ride_taken' || data.type === 'ride_cancelled_by_passenger') {
+    console.log('[SW] Course prise/annulée - pas de notification');
+    return;
+  }
+
+  const notificationTitle = payload.notification?.title || 'SmartCabb - Nouvelle Course';
   const notificationOptions = {
-    body: payload.notification?.body || '',
+    body: payload.notification?.body || 'Nouvelle course disponible',
     icon: '/logo-smartcabb.png',
     badge: '/badge-smartcabb.png',
-    tag: 'smartcabb-ride-' + (payload.data?.rideId || Date.now()),
+    tag: 'smartcabb-ride-' + (data.rideId || Date.now()),
     requireInteraction: true,
-    vibrate: [200, 100, 200, 100, 200],
-    data: payload.data || {},
-    actions: payload.data?.rideId ? [
+    vibrate: [300, 100, 300, 100, 300],
+    data: data,
+    actions: data.rideId ? [
       { action: 'accept', title: 'Accepter' },
       { action: 'decline', title: 'Refuser' }
     ] : []
   };
+
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const rideId = event.notification.data?.rideId;
+  const action = event.action;
 
-  if (event.action === 'accept') {
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.includes('smartcabb.com') && 'focus' in client) {
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes('smartcabb.com') && 'focus' in client) {
+          if (action === 'accept') {
             client.postMessage({ type: 'ACCEPT_RIDE', rideId });
-            return client.focus();
-          }
-        }
-        return clients.openWindow('/driver-dashboard?action=accept&rideId=' + rideId);
-      })
-    );
-  } else if (event.action === 'decline') {
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.includes('smartcabb.com') && 'focus' in client) {
+          } else if (action === 'decline') {
             client.postMessage({ type: 'DECLINE_RIDE', rideId });
-            return client.focus();
           }
+          return client.focus();
         }
-        return clients.openWindow('/driver-dashboard?action=decline&rideId=' + rideId);
-      })
-    );
-  } else {
-    event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-        for (const client of clientList) {
-          if (client.url.includes('smartcabb.com') && 'focus' in client) {
-            return client.focus();
-          }
-        }
-        return clients.openWindow('/driver-dashboard');
-      })
-    );
-  }
+      }
+      const url = action === 'accept'
+        ? `/app/driver?action=accept&rideId=${rideId}`
+        : '/app/driver';
+      return clients.openWindow(url);
+    })
+  );
 });
 
-console.log('[Service Worker] Firebase Messaging Service Worker chargé pour SmartCabb ✅');
+// Écouter aussi les messages de l'app pour config dynamique (compatibilité)
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'INIT_FIREBASE') {
+    console.log('[SW] Config Firebase reçue (déjà initialisé)');
+  }
+});

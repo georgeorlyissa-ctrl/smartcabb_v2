@@ -27,57 +27,36 @@ interface ReverseGeocodeResponse {
  */
 export async function reverseGeocode(lat: number, lng: number): Promise<string> {
   try {
-    console.log(`🗺️ Reverse geocoding: ${lat}, ${lng}`);
-    
-    // Vérifier que les coordonnées sont valides
     if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-      console.warn('⚠️ Coordonnées invalides pour le geocoding');
       return 'Position GPS activée';
     }
-    
-    // Appel à l'API Nominatim (OpenStreetMap)
-    // Limite de requêtes : 1 par seconde (pas de clé API requise)
+
+    // Coordonnées hors RDC → retourner fallback immédiatement
+    const isInRDC = lat >= -13.5 && lat <= 5.5 && lng >= 12.0 && lng <= 31.5;
+    if (!isInRDC) {
+      console.warn(`⚠️ Coordonnées hors RDC: ${lat}, ${lng}`);
+      return 'Kinshasa, RDC';
+    }
+
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
-    
+
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'SmartCabb-RDC/1.0' // Nominatim requiert un User-Agent
+        'User-Agent': 'SmartCabb-RDC/1.0'
       }
     });
-    
-    if (!response.ok) {
-      console.warn('⚠️ Erreur API Nominatim:', response.status);
-      return 'Position GPS activée';
-    }
-    
+
+    if (!response.ok) return 'Position GPS activée';
+
     const data: ReverseGeocodeResponse = await response.json();
-    
-    if (data.error) {
-      console.warn('⚠️ Erreur geocoding:', data.error);
-      return 'Position GPS activée';
-    }
-    
-    // Extraire le nom du lieu (priorité: quartier > commune > ville)
+    if (data.error) return 'Position GPS activée';
+
     const address = data.address;
-    if (!address) {
-      return 'Position GPS activée';
-    }
-    
-    // 🎯 Priorité pour Kinshasa :
-    // 1. Suburb = Quartier (ex: Matete, Bandalungwa)
-    // 2. City_district = Commune (ex: Ngaliema, Gombe)
-    // 3. City = Ville (ex: Kinshasa)
-    const locationName = 
-      address.suburb || 
-      address.city_district || 
-      address.city || 
-      address.county ||
-      'Position GPS activée';
-    
-    console.log('✅ Lieu trouvé:', locationName);
-    return locationName;
-    
+    if (!address) return 'Position GPS activée';
+
+    return address.suburb || address.city_district || address.city || address.county || 'Kinshasa, RDC';
+
   } catch (error) {
     console.error('❌ Erreur reverse geocoding:', error);
     return 'Position GPS activée';
