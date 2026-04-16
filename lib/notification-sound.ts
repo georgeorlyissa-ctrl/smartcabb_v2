@@ -76,33 +76,49 @@ function vibrate(pattern: number[] = [200, 100, 200, 100, 200]) {
 }
 
 // 🔔 Notification navigateur
-async function showBrowserNotification(title: string, body: string, options?: NotificationOptions) {
-  if (!('Notification' in window)) {
-    console.warn('Notifications non supportées');
-    return null;
-  }
+async function showBrowserNotification(title: string, body: string, options?: any) {
+  if (!('Notification' in window)) return null;
 
-  // Demander permission si pas encore accordée
   if (Notification.permission === 'default') {
     await Notification.requestPermission();
   }
 
-  if (Notification.permission === 'granted') {
-    const notification = new Notification(title, {
-      body,
-      icon: '/logo.png',
-      badge: '/logo.png',
-      vibrate: [200, 100, 200],
-      requireInteraction: true, // Ne se ferme pas automatiquement
-      ...options
-    });
+  if (Notification.permission !== 'granted') return null;
 
-    return notification;
+  // ✅ Mobile : utiliser ServiceWorker (new Notification() interdit sur mobile)
+  if ('serviceWorker' in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(title, {
+        body,
+        icon: '/logo-smartcabb.png',
+        badge: '/badge-smartcabb.png',
+        vibrate: [200, 100, 200],
+        requireInteraction: true,
+        tag: options?.tag || 'smartcabb-notification',
+        renotify: true,
+        data: options?.data || {}
+      });
+      return null;
+    } catch (error) {
+      console.error('Erreur SW notification:', error);
+    }
   }
 
-  return null;
+  // Fallback PC uniquement
+  try {
+    return new Notification(title, {
+      body,
+      icon: '/logo-smartcabb.png',
+      tag: options?.tag || 'smartcabb-notification',
+      requireInteraction: true,
+      ...options
+    });
+  } catch (error) {
+    console.error('Erreur Notification:', error);
+    return null;
+  }
 }
-
 // 🚖 NOTIFICATION COMPLÈTE DE COURSE
 export async function playRideNotification(rideDetails?: {
   passengerName?: string;

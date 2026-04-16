@@ -220,7 +220,7 @@ export async function listenToFCMMessages(
     console.log('Ecoute des messages FCM en foreground...');
 
     modules.onMessage(messaging, (payload: any) => {
-      console.log('📩 Message FCM recu (foreground):', payload);
+      console.log(' Message FCM recu (foreground):', payload);
 
       const data = payload?.data || {};
 
@@ -258,22 +258,17 @@ export async function listenToFCMMessages(
       }
 
       // ✅ notification navigateur
-      if (payload.notification) {
-        const { title, body } = payload.notification;
-
-        if (
-          'Notification' in window &&
-          Notification.permission === 'granted'
-        ) {
-          new Notification(title || 'SmartCabb', {
-            body: body || 'Nouvelle notification',
-            icon: '/logo-smartcabb.png',
-            badge: '/logo-smartcabb.png',
-            tag: 'smartcabb-notification',
-            requireInteraction: true
-          });
-        }
-      }
+      if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(registration => {
+    registration.showNotification(title || 'SmartCabb', {
+      body: body || 'Nouvelle notification',
+      icon: '/logo-smartcabb.jpeg',
+      badge: '/badge-smartcabb.png',
+      tag: 'smartcabb-notification',
+      requireInteraction: true
+    });
+  }).catch(e => console.error('SW notification error:', e));
+}
     });
 
     console.log('✅ Listener FCM active');
