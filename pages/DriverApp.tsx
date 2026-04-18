@@ -129,12 +129,16 @@ function DriverAppContent() {
   }, [location.pathname, currentScreen, state.currentView, state.currentDriver, setCurrentView, setCurrentScreen, setCurrentDriver]); // Ajout de setCurrentDriver
 
   // ✅ FCM : Initialiser les notifications push pour le conducteur
-  useEffect(() => {
-    // Ne rien faire si pas d'utilisateur connecté
-    if (!state.currentDriver || !state.currentDriver.id) {
-      console.log('⏭️ FCM : Pas de conducteur connecté, skip');
-      return;
-    }
+useEffect(() => {
+  if (!state.currentDriver?.id || state.currentView !== 'driver') return;
+
+  console.log('🔥 FCM déjà géré par DriverDashboardNew - skip setupFCMForUser');
+  
+  // ❌ NE PAS appeler setupFCMForUser ici - il court-circuite le système FCM
+  // Le listener FCM est géré dans DriverDashboardNew via registerDriverFCMToken + listenToFCMMessages
+  // qui dispatche fcm-new-ride-request → setPendingRideRequest → RideNotification
+
+}, [state.currentDriver?.id, state.currentView]);
 
     // Vérifier que c'est bien un conducteur
     if (state.currentView !== 'driver') {
