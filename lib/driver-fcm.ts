@@ -1,6 +1,6 @@
 /**
  * SYSTEME FCM POUR DRIVERS - SmartCabb
- * @version 4.5.0 - FIX listener FCM foreground
+ * @version 4.6.0 - FIX COMPLET listener FCM foreground
  */
 
 import { projectId, publicAnonKey } from '../utils/supabase/info';
@@ -22,7 +22,8 @@ const VAPID_KEY = "BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekI
 
 let messaging: Messaging | null = null;
 let firebaseModules: any = null;
-let fcmListenerActive = false; // ✅ Empêcher les listeners dupliqués
+let fcmListenerActive = false;
+let fcmUnsubscribe: (() => void) | null = null;
 
 async function loadFirebaseModules() {
   if (firebaseModules) return firebaseModules;
@@ -170,13 +171,13 @@ export async function saveFCMToken(userId: string, token: string): Promise<boole
 export async function listenToFCMMessages(
   onMessageReceived: (payload: any) => void
 ): Promise<void> {
-  // ✅ Empêcher les listeners dupliqués
-  if (fcmListenerActive) {
-    console.log('ℹ️ Listener FCM déjà actif');
-    return;
-  }
-
   try {
+    // Empêcher les listeners dupliqués
+    if (fcmListenerActive && fcmUnsubscribe) {
+      console.log('ℹ️ Listener FCM déjà actif, réutilisation');
+      return;
+    }
+
     if (!messaging) {
       const initialized = await initializeFCM();
       if (!initialized) return;
@@ -185,9 +186,9 @@ export async function listenToFCMMessages(
     const modules = await loadFirebaseModules();
     if (!modules || !messaging) return;
 
-    console.log('Ecoute des messages FCM en foreground...');
+    console.log('Démarrage écoute messages FCM en foreground...');
 
-    modules.onMessage(messaging, (payload: any) => {
+    const unsubscribe = modules.onMessage(messaging, (payload: any) => {
       console.log('📨 Message FCM recu (foreground):', payload);
 
       const data = payload?.data || {};
@@ -197,7 +198,7 @@ export async function listenToFCMMessages(
       // Callback principal
       onMessageReceived(payload);
 
-      // Course déjà prise ou annulée → fermer popup
+      // Course prise ou annulée → fermer popup
       if (data.type === 'ride_taken' || data.type === 'ride_cancelled_by_passenger') {
         console.log('⏹️ Course prise/annulée - dispatch fcm-ride-dismissed');
         window.dispatchEvent(new CustomEvent('fcm-ride-dismissed', { detail: data }));
@@ -210,7 +211,7 @@ export async function listenToFCMMessages(
         window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
       }
 
-      // ✅ Notification navigateur via Service Worker (compatible mobile)
+      // Notification navigateur via Service Worker (compatible mobile)
       if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(registration => {
           registration.showNotification(notifTitle, {
@@ -225,6 +226,7 @@ export async function listenToFCMMessages(
       }
     });
 
+    fcmUnsubscribe = unsubscribe;
     fcmListenerActive = true;
     console.log('✅ Listener FCM actif');
 
@@ -345,7 +347,7 @@ export async function registerDriverFCMToken(driverId: string): Promise<boolean>
     localStorage.setItem(`fcm_registered_${driverId}`, 'true');
     localStorage.setItem(`fcm_registered_at_${driverId}`, new Date().toISOString());
 
-    // ✅ Démarrer l'écoute après enregistrement réussi
+    // Démarrer l'écoute après enregistrement réussi
     await listenToFCMMessages((payload) => {
       console.log('📬 Message FCM reçu:', payload?.data?.type || 'unknown');
     });
@@ -367,10 +369,17 @@ export function isDriverFCMTokenRegistered(driverId: string): boolean {
 
 export async function forceRefreshDriverFCMToken(driverId: string): Promise<boolean> {
   try {
-    fcmListenerActive = false; // ✅ Réinitialiser le flag pour permettre un nouveau listener
+    // Nettoyer l'ancien listener avant de recréer
+    if (fcmUnsubscribe) {
+      fcmUnsubscribe();
+      fcmUnsubscribe = null;
+    }
+    fcmListenerActive = false;
+
     localStorage.removeItem(`fcm_token_${driverId}`);
     localStorage.removeItem(`fcm_registered_${driverId}`);
     localStorage.removeItem(`fcm_registered_at_${driverId}`);
+
     return await registerDriverFCMToken(driverId);
   } catch (error) {
     console.error('Erreur rafraichissement token FCM:', error);
