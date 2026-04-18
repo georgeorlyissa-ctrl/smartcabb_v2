@@ -1,11 +1,6 @@
 /**
  * SYSTEME FCM POUR DRIVERS - SmartCabb
- *
- * VERSION HYBRID : Client génère token + Backend envoie notifications
- * Config Firebase publique nécessaire pour Web Push (Safe)
- *
- * @version 4.4.0 - FIX CRITIQUE : register-driver-token au lieu de save-token
- * @date 2026-04-14
+ * @version 4.5.0 - FIX listener FCM foreground
  */
 
 import { projectId, publicAnonKey } from '../utils/supabase/info';
@@ -27,6 +22,7 @@ const VAPID_KEY = "BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekI
 
 let messaging: Messaging | null = null;
 let firebaseModules: any = null;
+let fcmListenerActive = false; // ✅ Empêcher les listeners dupliqués
 
 async function loadFirebaseModules() {
   if (firebaseModules) return firebaseModules;
@@ -70,10 +66,7 @@ export async function initializeFCM(): Promise<boolean> {
     }
 
     const modules = await loadFirebaseModules();
-    if (!modules) {
-      console.warn('Firebase non disponible');
-      return false;
-    }
+    if (!modules) return false;
 
     const supported = await modules.isSupported();
     if (!supported) {
@@ -101,7 +94,6 @@ export async function initializeFCM(): Promise<boolean> {
           type: 'INIT_FIREBASE',
           config: firebaseConfig
         });
-        console.log('Configuration envoyee au Service Worker');
       }
     } catch (swError) {
       console.warn('Impossible d\'envoyer la config au Service Worker:', swError);
@@ -131,52 +123,26 @@ export async function getFCMToken(): Promise<string | null> {
     const modules = await loadFirebaseModules();
     if (!modules || !messaging) return null;
 
-    console.log('Demande de token FCM...');
-
     const token = await modules.getToken(messaging, { vapidKey: VAPID_KEY });
 
     if (token) {
       console.log('Token FCM obtenu:', token.substring(0, 20) + '...');
       return token;
-    } else {
-      console.warn('Aucun token FCM obtenu');
-      return null;
     }
+
+    console.warn('Aucun token FCM obtenu');
+    return null;
   } catch (error: any) {
     console.error('Erreur obtention token FCM:', error);
-
     if (error?.code === 'messaging/permission-blocked') {
       toast('Les notifications sont bloquees. Veuillez les autoriser dans les parametres du navigateur.', { type: 'error' });
-    } else if (error?.message?.includes('API key not valid')) {
-      console.error('CLE API FIREBASE INVALIDE');
-    } else {
-      toast('Erreur lors de l\'obtention du token de notification', { type: 'error' });
     }
-
     return null;
   }
 }
 
-/**
- * FIX CRITIQUE v4.4.0
- *
- * AVANT (bugge) : appelait /fcm/save-token
- *   → stockait dans kv['fcm_token_${userId}']
- *   → findAndNotifyNearbyDrivers cherche driver.fcmToken dans kv['driver:${id}']
- *   → token jamais trouve → aucune notification
- *
- * APRES (corrige) : appelle /fcm/register-driver-token
- *   → stocke fcmToken dans kv['driver:${driverId}'].fcmToken
- *   → ET dans kv['fcm_token_${driverId}'] (double stockage)
- *   → findAndNotifyNearbyDrivers trouve driver.fcmToken → notification envoyee
- */
 export async function saveFCMToken(userId: string, token: string): Promise<boolean> {
   try {
-    console.log('Sauvegarde du token FCM pour le conducteur:', userId);
-    console.log('Token:', token.substring(0, 20) + '...');
-
-    // CORRECTION : utiliser register-driver-token qui met à jour driver.fcmToken
-    // dans le KV store, ce que findAndNotifyNearbyDrivers lit ensuite
     const response = await fetch(
       `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/fcm/register-driver-token`,
       {
@@ -190,13 +156,9 @@ export async function saveFCMToken(userId: string, token: string): Promise<boole
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Erreur serveur lors de la sauvegarde du token:', error);
+      console.error('Erreur serveur sauvegarde token:', await response.text());
       return false;
     }
-
-    const data = await response.json();
-    console.log('Token FCM sauvegarde sur le serveur (register-driver-token):', data);
 
     return true;
   } catch (error) {
@@ -208,6 +170,12 @@ export async function saveFCMToken(userId: string, token: string): Promise<boole
 export async function listenToFCMMessages(
   onMessageReceived: (payload: any) => void
 ): Promise<void> {
+  // ✅ Empêcher les listeners dupliqués
+  if (fcmListenerActive) {
+    console.log('ℹ️ Listener FCM déjà actif');
+    return;
+  }
+
   try {
     if (!messaging) {
       const initialized = await initializeFCM();
@@ -220,58 +188,46 @@ export async function listenToFCMMessages(
     console.log('Ecoute des messages FCM en foreground...');
 
     modules.onMessage(messaging, (payload: any) => {
-      console.log(' Message FCM recu (foreground):', payload);
+      console.log('📨 Message FCM recu (foreground):', payload);
 
       const data = payload?.data || {};
+      const notifTitle = payload?.notification?.title || 'SmartCabb';
+      const notifBody = payload?.notification?.body || 'Nouvelle notification';
 
-      // callback principal
+      // Callback principal
       onMessageReceived(payload);
 
-      // ✅ course déjà prise ou annulée
-      if (
-        data.type === 'ride_taken' ||
-        data.type === 'ride_cancelled_by_passenger'
-      ) {
-        console.log('⏹️ Fermeture notification course');
-
-        window.dispatchEvent(
-          new CustomEvent('fcm-ride-dismissed', {
-            detail: data
-          })
-        );
-
+      // Course déjà prise ou annulée → fermer popup
+      if (data.type === 'ride_taken' || data.type === 'ride_cancelled_by_passenger') {
+        console.log('⏹️ Course prise/annulée - dispatch fcm-ride-dismissed');
+        window.dispatchEvent(new CustomEvent('fcm-ride-dismissed', { detail: data }));
         return;
       }
 
-      // ✅ nouvelle demande de course
-      if (
-        data.type === 'new_ride_request' &&
-        data.rideId
-      ) {
-        console.log('🚕 Nouvelle course FCM');
-
-        window.dispatchEvent(
-          new CustomEvent('fcm-new-ride-request', {
-            detail: data
-          })
-        );
+      // Nouvelle course → ouvrir popup driver
+      if (data.type === 'new_ride_request' && data.rideId) {
+        console.log('🚕 Nouvelle course FCM - dispatch fcm-new-ride-request');
+        window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
       }
 
-      // ✅ notification navigateur
+      // ✅ Notification navigateur via Service Worker (compatible mobile)
       if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
-  navigator.serviceWorker.ready.then(registration => {
-    registration.showNotification(title || 'SmartCabb', {
-      body: body || 'Nouvelle notification',
-      icon: '/logo-smartcabb.jpeg',
-      badge: '/badge-smartcabb.png',
-      tag: 'smartcabb-notification',
-      requireInteraction: true
-    });
-  }).catch(e => console.error('SW notification error:', e));
-}
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(notifTitle, {
+            body: notifBody,
+            icon: '/logo-smartcabb.jpeg',
+            badge: '/badge-smartcabb.png',
+            tag: 'smartcabb-notification-' + (data.rideId || Date.now()),
+            requireInteraction: true,
+            data: data
+          });
+        }).catch(e => console.error('SW notification error:', e));
+      }
     });
 
-    console.log('✅ Listener FCM active');
+    fcmListenerActive = true;
+    console.log('✅ Listener FCM actif');
+
   } catch (error) {
     console.error('❌ Erreur listener FCM:', error);
   }
@@ -279,8 +235,6 @@ export async function listenToFCMMessages(
 
 export async function testFCMNotification(userId: string): Promise<void> {
   try {
-    console.log('Test d\'envoi de notification FCM...');
-
     const response = await fetch(
       `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/fcm/test-notification`,
       {
@@ -294,17 +248,12 @@ export async function testFCMNotification(userId: string): Promise<void> {
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Erreur test notification:', error);
       toast('Erreur lors du test de notification', { type: 'error' });
       return;
     }
 
-    const data = await response.json();
-    console.log('Resultat du test:', data);
-    toast('Notification de test envoyee ! Verifiez votre appareil.', { type: 'success' });
+    toast('Notification de test envoyee !', { type: 'success' });
   } catch (error) {
-    console.error('Erreur test FCM:', error);
     toast('Erreur lors du test de notification', { type: 'error' });
   }
 }
@@ -377,28 +326,29 @@ export async function registerDriverFCMToken(driverId: string): Promise<boolean>
   try {
     console.log(`Enregistrement FCM pour le conducteur ${driverId}...`);
 
-    // Vider le cache local pour forcer un nouveau token
     localStorage.removeItem(`fcm_token_${driverId}`);
     localStorage.removeItem(`fcm_registered_${driverId}`);
 
-    // Obtenir le token FCM
     const token = await getFCMToken();
     if (!token) {
       console.error('Impossible d\'obtenir le token FCM');
       return false;
     }
 
-    // Sauvegarder sur le serveur via register-driver-token (FIX)
     const saved = await saveFCMToken(driverId, token);
     if (!saved) {
       console.error('Impossible de sauvegarder le token FCM');
       return false;
     }
 
-    // Sauvegarder localement
     localStorage.setItem(`fcm_token_${driverId}`, token);
     localStorage.setItem(`fcm_registered_${driverId}`, 'true');
     localStorage.setItem(`fcm_registered_at_${driverId}`, new Date().toISOString());
+
+    // ✅ Démarrer l'écoute après enregistrement réussi
+    await listenToFCMMessages((payload) => {
+      console.log('📬 Message FCM reçu:', payload?.data?.type || 'unknown');
+    });
 
     console.log('Token FCM enregistre avec succes pour', driverId);
     return true;
@@ -417,15 +367,13 @@ export function isDriverFCMTokenRegistered(driverId: string): boolean {
 
 export async function forceRefreshDriverFCMToken(driverId: string): Promise<boolean> {
   try {
-    console.log(`Rafraichissement force du token FCM pour ${driverId}...`);
-
+    fcmListenerActive = false; // ✅ Réinitialiser le flag pour permettre un nouveau listener
     localStorage.removeItem(`fcm_token_${driverId}`);
     localStorage.removeItem(`fcm_registered_${driverId}`);
     localStorage.removeItem(`fcm_registered_at_${driverId}`);
-
     return await registerDriverFCMToken(driverId);
   } catch (error) {
-    console.error('Erreur lors du rafraichissement du token FCM:', error);
+    console.error('Erreur rafraichissement token FCM:', error);
     return false;
   }
 }
@@ -438,7 +386,6 @@ export function getDriverFCMTokenInfo(driverId: string): {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
     return { token: null, registered: false, registeredAt: null };
   }
-
   return {
     token: localStorage.getItem(`fcm_token_${driverId}`),
     registered: localStorage.getItem(`fcm_registered_${driverId}`) === 'true',
