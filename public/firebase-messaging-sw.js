@@ -35,10 +35,25 @@ messaging.onBackgroundMessage((payload) => {
 
   const data = payload.data || {};
 
-  // Ne pas afficher de notification si course prise ou annulée
+  // Course prise ou annulée
   if (data.type === 'ride_taken' || data.type === 'ride_cancelled_by_passenger') {
-    console.log('[SW] Course prise/annulée - pas de notification');
+    console.log('[SW] Course prise/annulée - fermeture popup');
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        client.postMessage({ type: 'RIDE_DISMISSED', detail: data });
+      }
+    });
     return;
+  }
+
+  // Nouvelle course : notifier TOUS les clients ouverts immédiatement
+  if (data.type === 'new_ride_request' && data.rideId) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      for (const client of clientList) {
+        console.log('[SW] Envoi NEW_RIDE_REQUEST au client:', client.url);
+        client.postMessage({ type: 'NEW_RIDE_REQUEST', detail: data });
+      }
+    });
   }
 
   const notificationTitle = payload.notification?.title || 'SmartCabb - Nouvelle Course';

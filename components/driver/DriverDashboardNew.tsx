@@ -238,20 +238,20 @@ export function DriverDashboardNew() {
     if (!driver?.id) return;
 
     // Écouter les messages du Service Worker (app en arrière-plan)
-    const handleSWMessage = (event: MessageEvent) => {
-      const { type, detail } = event.data || {};
-      console.log('📬 Message SW reçu:', type);
+   const handleSWMessage = (event: MessageEvent) => {
+  const { type, detail } = event.data || {};
+  console.log('📬 Message SW reçu:', type);
 
-      if (type === 'NEW_RIDE_REQUEST' && detail?.rideId) {
-        console.log('🚕 Nouvelle course via SW:', detail.rideId);
-        setPendingRideRequest(buildRideRequest(detail));
-      }
+  if (type === 'NEW_RIDE_REQUEST' && detail?.rideId) {
+    console.log('🚕 Nouvelle course via SW:', detail.rideId);
+    setPendingRideRequest(buildRideRequest(detail));
+  }
 
-      if (type === 'DECLINE_RIDE') {
-        setPendingRideRequest(null);
-        stopAllNotifications();
-      }
-    };
+  if (type === 'DECLINE_RIDE' || type === 'RIDE_DISMISSED') {
+    setPendingRideRequest(null);
+    stopAllNotifications();
+  }
+};
     navigator.serviceWorker?.addEventListener('message', handleSWMessage);
 
     // Écouter l'événement custom FCM foreground
