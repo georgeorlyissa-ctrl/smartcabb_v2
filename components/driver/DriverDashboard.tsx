@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from '../../lib/motion';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
@@ -21,90 +21,59 @@ import { reverseGeocodeWithCache } from '../../lib/geocoding';
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { listenToFCMMessages } from '../../lib/driver-fcm';
+import { registerDriverFCMToken, listenToFCMMessages } from '../../lib/driver-fcm';
 import { 
-  notifyRideConfirmed,
-  notifyDriverEnroute,
-  notifyDriverArrived,
-  notifyRideStarted,
-  notifyRideCompleted,
-  notifyPaymentReceived,
-  notifyRideCancelled
+  notifyRideConfirmed, notifyDriverEnroute, notifyDriverArrived,
+  notifyRideStarted, notifyRideCompleted, notifyPaymentReceived, notifyRideCancelled
 } from '../../lib/sms-service';
 import { RideNotificationSound } from './RideNotificationSound';
 import { RideNotification } from './RideNotification';
-import { registerDriverFCMToken } from '../../lib/driver-fcm';
 import { FCMDiagnostic } from './FCMDiagnostic';
-
-// Nouveaux imports pour les écrans
 import { DriverRidesHistory } from './DriverRidesHistory';
 import { DriverEarningsScreen } from './DriverEarningsScreen';
 import { DriverProfileSettings } from './DriverProfileSettings';
 
-// ✅ Helper inliné pour éviter les problèmes de build Rollup
 function isDriverFCMTokenRegistered(driverId: string): boolean {
-  if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-    return false;
-  }
+  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return false;
   const registered = localStorage.getItem(`fcm_registered_${driverId}`);
   const token = localStorage.getItem(`fcm_token_${driverId}`);
   return registered === 'true' && !!token;
 }
 
-// Icônes SVG inline
 const Power = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
 );
-
 const MapPin = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 );
-
 const Navigation = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
 );
-
 const Clock = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 );
-
 const DollarSign = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 );
-
 const Star = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /></svg>
 );
-
 const User = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
 );
-
 const Settings = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
 );
-
 const XCircle = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 );
-
-const Check = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-);
-
-const X = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-);
-
 const AlertCircle = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 );
-
 const Wallet = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
 );
 
-// Types
 interface Driver {
   id: string;
   full_name: string;
@@ -119,18 +88,10 @@ interface Driver {
   rating: number;
   totalRides: number;
   vehicle?: {
-    make?: string;
-    model?: string;
-    year?: string;
-    color?: string;
-    plate?: string;
-    category?: VehicleCategory;
-    seats?: number;
+    make?: string; model?: string; year?: string;
+    color?: string; plate?: string; category?: VehicleCategory; seats?: number;
   };
-  currentLocation?: {
-    latitude: number;
-    longitude: number;
-  };
+  currentLocation?: { latitude: number; longitude: number };
   accountType?: 'prepaid' | 'postpaid';
 }
 
@@ -139,20 +100,35 @@ interface RideRequest {
   passengerId: string;
   passengerName: string;
   passengerPhone: string;
-  pickup: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  };
-  dropoff: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  };
+  pickup: { latitude: number; longitude: number; address: string };
+  dropoff: { latitude: number; longitude: number; address: string };
   distance: number;
   estimatedPrice: number;
   vehicleCategory: VehicleCategory;
   timestamp: number;
+}
+
+function buildRideRequest(d: any): RideRequest {
+  return {
+    id: d.rideId || d.id,
+    passengerId: d.passengerId || '',
+    passengerName: d.passengerName || 'Passager',
+    passengerPhone: d.passengerPhone || '',
+    pickup: {
+      latitude: parseFloat(d.pickupLat || d.pickup?.coordinates?.lat) || -4.3276,
+      longitude: parseFloat(d.pickupLng || d.pickup?.coordinates?.lng) || 15.3136,
+      address: d.pickupName || d.pickup?.name || 'Point de départ'
+    },
+    dropoff: {
+      latitude: parseFloat(d.destinationLat || d.destination?.coordinates?.lat) || -4.3276,
+      longitude: parseFloat(d.destinationLng || d.destination?.coordinates?.lng) || 15.3136,
+      address: d.destinationName || d.destination?.name || 'Destination'
+    },
+    distance: parseFloat(d.distance) || 0,
+    estimatedPrice: parseFloat(d.estimatedPrice) || 0,
+    vehicleCategory: d.vehicleCategory,
+    timestamp: Date.now()
+  };
 }
 
 export function DriverDashboard() {
@@ -163,21 +139,15 @@ export function DriverDashboard() {
   const [showWalletManager, setShowWalletManager] = useState(false);
   const [showFCMDiagnostic, setShowFCMDiagnostic] = useState(false);
 
-  // Charger les données du conducteur
+  // 1. Charger profil conducteur
   useEffect(() => {
     const loadDriver = async () => {
       if (!state.currentDriver?.id) return;
-      
       try {
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${state.currentDriver.id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${publicAnonKey}`,
-            },
-          }
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
         );
-
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.driver) {
@@ -189,213 +159,130 @@ export function DriverDashboard() {
         console.error('Erreur chargement conducteur:', error);
       }
     };
-
     loadDriver();
   }, [state.currentDriver?.id]);
 
-  // 🔔 Initialiser FCM pour recevoir les notifications push
-  // 🔔 Initialiser FCM - toujours re-enregistrer sur le serveur
-const stopAllNotifications = () => {
-  window.dispatchEvent(new CustomEvent('stop-ride-notification'));
-};
-
-useEffect(() => {
-  if (!driver?.id) return;
-
-  const initializeFCMListener = async () => {
-    try {
-      const success = await registerDriverFCMToken(driver.id);
-
-      if (!success) {
-        console.warn('⚠️ Échec enregistrement FCM');
-        return;
-      }
-
-      console.log('✅ Token FCM enregistré avec succès');
-
-      await listenToFCMMessages((payload: any) => {
-        console.log('📬 Message FCM reçu dans dashboard:', payload);
-
-        const data = payload?.data || {};
-
-        // 🔥 IMPORTANT : course déjà prise / annulée
-        if (
-          data.type === 'ride_taken' ||
-          data.type === 'ride_cancelled_by_passenger'
-        ) {
-          console.log('⏹️ Notification de fermeture reçue');
-
-          setPendingRideRequest(null);
-
-          window.dispatchEvent(
-            new CustomEvent('stop-ride-notification')
-          );
-
-          return;
-        }
-
-        // 🔥 Nouvelle course
-        if (data.type === 'new_ride_request' && data.rideId) {
-          window.dispatchEvent(
-            new CustomEvent('fcm-new-ride-request', {
-              detail: data,
-            })
-          );
-        }
-      });
-    } catch (error) {
-      console.error('❌ Erreur initialisation FCM:', error);
-    }
-  };
-
-  initializeFCMListener();
-}, [driver?.id]);
-
-useEffect(() => {
-  // Écouter les messages du Service Worker (clic sur notification)
-  const handleSWMessage = (event: MessageEvent) => {
-    if (event.data?.type === 'ACCEPT_RIDE' || event.data?.type === 'DECLINE_RIDE') {
-      console.log('📬 Message SW reçu:', event.data);
-    }
-  };
-  navigator.serviceWorker?.addEventListener('message', handleSWMessage);
-
-  // Écouter les notifications FCM en foreground
-  const handleFCMRide = (event: any) => {
-    console.log('🔔 FCM nouvelle course:', event.detail);
-    const d = event.detail;
-    setPendingRideRequest({
-      id: d.rideId,
-      passengerId: '',
-      passengerName: d.passengerName || 'Passager',
-      passengerPhone: d.passengerPhone || '',
-      pickup: {
-        latitude: parseFloat(d.pickupLat) || -4.3276,
-        longitude: parseFloat(d.pickupLng) || 15.3136,
-        address: d.pickupName || 'Point de départ'
-      },
-      dropoff: {
-        latitude: parseFloat(d.destinationLat) || -4.3276,
-        longitude: parseFloat(d.destinationLng) || 15.3136,
-        address: d.destinationName || 'Destination'
-      },
-      distance: parseFloat(d.distance) || 0,
-      estimatedPrice: parseFloat(d.estimatedPrice) || 0,
-      vehicleCategory: d.vehicleCategory,
-      timestamp: Date.now()
-    });
-  };
-  window.addEventListener('fcm-new-ride-request', handleFCMRide);
-
-  // Polling de secours toutes les 10 secondes (si FCM silencieux)
-  const poll = setInterval(async () => {
-    if (!driver?.id || pendingRideRequest) return;
-    try {
-      const res = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/pending/${driver.id}`,
+  // 2. Vérifier URL params (app ouverte depuis notification)
+  useEffect(() => {
+    if (!driver?.id) return;
+    const params = new URLSearchParams(window.location.search);
+    const rideId = params.get('rideId');
+    const action = params.get('action');
+    if (rideId && action === 'new_ride') {
+      fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/${rideId}`,
         { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
-      );
-      const data = await res.json();
-      if (data.success && data.ride) {
-        const ride = data.ride;
-        setPendingRideRequest({
-          id: ride.id,
-          passengerId: ride.passengerId || '',
-          passengerName: ride.passengerName || 'Passager',
-          passengerPhone: ride.passengerPhone || '',
-          pickup: {
-            latitude: ride.pickup?.coordinates?.lat || -4.3276,
-            longitude: ride.pickup?.coordinates?.lng || 15.3136,
-            address: ride.pickup?.name || 'Point de départ'
-          },
-          dropoff: {
-            latitude: ride.destination?.coordinates?.lat || -4.3276,
-            longitude: ride.destination?.coordinates?.lng || 15.3136,
-            address: ride.destination?.name || 'Destination'
-          },
-          distance: ride.distance || 0,
-          estimatedPrice: ride.estimatedPrice || 0,
-          vehicleCategory: ride.vehicleCategory,
-          timestamp: Date.now()
-        });
+      ).then(r => r.json()).then(data => {
+        if (data.success && data.ride) {
+          setPendingRideRequest(buildRideRequest(data.ride));
+          window.history.replaceState({}, '', '/app/driver');
+        }
+      }).catch(e => console.error('Erreur récupération course depuis URL:', e));
+    }
+  }, [driver?.id]);
+
+  // 3. FCM + SW + polling unifié
+  useEffect(() => {
+    if (!driver?.id) return;
+
+    // Messages Service Worker (app en arrière-plan)
+    const handleSWMessage = (event: MessageEvent) => {
+      const { type, detail } = event.data || {};
+      console.log('📬 Message SW reçu:', type);
+      if (type === 'NEW_RIDE_REQUEST' && detail?.rideId) {
+        setPendingRideRequest(buildRideRequest(detail));
       }
-    } catch (e) {}
-  }, 10000);
+      if (type === 'DECLINE_RIDE') {
+        setPendingRideRequest(null);
+        stopAllNotifications();
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
 
-  return () => {
-    navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
-    window.removeEventListener('fcm-new-ride-request', handleFCMRide);
-    clearInterval(poll);
-  };
-}, [driver?.id, pendingRideRequest]);
+    // FCM foreground
+    const handleFCMRide = (event: any) => {
+      console.log('🔔 FCM nouvelle course:', event.detail);
+      setPendingRideRequest(buildRideRequest(event.detail));
+    };
+    window.addEventListener('fcm-new-ride-request', handleFCMRide);
 
-  // Toggle en ligne/hors ligne
+    // Course dismissée (prise ou annulée)
+    const handleRideDismissed = () => {
+      setPendingRideRequest(null);
+      stopAllNotifications();
+    };
+    window.addEventListener('fcm-ride-dismissed', handleRideDismissed);
+
+    // Init FCM
+    registerDriverFCMToken(driver.id).then(success => {
+      if (success) console.log('✅ FCM configuré pour driver', driver.id);
+      else console.warn('⚠️ Échec enregistrement FCM');
+    }).catch(e => console.error('❌ Erreur FCM:', e));
+
+    // Polling de secours
+    const poll = setInterval(async () => {
+      if (!driver?.id || pendingRideRequest) return;
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/pending/${driver.id}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        const data = await res.json();
+        if (data.success && data.ride) {
+          setPendingRideRequest(buildRideRequest(data.ride));
+        }
+      } catch (e) {}
+    }, 10000);
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
+      window.removeEventListener('fcm-new-ride-request', handleFCMRide);
+      window.removeEventListener('fcm-ride-dismissed', handleRideDismissed);
+      clearInterval(poll);
+    };
+  }, [driver?.id]);
+
   const handleToggleOnline = async () => {
     if (!driver) return;
-
-    // Vérifier le solde de crédit minimum
     const minimumCredit = getMinimumCreditForCategory(driver.vehicle?.category || 'smart_standard');
-    
     if (!isOnline && (driver.balance || 0) < minimumCredit) {
-      toast.error(`❌ Solde insuffisant ! Vous devez avoir au moins ${minimumCredit.toLocaleString('fr-FR')} CDF pour vous mettre en ligne.`);
+      toast.error(`Solde insuffisant ! Minimum ${minimumCredit.toLocaleString('fr-FR')} CDF requis.`);
       setShowWalletManager(true);
       return;
     }
-
     try {
       const newStatus = isOnline ? 'offline' : 'online';
-      
-      // 🔥 FIX: Si le conducteur se met EN LIGNE, d'abord obtenir sa position GPS
       let currentLocation = null;
       if (newStatus === 'online') {
-        console.log('📍 Obtention de la position GPS avant mise en ligne...');
         try {
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000,
-              maximumAge: 0
+              enableHighAccuracy: true, timeout: 10000, maximumAge: 0
             });
           });
-          
-          currentLocation = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          
-          console.log('✅ Position GPS obtenue:', currentLocation);
+          currentLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
         } catch (gpsError) {
-          console.error('❌ Erreur GPS:', gpsError);
-          toast.error('❌ Impossible d\'obtenir votre position GPS. Vérifiez vos autorisations.');
-          return; // ❌ Bloquer la mise en ligne si pas de GPS
+          toast.error('Impossible d\'obtenir votre position GPS.');
+          return;
         }
       }
-      
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${driver.id}/status`,
         {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            status: newStatus,
-            location: currentLocation // 🔥 Envoyer la position GPS si EN LIGNE
-          }),
+          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus, location: currentLocation })
         }
       );
-
       if (response.ok) {
         setIsOnline(!isOnline);
-        toast.success(newStatus === 'online' ? '✅ Vous êtes maintenant en ligne' : '✅ Vous êtes maintenant hors ligne');
+        toast.success(newStatus === 'online' ? 'Vous êtes maintenant en ligne' : 'Vous êtes maintenant hors ligne');
       } else {
         const errorData = await response.json();
-        toast.error(`❌ ${errorData.error || 'Erreur lors du changement de statut'}`);
+        toast.error(errorData.error || 'Erreur lors du changement de statut');
       }
     } catch (error) {
-      console.error('Erreur changement statut:', error);
-      toast.error('❌ Erreur lors du changement de statut');
+      toast.error('Erreur lors du changement de statut');
     }
   };
 
@@ -412,7 +299,6 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
       <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-4 py-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -427,17 +313,13 @@ useEffect(() => {
           <button
             onClick={handleToggleOnline}
             className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              isOnline
-                ? 'bg-green-500 text-white'
-                : 'bg-white/20 text-white hover:bg-white/30'
+              isOnline ? 'bg-green-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'
             }`}
           >
             <Power className="w-4 h-4 inline mr-1" />
             {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
           </button>
         </div>
-
-        {/* Stats rapides */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-white/10 backdrop-blur rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
@@ -446,7 +328,6 @@ useEffect(() => {
             </div>
             <p className="text-xl font-bold">{driver.rating?.toFixed(1) || '5.0'}</p>
           </div>
-          
           <div className="bg-white/10 backdrop-blur rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <Navigation className="w-4 h-4" />
@@ -454,7 +335,6 @@ useEffect(() => {
             </div>
             <p className="text-xl font-bold">{driver.totalRides || 0}</p>
           </div>
-          
           <div className="bg-white/10 backdrop-blur rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <DollarSign className="w-4 h-4" />
@@ -465,25 +345,15 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Contenu principal */}
       <div className="p-4 space-y-4">
-        {/* Alerte si solde faible */}
         {(driver.balance || 0) < getMinimumCreditForCategory(driver.vehicle?.category || 'smart_standard') && (
           <Card className="p-4 bg-orange-50 border-orange-200">
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-orange-900">
-                  Solde de crédit insuffisant
-                </p>
-                <p className="text-xs text-orange-700 mt-1">
-                  Rechargez votre compte pour pouvoir vous mettre en ligne.
-                </p>
-                <Button
-                  onClick={() => setShowWalletManager(true)}
-                  size="sm"
-                  className="mt-2 bg-orange-600 hover:bg-orange-700"
-                >
+                <p className="text-sm font-medium text-orange-900">Solde de crédit insuffisant</p>
+                <p className="text-xs text-orange-700 mt-1">Rechargez votre compte pour vous mettre en ligne.</p>
+                <Button onClick={() => setShowWalletManager(true)} size="sm" className="mt-2 bg-orange-600 hover:bg-orange-700">
                   <Wallet className="w-4 h-4 mr-2" />
                   Recharger maintenant
                 </Button>
@@ -492,18 +362,11 @@ useEffect(() => {
           </Card>
         )}
 
-        {/* Bouton Gérer mon portefeuille */}
-        <Button
-          onClick={() => setShowWalletManager(true)}
-          variant="outline"
-          className="w-full"
-          size="lg"
-        >
+        <Button onClick={() => setShowWalletManager(true)} variant="outline" className="w-full" size="lg">
           <Wallet className="w-5 h-5 mr-2" />
           Gérer mon portefeuille
         </Button>
 
-        {/* Informations véhicule */}
         <Card className="p-4">
           <h3 className="font-semibold text-gray-900 mb-3">Mon véhicule</h3>
           <div className="space-y-2">
@@ -528,20 +391,14 @@ useEffect(() => {
           </div>
         </Card>
 
-        {/* Boutons d'actions */}
         <div className="space-y-2">
-          <Button
-            onClick={() => setShowFCMDiagnostic(true)}
-            variant="outline"
-            className="w-full"
-          >
+          <Button onClick={() => setShowFCMDiagnostic(true)} variant="outline" className="w-full">
             <Settings className="w-5 h-5 mr-2" />
             Diagnostic FCM
           </Button>
         </div>
       </div>
 
-      {/* Modal Gestionnaire de portefeuille */}
       {showWalletManager && driver && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center">
           <motion.div
@@ -552,10 +409,7 @@ useEffect(() => {
           >
             <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
               <h3 className="font-bold text-lg">Portefeuille</h3>
-              <button
-                onClick={() => setShowWalletManager(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
+              <button onClick={() => setShowWalletManager(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
@@ -565,72 +419,76 @@ useEffect(() => {
                 creditBalance={driver.balance || 0}
                 earningsBalance={driver.earningsBalance || 0}
                 bonusBalance={driver.bonusBalance || 0}
-                onBalanceUpdate={(newCreditBalance, newEarningsBalance, newBonusBalance) => {
-                  setDriver({
-                    ...driver,
-                    balance: newCreditBalance,
-                    earningsBalance: newEarningsBalance,
-                    bonusBalance: newBonusBalance,
-                  });
-                }}
+                onBalanceUpdate={(c, e, b) => setDriver({ ...driver, balance: c, earningsBalance: e, bonusBalance: b })}
               />
             </div>
           </motion.div>
         </div>
       )}
 
-      {/* Modal Diagnostic FCM */}
       {showFCMDiagnostic && driver && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
               <h3 className="font-bold text-lg">Diagnostic FCM</h3>
-              <button
-                onClick={() => setShowFCMDiagnostic(false)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
+              <button onClick={() => setShowFCMDiagnostic(false)} className="p-2 hover:bg-gray-100 rounded-lg">
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
             <div className="p-4">
-              <FCMDiagnostic 
-                driverId={driver.id} 
-                driverName={driver.full_name || driver.name}
-              />
+              <FCMDiagnostic driverId={driver.id} driverName={driver.full_name || driver.name} />
             </div>
           </div>
         </div>
       )}
 
-      {/* Notification de course */}
       {pendingRideRequest && (
         <RideNotification
-          rideRequest={pendingRideRequest}
-          onAccept={async (request) => {
-            console.log('Course acceptée:', request);
-            setPendingRideRequest(null);
+          rideRequest={{
+            id: pendingRideRequest.id,
+            passengerId: pendingRideRequest.passengerId,
+            passengerName: pendingRideRequest.passengerName,
+            passengerPhone: pendingRideRequest.passengerPhone,
+            pickup: {
+              lat: pendingRideRequest.pickup.latitude,
+              lng: pendingRideRequest.pickup.longitude,
+              address: pendingRideRequest.pickup.address
+            },
+            destination: {
+              lat: pendingRideRequest.dropoff.latitude,
+              lng: pendingRideRequest.dropoff.longitude,
+              address: pendingRideRequest.dropoff.address
+            },
+            distance: pendingRideRequest.distance,
+            estimatedEarnings: pendingRideRequest.estimatedPrice,
+            estimatedDuration: 0,
+            vehicleType: pendingRideRequest.vehicleCategory,
+            createdAt: new Date().toISOString()
           }}
-          onDecline={() => {
+          onAccept={async (rideId) => {
+            console.log('Course acceptée:', rideId);
             setPendingRideRequest(null);
+            stopAllNotifications();
+          }}
+          onDecline={(rideId) => {
+            console.log('Course refusée:', rideId);
+            setPendingRideRequest(null);
+            stopAllNotifications();
           }}
           timeoutSeconds={30}
         />
       )}
 
-      {/* Son de notification */}
-      <RideNotificationSound 
-  shouldPlay={!!pendingRideRequest}
-  rideDetails={pendingRideRequest ? {
-    passengerName: pendingRideRequest.passengerName,
-    pickup: { 
-      address: pendingRideRequest.pickup?.address,
-      lat: pendingRideRequest.pickup?.latitude,
-      lng: pendingRideRequest.pickup?.longitude
-    },
-    distance: pendingRideRequest.distance,
-    estimatedEarnings: pendingRideRequest.estimatedPrice
-  } : undefined}
-/>
+      <RideNotificationSound
+        shouldPlay={!!pendingRideRequest}
+        rideDetails={pendingRideRequest ? {
+          passengerName: pendingRideRequest.passengerName,
+          pickup: pendingRideRequest.pickup?.address,
+          destination: pendingRideRequest.dropoff?.address,
+          distance: pendingRideRequest.distance,
+          estimatedEarnings: pendingRideRequest.estimatedPrice
+        } : undefined}
+      />
     </div>
   );
 }
