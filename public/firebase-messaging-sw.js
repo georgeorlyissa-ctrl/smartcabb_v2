@@ -61,25 +61,46 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const rideId = event.notification.data?.rideId;
+  const data = event.notification.data || {};
+  const rideId = data.rideId;
   const action = event.action;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      
+      // Fonction pour envoyer le message à l'app
+      const sendRideData = (client) => {
+        if (action === 'decline') {
+          client.postMessage({ type: 'DECLINE_RIDE', rideId });
+        } else {
+          // Envoyer toutes les données de la course pour afficher la popup
+          client.postMessage({ 
+            type: 'NEW_RIDE_REQUEST',
+            detail: data
+          });
+        }
+      };
+
+      // Si l'app est déjà ouverte
       for (const client of clientList) {
         if (client.url.includes('smartcabb.com') && 'focus' in client) {
-          if (action === 'accept') {
-            client.postMessage({ type: 'ACCEPT_RIDE', rideId });
-          } else if (action === 'decline') {
-            client.postMessage({ type: 'DECLINE_RIDE', rideId });
-          }
+          sendRideData(client);
           return client.focus();
         }
       }
-      const url = action === 'accept'
-        ? `/app/driver?action=accept&rideId=${rideId}`
-        : '/app/driver';
-      return clients.openWindow(url);
+
+      // Si l'app est fermée, l'ouvrir avec les données en URL
+      if (clients.openWindow) {
+        const url = rideId 
+          ? `/app/driver?rideId=${rideId}&action=new_ride`
+          : '/app/driver';
+        return clients.openWindow(url).then(newClient => {
+          if (newClient) {
+            // Attendre que l'app soit chargée avant d'envoyer
+            setTimeout(() => sendRideData(newClient), 2000);
+          }
+        });
+      }
     })
   );
 });
