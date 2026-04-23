@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from '../../lib/motion';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
@@ -14,7 +14,7 @@ import { RideNotificationSound } from './RideNotificationSound';
 import { RideNotification } from './RideNotification';
 import { FCMDiagnostic } from './FCMDiagnostic';
 import { PreciseGPSTracker, reverseGeocode } from '../../lib/precise-gps';
-import { registerDriverFCMToken, listenToFCMMessages } from '../../lib/driver-fcm';
+import { registerDriverFCMToken } from '../../lib/driver-fcm';
 import { stopAllNotifications } from '../../lib/notification-sound';
 
 function isDriverFCMTokenRegistered(driverId: string): boolean {
