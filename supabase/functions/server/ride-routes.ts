@@ -104,8 +104,16 @@ async function notifyDriverAtIndex(ride: any, drivers: any[], index: number) {
   }
 
   const driver = drivers[index];
-  const pickupName = ride.pickup?.name || 'Point de départ';
-  const destinationName = ride.destination?.name || 'Destination';
+  const pickupName = ride.pickup?.name || 
+                   ride.pickup?.address || 
+                   ride.pickupAddress || 
+                   ride.from?.name || 
+                   'Point de départ';
+  const destinationName = ride.destination?.name || 
+                        ride.destination?.address || 
+                        ride.destinationAddress || 
+                        ride.to?.name || 
+                        'Destination';
   const distance = ride.distance || 0;
   const estimatedPrice = ride.estimatedPrice || 0;
   const pickupLat = ride.pickup?.coordinates?.lat || -4.3276;
@@ -617,8 +625,16 @@ app.post("/decline", async (c) => {
       return c.json({ success: true, message: "Driver suivant sans token" });
     }
 
-    const pickupName = ride.pickup?.name || 'Point de départ';
-    const destinationName = ride.destination?.name || 'Destination';
+    const pickupName = ride.pickup?.name || 
+                   ride.pickup?.address || 
+                   ride.pickupAddress || 
+                   ride.from?.name || 
+                   'Point de départ';
+    const destinationName = ride.destination?.name || 
+                        ride.destination?.address || 
+                        ride.destinationAddress || 
+                        ride.to?.name || 
+                        'Destination';
     const distance = ride.distance || 0;
     const estimatedPrice = ride.estimatedPrice || 0;
 

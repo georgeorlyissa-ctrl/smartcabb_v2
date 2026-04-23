@@ -37,34 +37,40 @@ function playNotificationBeep() {
 
 // 🗣️ Message vocal synthétisé
 function speakMessage(message: string, lang: string = 'fr-FR'): Promise<void> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     if (!('speechSynthesis' in window)) {
-      console.warn('Web Speech API non supportée');
-      reject(new Error('Speech API non supportée'));
+      resolve();
       return;
     }
 
-    // Annuler toute synthèse en cours
+    // ✅ Annuler et relancer pour débloquer sur mobile
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(message);
-    utterance.lang = lang;
-    utterance.rate = 1.0; // Vitesse normale
-    utterance.pitch = 1.0; // Ton normal
-    utterance.volume = 1.0; // Volume max
+    // Attendre que le cancel soit effectif
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.lang = lang;
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
 
-    utterance.onend = () => {
-      console.log('✅ Message vocal terminé');
-      resolve();
-    };
+      utterance.onend = () => resolve();
+      utterance.onerror = () => resolve(); // Ne pas bloquer si erreur
 
-    utterance.onerror = (event) => {
-      console.error('❌ Erreur synthèse vocale:', event);
-      reject(event);
-    };
+      // ✅ Fix Chrome mobile : forcer la voix disponible
+      const voices = window.speechSynthesis.getVoices();
+      const frVoice = voices.find(v => v.lang.startsWith('fr'));
+      if (frVoice) utterance.voice = frVoice;
 
-    // Jouer le message
-    window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utterance);
+
+      // ✅ Fix Chrome mobile : relancer si bloqué après 500ms
+      setTimeout(() => {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+      }, 500);
+    }, 100);
   });
 }
 
