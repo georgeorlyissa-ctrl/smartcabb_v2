@@ -44,7 +44,7 @@ export function RideNotification({
   rideRequest,
   onAccept,
   onDecline,
-  timeoutSeconds = 15
+  timeoutSeconds = 10
 }: RideNotificationProps) {
   const [timeLeft, setTimeLeft] = useState(timeoutSeconds);
   const [hasPlayed, setHasPlayed] = useState(false);
@@ -59,14 +59,15 @@ export function RideNotification({
 
     // Jouer le son/notification une seule fois
     if (!hasPlayed) {
-      playRideNotification({
-        passengerName: rideRequest.passengerName,
-        pickup: rideRequest.pickup.address,
-        distance: rideRequest.distance,
-        estimatedEarnings: rideRequest.estimatedEarnings
-      });
-      setHasPlayed(true);
-    }
+  playRideNotification({
+    passengerName: rideRequest.passengerName,
+    pickup: rideRequest.pickup.address,
+    destination: rideRequest.destination?.address,
+    distance: rideRequest.distance,
+    estimatedEarnings: rideRequest.estimatedEarnings
+  });
+  setHasPlayed(true);
+}
 
     // Démarrer le compte à rebours
     setTimeLeft(timeoutSeconds);

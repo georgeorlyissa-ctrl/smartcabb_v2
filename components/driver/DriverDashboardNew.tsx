@@ -773,11 +773,20 @@ export function DriverDashboardNew() {
             stopAllNotifications();
           }}
           onDecline={(rideId) => {
-            console.log('Course refusée:', rideId);
-            setPendingRideRequest(null);
-            stopAllNotifications();
-          }}
-          timeoutSeconds={30}
+  // Appeler le backend pour passer au driver suivant
+  fetch(
+    `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/decline`,
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rideId, driverId: driver?.id })
+    }
+  ).catch(e => console.error('Erreur decline:', e));
+
+  setPendingRideRequest(null);
+  stopAllNotifications();
+}}
+          timeoutSeconds={10}
         />
       )}
 

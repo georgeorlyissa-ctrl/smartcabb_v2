@@ -501,7 +501,6 @@ app.post("/accept", async (c) => {
       return c.json({ success: false, error: "Course déjà acceptée ou terminée" }, 400);
     }
 
-    // Mettre à jour la course IMMÉDIATEMENT pour bloquer les autres
     ride.status = 'accepted';
     ride.driverId = driverId;
     ride.driver = { id: driverId, name: driverName, phone: driverPhone, vehicle: driverVehicle, rating: driverRating };
@@ -510,30 +509,31 @@ app.post("/accept", async (c) => {
 
     console.log(`✅ Course ${rideId} acceptée par ${driverName}`);
 
-    // Nettoyer la file de matching (arrête le séquentiel)
+    // Arrêter le matching séquentiel
     await kv.delete(`matching:${rideId}`);
 
-    // Notifier tous les autres drivers de la file que la course est prise
-    // Notifier TOUS les drivers éligibles que la course est annulée
-try {
-  const allDrivers = await kv.getByPrefix('driver:');
-  const eligibleDrivers = allDrivers.filter((d: any) => {
-    const driverCategory = d.vehicleCategory || d.vehicle_category || d.vehicle_type || d.vehicleType;
-    return d.status === 'online' && driverCategory === ride.vehicleCategory && d.fcmToken;
-  });
+    // Notifier les autres drivers de la même catégorie que la course est prise
+    try {
+      const allDrivers = await kv.getByPrefix('driver:');
+      const otherDrivers = allDrivers.filter((d: any) => {
+        const driverCategory = d.vehicleCategory || d.vehicle_category || d.vehicle_type || d.vehicleType;
+        return d.id !== driverId &&
+               d.status === 'online' &&
+               driverCategory === ride.vehicleCategory &&
+               d.fcmToken;
+      });
 
-  for (const driver of eligibleDrivers) {
-    await sendFCMNotification(driver.fcmToken, {
-      title: 'SmartCabb',
-      body: 'Le passager a annulé sa course.',
-      data: { type: 'ride_cancelled_by_passenger', rideId }
-    });
-  }
-  // Nettoyer le matching
-  await kv.delete(`matching:${rideId}`);
-} catch (error) {
-  console.error('❌ Erreur notification annulation:', error);
-}
+      for (const otherDriver of otherDrivers) {
+        await sendFCMNotification(otherDriver.fcmToken, {
+          title: 'SmartCabb',
+          body: 'Cette course a été acceptée par un autre chauffeur.',
+          data: { type: 'ride_taken', rideId }
+        });
+      }
+      console.log(`📢 ${otherDrivers.length} autres chauffeurs notifiés (course prise)`);
+    } catch (error) {
+      console.error('❌ Erreur notification autres drivers:', error);
+    }
 
     // Notifier le passager
     try {
@@ -552,6 +552,105 @@ try {
     return c.json({ success: true, ride });
   } catch (error) {
     console.error("❌ Erreur acceptation course:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ============================================
+// POST /decline - Refuser une course (passe au driver suivant)
+// ============================================
+app.post("/decline", async (c) => {
+  try {
+    const { rideId, driverId } = await c.req.json();
+
+    if (!isValidUUID(rideId)) {
+      return c.json({ success: false, error: "ID course invalide" }, 400);
+    }
+
+    console.log(`❌ Driver ${driverId} a refusé la course ${rideId}`);
+
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    if (!ride) {
+      return c.json({ success: false, error: "Course non trouvée" }, 404);
+    }
+
+    if (ride.status !== 'searching') {
+      return c.json({ success: false, error: "Course non disponible" }, 400);
+    }
+
+    // Récupérer la file de matching
+    const matching = await kv.get<any>(`matching:${rideId}`);
+    if (!matching) {
+      return c.json({ success: true, message: "Matching déjà terminé" });
+    }
+
+    const currentIndex = matching.currentIndex || 0;
+    const nextIndex = currentIndex + 1;
+
+    // Récupérer les drivers de la file
+    const allDrivers = await kv.getByPrefix('driver:');
+    const queuedDriverIds: string[] = matching.queue || [];
+
+    const queuedDrivers = queuedDriverIds
+      .map((id: string) => allDrivers.find((d: any) => d.id === id))
+      .filter(Boolean);
+
+    console.log(`⏭️ Passage au driver suivant (index ${nextIndex}/${queuedDrivers.length})`);
+
+    if (nextIndex >= queuedDrivers.length) {
+      // Plus de drivers disponibles
+      console.warn(`⚠️ Tous les chauffeurs ont refusé la course ${rideId}`);
+      ride.status = 'no_driver_found';
+      ride.noDriverFoundAt = new Date().toISOString();
+      await kv.set(`ride:${rideId}`, ride);
+      await kv.delete(`matching:${rideId}`);
+      return c.json({ success: true, message: "Aucun chauffeur disponible" });
+    }
+
+    // Mettre à jour l'index
+    matching.currentIndex = nextIndex;
+    await kv.set(`matching:${rideId}`, matching);
+
+    // Notifier le driver suivant immédiatement
+    const nextDriver = queuedDrivers[nextIndex];
+    if (!nextDriver?.fcmToken) {
+      return c.json({ success: true, message: "Driver suivant sans token" });
+    }
+
+    const pickupName = ride.pickup?.name || 'Point de départ';
+    const destinationName = ride.destination?.name || 'Destination';
+    const distance = ride.distance || 0;
+    const estimatedPrice = ride.estimatedPrice || 0;
+
+    const result = await sendFCMNotification(nextDriver.fcmToken, {
+      title: 'SmartCabb - Nouvelle Course',
+      body: `${pickupName} vers ${destinationName} - ${distance.toFixed(1)} km - ${Math.round(estimatedPrice)} FC`,
+      data: {
+        rideId: ride.id,
+        type: 'new_ride_request',
+        pickupLat: (ride.pickup?.coordinates?.lat || -4.3276).toString(),
+        pickupLng: (ride.pickup?.coordinates?.lng || 15.3136).toString(),
+        destinationLat: (ride.destination?.coordinates?.lat || -4.3276).toString(),
+        destinationLng: (ride.destination?.coordinates?.lng || 15.3136).toString(),
+        pickupName,
+        destinationName,
+        passengerName: ride.passengerName || 'Passager',
+        distance: distance.toString(),
+        duration: (ride.duration || 0).toString(),
+        estimatedPrice: estimatedPrice.toString(),
+        vehicleCategory: ride.vehicleCategory,
+        driverIndex: nextIndex.toString(),
+        totalDrivers: queuedDrivers.length.toString()
+      }
+    });
+
+    if (result.success) {
+      console.log(`✅ Driver suivant notifié: ${nextDriver.full_name || nextDriver.name}`);
+    }
+
+    return c.json({ success: true, nextDriverNotified: result.success });
+  } catch (error) {
+    console.error("❌ Erreur refus course:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
   }
 });
@@ -674,6 +773,26 @@ app.post("/cancel", async (c) => {
     ride.cancellationReason = reason;
     
     await kv.set(`ride:${rideId}`, ride);
+    // Notifier tous les drivers de la même catégorie que la course est annulée
+try {
+  const allDrivers = await kv.getByPrefix('driver:');
+  const categoryDrivers = allDrivers.filter((d: any) => {
+    const driverCategory = d.vehicleCategory || d.vehicle_category || d.vehicle_type || d.vehicleType;
+    return d.status === 'online' && driverCategory === ride.vehicleCategory && d.fcmToken;
+  });
+
+  for (const driver of categoryDrivers) {
+    await sendFCMNotification(driver.fcmToken, {
+      title: 'SmartCabb',
+      body: 'Le passager a annulé sa course.',
+      data: { type: 'ride_cancelled_by_passenger', rideId }
+    });
+  }
+  await kv.delete(`matching:${rideId}`);
+  console.log(`📢 ${categoryDrivers.length} chauffeurs notifiés de l'annulation`);
+} catch (error) {
+  console.error('❌ Erreur notification annulation drivers:', error);
+}
     
     console.log(`✅ Course ${rideId} annulée par ${cancelledBy}`);
     
