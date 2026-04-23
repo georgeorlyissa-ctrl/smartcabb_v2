@@ -468,9 +468,64 @@ export function RideScreen() {
       checkInterval = setInterval(checkRideStatus, 2000);
       
       // Après 30 secondes, vérifier la disponibilité et proposer une alternative
-      timeoutTimer = setTimeout(() => {
-        checkAvailability();
-      }, 30000);
+timeoutTimer = setTimeout(() => {
+  checkAvailability();
+}, 30000);
+
+// ⏰ TIMEOUT 3 MINUTES : Si aucun chauffeur n'accepte après 3 min
+const globalTimeoutTimer = setTimeout(async () => {
+  if (driverFound) return; // Un chauffeur a déjà accepté
+
+  console.log('⏰ Timeout 3 minutes atteint - annulation automatique');
+
+  clearInterval(checkInterval);
+  setSearchingDriver(false);
+
+  // Vérifier s'il y a des chauffeurs en ligne
+  try {
+    const res = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/check-availability/${currentRide?.id}`,
+      { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+    );
+    const data = await res.json();
+
+    if (data.success && data.alternatives && data.alternatives.length > 0) {
+      // Des chauffeurs existent dans d'autres catégories
+      setAlternativeCategory(data.alternatives[0].category as VehicleCategory);
+      setAlternativeDriversCount(data.alternatives[0].count || data.alternatives[0].driversCount || 1);
+      setShowAlternativeDialog(true);
+    } else {
+      // Aucun chauffeur du tout
+      setError('Aucun chauffeur disponible pour votre commande. Veuillez réessayer plus tard.');
+      // Annuler la course automatiquement
+      if (currentRide?.id) {
+        await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/cancel`,
+          {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rideId: currentRide.id,
+              passengerId: state.user?.id || 'unknown',
+              reason: 'Timeout - aucun chauffeur disponible',
+              cancelledBy: 'system'
+            })
+          }
+        );
+      }
+    }
+  } catch (e) {
+    setError('Aucun chauffeur disponible pour votre commande. Veuillez réessayer plus tard.');
+  }
+}, 180000); // 3 minutes
+
+// Nettoyer aussi le globalTimeout au unmount
+return () => {
+  clearInterval(checkInterval);
+  clearTimeout(timeoutTimer);
+  clearTimeout(initialDelayTimer);
+  clearTimeout(globalTimeoutTimer);
+};
     }, 800);
 
     return () => {

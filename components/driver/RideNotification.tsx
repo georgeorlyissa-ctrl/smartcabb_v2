@@ -51,31 +51,30 @@ export function RideNotification({
 
   // Compte à rebours
   useEffect(() => {
-    if (!rideRequest) {
-      setTimeLeft(timeoutSeconds);
-      setHasPlayed(false);
-      return;
-    }
+  if (!rideRequest) {
+    setTimeLeft(timeoutSeconds);
+    setHasPlayed(false);
+    return;
+  }
 
-    // Jouer le son/notification une seule fois
-    if (!hasPlayed) {
-  playRideNotification({
-    passengerName: rideRequest.passengerName,
-    pickup: rideRequest.pickup.address,
-    destination: rideRequest.destination?.address,
-    distance: rideRequest.distance,
-    estimatedEarnings: rideRequest.estimatedEarnings
-  });
-  setHasPlayed(true);
-}
+  if (!hasPlayed) {
+    // ✅ Déclencher le son après un court délai pour laisser le DOM se rendre
+    const soundTimer = setTimeout(() => {
+      playRideNotification({
+        passengerName: rideRequest.passengerName,
+        pickup: rideRequest.pickup.address,
+        destination: rideRequest.destination?.address,
+        distance: rideRequest.distance,
+        estimatedEarnings: rideRequest.estimatedEarnings
+      });
+    }, 300);
+    setHasPlayed(true);
 
-    // Démarrer le compte à rebours
     setTimeLeft(timeoutSeconds);
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          // Auto-refuser après timeout
           onDecline(rideRequest.id);
           return 0;
         }
@@ -85,9 +84,28 @@ export function RideNotification({
 
     return () => {
       clearInterval(interval);
+      clearTimeout(soundTimer);
       stopAllNotifications();
     };
-  }, [rideRequest, timeoutSeconds, onDecline, hasPlayed]);
+  }
+
+  setTimeLeft(timeoutSeconds);
+  const interval = setInterval(() => {
+    setTimeLeft((prev) => {
+      if (prev <= 1) {
+        clearInterval(interval);
+        onDecline(rideRequest.id);
+        return 0;
+      }
+      return prev - 1;
+    });
+  }, 1000);
+
+  return () => {
+    clearInterval(interval);
+    stopAllNotifications();
+  };
+}, [rideRequest?.id, timeoutSeconds]);S
 
   if (!rideRequest) return null;
 

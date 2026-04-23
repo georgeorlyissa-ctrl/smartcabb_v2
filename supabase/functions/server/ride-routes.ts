@@ -23,8 +23,12 @@ async function findAndNotifyNearbyDrivers(ride: any) {
     const eligibleDrivers = allDrivers.filter((driver: any) => {
       const isOnline = driver.status === 'online';
       const isAvailable = driver.available === true || driver.is_available === true;
-      const driverCategory = driver.vehicleCategory || driver.vehicle_category ||
-                             driver.vehicle_type || driver.vehicleType;
+      const driverCategory = driver.vehicleCategory || 
+                       driver.vehicle_category ||
+                       driver.vehicle_type || 
+                       driver.vehicleType ||
+                       driver.vehicle?.category ||  // ✅ AJOUT
+                       driver.vehicle?.type;        // ✅ AJOUT
       const categoryMatch = driverCategory === ride.vehicleCategory;
       return isOnline && isAvailable && categoryMatch && driver.fcmToken;
     });
@@ -332,10 +336,12 @@ app.post("/check-drivers-availability", async (c) => {
       const hasPositiveBalance = (d.balance || 0) >= 0;
       
       // Supporter toutes les variantes de catégorie
-      const driverCategory = d.vehicleCategory || 
-                            d.vehicle_category || 
-                            d.vehicle_type || 
-                            d.vehicleType;
+      const driverCategory = driver.vehicleCategory || 
+                      driver.vehicle_category || 
+                      driver.vehicle_type || 
+                      driver.vehicleType ||
+                      driver.vehicle?.category ||
+                      driver.vehicle?.type;
       
       const categoryMatch = driverCategory === vehicleCategory;
       
@@ -372,11 +378,12 @@ app.post("/check-drivers-availability", async (c) => {
             const hasPositiveBalance = (d.balance || 0) >= 0;
             
             // Supporter toutes les variantes
-            const driverCategory = d.vehicleCategory || 
-                                  d.vehicle_category || 
-                                  d.vehicle_type || 
-                                  d.vehicleType;
-            
+            const driverCategory = driver.vehicleCategory || 
+                      driver.vehicle_category || 
+                      driver.vehicle_type || 
+                      driver.vehicleType ||
+                      driver.vehicle?.category ||
+                      driver.vehicle?.type;
             return isOnline && isAvailable && hasPositiveBalance && driverCategory === cat;
           }).length;
           return { category: cat, count };
@@ -427,11 +434,12 @@ app.get("/check-availability/:id", async (c) => {
       const hasPositiveBalance = (d.balance || 0) >= 0;
       
       // Supporter toutes les variantes de catégorie
-      const driverCategory = d.vehicleCategory || 
-                            d.vehicle_category || 
-                            d.vehicle_type || 
-                            d.vehicleType;
-      
+      const driverCategory = driver.vehicleCategory || 
+                      driver.vehicle_category || 
+                      driver.vehicle_type || 
+                      driver.vehicleType ||
+                      driver.vehicle?.category ||
+                      driver.vehicle?.type;
       const categoryMatch = driverCategory === ride.vehicleCategory;
       
       return isOnline && isAvailable && hasPositiveBalance && categoryMatch;
@@ -452,11 +460,12 @@ app.get("/check-availability/:id", async (c) => {
             const hasPositiveBalance = (d.balance || 0) >= 0;
             
             // Supporter toutes les variantes
-            const driverCategory = d.vehicleCategory || 
-                                  d.vehicle_category || 
-                                  d.vehicle_type || 
-                                  d.vehicleType;
-            
+            const driverCategory = driver.vehicleCategory || 
+                      driver.vehicle_category || 
+                      driver.vehicle_type || 
+                      driver.vehicleType ||
+                      driver.vehicle?.category ||
+                      driver.vehicle?.type;            
             return isOnline && isAvailable && hasPositiveBalance && driverCategory === cat;
           }).length;
           return { category: cat, count };
@@ -524,7 +533,12 @@ app.post("/accept", async (c) => {
     try {
       const allDrivers = await kv.getByPrefix('driver:');
       const otherDrivers = allDrivers.filter((d: any) => {
-        const driverCategory = d.vehicleCategory || d.vehicle_category || d.vehicle_type || d.vehicleType;
+        const driverCategory = driver.vehicleCategory || 
+                       driver.vehicle_category ||
+                       driver.vehicle_type || 
+                       driver.vehicleType ||
+                       driver.vehicle?.category ||  // ✅ AJOUT
+                       driver.vehicle?.type;        // ✅ AJOUT
         return d.id !== driverId &&
                d.status === 'online' &&
                driverCategory === ride.vehicleCategory &&
@@ -793,7 +807,12 @@ app.post("/cancel", async (c) => {
 try {
   const allDrivers = await kv.getByPrefix('driver:');
   const categoryDrivers = allDrivers.filter((d: any) => {
-    const driverCategory = d.vehicleCategory || d.vehicle_category || d.vehicle_type || d.vehicleType;
+    const driverCategory = driver.vehicleCategory || 
+                       driver.vehicle_category ||
+                       driver.vehicle_type || 
+                       driver.vehicleType ||
+                       driver.vehicle?.category ||  // ✅ AJOUT
+                       driver.vehicle?.type;        // ✅ AJOUT
     return d.status === 'online' && driverCategory === ride.vehicleCategory && d.fcmToken;
   });
 
