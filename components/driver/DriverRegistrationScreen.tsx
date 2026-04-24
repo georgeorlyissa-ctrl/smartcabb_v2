@@ -209,7 +209,7 @@ export function DriverRegistrationScreen() {
       // 🧹 NETTOYER LES UTILISATEURS ORPHELINS AVANT L'INSCRIPTION
       try {
         const cleanupResponse = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/delete-user-by-phone`,
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/delete-user-by-phone`,
           {
             method: 'POST',
             headers: {
