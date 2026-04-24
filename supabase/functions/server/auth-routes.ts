@@ -2,15 +2,19 @@ import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhoneNumber } from "./phone-utils.ts";
 import { isValidEmail, normalizeEmail } from "./email-validation.ts";
+import * as kv from "./kv-wrapper.ts";
 
 const app = new Hono();
 
 // 📱 SIGNUP - Inscription utilisateur (passager ou conducteur)
 app.post("/signup", async (c) => {
   try {
-    const { email, password, phone, name, full_name, role } = await c.req.json();
+    const body = await c.req.json();
+    // ✅ Accepter fullName (camelCase) ET full_name/name (snake_case)
+    const { email, password, phone, name, full_name, fullName, role } = body;
+    const resolvedName = full_name || fullName || name;
 
-    console.log('📱 [AUTH/SIGNUP] Début inscription:', { email, phone, name, full_name, role });
+    console.log('📱 [AUTH/SIGNUP] Début inscription:', { email, phone, resolvedName, role });
 
     // Validation : mot de passe obligatoire
     if (!password) {
@@ -102,8 +106,8 @@ app.post("/signup", async (c) => {
         password,
         email_confirm: true, // Auto-confirm car pas de serveur email
         user_metadata: {
-          full_name: full_name || name, // ✅ Priorité à full_name
-          name: full_name || name,      // ✅ Compatibilité
+          full_name: resolvedName || 'Utilisateur', // ✅ Utiliser le nom résolu
+          name: resolvedName || 'Utilisateur',
           phone: normalizedPhone,
           role: role || 'passenger'
         }
@@ -148,7 +152,7 @@ app.post("/signup", async (c) => {
     const profile = {
       id: data.user.id,
       email: normalizedEmail,
-      full_name: full_name || name || 'Utilisateur',
+      full_name: resolvedName || 'Utilisateur',
       phone: normalizedPhone,
       role: role || 'passenger',
       balance: 0,
@@ -159,14 +163,13 @@ app.post("/signup", async (c) => {
     // Importer kv pour sauvegarder le profil
     try {
       console.log('💾 [AUTH/SIGNUP] Sauvegarde profil dans KV store...');
-      const kvModule = await import('./kv-wrapper.ts');
       
       // ✅ Sauvegarder dans le KV store
-      await kvModule.set(`profile:${data.user.id}`, profile);
+      await kv.set(`profile:${data.user.id}`, profile);
       
       // Sauvegarder aussi avec le préfixe selon le rôle
       const userRole = role || 'passenger';
-      await kvModule.set(`${userRole}:${data.user.id}`, profile);
+      await kv.set(`${userRole}:${data.user.id}`, profile);
       
       console.log(`✅ Profil créé automatiquement: ${profile.id} - Role: ${profile.role} - Clés KV: profile:${data.user.id} et ${userRole}:${data.user.id}`);
     } catch (kvError) {
@@ -300,7 +303,7 @@ app.post("/login", async (c) => {
       
       profile = {
         id: data.user.id,
-        email: data.user.email || normalizedEmail,
+        email: data.user.email || '',
         full_name: userMetadata.full_name || userMetadata.name || 'Utilisateur',
         phone: userMetadata.phone || null,
         role: role,
@@ -393,6 +396,80 @@ app.post("/logout", async (c) => {
   } catch (error) {
     console.error("❌ Erreur logout:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// 🧹 DELETE-USER-BY-PHONE - Nettoyage des utilisateurs orphelins (passagers)
+app.post("/delete-user-by-phone", async (c) => {
+  try {
+    const { phone } = await c.req.json();
+
+    if (!phone) {
+      return c.json({ success: false, error: "Téléphone requis" }, 400);
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phone);
+    if (!normalizedPhone) {
+      return c.json({ success: false, error: "Format de téléphone invalide" }, 400);
+    }
+
+    const phoneDigits = normalizedPhone.replace(/\D/g, "");
+    const generatedEmail = `u${phoneDigits}@smartcabb.app`;
+
+    console.log("🧹 [AUTH/DELETE-BY-PHONE] Nettoyage utilisateur passager:", normalizedPhone);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+
+    if (listError) {
+      console.error("❌ [AUTH/DELETE-BY-PHONE] Erreur listUsers:", listError);
+      return c.json({ success: true, deletedAuth: false, deletedProfile: false });
+    }
+
+    const targetUser = users?.find((u) => {
+      if (u.email?.toLowerCase() === generatedEmail.toLowerCase()) return true;
+      const userPhone = u.user_metadata?.phone || (u as any).phone;
+      if (userPhone && normalizePhoneNumber(userPhone) === normalizedPhone) return true;
+      return false;
+    });
+
+    let deletedAuth = false;
+    let deletedProfile = false;
+
+    if (targetUser) {
+      try {
+        await supabase.auth.admin.deleteUser(targetUser.id);
+        deletedAuth = true;
+        console.log("✅ [AUTH/DELETE-BY-PHONE] Utilisateur Auth supprimé:", targetUser.id);
+      } catch (err) {
+        console.warn("⚠️ [AUTH/DELETE-BY-PHONE] Erreur suppression Auth:", err);
+      }
+
+      try {
+        await kv.del(`profile:${targetUser.id}`);
+        await kv.del(`passenger:${targetUser.id}`);
+        deletedProfile = true;
+        console.log("✅ [AUTH/DELETE-BY-PHONE] Profils KV supprimés:", targetUser.id);
+      } catch (err) {
+        console.warn("⚠️ [AUTH/DELETE-BY-PHONE] Erreur suppression KV:", err);
+      }
+    } else {
+      console.log("ℹ️ [AUTH/DELETE-BY-PHONE] Aucun utilisateur trouvé pour:", normalizedPhone);
+    }
+
+    return c.json({
+      success: true,
+      deletedAuth,
+      deletedProfile,
+      message: deletedAuth ? "Utilisateur orphelin supprimé" : "Aucun utilisateur à supprimer",
+    });
+  } catch (error) {
+    console.error("❌ [AUTH/DELETE-BY-PHONE] Erreur:", error);
+    return c.json({ success: true, deletedAuth: false, deletedProfile: false });
   }
 });
 
