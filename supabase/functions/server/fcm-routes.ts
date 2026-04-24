@@ -1,8 +1,29 @@
 import { Hono } from "npm:hono";
-import * as kv from './kv-wrapper.ts';
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification, isFirebaseAdminConfigured } from './firebase-admin.ts';
 
 const app = new Hono();
+
+// ─── Table KV & helpers inlinés ──────────────────────────────────────────────
+const KV_TABLE = "kv_store_2eb02e52";
+function kvClient() {
+  return createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+}
+async function kvGet(key: string): Promise<any> {
+  try { const { data } = await kvClient().from(KV_TABLE).select("value").eq("key", key).maybeSingle(); return data?.value ?? null; } catch { return null; }
+}
+async function kvSet(key: string, value: any): Promise<void> {
+  try { const { error } = await kvClient().from(KV_TABLE).upsert({ key, value }); if (error) throw new Error(error.message); } catch (e) { console.error("KV set error:", e); throw e; }
+}
+async function kvDel(key: string): Promise<void> {
+  try { await kvClient().from(KV_TABLE).delete().eq("key", key); } catch (e) { console.error("KV del error:", e); }
+}
+async function kvGetByPrefix(prefix: string): Promise<any[]> {
+  try { const { data } = await kvClient().from(KV_TABLE).select("key, value").like("key", prefix + "%"); return data?.map((d: any) => d.value) ?? []; } catch { return []; }
+}
+
+// Compatibilité avec l'ancien import kv.*
+const kv = { get: kvGet, set: kvSet, del: kvDel, getByPrefix: kvGetByPrefix };
 
 /**
  * 💾 Sauvegarder le token FCM d'un utilisateur
