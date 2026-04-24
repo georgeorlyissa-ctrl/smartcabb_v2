@@ -271,6 +271,46 @@ app.post("/signup", async (c) => {
   }
 });
 
+// ─── POST /:driverId/update — Mise à jour générale ────────────────────────────
+app.post("/:driverId/update", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const updates = await c.req.json();
+    console.log(`🔄 [DRIVERS/UPDATE] ${driverId}:`, updates);
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    // Appliquer les mises à jour
+    const updatedDriver = {
+      ...driver,
+      ...updates,
+      // S'assurer que isApproved est cohérent avec status
+      ...(updates.status === 'approved' ? { isApproved: true, is_approved: true } : {}),
+      ...(updates.status === 'rejected' ? { isApproved: false, is_approved: false } : {}),
+      updated_at: new Date().toISOString(),
+    };
+
+    await kvSet(`driver:${driverId}`, updatedDriver);
+
+    // Sync profil
+    const profile = await kvGet(`profile:${driverId}`);
+    if (profile) {
+      await kvSet(`profile:${driverId}`, {
+        ...profile,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    console.log(`✅ [DRIVERS/UPDATE] Conducteur ${driverId} mis à jour`);
+    return c.json({ success: true, driver: updatedDriver });
+  } catch (error) {
+    console.error("❌ [DRIVERS/UPDATE] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
 // ─── POST /delete-user-by-phone ───────────────────────────────────────────────
 
 app.post("/delete-user-by-phone", async (c) => {
