@@ -105,7 +105,7 @@ export function RideNotification({
     clearInterval(interval);
     stopAllNotifications();
   };
-}, [rideRequest?.id, timeoutSeconds]);S
+}, [rideRequest?.id, timeoutSeconds]);
 
   if (!rideRequest) return null;
 
