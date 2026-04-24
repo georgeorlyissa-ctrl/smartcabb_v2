@@ -423,7 +423,7 @@ export async function signUp(userData: SignUpData): Promise<AuthResult> {
     
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/signup-passenger`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/auth/signup`,
         {
           method: 'POST',
           headers: {
@@ -434,7 +434,8 @@ export async function signUp(userData: SignUpData): Promise<AuthResult> {
             email: finalEmail,
             phone: phoneToSend,  // ✅ Téléphone normalisé
             password,
-            fullName,
+            full_name: fullName, // ✅ snake_case pour correspondre au backend
+            name: fullName,      // ✅ compatibilité
             role
           }),
         }
