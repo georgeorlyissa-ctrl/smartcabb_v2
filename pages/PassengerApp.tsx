@@ -399,9 +399,13 @@ function PassengerAppContent() {
       {/* RLS Fix Modal (non-blocking) */}
       {showRLSModal && <RLSFixModal />}
 
-      {/* Main App Screens - Optimisé pour mobile */}
-      <div className="h-screen transition-opacity duration-300" style={{ willChange: 'opacity' }}>
-        {screenComponent}
+      {/* Main App Screens — contrainte mobile 430px */}
+      <div className="min-h-screen bg-gray-100 flex justify-center">
+        <div className="w-full max-w-[430px] h-screen relative overflow-hidden bg-white shadow-2xl">
+          <div className="h-screen transition-opacity duration-300" style={{ willChange: 'opacity' }}>
+            {screenComponent}
+          </div>
+        </div>
       </div>
     </ErrorBoundary>
   );
