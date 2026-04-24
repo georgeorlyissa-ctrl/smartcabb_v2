@@ -657,10 +657,27 @@ return () => {
     } catch (error) {
       console.error('❌ Erreur lors de l\'annulation:', error);
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      toast.error('Erreur d\'annulation', {
-        description: `Impossible d'annuler la course: ${errorMessage}`,
-        duration: 6000
-      });
+      
+      // ✅ FIX: Si la course est déjà terminée/annulée → naviguer vers la carte quand même
+      const alreadyDone = errorMessage.includes('terminée') || 
+                          errorMessage.includes('annulée') || 
+                          errorMessage.includes('400') ||
+                          errorMessage.includes('already') ||
+                          errorMessage.includes('not found');
+      
+      if (alreadyDone) {
+        toast.info('Course déjà terminée', {
+          description: 'Retour à la carte...',
+          duration: 3000
+        });
+        setShowCancelModal(false);
+        setCurrentScreen('map');
+      } else {
+        toast.error('Erreur d\'annulation', {
+          description: `Impossible d'annuler la course: ${errorMessage}`,
+          duration: 6000
+        });
+      }
     } finally {
       setCancellingRide(false);
     }
@@ -884,8 +901,8 @@ return () => {
               </div>
             )}
 
-            {/* ✅ FIX : Bouton d'annulation dans le modal */}
-            <div className="mt-6">
+            {/* ✅ FIX : Boutons dans le modal */}
+            <div className="mt-6 space-y-2">
               <Button
                 onClick={handleCancelRide}
                 variant="ghost"
@@ -894,6 +911,14 @@ return () => {
               >
                 <X className="w-4 h-4" />
                 {cancellingRide ? 'Annulation...' : 'Annuler la course'}
+              </Button>
+              {/* ✅ FIX: Bouton de secours toujours accessible */}
+              <Button
+                onClick={() => setCurrentScreen('map')}
+                variant="outline"
+                className="w-full h-10 text-gray-500 border-gray-200 text-sm flex items-center justify-center gap-2"
+              >
+                ← Retour à la carte
               </Button>
             </div>
           </motion.div>
