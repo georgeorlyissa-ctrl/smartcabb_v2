@@ -1,422 +1,317 @@
+/**
+ * 🔐 ROUTES AUTH - SMARTCABB
+ * Fichier auto-suffisant (pas de dépendances locales externes)
+ * @version 2.0.0
+ */
+
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { normalizePhoneNumber } from "./phone-utils.ts";
-import { isValidEmail, normalizeEmail } from "./email-validation.ts";
-import * as kv from "./kv-wrapper.ts";
+import * as kv from "./kv_store.tsx";
 
 const app = new Hono();
 
-// 📱 SIGNUP - Inscription utilisateur (passager ou conducteur)
+// ─── Utilitaires inlinés ────────────────────────────────────────────────────
+
+function normalizePhoneNumber(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const cleaned = phone.replace(/[\s\-().]/g, "");
+  if (/^\+243\d{9}$/.test(cleaned)) return cleaned;
+  if (/^243\d{9}$/.test(cleaned)) return "+" + cleaned;
+  if (/^00243\d{9}$/.test(cleaned)) return "+" + cleaned.substring(2);
+  if (/^0\d{9}$/.test(cleaned)) return "+243" + cleaned.substring(1);
+  if (/^\d{9}$/.test(cleaned)) return "+243" + cleaned;
+  return null;
+}
+
+function isValidEmail(email: string): boolean {
+  if (!email || typeof email !== "string") return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.toLowerCase());
+}
+
+function normalizeEmail(email: string): string {
+  return email.toLowerCase().trim();
+}
+
+// ─── POST /signup ────────────────────────────────────────────────────────────
+
 app.post("/signup", async (c) => {
   try {
     const body = await c.req.json();
-    // ✅ Accepter fullName (camelCase) ET full_name/name (snake_case)
+    // Accepter fullName (camelCase) ET full_name/name (snake_case)
     const { email, password, phone, name, full_name, fullName, role } = body;
-    const resolvedName = full_name || fullName || name;
+    const resolvedName = full_name || fullName || name || "Utilisateur";
 
-    console.log('📱 [AUTH/SIGNUP] Début inscription:', { email, phone, resolvedName, role });
+    console.log("📱 [AUTH/SIGNUP] Début inscription:", { email, phone, resolvedName, role });
 
-    // Validation : mot de passe obligatoire
     if (!password) {
-      console.error('❌ [AUTH/SIGNUP] Mot de passe manquant');
       return c.json({ success: false, error: "Mot de passe requis" }, 400);
     }
-
-    // Validation : soit email soit téléphone requis
     if (!email && !phone) {
-      console.error('❌ [AUTH/SIGNUP] Email et téléphone manquants');
       return c.json({ success: false, error: "Email ou téléphone requis" }, 400);
     }
 
     // Générer email automatiquement si seulement téléphone fourni
     let finalEmail = email;
     if (!email && phone) {
-      // Format: u243XXXXXXXXX@smartcabb.app (préfixe "u" pour éviter rejet Supabase)
-      const phoneDigits = phone.replace(/\D/g, '');
-      const phoneNumber = phoneDigits.startsWith('243') ? phoneDigits : `243${phoneDigits}`;
+      const phoneDigits = phone.replace(/\D/g, "");
+      const phoneNumber = phoneDigits.startsWith("243") ? phoneDigits : `243${phoneDigits}`;
       finalEmail = `u${phoneNumber}@smartcabb.app`;
-      console.log('📧 [AUTH/SIGNUP] Email généré automatiquement:', finalEmail);
+      console.log("📧 [AUTH/SIGNUP] Email généré:", finalEmail);
     }
 
-    // Validation email si fourni
     if (email && !isValidEmail(email)) {
-      console.error('❌ [AUTH/SIGNUP] Email invalide:', email);
       return c.json({ success: false, error: "Email invalide" }, 400);
     }
 
     const normalizedEmail = normalizeEmail(finalEmail);
     const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
 
-    console.log('✅ [AUTH/SIGNUP] Email normalisé:', normalizedEmail);
-    console.log('✅ [AUTH/SIGNUP] Téléphone normalisé:', normalizedPhone);
+    console.log("✅ [AUTH/SIGNUP] Email normalisé:", normalizedEmail);
 
-    // Créer l'utilisateur avec Supabase Auth
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    console.log('🔐 [AUTH/SIGNUP] Vérification si utilisateur existe déjà...');
-    
-    // ✅ VÉRIFIER SI L'UTILISATEUR EXISTE DÉJÀ (par email ou téléphone)
+    // Vérifier si l'utilisateur existe déjà
+    console.log("🔐 [AUTH/SIGNUP] Vérification utilisateur existant...");
     const { data: { users: existingUsers } } = await supabase.auth.admin.listUsers();
-    
-    const existingUser = existingUsers?.find(u => {
-      // Vérifier par email
-      if (u.email?.toLowerCase() === normalizedEmail.toLowerCase()) {
-        console.log('🔍 [AUTH/SIGNUP] Utilisateur trouvé avec le même email:', u.id);
-        return true;
-      }
-      // Vérifier par téléphone
+
+    const existingUser = existingUsers?.find((u) => {
+      if (u.email?.toLowerCase() === normalizedEmail.toLowerCase()) return true;
       if (normalizedPhone) {
         const userPhone = u.user_metadata?.phone || u.phone;
-        if (userPhone && normalizePhoneNumber(userPhone) === normalizedPhone) {
-          console.log('🔍 [AUTH/SIGNUP] Utilisateur trouvé avec le même téléphone:', u.id);
-          return true;
-        }
+        if (userPhone && normalizePhoneNumber(userPhone) === normalizedPhone) return true;
       }
       return false;
     });
 
     if (existingUser) {
-      console.error('❌ [AUTH/SIGNUP] Utilisateur déjà existant:', existingUser.id);
-      
-      // ✅ OPTION : Supprimer l'ancien utilisateur et créer un nouveau
-      console.log('🗑️ [AUTH/SIGNUP] Suppression de l\'utilisateur existant...');
+      console.log("🗑️ [AUTH/SIGNUP] Suppression utilisateur existant:", existingUser.id);
       try {
         await supabase.auth.admin.deleteUser(existingUser.id);
-        console.log('✅ [AUTH/SIGNUP] Utilisateur supprimé, création d\'un nouveau compte...');
-        // Continuer vers la création
+        console.log("✅ [AUTH/SIGNUP] Utilisateur supprimé");
       } catch (deleteError) {
-        console.error('❌ [AUTH/SIGNUP] Erreur suppression:', deleteError);
-        return c.json({ 
-          success: false, 
-          error: "Ce numéro de téléphone a déjà été enregistré. Veuillez vous connecter." 
+        console.error("❌ [AUTH/SIGNUP] Erreur suppression:", deleteError);
+        return c.json({
+          success: false,
+          error: "Ce numéro de téléphone a déjà été enregistré. Veuillez vous connecter.",
         }, 400);
       }
-    } else {
-      console.log('🔐 [AUTH/SIGNUP] Aucun utilisateur existant, création...');
     }
 
-    // ✅ CRÉER L'UTILISATEUR
-    let createResult;
-    try {
-      createResult = await supabase.auth.admin.createUser({
-        email: normalizedEmail,
-        password,
-        email_confirm: true, // Auto-confirm car pas de serveur email
-        user_metadata: {
-          full_name: resolvedName || 'Utilisateur', // ✅ Utiliser le nom résolu
-          name: resolvedName || 'Utilisateur',
-          phone: normalizedPhone,
-          role: role || 'passenger'
-        }
-      });
-    } catch (createError) {
-      console.error("❌ [AUTH/SIGNUP] Exception lors de la création:", createError);
-      throw createError;
-    }
-
-    const { data, error } = createResult;
+    // Créer l'utilisateur
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: normalizedEmail,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: resolvedName,
+        name: resolvedName,
+        phone: normalizedPhone,
+        role: role || "passenger",
+      },
+    });
 
     if (error) {
-      console.error("❌ [AUTH/SIGNUP] Erreur création utilisateur Supabase:", error.message);
-      console.error("❌ [AUTH/SIGNUP] Code erreur:", error.code || error.status);
-      console.error("❌ [AUTH/SIGNUP] Détails erreur:", JSON.stringify(error, null, 2));
-      
-      // Messages d'erreur plus explicites
-      if (error.message?.includes('already been registered') || error.message?.includes('already exists')) {
-        return c.json({ 
-          success: false, 
-          error: "Ce numéro de téléphone a déjà été enregistré. Veuillez vous connecter." 
+      console.error("❌ [AUTH/SIGNUP] Erreur création:", error.message);
+      if (error.message?.includes("already been registered") || error.message?.includes("already exists")) {
+        return c.json({
+          success: false,
+          error: "Ce numéro de téléphone a déjà été enregistré. Veuillez vous connecter.",
         }, 400);
       }
-      
-      return c.json({ 
-        success: false, 
-        error: `Erreur d'inscription: ${error.message}` 
-      }, 400);
+      return c.json({ success: false, error: `Erreur d'inscription: ${error.message}` }, 400);
     }
 
     if (!data?.user) {
-      console.error("❌ [AUTH/SIGNUP] Aucun utilisateur retourné par Supabase");
-      return c.json({ 
-        success: false, 
-        error: "Erreur lors de la création du compte" 
-      }, 500);
+      return c.json({ success: false, error: "Erreur lors de la création du compte" }, 500);
     }
 
-    console.log("✅ [AUTH/SIGNUP] Utilisateur créé dans Supabase Auth:", data.user.id);
-    
-    // ✅ Créer le profil de base dans KV store
+    console.log("✅ [AUTH/SIGNUP] Utilisateur créé:", data.user.id);
+
+    // Créer le profil dans le KV store
     const profile = {
       id: data.user.id,
       email: normalizedEmail,
-      full_name: resolvedName || 'Utilisateur',
+      full_name: resolvedName,
       phone: normalizedPhone,
-      role: role || 'passenger',
+      role: role || "passenger",
       balance: 0,
       created_at: data.user.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
-    
-    // Importer kv pour sauvegarder le profil
+
     try {
-      console.log('💾 [AUTH/SIGNUP] Sauvegarde profil dans KV store...');
-      
-      // ✅ Sauvegarder dans le KV store
       await kv.set(`profile:${data.user.id}`, profile);
-      
-      // Sauvegarder aussi avec le préfixe selon le rôle
-      const userRole = role || 'passenger';
-      await kv.set(`${userRole}:${data.user.id}`, profile);
-      
-      console.log(`✅ Profil créé automatiquement: ${profile.id} - Role: ${profile.role} - Clés KV: profile:${data.user.id} et ${userRole}:${data.user.id}`);
+      await kv.set(`${role || "passenger"}:${data.user.id}`, profile);
+      console.log("✅ [AUTH/SIGNUP] Profil KV sauvegardé");
     } catch (kvError) {
-      console.error("⚠️ [AUTH/SIGNUP] Erreur sauvegarde KV (non bloquant):", kvError);
-      // Ne pas bloquer l'inscription si le KV échoue
+      console.error("⚠️ [AUTH/SIGNUP] Erreur KV (non bloquant):", kvError);
     }
-    
-    console.log("✅ [AUTH/SIGNUP] Inscription terminée avec succès");
-    
-    // ✅ RETOURNER PROFILE AU LIEU DE USER
+
     return c.json({ success: true, user: data.user, profile });
   } catch (error) {
     console.error("❌ [AUTH/SIGNUP] Erreur inattendue:", error);
-    console.error("❌ [AUTH/SIGNUP] Type d'erreur:", error?.constructor?.name);
-    console.error("❌ [AUTH/SIGNUP] Message:", error instanceof Error ? error.message : 'N/A');
-    console.error("❌ [AUTH/SIGNUP] Stack trace:", error instanceof Error ? error.stack : 'N/A');
-    
-    // Retourner le message d'erreur réel au lieu de "Database error"
-    const errorMessage = error instanceof Error ? error.message : "Erreur lors de l'inscription";
-    return c.json({ 
-      success: false, 
-      error: errorMessage,
-      details: error instanceof Error ? error.stack : undefined
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur lors de l'inscription",
     }, 500);
   }
 });
 
-// 🔑 LOGIN - Connexion
+// ─── POST /login ─────────────────────────────────────────────────────────────
+
 app.post("/login", async (c) => {
   try {
     const body = await c.req.json();
     const { identifier, email, password } = body;
-
-    // ✅ Accepter "identifier" (frontend) ou "email" (legacy)
     const userIdentifier = identifier || email;
 
-    console.log("🔑 [AUTH/LOGIN] Tentative de connexion:", { identifier: userIdentifier });
+    console.log("🔑 [AUTH/LOGIN] Connexion:", { identifier: userIdentifier });
 
     if (!userIdentifier || !password) {
       return c.json({ success: false, error: "Email/téléphone et mot de passe requis" }, 400);
     }
 
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!
     );
 
     let loginEmail = userIdentifier;
-    
-    // 🔍 DÉTECTER SI C'EST UN NUMÉRO DE TÉLÉPHONE
-    // Un téléphone contient uniquement des chiffres, espaces, +, -, ()
     const phoneRegex = /^[\d\s+\-()]+$/;
     const isPhoneNumber = phoneRegex.test(userIdentifier.trim());
-    
+
     if (isPhoneNumber) {
-      console.log("📱 [AUTH/LOGIN] Identifiant détecté comme numéro de téléphone");
-      
-      // Normaliser le téléphone
+      console.log("📱 [AUTH/LOGIN] Identifiant téléphone détecté");
       const normalizedPhone = normalizePhoneNumber(userIdentifier);
-      console.log("📱 [AUTH/LOGIN] Téléphone normalisé:", normalizedPhone);
-      
-      // Chercher l'utilisateur par téléphone dans Auth user_metadata
+
       const supabaseAdmin = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
-      
-      // Récupérer tous les utilisateurs (on devrait avoir une table d'index, mais pour l'instant...)
+
       const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-      
       if (listError) {
-        console.error("❌ [AUTH/LOGIN] Erreur récupération utilisateurs:", listError);
         return c.json({ success: false, error: "Erreur serveur" }, 500);
       }
-      
-      // Chercher l'utilisateur avec ce numéro de téléphone
-      const userWithPhone = users?.find(u => {
+
+      const userWithPhone = users?.find((u) => {
         const userPhone = u.user_metadata?.phone || u.phone;
         if (!userPhone) return false;
-        
-        // Normaliser les deux téléphones pour comparaison
-        const normalizedUserPhone = normalizePhoneNumber(userPhone);
-        return normalizedUserPhone === normalizedPhone;
+        return normalizePhoneNumber(userPhone) === normalizedPhone;
       });
-      
+
       if (!userWithPhone) {
-        console.error("❌ [AUTH/LOGIN] Aucun utilisateur trouvé avec le téléphone:", normalizedPhone);
-        return c.json({ 
-          success: false, 
-          error: "Numéro de téléphone ou mot de passe incorrect" 
-        }, 401);
+        return c.json({ success: false, error: "Numéro de téléphone ou mot de passe incorrect" }, 401);
       }
-      
-      // Utiliser l'email de cet utilisateur pour se connecter
+
       loginEmail = userWithPhone.email!;
-      console.log("✅ [AUTH/LOGIN] Utilisateur trouvé par téléphone, email:", loginEmail);
+      console.log("✅ [AUTH/LOGIN] Utilisateur trouvé, email:", loginEmail);
     } else {
-      // C'est un email, normaliser
       loginEmail = normalizeEmail(userIdentifier);
-      console.log("📧 [AUTH/LOGIN] Identifiant détecté comme email:", loginEmail);
     }
 
-    // Se connecter avec l'email
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
 
     if (error) {
-      console.error("❌ [AUTH/LOGIN] Erreur authentification:", error.message);
-      return c.json({ 
-        success: false, 
-        error: isPhoneNumber 
-          ? "Numéro de téléphone ou mot de passe incorrect" 
-          : "Email ou mot de passe incorrect" 
+      console.error("❌ [AUTH/LOGIN] Erreur auth:", error.message);
+      return c.json({
+        success: false,
+        error: isPhoneNumber ? "Numéro de téléphone ou mot de passe incorrect" : "Email ou mot de passe incorrect",
       }, 401);
     }
 
-    console.log("✅ [AUTH/LOGIN] Auth réussie, récupération du profil...");
-    
-    // Importer le kv wrapper
-    const kvModule = await import('./kv-wrapper.ts');
-    let profile = await kvModule.get(`profile:${data.user.id}`);
-    
-    // ✅ Si le profil n'existe pas, le créer automatiquement à partir des user_metadata
+    console.log("✅ [AUTH/LOGIN] Auth réussie, récupération profil...");
+
+    let profile = await kv.get(`profile:${data.user.id}`);
+
     if (!profile) {
-      console.log("⚠️ Profil introuvable dans KV store, création automatique...");
-      
+      console.log("⚠️ Profil introuvable, création automatique...");
       const userMetadata = data.user.user_metadata || {};
-      const role = userMetadata.role || 'passenger';
-      
+      const role = userMetadata.role || "passenger";
+
       profile = {
         id: data.user.id,
-        email: data.user.email || '',
-        full_name: userMetadata.full_name || userMetadata.name || 'Utilisateur',
+        email: data.user.email || "",
+        full_name: userMetadata.full_name || userMetadata.name || "Utilisateur",
         phone: userMetadata.phone || null,
-        role: role,
+        role,
         balance: 0,
         created_at: data.user.created_at || new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       };
-      
-      // Sauvegarder dans le KV store
-      await kvModule.set(`profile:${data.user.id}`, profile);
-      
-      // Si c'est un admin, sauvegarder aussi avec le préfixe admin:
-      if (role === 'admin') {
-        await kvModule.set(`admin:${data.user.id}`, profile);
-      }
-      
-      // Si c'est un driver, sauvegarder aussi avec le préfixe driver:
-      if (role === 'driver') {
-        await kvModule.set(`driver:${data.user.id}`, profile);
-      }
-      
-      console.log("✅ Profil créé automatiquement:", profile.id, "- Role:", profile.role);
-    } else {
-      console.log("📋 Profil récupéré:", profile ? "✅" : "❌");
+
+      await kv.set(`profile:${data.user.id}`, profile);
+      if (role === "admin") await kv.set(`admin:${data.user.id}`, profile);
+      if (role === "driver") await kv.set(`driver:${data.user.id}`, profile);
+      console.log("✅ Profil créé automatiquement:", profile.id, "- Role:", role);
     }
 
-    // 🔒 VÉRIFICATION : Bloquer les conducteurs non approuvés
-    if (profile.role === 'driver') {
-      // Vérifier le statut dans le profil driver spécifique
-      const driverProfile = await kvModule.get(`driver:${data.user.id}`);
-      
+    // Bloquer les conducteurs non approuvés
+    if ((profile as any).role === "driver") {
+      const driverProfile = await kv.get(`driver:${data.user.id}`);
       if (driverProfile) {
-        const isApproved = driverProfile.isApproved === true;
-        const status = driverProfile.status;
-        
-        console.log(`🔍 [AUTH/LOGIN] Vérification conducteur - Status: ${status}, Approved: ${isApproved}`);
-        
-        if (!isApproved || status === 'pending') {
-          console.log(`❌ [AUTH/LOGIN] Conducteur non approuvé - ID: ${data.user.id}`);
-          return c.json({ 
-            success: false, 
-            error: "Votre compte est en attente d'approbation par l'administrateur. Vous recevrez une notification une fois votre compte approuvé." 
+        const dp = driverProfile as any;
+        if (!dp.isApproved || dp.status === "pending") {
+          return c.json({
+            success: false,
+            error: "Votre compte est en attente d'approbation par l'administrateur.",
           }, 403);
         }
-        
-        if (status === 'rejected' || status === 'suspended') {
-          console.log(`❌ [AUTH/LOGIN] Conducteur rejeté/suspendu - ID: ${data.user.id}`);
-          return c.json({ 
-            success: false, 
-            error: "Votre compte a été désactivé. Veuillez contacter l'administrateur." 
+        if (dp.status === "rejected" || dp.status === "suspended") {
+          return c.json({
+            success: false,
+            error: "Votre compte a été désactivé. Veuillez contacter l'administrateur.",
           }, 403);
         }
       }
     }
 
-    return c.json({ 
-      success: true, 
-      session: data.session,
-      user: data.user,
-      profile: profile
-    });
+    return c.json({ success: true, session: data.session, user: data.user, profile });
   } catch (error) {
-    console.error("❌ Erreur login:", error);
+    console.error("❌ [AUTH/LOGIN] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
   }
 });
 
-// 🚪 LOGOUT - Déconnexion
+// ─── POST /logout ─────────────────────────────────────────────────────────────
+
 app.post("/logout", async (c) => {
   try {
-    const accessToken = c.req.header('Authorization')?.split(' ')[1];
-    
-    if (!accessToken) {
-      return c.json({ success: false, error: "Non autorisé" }, 401);
-    }
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    if (!accessToken) return c.json({ success: false, error: "Non autorisé" }, 401);
 
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
     const { error } = await supabase.auth.admin.signOut(accessToken);
-
-    if (error) {
-      console.error("❌ Erreur logout:", error);
-      return c.json({ success: false, error: error.message }, 400);
-    }
+    if (error) return c.json({ success: false, error: error.message }, 400);
 
     return c.json({ success: true });
   } catch (error) {
-    console.error("❌ Erreur logout:", error);
+    console.error("❌ [AUTH/LOGOUT] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
   }
 });
 
-// 🧹 DELETE-USER-BY-PHONE - Nettoyage des utilisateurs orphelins (passagers)
+// ─── POST /delete-user-by-phone ───────────────────────────────────────────────
+
 app.post("/delete-user-by-phone", async (c) => {
   try {
     const { phone } = await c.req.json();
-
-    if (!phone) {
-      return c.json({ success: false, error: "Téléphone requis" }, 400);
-    }
+    if (!phone) return c.json({ success: false, error: "Téléphone requis" }, 400);
 
     const normalizedPhone = normalizePhoneNumber(phone);
-    if (!normalizedPhone) {
-      return c.json({ success: false, error: "Format de téléphone invalide" }, 400);
-    }
+    if (!normalizedPhone) return c.json({ success: false, error: "Format invalide" }, 400);
 
     const phoneDigits = normalizedPhone.replace(/\D/g, "");
     const generatedEmail = `u${phoneDigits}@smartcabb.app`;
 
-    console.log("🧹 [AUTH/DELETE-BY-PHONE] Nettoyage utilisateur passager:", normalizedPhone);
+    console.log("🧹 [AUTH/DELETE-BY-PHONE] Nettoyage passager:", normalizedPhone);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -424,17 +319,12 @@ app.post("/delete-user-by-phone", async (c) => {
     );
 
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-
-    if (listError) {
-      console.error("❌ [AUTH/DELETE-BY-PHONE] Erreur listUsers:", listError);
-      return c.json({ success: true, deletedAuth: false, deletedProfile: false });
-    }
+    if (listError) return c.json({ success: true, deletedAuth: false, deletedProfile: false });
 
     const targetUser = users?.find((u) => {
       if (u.email?.toLowerCase() === generatedEmail.toLowerCase()) return true;
       const userPhone = u.user_metadata?.phone || (u as any).phone;
-      if (userPhone && normalizePhoneNumber(userPhone) === normalizedPhone) return true;
-      return false;
+      return userPhone && normalizePhoneNumber(userPhone) === normalizedPhone;
     });
 
     let deletedAuth = false;
@@ -444,21 +334,16 @@ app.post("/delete-user-by-phone", async (c) => {
       try {
         await supabase.auth.admin.deleteUser(targetUser.id);
         deletedAuth = true;
-        console.log("✅ [AUTH/DELETE-BY-PHONE] Utilisateur Auth supprimé:", targetUser.id);
       } catch (err) {
         console.warn("⚠️ [AUTH/DELETE-BY-PHONE] Erreur suppression Auth:", err);
       }
-
       try {
         await kv.del(`profile:${targetUser.id}`);
         await kv.del(`passenger:${targetUser.id}`);
         deletedProfile = true;
-        console.log("✅ [AUTH/DELETE-BY-PHONE] Profils KV supprimés:", targetUser.id);
       } catch (err) {
         console.warn("⚠️ [AUTH/DELETE-BY-PHONE] Erreur suppression KV:", err);
       }
-    } else {
-      console.log("ℹ️ [AUTH/DELETE-BY-PHONE] Aucun utilisateur trouvé pour:", normalizedPhone);
     }
 
     return c.json({
