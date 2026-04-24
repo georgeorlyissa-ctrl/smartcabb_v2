@@ -67,7 +67,7 @@ export async function searchPlaces(
   console.log('📍 Position:', currentLocation);
 
   try {
-    const url = new URL(`${BACKEND_URL}/google-maps/search`);
+    const url = new URL(`${BACKEND_URL}/maps/search`);
     url.searchParams.set('query', query);
     
     if (currentLocation) {
