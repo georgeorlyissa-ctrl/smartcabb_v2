@@ -166,7 +166,8 @@ export function DriverDashboardNew() {
             const data = await response.json();
             if (data.success && data.driver) {
               setDriver(data.driver);
-              setIsOnline(data.driver.status === 'online');
+              // ✅ FIX : status = approbation ("approved"), isOnline/is_online = statut en ligne
+              setIsOnline(data.driver.isOnline === true || data.driver.is_online === true);
               return;
             }
           } else if (response.status === 404 && attempts === maxAttempts - 1 && state.currentDriver) {
