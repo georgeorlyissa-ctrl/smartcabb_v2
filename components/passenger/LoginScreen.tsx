@@ -135,22 +135,9 @@ export function LoginScreen() {
         
         // 🆕 CAS 3 : Si le compte n'existe pas, proposer de s'inscrire OU de créer un compte de test
         if (errorMessage.includes('Identifiants incorrects') || errorMessage.includes('Invalid login credentials')) {
-          toast.error(
-            '❌ Aucun compte trouvé\n\n' +
-            'Ces identifiants ne correspondent à aucun compte existant.\n\n' +
-            '🧪 Besoin de comptes de test ?\n' +
-            'Créez 3 utilisateurs de test en 1 clic !',
-            {
-              duration: 20000,
-              position: 'top-center',
-              action: {
-                label: '🧪 Créer comptes test',
-                onClick: () => {
-                  window.location.href = '/admin/create-test-users';
-                }
-              }
-            }
-          );
+          toast.error('Compte introuvable. Créez un compte ou contactez l\'administrateur.', {
+            duration: 5000
+          });
         } else {
           toast.error(fullMessage, {
             duration: 6000
@@ -317,13 +304,9 @@ export function LoginScreen() {
       setLoading(false);
       setErrorMsg('Erreur lors de la connexion');
       
-      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
-      toast.error(
-        `❌ Erreur inattendue\n\n${errorMessage}\n\nConsultez la console (F12) pour plus de détails`,
-        {
-          duration: 8000
-        }
-      );
+      toast.error('Une erreur inattendue s\'est produite. Vérifiez votre connexion.', {
+        duration: 5000
+      });
     }
   };
 
