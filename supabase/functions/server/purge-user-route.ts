@@ -1,8 +1,19 @@
 import { Hono } from "npm:hono";
-import { createClient } from "jsr:@supabase/supabase-js@2";
-import * as kv from "./kv-wrapper.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const app = new Hono();
+
+// ─── Table KV & helpers inlinés ──────────────────────────────────────────────
+const KV_TABLE = "kv_store_2eb02e52";
+function kvClient() {
+  return createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+}
+async function kvSet(key: string, value: any): Promise<void> {
+  try { const { error } = await kvClient().from(KV_TABLE).upsert({ key, value }); if (error) throw new Error(error.message); } catch (e) { console.error("KV set error:", e); throw e; }
+}
+async function kvDel(key: string): Promise<void> {
+  try { await kvClient().from(KV_TABLE).delete().eq("key", key); } catch (e) { console.error("KV del error:", e); }
+}
 
 // ============================================
 // 🗑️ PURGER COMPLÈTEMENT UN UTILISATEUR
@@ -77,10 +88,10 @@ app.post("/purge-user-by-email", async (c) => {
     
     // 4️⃣ Nettoyer aussi le KV store
     try {
-      await kv.del(`profile:${userToDelete.id}`);
-      await kv.del(`admin:${userToDelete.id}`);
-      await kv.del(`driver:${userToDelete.id}`);
-      await kv.del(`passenger:${userToDelete.id}`);
+      await kvDel(`profile:${userToDelete.id}`);
+      await kvDel(`admin:${userToDelete.id}`);
+      await kvDel(`driver:${userToDelete.id}`);
+      await kvDel(`passenger:${userToDelete.id}`);
       console.log(`✅ Données KV nettoyées pour: ${userToDelete.id}`);
     } catch (kvError) {
       console.warn("⚠️ Erreur nettoyage KV (peut être ignoré):", kvError);
@@ -151,8 +162,8 @@ app.post("/create-admin-with-purge", async (c) => {
       
       // Nettoyer le KV store
       try {
-        await kv.del(`profile:${existingUser.id}`);
-        await kv.del(`admin:${existingUser.id}`);
+        await kvDel(`profile:${existingUser.id}`);
+        await kvDel(`admin:${existingUser.id}`);
       } catch (kvError) {
         console.warn("⚠️ Erreur nettoyage KV:", kvError);
       }
@@ -191,8 +202,8 @@ app.post("/create-admin-with-purge", async (c) => {
       updated_at: new Date().toISOString()
     };
     
-    await kv.set(`profile:${newUser.user.id}`, adminProfile);
-    await kv.set(`admin:${newUser.user.id}`, adminProfile);
+    await kvSet(`profile:${newUser.user.id}`, adminProfile);
+    await kvSet(`admin:${newUser.user.id}`, adminProfile);
     
     console.log(`✅ Profil admin créé dans le KV store`);
     
