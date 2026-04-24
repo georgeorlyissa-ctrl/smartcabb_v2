@@ -392,7 +392,7 @@ app.post("/:driverId/wallet/withdraw", async (c) => {
   }
 });
 
-// ─── GET /:driverId — Un conducteur par ID ──────────────��─────────────────────
+// ─── GET /:driverId — Un conducteur par ID ───────────────────────────────────
 app.get("/:driverId", async (c) => {
   try {
     const driverId = c.req.param("driverId");
@@ -592,6 +592,83 @@ app.post("/:driverId/update", async (c) => {
     return c.json({ success: true, driver: updatedDriver });
   } catch (error) {
     console.error("❌ [DRIVERS/UPDATE] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /:driverId/status — Passer en ligne / hors ligne ───────────────────
+app.post("/:driverId/status", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const { status, location } = await c.req.json();
+
+    if (!status || !["online", "offline"].includes(status)) {
+      return c.json({ success: false, error: "Statut invalide. Utilisez 'online' ou 'offline'" }, 400);
+    }
+
+    const isOnline = status === "online";
+    console.log(`🔄 [DRIVERS/STATUS] ${driverId} → ${status.toUpperCase()}`);
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+
+    // Vérifier que le conducteur est approuvé
+    if (driver.status !== "approved" && !driver.isApproved) {
+      return c.json({
+        success: false,
+        error: "Votre compte n'est pas encore approuvé. Veuillez attendre la validation de l'administrateur.",
+      }, 403);
+    }
+
+    // Vérifier le solde si passage EN LIGNE
+    if (isOnline) {
+      const balance = driver.creditBalance ?? driver.balance ?? 0;
+      if (balance <= 0) {
+        return c.json({
+          success: false,
+          error: "Solde insuffisant ! Rechargez votre compte pour vous mettre en ligne.",
+        }, 400);
+      }
+    }
+
+    const now = new Date().toISOString();
+    const updatedDriver = {
+      ...driver,
+      isOnline,
+      is_online: isOnline,
+      is_available: isOnline,
+      status_online: status,
+      ...(location ? { location, lastLocation: location } : {}),
+      lastOnlineChange: now,
+      updated_at: now,
+    };
+
+    await kvSet(`driver:${driverId}`, updatedDriver);
+
+    // Sync profil
+    const profile = await kvGet(`profile:${driverId}`);
+    if (profile) {
+      await kvSet(`profile:${driverId}`, {
+        ...profile,
+        isOnline,
+        is_online: isOnline,
+        is_available: isOnline,
+        updated_at: now,
+      });
+    }
+
+    console.log(`✅ [DRIVERS/STATUS] ${driverId} → ${status.toUpperCase()} OK`);
+    return c.json({
+      success: true,
+      isOnline,
+      status,
+      driver: updatedDriver,
+      message: isOnline ? "Vous êtes maintenant en ligne" : "Vous êtes maintenant hors ligne",
+    });
+  } catch (error) {
+    console.error("❌ [DRIVERS/STATUS] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
   }
 });
