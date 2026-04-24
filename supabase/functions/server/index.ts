@@ -20,6 +20,8 @@ import cancellationRoutes from "./cancellation-routes.ts";
 import fixEmailsRoutes from "./fix-emails-routes.ts";
 import purgeUserRoute from "./purge-user-route.ts";
 import googleMapsApi from "./google-maps-api.ts";
+import driverRoutes from "./driver-routes.ts";
+import configRoutes from "./config-routes.ts";
 
 const app = new Hono();
 
@@ -65,6 +67,8 @@ app.route("/make-server-2eb02e52/cancellation", cancellationRoutes);
 app.route("/make-server-2eb02e52/fix-emails", fixEmailsRoutes);
 app.route("/make-server-2eb02e52/purge", purgeUserRoute);
 app.route("/make-server-2eb02e52/maps", googleMapsApi);
+app.route("/make-server-2eb02e52/drivers", driverRoutes);
+app.route("/make-server-2eb02e52/config", configRoutes);
 
 // Route 404
 app.notFound((c) => {
