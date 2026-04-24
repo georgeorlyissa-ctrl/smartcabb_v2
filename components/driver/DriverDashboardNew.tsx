@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from '../../lib/motion';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
@@ -683,7 +683,7 @@ export function DriverDashboardNew() {
             { tab: 'rides', icon: <Navigation className="w-6 h-6 mb-1" />, label: 'Courses' },
             { tab: 'earnings', icon: <DollarSign className="w-6 h-6 mb-1" />, label: 'Gains' },
             { tab: 'profile', icon: <User className="w-6 h-6 mb-1" />, label: 'Profil' }
-          ] as { tab: TabType; icon: JSX.Element; label: string }[]).map(item => (
+          ] as { tab: TabType; icon: React.ReactNode; label: string }[]).map(item => (
             <button
               key={item.tab}
               onClick={() => setActiveTab(item.tab)}
