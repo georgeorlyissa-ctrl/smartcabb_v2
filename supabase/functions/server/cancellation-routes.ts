@@ -1,7 +1,22 @@
 import { Hono } from "npm:hono";
-import * as kv from "./kv-wrapper.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const app = new Hono();
+
+// ─── Table KV & helpers inlinés ──────────────────────────────────────────────
+const KV_TABLE = "kv_store_2eb02e52";
+function kvClient() {
+  return createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+}
+async function kvGet(key: string): Promise<any> {
+  try { const { data } = await kvClient().from(KV_TABLE).select("value").eq("key", key).maybeSingle(); return data?.value ?? null; } catch { return null; }
+}
+async function kvDel(key: string): Promise<void> {
+  try { await kvClient().from(KV_TABLE).delete().eq("key", key); } catch (e) { console.error("KV del error:", e); }
+}
+async function kvGetByPrefix(prefix: string): Promise<any[]> {
+  try { const { data } = await kvClient().from(KV_TABLE).select("key, value").like("key", prefix + "%"); return data?.map((d: any) => d.value) ?? []; } catch { return []; }
+}
 
 // ============================================
 // GET /all - Récupérer toutes les annulations
@@ -11,7 +26,7 @@ app.get("/all", async (c) => {
     console.log('📊 Récupération de toutes les annulations...');
     
     // Récupérer toutes les annulations
-    const allCancellations = await kv.getByPrefix('cancellation:');
+    const allCancellations = await kvGetByPrefix('cancellation:');
     
     // Trier par date (plus récent en premier)
     const sortedCancellations = allCancellations.sort((a: any, b: any) => {
@@ -48,7 +63,7 @@ app.get("/all", async (c) => {
 // ============================================
 app.get("/stats", async (c) => {
   try {
-    const allCancellations = await kv.getByPrefix('cancellation:');
+    const allCancellations = await kvGetByPrefix('cancellation:');
     
     const stats = {
       total: allCancellations.length,
@@ -95,7 +110,7 @@ app.get("/passenger/:passengerId", async (c) => {
   try {
     const passengerId = c.req.param('passengerId');
     
-    const allCancellations = await kv.getByPrefix('cancellation:');
+    const allCancellations = await kvGetByPrefix('cancellation:');
     const passengerCancellations = allCancellations.filter((c: any) => 
       c.passengerId === passengerId
     );
@@ -127,7 +142,7 @@ app.get("/driver/:driverId", async (c) => {
   try {
     const driverId = c.req.param('driverId');
     
-    const allCancellations = await kv.getByPrefix('cancellation:');
+    const allCancellations = await kvGetByPrefix('cancellation:');
     const driverCancellations = allCancellations.filter((c: any) => 
       c.driverId === driverId
     );
@@ -159,7 +174,7 @@ app.get("/:id", async (c) => {
   try {
     const cancellationId = c.req.param('id');
     
-    const cancellation = await kv.get(`cancellation:${cancellationId}`);
+    const cancellation = await kvGet(`cancellation:${cancellationId}`);
     
     if (!cancellation) {
       return c.json({ success: false, error: "Annulation non trouvée" }, 404);
@@ -182,13 +197,13 @@ app.delete("/:id", async (c) => {
   try {
     const cancellationId = c.req.param('id');
     
-    const cancellation = await kv.get(`cancellation:${cancellationId}`);
+    const cancellation = await kvGet(`cancellation:${cancellationId}`);
     
     if (!cancellation) {
       return c.json({ success: false, error: "Annulation non trouvée" }, 404);
     }
     
-    await kv.del(`cancellation:${cancellationId}`);
+    await kvDel(`cancellation:${cancellationId}`);
     
     console.log(`✅ Annulation ${cancellationId} supprimée`);
     
