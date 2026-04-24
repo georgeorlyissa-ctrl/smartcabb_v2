@@ -1,9 +1,35 @@
 import { Hono } from "npm:hono";
-import * as kv from "./kv-wrapper.ts";
-import { isValidUUID } from "./uuid-validator.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification } from "./firebase-admin.ts";
 
 const app = new Hono();
+
+// ─── Table KV & helpers inlinés ──────────────────────────────────────────────
+const KV_TABLE = "kv_store_2eb02e52";
+function kvClient() {
+  return createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+}
+async function kvGet(key: string): Promise<any> {
+  try { const { data } = await kvClient().from(KV_TABLE).select("value").eq("key", key).maybeSingle(); return data?.value ?? null; } catch { return null; }
+}
+async function kvSet(key: string, value: any): Promise<void> {
+  try { const { error } = await kvClient().from(KV_TABLE).upsert({ key, value }); if (error) throw new Error(error.message); } catch (e) { console.error("KV set error:", e); throw e; }
+}
+async function kvDel(key: string): Promise<void> {
+  try { await kvClient().from(KV_TABLE).delete().eq("key", key); } catch (e) { console.error("KV del error:", e); }
+}
+async function kvGetByPrefix(prefix: string): Promise<any[]> {
+  try { const { data } = await kvClient().from(KV_TABLE).select("key, value").like("key", prefix + "%"); return data?.map((d: any) => d.value) ?? []; } catch { return []; }
+}
+
+// Compatibilité avec les anciens appels kv.*
+const kv = { get: kvGet, set: kvSet, del: kvDel, getByPrefix: kvGetByPrefix, delete: kvDel };
+
+// isValidUUID inliné pour éviter l'import local
+function isValidUUID(uuid: string): boolean {
+  if (!uuid || typeof uuid !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid);
+}
 
 /**
  * 🎯 SYSTÈME DE MATCHING INTELLIGENT
@@ -133,6 +159,8 @@ async function notifyDriverAtIndex(ride: any, drivers: any[], index: number) {
     data: {
       rideId: ride.id,
       type: 'new_ride_request',
+      passengerId: ride.passengerId || '',  // ✅ AJOUTÉ
+      passengerPhone: ride.passengerPhone || ride.passenger_phone || '',  // ✅ AJOUTÉ
       pickupLat: pickupLat.toString(),
       pickupLng: pickupLng.toString(),
       destinationLat: destinationLat.toString(),
