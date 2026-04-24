@@ -446,7 +446,7 @@ export function EstimateScreen() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -300, opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col overflow-hidden"
+      className="h-full bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm border-b border-border flex-shrink-0">
@@ -604,36 +604,30 @@ export function EstimateScreen() {
               </motion.div>
             )}
             
-            {/*  SCROLL HORIZONTAL DES VÉHICULES */}
-            <div className="overflow-x-auto pb-2 px-4 scrollbar-hide">
-              <div className="flex gap-3" style={{ width: 'max-content' }}>
+            {/* ── GRILLE RESPONSIVE DES VÉHICULES — 2 colonnes, tout visible ── */}
+            <div className="px-4">
+              <div className="grid grid-cols-2 gap-3">
                 {vehicles.map((vehicle) => {
                   const Icon = vehicle.icon;
                   const isSelected = selectedVehicle === vehicle.id;
                   const vehiclePrice = calculatePrice(vehicle.id, estimatedDuration);
                   
-                  // Récupérer les tarifs jour et nuit
                   const currentHour = new Date().getHours();
                   const isDay = isDayTime(currentHour);
                   const isNight = !isDay;
                   const pricing = VEHICLE_PRICING[vehicle.id];
                   
-                  // Prix pour affichage (jour et nuit)
                   let dayPriceUSD, nightPriceUSD, dayPriceCDF, nightPriceCDF;
                   
                   if (vehicle.id === 'smart_business') {
-                    // Business = tarif journalier uniquement
                     dayPriceUSD = pricing.pricing.location_jour.usd;
                     dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
                     nightPriceUSD = null;
                     nightPriceCDF = null;
                   } else {
-                    // Autres catégories = tarif horaire jour/nuit
                     const hours = Math.max(1, Math.ceil(estimatedDuration / 60));
-                    
                     dayPriceUSD = (pricing.pricing.course_heure.jour.usd || 0) * hours;
                     dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
-                    
                     nightPriceUSD = (pricing.pricing.course_heure.nuit.usd || 0) * hours;
                     nightPriceCDF = convertUSDtoCDF(nightPriceUSD);
                   }
@@ -642,8 +636,8 @@ export function EstimateScreen() {
                     <motion.button
                       key={vehicle.id}
                       onClick={() => setSelectedVehicle(vehicle.id)}
-                      whileTap={{ scale: 0.95 }}
-                      className={`flex-shrink-0 w-[240px] rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden ${
+                      whileTap={{ scale: 0.97 }}
+                      className={`w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left ${
                         isSelected 
                           ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20' 
                           : 'border-border hover:border-secondary/50 hover:shadow-md'
@@ -659,57 +653,59 @@ export function EstimateScreen() {
                       )}
                       
                       {/* Informations du véhicule */}
-                      <div className="p-3 space-y-2">
+                      <div className="p-2.5 space-y-1.5">
+                        {/* Nom + capacité */}
                         <div>
-                          <h3 className={`text-sm font-semibold ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
+                          <h3 className={`text-xs font-bold leading-tight ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
                             {vehicle.name}
                           </h3>
-                          <p className="text-[10px] text-muted-foreground line-clamp-1">
+                          <p className="text-[9px] text-muted-foreground mt-0.5">
                             {vehicle.capacity} places · {VEHICLE_PRICING[vehicle.id].features[0]}
                           </p>
                         </div>
                         
                         {/* Prix principal */}
-                        <div className="space-y-1">
-                          <div className="flex items-baseline justify-between">
-                            <span className={`text-lg font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
-                              {vehiclePrice.toLocaleString()}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">{t('cdf')}</span>
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">
-                            ≈ {vehicle.id === 'smart_business' 
-                              ? `${dayPriceUSD}$ USD/jour`
-                              : `${isNight ? nightPriceUSD.toFixed(1) : dayPriceUSD.toFixed(1)}$ USD`
-                            }
-                          </div>
+                        <div className="flex items-baseline justify-between">
+                          <span className={`text-base font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
+                            {vehiclePrice.toLocaleString()}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">{t('cdf')}</span>
+                        </div>
+                        <div className="text-[9px] text-muted-foreground -mt-0.5">
+                          ≈ {vehicle.id === 'smart_business' 
+                            ? `${dayPriceUSD}$/jour`
+                            : `${isNight ? nightPriceUSD?.toFixed(1) : dayPriceUSD.toFixed(1)}$ USD`
+                          }
                         </div>
                         
-                        {/* Tarifs jour/nuit pour les véhicules non-business */}
+                        {/* Tarifs jour/nuit */}
                         {vehicle.id !== 'smart_business' && (
-                          <div className="bg-muted/30 rounded-lg px-2 py-1.5 space-y-0.5">
-                            <div className="flex items-center justify-between text-[10px]">
-                              <div className="flex items-center gap-1">
+                          <div className="bg-muted/30 rounded-lg px-1.5 py-1 space-y-0.5">
+                            <div className="flex items-center justify-between text-[9px]">
+                              <div className="flex items-center gap-0.5">
                                 <Sun className="w-2.5 h-2.5 text-amber-500" />
-                                <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>
-                                  Jour
-                                </span>
+                                <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>Jour</span>
                               </div>
-                              <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>
+                              <span className={`font-medium ${isNight ? 'text-muted-foreground' : 'text-primary'}`}>
                                 {Math.round(dayPriceCDF).toLocaleString()}
                               </span>
                             </div>
-                            <div className="flex items-center justify-between text-[10px]">
-                              <div className="flex items-center gap-1">
+                            <div className="flex items-center justify-between text-[9px]">
+                              <div className="flex items-center gap-0.5">
                                 <Moon className="w-2.5 h-2.5 text-blue-500" />
-                                <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>
-                                  Nuit
-                                </span>
+                                <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>Nuit</span>
                               </div>
-                              <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                              <span className={`font-medium ${isNight ? 'text-primary' : 'text-muted-foreground'}`}>
                                 {Math.round(nightPriceCDF).toLocaleString()}
                               </span>
                             </div>
+                          </div>
+                        )}
+
+                        {/* Badge sélectionné */}
+                        {isSelected && (
+                          <div className="flex items-center justify-center gap-1 py-0.5 bg-secondary/10 rounded-lg">
+                            <span className="text-[9px] font-bold text-secondary">✓ Sélectionné</span>
                           </div>
                         )}
                       </div>
