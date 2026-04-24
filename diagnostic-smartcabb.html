@@ -14,6 +14,13 @@
     button { background: #2563EB; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-size: 15px; font-weight: 600; cursor: pointer; }
     button:disabled { opacity: .5; cursor: not-allowed; }
     button:hover:not(:disabled) { background: #1D4ED8; }
+    .btn-sm { padding: 6px 14px; font-size: 13px; }
+    .btn-green { background: #16A34A; }
+    .btn-green:hover:not(:disabled) { background: #15803D; }
+    .btn-orange { background: #EA580C; }
+    .btn-orange:hover:not(:disabled) { background: #C2410C; }
+    .btn-purple { background: #7C3AED; }
+    .btn-purple:hover:not(:disabled) { background: #6D28D9; }
     .stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin: 16px 0; }
     .stat { text-align: center; padding: 16px; border-radius: 10px; background: #F3F4F6; }
     .stat .num { font-size: 36px; font-weight: 700; }
@@ -21,18 +28,26 @@
     .driver { border: 2px solid #E5E7EB; border-radius: 10px; padding: 14px; margin-top: 10px; }
     .driver.ok { border-color: #86EFAC; background: #F0FDF4; }
     .driver.ko { border-color: #FCA5A5; background: #FFF1F2; }
+    .driver.warn { border-color: #FCD34D; background: #FFFBEB; }
     .driver-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
     .badge { font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 20px; color: white; }
     .badge.ok { background: #22C55E; }
     .badge.ko { background: #EF4444; }
+    .badge.warn { background: #F59E0B; color: #000; }
     .fields { font-family: monospace; font-size: 12px; line-height: 2; }
     .ok-val { color: #16A34A; font-weight: 700; }
     .ko-val { color: #DC2626; font-weight: 700; }
+    .warn-val { color: #D97706; font-weight: 700; }
     .alert { border-radius: 10px; padding: 14px; margin: 12px 0; font-weight: 600; }
     .alert-red { background: #FEE2E2; border: 2px solid #EF4444; color: #DC2626; }
+    .alert-green { background: #F0FDF4; border: 2px solid #86EFAC; color: #15803D; }
+    .alert-yellow { background: #FFFBEB; border: 2px solid #FCD34D; color: #92400E; }
     .raw { background: #F3F4F6; border-radius: 8px; padding: 12px; font-size: 11px; font-family: monospace; white-space: pre-wrap; word-break: break-all; margin-top: 12px; max-height: 400px; overflow: auto; }
     .info { font-size: 11px; color: #9CA3AF; margin-top: 20px; padding: 12px; background: #F9FAFB; border-radius: 8px; }
     #status { margin-top: 12px; color: #6B7280; font-size: 13px; }
+    .repair-row { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid #E5E7EB; border-radius: 8px; margin-top: 8px; background: #F9FAFB; flex-wrap: wrap; }
+    .repair-row strong { flex: 1; min-width: 140px; font-size: 13px; }
+    select.cat-picker { border: 1px solid #D1D5DB; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -42,6 +57,7 @@
   <p id="proj-info">Chargement...</p>
 </div>
 
+<!-- ═══ 1. ANALYSE ══════════════════════════════════════════════════════════ -->
 <div class="card">
   <h2 style="margin-bottom:16px;font-size:16px;font-weight:700;">État des chauffeurs (base KV)</h2>
   <button id="btn-analyze" onclick="fetchDebug()">🔍 Analyser les chauffeurs</button>
@@ -49,28 +65,39 @@
   <div id="result"></div>
 </div>
 
-<div class="card" style="border-left:4px solid #F59E0B;background:#FFFBEB;">
-  <h2 style="margin-bottom:12px;font-size:16px;font-weight:700;">⚠️ Déploiement requis avant d'utiliser ce diagnostic</h2>
-  <p style="font-size:13px;color:#92400E;margin-bottom:12px;">La route <code>/rides/debug-drivers</code> était définie APRÈS <code>GET /:id</code> dans <b>ride-routes.ts</b>, elle était donc inaccessible. Le fichier est maintenant corrigé. Tu dois redéployer le serveur :</p>
-  <div style="background:#FEF3C7;border-radius:8px;padding:14px;font-family:monospace;font-size:13px;line-height:2;">
-    <div>cd /chemin/vers/smartcabb_v2</div>
-    <div>supabase functions deploy make-server-2eb02e52</div>
-  </div>
-  <p style="font-size:12px;color:#92400E;margin-top:10px;">Après déploiement, clique sur <b>"Analyser les chauffeurs"</b> ci-dessous.</p>
+<!-- ═══ 2. MIGRATION ════════════════════════════════════════════════════════ -->
+<div class="card" style="border-left:4px solid #7C3AED;background:#F5F3FF;">
+  <h2 style="margin-bottom:12px;font-size:16px;font-weight:700;">🔧 Migration — corriger les anciens statuts</h2>
+  <p style="font-size:13px;color:#5B21B6;margin-bottom:12px;">
+    Corrige les chauffeurs avec <code>status: "online"/"offline"</code> (ancien format) → <code>isOnline=true/false + status="approved"</code>.<br>
+    <b>Idempotente : peut être relancée sans risque.</b>
+  </p>
+  <button onclick="runMigration()" id="btn-migrate" class="btn-purple">🔧 Lancer la migration</button>
+  <div id="migrate-result"></div>
 </div>
 
+<!-- ═══ 3. RÉPARER vehicleCategory manquant ══════════════════════════════════ -->
+<div class="card" style="border-left:4px solid #EA580C;background:#FFF7ED;">
+  <h2 style="margin-bottom:12px;font-size:16px;font-weight:700;">🚗 Réparer — vehicleCategory manquant</h2>
+  <p style="font-size:13px;color:#9A3412;margin-bottom:12px;">
+    Certains chauffeurs ont un FCM token ✅ et sont en ligne ✅ mais <b>vehicleCategory est vide</b> → ils ne recevront jamais de course.
+    Sélectionne la bonne catégorie et clique "Réparer".
+  </p>
+  <div id="repair-list"><p style="font-size:13px;color:#6B7280;">Lance d'abord "Analyser les chauffeurs" pour voir les drivers à réparer.</p></div>
+  <div id="repair-result"></div>
+</div>
+
+<!-- ═══ 4. TESTER DISPONIBILITÉ ═════════════════════════════════════════════ -->
 <div class="card">
   <h2 style="margin-bottom:12px;font-size:16px;font-weight:700;">Tester disponibilité par catégorie</h2>
   <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
     <select id="cat-select" style="border:1px solid #D1D5DB;border-radius:8px;padding:8px 12px;font-size:14px;">
       <option value="smart_standard">Smart Standard</option>
-      <option value="smart_comfort">Smart Confort</option>
+      <option value="smart_confort">Smart Confort</option>
       <option value="smart_plus">Smart Plus</option>
-      <option value="economic">economic</option>
-      <option value="comfort">comfort</option>
-      <option value="van">van</option>
+      <option value="smart_business">Smart Business</option>
     </select>
-    <button onclick="testAvailability()" id="btn-avail" style="background:#7C3AED;">🚗 Tester</button>
+    <button onclick="testAvailability()" id="btn-avail" class="btn-purple">🚗 Tester</button>
   </div>
   <div id="avail-result"></div>
 </div>
@@ -79,14 +106,22 @@
 
 <script>
   // ─── CONFIG ───────────────────────────────────────────────
-  const PROJECT_ID   = "zaerjqchzqmcxqblkfkg";
-  const ANON_KEY     = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZXJqcWNoenFtY3hxYmxrZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxNDMyOTgsImV4cCI6MjA3NTcxOTI5OH0.qwFRKsi9Gw4VVYoEGBBCIj0-lAZOxtqlGQ0eT6cPhik";
-  const BASE_URL     = `https://${PROJECT_ID}.supabase.co/functions/v1/make-server-2eb02e52`;
+  const PROJECT_ID = "zaerjqchzqmcxqblkfkg";
+  const ANON_KEY   = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphZXJqcWNoenFtY3hxYmxrZmtnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAxNDMyOTgsImV4cCI6MjA3NTcxOTI5OH0.qwFRKsi9Gw4VVYoEGBBCIj0-lAZOxtqlGQ0eT6cPhik";
+  const BASE_URL   = `https://${PROJECT_ID}.supabase.co/functions/v1/make-server-2eb02e52`;
   // ──────────────────────────────────────────────────────────
+
+  const CAT_LABELS = {
+    smart_standard: 'Smart Standard',
+    smart_confort:  'Smart Confort',
+    smart_plus:     'Smart Plus',
+    smart_business: 'Smart Business',
+  };
 
   document.getElementById('proj-info').textContent = `Projet : ${PROJECT_ID} · Serveur : make-server-2eb02e52`;
   document.getElementById('token-info').innerHTML  = `<b>URL :</b> ${BASE_URL}/rides/debug-drivers<br><b>Token (début) :</b> ${ANON_KEY.slice(0,45)}...`;
 
+  // ── Analyse ───────────────────────────────────────────────
   async function fetchDebug() {
     const btn = document.getElementById('btn-analyze');
     const status = document.getElementById('status');
@@ -102,7 +137,6 @@
       });
       status.textContent = `→ Réponse HTTP ${res.status} reçue`;
       const text = await res.text();
-
       let data;
       try { data = JSON.parse(text); } catch { data = null; }
 
@@ -110,7 +144,6 @@
         result.innerHTML = `<div class="alert alert-red">❌ Réponse non-JSON (HTTP ${res.status}):</div><div class="raw">${escHtml(text)}</div>`;
         return;
       }
-
       if (data.error || data.code) {
         result.innerHTML = `<div class="alert alert-red">❌ Erreur serveur : <code>${escHtml(JSON.stringify(data))}</code></div>`;
         return;
@@ -125,10 +158,34 @@
     }
   }
 
+  function getDriverCategory(d) {
+    return d.vehicleCategory || d.vehicle_category || d.vehicleType || d.vehicle_type || d.vehicleFromObj || '';
+  }
+
+  function isEligible(d) {
+    const online    = d.isOnline === true || d.is_online === true;
+    const available = d.available === true || d.is_available === true || online;
+    const hasCat    = !!getDriverCategory(d);
+    const hasFcm    = !!d.hasFcmToken;
+    return online && available && hasCat && hasFcm;
+  }
+
   function renderResult(data) {
     const result = document.getElementById('result');
-    const onlineOk  = (data.onlineCount  ?? 0) > 0;
-    const eligOk    = (data.eligibleCount ?? 0) > 0;
+
+    // Re-calculer les vrais éligibles (en incluant vehicleCategory)
+    const drivers = data.drivers || [];
+    const realEligible = drivers.filter(d => isEligible(d));
+    const realOnline   = drivers.filter(d => d.isOnline === true || d.is_online === true);
+    const needsRepair  = drivers.filter(d => {
+      const online  = d.isOnline === true || d.is_online === true;
+      const hasFcm  = !!d.hasFcmToken;
+      const hasCat  = !!getDriverCategory(d);
+      return (online || hasFcm) && !hasCat;
+    });
+
+    const onlineOk = realOnline.length > 0;
+    const eligOk   = realEligible.length > 0;
 
     let html = `
       <div class="stats">
@@ -137,53 +194,162 @@
           <div class="lbl">Total chauffeurs</div>
         </div>
         <div class="stat">
-          <div class="num" style="color:${onlineOk?'#16A34A':'#DC2626'}">${data.onlineCount ?? '?'}</div>
+          <div class="num" style="color:${onlineOk?'#16A34A':'#DC2626'}">${realOnline.length}</div>
           <div class="lbl">En ligne</div>
         </div>
         <div class="stat">
-          <div class="num" style="color:${eligOk?'#16A34A':'#DC2626'}">${data.eligibleCount ?? '?'}</div>
-          <div class="lbl">Éligibles (reçoivent notifs)</div>
+          <div class="num" style="color:${eligOk?'#16A34A':'#DC2626'}">${realEligible.length}</div>
+          <div class="lbl">Éligibles (notifs)</div>
         </div>
       </div>`;
 
     if (!eligOk) {
       html += `<div class="alert alert-red">🚨 0 chauffeur éligible — aucune notification ne peut partir !</div>`;
+    } else {
+      html += `<div class="alert alert-green">✅ ${realEligible.length} chauffeur(s) recevront les notifications</div>`;
     }
 
-    (data.drivers || []).forEach(d => {
-      const online = d.isOnline === true || d.is_online === true || d.status_online === 'online';
-      const cat    = d.vehicleCategory || d.vehicle_category || d.vehicleType || d.vehicle_type || d.vehicleFromObj || '';
+    drivers.forEach(d => {
+      const online    = d.isOnline === true || d.is_online === true;
+      const available = d.available === true || d.is_available === true || online;
+      const cat       = getDriverCategory(d);
+      const hasFcm    = d.hasFcmToken;
+      const elig      = isEligible(d);
+      // Cas spécial : FCM ok + en ligne mais pas de catégorie → "à réparer"
+      const needFix   = (online || hasFcm) && !cat;
+
+      const cls = elig ? 'ok' : (needFix ? 'warn' : 'ko');
+      const badgeCls = elig ? 'ok' : (needFix ? 'warn' : 'ko');
+      const badgeTxt = elig ? 'ÉLIGIBLE' : (needFix ? 'À RÉPARER' : 'NON ÉLIGIBLE');
+
       html += `
-        <div class="driver ${d.eligible?'ok':'ko'}">
+        <div class="driver ${cls}">
           <div class="driver-header">
-            <strong>${d.eligible?'✅':'❌'} ${escHtml(d.name||d.id)}</strong>
-            <span class="badge ${d.eligible?'ok':'ko'}">${d.eligible?'ÉLIGIBLE':'NON ÉLIGIBLE'}</span>
+            <strong>${elig?'✅':(needFix?'⚠️':'❌')} ${escHtml(d.name||d.id||'?')}</strong>
+            <span class="badge ${badgeCls}">${badgeTxt}</span>
           </div>
           <div class="fields">
-            <div>🔑 Status approbation : <span class="${d.status==='approved'?'ok-val':'ko-val'}">${d.status||'MANQUANT'}</span></div>
+            <div>🔑 Status : <span class="${d.status==='approved'?'ok-val':'ko-val'}">${d.status||'MANQUANT'}</span></div>
             <div>📡 En ligne : <span class="${online?'ok-val':'ko-val'}">isOnline=${d.isOnline} | is_online=${d.is_online}</span></div>
-            <div>🔔 FCM Token : <span class="${d.hasFcmToken?'ok-val':'ko-val'}">${d.hasFcmToken?'✅ '+escHtml(d.fcmTokenPreview||''):'❌ MANQUANT — notifications impossibles !'}</span></div>
+            <div>🔔 FCM Token : <span class="${hasFcm?'ok-val':'ko-val'}">${hasFcm?'✅ '+escHtml(d.fcmTokenPreview||''):'❌ MANQUANT'}</span></div>
             <div>🚗 Catégorie : <span class="${cat?'ok-val':'ko-val'}">${cat||'❌ MANQUANT'}</span></div>
-            <div>💰 Solde : <span>${(d.balance??d.creditBalance??0).toLocaleString()} CDF</span></div>
+            <div>💰 Solde : ${(d.balance??d.creditBalance??0).toLocaleString()} CDF</div>
           </div>
-          ${!d.eligible ? `
+          ${!elig && !needFix ? `
           <div style="margin-top:8px;font-size:11px;background:rgba(255,255,255,.6);border-radius:6px;padding:8px;color:#DC2626;">
             <b>Cause :</b>
-            ${!d.hasFcmToken        ? ' ❌ FCM Token manquant.' : ''}
-            ${!online               ? ' ❌ Driver hors ligne (isOnline=false).' : ''}
-            ${!(d.available||d.is_available) ? ' ❌ is_available=false.' : ''}
-            ${!cat                  ? ' ❌ vehicleCategory vide.' : ''}
+            ${!hasFcm    ? ' ❌ FCM Token manquant.' : ''}
+            ${!online    ? ' ❌ Hors ligne.' : ''}
+            ${!available ? ' ❌ is_available=false.' : ''}
+            ${!cat       ? ' ❌ vehicleCategory vide.' : ''}
+          </div>` : ''}
+          ${needFix ? `<div style="margin-top:8px;font-size:11px;background:rgba(255,255,255,.6);border-radius:6px;padding:8px;color:#92400E;">
+            ⚠️ FCM ou en ligne mais <b>vehicleCategory manquant</b> → ne recevra aucune course. Utilise la section "Réparer" ci-dessous.
           </div>` : ''}
         </div>`;
     });
 
-    // Données brutes
     html += `<details style="margin-top:16px;cursor:pointer;"><summary style="font-size:13px;color:#6B7280;">Voir JSON brut</summary><div class="raw">${escHtml(JSON.stringify(data,null,2))}</div></details>`;
 
     result.innerHTML = html;
     document.getElementById('status').textContent = `✅ Analyse terminée — ${data.totalDrivers} chauffeur(s) trouvé(s)`;
+
+    // Remplir la section "Réparer"
+    buildRepairSection(needsRepair);
   }
 
+  // ── Réparation vehicleCategory ────────────────────────────
+  function buildRepairSection(driversToRepair) {
+    const div = document.getElementById('repair-list');
+    if (!driversToRepair || driversToRepair.length === 0) {
+      div.innerHTML = `<div class="alert alert-green">✅ Tous les chauffeurs actifs ont une catégorie définie.</div>`;
+      return;
+    }
+
+    let html = `<p style="font-size:13px;color:#9A3412;margin-bottom:10px;"><b>${driversToRepair.length} chauffeur(s) sans catégorie :</b></p>`;
+    driversToRepair.forEach(d => {
+      const catOptions = Object.entries(CAT_LABELS).map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+      html += `
+        <div class="repair-row">
+          <strong>🚗 ${escHtml(d.name||d.id||'?')}</strong>
+          <span style="font-size:12px;color:#6B7280;">FCM: ${d.hasFcmToken?'✅':'❌'} | En ligne: ${d.isOnline||d.is_online?'✅':'❌'}</span>
+          <select class="cat-picker" id="cat-${escHtml(d.id)}">${catOptions}</select>
+          <button class="btn-sm btn-orange" onclick="repairDriver('${escHtml(d.id)}','${escHtml(d.name||'?')}')">🔧 Réparer</button>
+          <span id="repair-status-${escHtml(d.id)}" style="font-size:12px;"></span>
+        </div>`;
+    });
+    div.innerHTML = html;
+  }
+
+  async function repairDriver(driverId, driverName) {
+    const select = document.getElementById(`cat-${driverId}`);
+    const statusEl = document.getElementById(`repair-status-${driverId}`);
+    if (!select) return;
+    const vehicleCategory = select.value;
+    statusEl.textContent = '⏳ En cours...';
+    statusEl.style.color = '#6B7280';
+
+    try {
+      const res = await fetch(`${BASE_URL}/drivers/${driverId}/update`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicleCategory,
+          vehicle_category: vehicleCategory,
+          vehicle_type: vehicleCategory,
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        statusEl.textContent = `✅ ${CAT_LABELS[vehicleCategory]} enregistré`;
+        statusEl.style.color = '#16A34A';
+      } else {
+        statusEl.textContent = `❌ ${data.error||'Erreur'}`;
+        statusEl.style.color = '#DC2626';
+      }
+    } catch(e) {
+      statusEl.textContent = `❌ Réseau : ${e.message}`;
+      statusEl.style.color = '#DC2626';
+    }
+  }
+
+  // ── Migration ─────────────────────────────────────────────
+  async function runMigration() {
+    const btn = document.getElementById('btn-migrate');
+    const div = document.getElementById('migrate-result');
+    btn.disabled = true;
+    btn.textContent = '⏳ Migration en cours...';
+    div.innerHTML = '';
+
+    try {
+      const res = await fetch(`${BASE_URL}/drivers/migrate-status`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const text = await res.text();
+      let data; try { data = JSON.parse(text); } catch { data = null; }
+      if (!data) { div.innerHTML = `<div class="alert alert-red">Réponse non-JSON : ${escHtml(text)}</div>`; return; }
+      if (data.success) {
+        div.innerHTML = `
+          <div class="alert alert-green">
+            ✅ Migration réussie !<br>
+            • <b>${data.migrated}</b> chauffeur(s) migré(s)<br>
+            • <b>${data.skipped}</b> ignoré(s) (déjà au bon format)<br><br>
+            <b>→ Relance "Analyser les chauffeurs" pour voir le résultat.</b>
+          </div>`;
+      } else {
+        div.innerHTML = `<div class="alert alert-red">❌ ${escHtml(data.error||JSON.stringify(data))}</div>`;
+      }
+    } catch(e) {
+      div.innerHTML = `<div class="alert alert-red">❌ Réseau : ${escHtml(e.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🔄 Relancer la migration';
+    }
+  }
+
+  // ── Test disponibilité ────────────────────────────────────
   async function testAvailability() {
     const cat = document.getElementById('cat-select').value;
     const btn = document.getElementById('btn-avail');
@@ -200,17 +366,16 @@
       const text = await res.text();
       let data; try { data = JSON.parse(text); } catch { data = null; }
       if (!data) { div.innerHTML = `<div class="alert alert-red">Réponse non-JSON : ${escHtml(text)}</div>`; return; }
-
       const ok = data.available === true;
       div.innerHTML = `
-        <div class="alert ${ok?'':'alert-red'}" style="${ok?'background:#F0FDF4;border:2px solid #86EFAC;color:#15803D;':''}">
+        <div class="alert ${ok?'alert-green':'alert-red'}">
           ${ok
-            ? `✅ ${data.driversCount} chauffeur(s) disponible pour <b>${cat}</b>`
-            : `❌ Aucun chauffeur pour <b>${cat}</b> (${data.totalOnline??0} en ligne au total)`}
+            ? `✅ ${data.driversCount} chauffeur(s) disponible(s) pour <b>${CAT_LABELS[cat]||cat}</b> — notifications activées`
+            : `❌ Aucun chauffeur pour <b>${CAT_LABELS[cat]||cat}</b> (${data.totalOnline??0} en ligne au total)`}
         </div>
         <div class="raw">${escHtml(JSON.stringify(data,null,2))}</div>`;
     } catch(e) {
-      div.innerHTML = `<div class="alert alert-red">❌ Erreur réseau : ${escHtml(e.message)}</div>`;
+      div.innerHTML = `<div class="alert alert-red">❌ Réseau : ${escHtml(e.message)}</div>`;
     } finally { btn.disabled = false; }
   }
 
