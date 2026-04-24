@@ -107,6 +107,91 @@ app.get("/pending", async (c) => {
   }
 });
 
+// ─── POST /toggle-online-status — Passer en ligne / hors ligne ────────────────
+app.post("/toggle-online-status", async (c) => {
+  try {
+    const accessToken = c.req.header("Authorization")?.split(" ")[1];
+    if (!accessToken) {
+      return c.json({ success: false, error: "Token d'authentification manquant" }, 401);
+    }
+
+    // Identifier le conducteur depuis son JWT
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser(accessToken);
+    if (authError || !user) {
+      return c.json({ success: false, error: "Utilisateur non authentifié" }, 401);
+    }
+
+    const driverId = user.id;
+    const { isOnline, location } = await c.req.json();
+
+    console.log(`🔄 [DRIVERS/TOGGLE-ONLINE] ${driverId} → ${isOnline ? "EN LIGNE" : "HORS LIGNE"}`);
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+
+    // Vérifier que le conducteur est approuvé
+    if (driver.status !== "approved" && !driver.isApproved) {
+      return c.json({
+        success: false,
+        error: "Votre compte n'est pas encore approuvé. Veuillez attendre la validation de l'administrateur.",
+      }, 403);
+    }
+
+    // Vérifier le solde si passage EN LIGNE
+    if (isOnline) {
+      const balance = driver.creditBalance ?? driver.balance ?? 0;
+      if (balance <= 0) {
+        return c.json({
+          success: false,
+          error: "Solde insuffisant ! Rechargez votre compte pour vous mettre en ligne.",
+        }, 400);
+      }
+    }
+
+    const now = new Date().toISOString();
+    const updatedDriver = {
+      ...driver,
+      isOnline,
+      is_online: isOnline,
+      is_available: isOnline,
+      ...(location ? { location, lastLocation: location } : {}),
+      lastOnlineChange: now,
+      updated_at: now,
+    };
+
+    await kvSet(`driver:${driverId}`, updatedDriver);
+
+    // Sync profil
+    const profile = await kvGet(`profile:${driverId}`);
+    if (profile) {
+      await kvSet(`profile:${driverId}`, {
+        ...profile,
+        isOnline,
+        is_online: isOnline,
+        is_available: isOnline,
+        updated_at: now,
+      });
+    }
+
+    console.log(`✅ [DRIVERS/TOGGLE-ONLINE] Statut mis à jour : ${driverId} → ${isOnline ? "EN LIGNE" : "HORS LIGNE"}`);
+    return c.json({
+      success: true,
+      isOnline,
+      driver: updatedDriver,
+      message: isOnline ? "Vous êtes maintenant en ligne" : "Vous êtes maintenant hors ligne",
+    });
+  } catch (error) {
+    console.error("❌ [DRIVERS/TOGGLE-ONLINE] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
 // ─── GET /:driverId/balance — Solde principal ─────────────────────────────────
 app.get("/:driverId/balance", async (c) => {
   try {
@@ -307,7 +392,7 @@ app.post("/:driverId/wallet/withdraw", async (c) => {
   }
 });
 
-// ─── GET /:driverId — Un conducteur par ID ────────────────────────────────────
+// ─── GET /:driverId — Un conducteur par ID ──────────────��─────────────────────
 app.get("/:driverId", async (c) => {
   try {
     const driverId = c.req.param("driverId");
