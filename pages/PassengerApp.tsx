@@ -64,7 +64,7 @@ function PassengerAppContent() {
     
     // ❌ NE PAS charger PassengerApp si on est sur un écran admin ou driver
     if (currentScreen?.startsWith('admin-') || currentScreen?.startsWith('driver-')) {
-      console.log('⚠️ Écran admin/driver détecté, on ne touche pas à la vue');
+      console.log('⚠️ Écran admin/driver d��tecté, on ne touche pas à la vue');
       return;
     }
     
@@ -402,7 +402,7 @@ function PassengerAppContent() {
       {/* Main App Screens — contrainte mobile 430px */}
       <div className="min-h-screen bg-gray-100 flex justify-center">
         <div className="w-full max-w-[430px] h-screen relative overflow-hidden bg-white shadow-2xl">
-          <div className="h-screen transition-opacity duration-300" style={{ willChange: 'opacity' }}>
+          <div className="h-full transition-opacity duration-300" style={{ willChange: 'opacity' }}>
             {screenComponent}
           </div>
         </div>
