@@ -116,7 +116,7 @@ function DriverAppContent() {
       {/* Contrainte mobile 430px */}
       <div className="min-h-screen bg-gray-100 flex justify-center">
         <div className="w-full max-w-[430px] h-screen relative overflow-hidden bg-white shadow-2xl">
-          <div className="h-screen">
+          <div className="h-full overflow-y-auto">
             {currentScreen === 'driver-welcome' && <DriverWelcomeScreen />}
             {currentScreen === 'driver-login' && <DriverLoginScreen />}
             {currentScreen === 'driver-registration' && <DriverRegistrationScreen />}
