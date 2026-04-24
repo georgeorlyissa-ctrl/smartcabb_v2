@@ -7,9 +7,12 @@ function resolveSupabaseInfo() {
   return {
     name: 'resolve-supabase-info',
     resolveId(source: string) {
-      // Résoudre tous les imports de utils/supabase/info (avec ou sans ../)\
-      if (source.includes('utils/supabase/info') && !source.endsWith('.tsx')) {
-        return path.resolve(__dirname, './utils/supabase/info.tsx');
+      // Résoudre tous les imports de utils/supabase/info (avec ou sans ../)
+      if (source.includes('utils/supabase/info') && !source.endsWith('.ts') && !source.endsWith('.tsx')) {
+        return path.resolve(__dirname, './utils/supabase/info.ts');
+      }
+      if (source.includes('utils/supabase/info') && source.endsWith('.tsx')) {
+        return path.resolve(__dirname, './utils/supabase/info.ts');
       }
       
       // Ignorer tous les imports du dossier supabase/functions/server/
@@ -52,8 +55,8 @@ export default defineConfig({
       'lucide-react': path.resolve(__dirname, './lib/icons.tsx'),
       
       // ✅ FIX CRITIQUE: Alias pour utils/supabase/info (avec ET sans extension)
-      '../utils/supabase/info': path.resolve(__dirname, './utils/supabase/info.tsx'),
-      '../../utils/supabase/info': path.resolve(__dirname, './utils/supabase/info.tsx'),
+      '../utils/supabase/info': path.resolve(__dirname, './utils/supabase/info.ts'),
+      '../../utils/supabase/info': path.resolve(__dirname, './utils/supabase/info.ts'),
       
       // ✅ FIX: Alias pour utils - permet d'importer sans extension
       '@': path.resolve(__dirname, './'),
