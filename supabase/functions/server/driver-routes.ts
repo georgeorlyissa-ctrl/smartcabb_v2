@@ -718,4 +718,119 @@ app.post("/delete-user-by-phone", async (c) => {
   }
 });
 
+// ─── GET /location/:driverId — Position GPS du conducteur ────────────────────
+app.get("/location/:driverId", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    console.log(`📍 [DRIVERS/LOCATION-GET] ${driverId}`);
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+
+    const location =
+      driver.currentLocation ||
+      driver.lastLocation ||
+      driver.location ||
+      driver.current_location ||
+      null;
+
+    return c.json({
+      success: true,
+      driverId,
+      location,
+      isOnline: driver.isOnline ?? driver.is_online ?? false,
+    });
+  } catch (error) {
+    console.error("�� [DRIVERS/LOCATION-GET] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /:driverId/location — Mettre à jour la position ────────────────────
+app.post("/:driverId/location", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const body = await c.req.json();
+    const lat = body.lat ?? body.latitude;
+    const lng = body.lng ?? body.longitude;
+
+    if (lat === undefined || lng === undefined) {
+      return c.json({ success: false, error: "lat et lng requis" }, 400);
+    }
+
+    console.log(`📍 [DRIVERS/LOCATION-POST] ${driverId}: (${lat}, ${lng})`);
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+
+    const locationObj = { lat, lng, updatedAt: new Date().toISOString() };
+    const updatedDriver = {
+      ...driver,
+      location: locationObj,
+      currentLocation: locationObj,
+      lastLocation: locationObj,
+      current_location: locationObj,
+      updated_at: new Date().toISOString(),
+    };
+
+    await kvSet(`driver:${driverId}`, updatedDriver);
+
+    return c.json({ success: true, driverId, location: locationObj });
+  } catch (error) {
+    console.error("❌ [DRIVERS/LOCATION-POST] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /update-driver-location — Endpoint alternatif de localisation ───────
+app.post("/update-driver-location", async (c) => {
+  try {
+    const body = await c.req.json();
+    const driverId = body.driverId;
+    const lat = body.lat ?? body.latitude;
+    const lng = body.lng ?? body.longitude;
+
+    if (!driverId || lat === undefined || lng === undefined) {
+      return c.json({ success: false, error: "driverId, lat et lng requis" }, 400);
+    }
+
+    console.log(`📍 [DRIVERS/UPDATE-LOCATION] ${driverId}: (${lat}, ${lng})`);
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) {
+      // Créer une entrée minimale si inexistante
+      const locationObj = { lat, lng, updatedAt: new Date().toISOString() };
+      await kvSet(`driver:${driverId}`, {
+        id: driverId,
+        location: locationObj,
+        currentLocation: locationObj,
+        lastLocation: locationObj,
+        updated_at: new Date().toISOString(),
+      });
+      return c.json({ success: true, driverId, location: locationObj });
+    }
+
+    const locationObj = { lat, lng, updatedAt: new Date().toISOString() };
+    const updatedDriver = {
+      ...driver,
+      location: locationObj,
+      currentLocation: locationObj,
+      lastLocation: locationObj,
+      current_location: locationObj,
+      updated_at: new Date().toISOString(),
+    };
+
+    await kvSet(`driver:${driverId}`, updatedDriver);
+
+    return c.json({ success: true, driverId, location: locationObj });
+  } catch (error) {
+    console.error("❌ [DRIVERS/UPDATE-LOCATION] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
 export default app;
