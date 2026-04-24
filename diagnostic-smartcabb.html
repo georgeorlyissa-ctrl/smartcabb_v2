@@ -49,6 +49,16 @@
   <div id="result"></div>
 </div>
 
+<div class="card" style="border-left:4px solid #F59E0B;background:#FFFBEB;">
+  <h2 style="margin-bottom:12px;font-size:16px;font-weight:700;">⚠️ Déploiement requis avant d'utiliser ce diagnostic</h2>
+  <p style="font-size:13px;color:#92400E;margin-bottom:12px;">La route <code>/rides/debug-drivers</code> était définie APRÈS <code>GET /:id</code> dans <b>ride-routes.ts</b>, elle était donc inaccessible. Le fichier est maintenant corrigé. Tu dois redéployer le serveur :</p>
+  <div style="background:#FEF3C7;border-radius:8px;padding:14px;font-family:monospace;font-size:13px;line-height:2;">
+    <div>cd /chemin/vers/smartcabb_v2</div>
+    <div>supabase functions deploy make-server-2eb02e52</div>
+  </div>
+  <p style="font-size:12px;color:#92400E;margin-top:10px;">Après déploiement, clique sur <b>"Analyser les chauffeurs"</b> ci-dessous.</p>
+</div>
+
 <div class="card">
   <h2 style="margin-bottom:12px;font-size:16px;font-weight:700;">Tester disponibilité par catégorie</h2>
   <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
