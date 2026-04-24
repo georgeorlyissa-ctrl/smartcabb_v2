@@ -87,7 +87,7 @@
   <div id="repair-result"></div>
 </div>
 
-<!-- ═══ 4. TESTER DISPONIBILITÉ ═════════════════════════════════════════════ -->
+<!-- ═══ 4. TESTER DISPONIBILITÉ ─────────────────────────────────────────── -->
 <div class="card">
   <h2 style="margin-bottom:12px;font-size:16px;font-weight:700;">Tester disponibilité par catégorie</h2>
   <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
@@ -100,6 +100,17 @@
     <button onclick="testAvailability()" id="btn-avail" class="btn-purple">🚗 Tester</button>
   </div>
   <div id="avail-result"></div>
+</div>
+
+<!-- ═══ 5. RESET COMPLET ════════════════════════════════════════════════════ -->
+<div class="card" style="border-left:4px solid #DC2626;background:#FFF1F2;">
+  <h2 style="margin-bottom:12px;font-size:16px;font-weight:700;">🗑️ Reset — Nettoyer les tokens FCM orphelins</h2>
+  <p style="font-size:13px;color:#991B1B;margin-bottom:12px;">
+    Après avoir supprimé tous les drivers depuis le panel admin, clique ici pour supprimer les FCM tokens orphelins dans le KV store.<br>
+    <b>⚠️ Irréversible. À faire uniquement si tu veux repartir de zéro.</b>
+  </p>
+  <button onclick="confirmReset()" id="btn-reset" style="background:#DC2626;">🗑️ Supprimer les tokens FCM orphelins</button>
+  <div id="reset-result"></div>
 </div>
 
 <div class="info" id="token-info"></div>
@@ -377,6 +388,49 @@
     } catch(e) {
       div.innerHTML = `<div class="alert alert-red">❌ Réseau : ${escHtml(e.message)}</div>`;
     } finally { btn.disabled = false; }
+  }
+
+  // ── Reset tokens orphelins ────────────────────────────────
+  async function confirmReset() {
+    const ok = confirm(
+      '⚠️ ATTENTION\n\n' +
+      'Cette action supprime tous les FCM tokens des chauffeurs dans le KV store.\n\n' +
+      'Assure-toi d\'avoir DÉJÀ supprimé tous les drivers depuis le panel admin.\n\n' +
+      'Continuer ?'
+    );
+    if (!ok) return;
+
+    const btn = document.getElementById('btn-reset');
+    const div = document.getElementById('reset-result');
+    btn.disabled = true;
+    btn.textContent = '⏳ Suppression en cours...';
+    div.innerHTML = '';
+
+    try {
+      const res = await fetch(`${BASE_URL}/drivers/reset-fcm-tokens`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${ANON_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      const text = await res.text();
+      let data; try { data = JSON.parse(text); } catch { data = null; }
+      if (!data) { div.innerHTML = `<div class="alert alert-red">Réponse non-JSON : ${escHtml(text)}</div>`; return; }
+      if (data.success) {
+        div.innerHTML = `
+          <div class="alert alert-green">
+            ✅ Nettoyage terminé !<br>
+            • <b>${data.deleted}</b> token(s) FCM supprimé(s)<br><br>
+            Tu peux maintenant enregistrer de nouveaux chauffeurs.
+          </div>`;
+      } else {
+        div.innerHTML = `<div class="alert alert-red">❌ ${escHtml(data.error||JSON.stringify(data))}</div>`;
+      }
+    } catch(e) {
+      div.innerHTML = `<div class="alert alert-red">❌ Réseau : ${escHtml(e.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🗑️ Supprimer les tokens FCM orphelins';
+    }
   }
 
   function escHtml(s) {
