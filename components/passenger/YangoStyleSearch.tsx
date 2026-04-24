@@ -1,38 +1,41 @@
 /**
- * 🎯 RECHERCHE YANGO-STYLE - 100% GOOGLE MAPS API
- * 
- * ✅ MIGRATION COMPLÈTE : Utilise uniquement Google Maps API
- * ✅ Google Places Text Search + Autocomplete
- * ✅ Exactement comme Yango/Uber
- * ✅ Pas de base locale, pas d'OpenStreetMap
+ * 🔍 SMARTCABB INTELLIGENT SEARCH — Moteur de recherche ultra-intelligent pour Kinshasa
+ *
+ * Stratégie multi-sources en parallèle :
+ *  1. Base locale Kinshasa → résultats instantanés (0 ms)
+ *  2. Google Places API via backend → résultats précis (~500 ms)
+ *  3. Merge intelligent + scoring fuzzy par tokens
+ *
+ * @version 4.0.0 — Moteur hybride sans dépendance au hostname
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from '../../lib/toast';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Card } from '../ui/card';
 import { motion } from '../../lib/motion';
-import { Search, MapPin, Clock, Star, X } from '../../lib/icons';
+import { Search, MapPin, Clock, Star, X, Navigation } from '../../lib/icons';
 import * as GoogleMapsService from '../../lib/google-maps-service';
 import { kinshasaPlacesDatabase, type LocalPlace } from '../../lib/kinshasa-places-database';
 
-interface SearchResult {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export interface SearchResult {
   id: string;
   name: string;
   description: string;
   coordinates?: { lat: number; lng: number };
   placeId?: string;
-  type?: 'place' | 'recent' | 'favorite';
+  type?: 'place' | 'recent' | 'favorite' | 'commune';
   placeType?: string;
   distance?: number;
   rating?: number;
   userRatingsTotal?: number;
-  source: 'google_maps';
+  source: 'google_maps' | 'local' | 'recent';
+  score?: number;
 }
 
-interface YangoStyleSearchProps {
+export interface YangoStyleSearchProps {
   placeholder?: string;
   onSelect: (result: SearchResult) => void;
   currentLocation?: { lat: number; lng: number };
@@ -41,303 +44,344 @@ interface YangoStyleSearchProps {
   onManualSubmit?: (value: string) => void;
 }
 
-export function YangoStyleSearch({ 
-  placeholder = "Où allez-vous ?", 
+// ─── Base étendue : communes + quartiers de Kinshasa ─────────────────────────
+// Utilisée comme "hints" pour la recherche locale quand la DB principale ne couvre pas
+
+const KINSHASA_COMMUNES: Record<string, { lat: number; lng: number; quartiers: string[] }> = {
+  'Gombe':        { lat: -4.3037, lng: 15.3072, quartiers: ['Gombe', 'Centre-ville', 'Boulevard du 30 Juin'] },
+  'Kinshasa':     { lat: -4.3219, lng: 15.3147, quartiers: ['Kinshasa', 'Kintambo'] },
+  'Barumbu':      { lat: -4.3162, lng: 15.2974, quartiers: ['Barumbu', 'Kintambo', 'Ngaliema'] },
+  'Kasa-Vubu':    { lat: -4.3426, lng: 15.3028, quartiers: ['Kasa-Vubu', 'Matonge', 'Victoire'] },
+  'Ngiri-Ngiri':  { lat: -4.3471, lng: 15.3028, quartiers: ['Ngiri-Ngiri', 'Matonge'] },
+  'Bumbu':        { lat: -4.3897, lng: 15.2740, quartiers: ['Bumbu', 'Kisenso'] },
+  'Selembao':     { lat: -4.4101, lng: 15.2737, quartiers: ['Selembao', 'Kimwenza'] },
+  'Kalamu':       { lat: -4.3568, lng: 15.3131, quartiers: ['Kalamu', 'Matonge', 'Camp Luka'] },
+  'Lemba':        { lat: -4.3968, lng: 15.3111, quartiers: ['Lemba', 'Righini', 'Terminus'] },
+  'Makala':       { lat: -4.3744, lng: 15.2787, quartiers: ['Makala', 'Cité Verte'] },
+  'Ngaliema':     { lat: -4.3249, lng: 15.2560, quartiers: ['Ngaliema', 'Djelo Binza', 'Binza', 'Djalo', 'Djali', 'Ngomba-Kinkusa'] },
+  'Mont-Ngafula': { lat: -4.4396, lng: 15.2519, quartiers: ['Mont-Ngafula', 'Kimwenza', 'Mbudi'] },
+  'Kimbanseke':   { lat: -4.4281, lng: 15.4019, quartiers: ['Kimbanseke', 'Kimbwala'] },
+  "N'sele":       { lat: -4.3569, lng: 15.5333, quartiers: ["N'sele", 'Mikonga', 'Malweka'] },
+  'Maluku':       { lat: -4.0564, lng: 15.5628, quartiers: ['Maluku', 'Mbankana'] },
+  'Masina':       { lat: -4.3856, lng: 15.4446, quartiers: ['Masina', 'Kingasani', 'Camp Massart', 'Pascal', 'Zone industrielle'] },
+  'Matete':       { lat: -4.3682, lng: 15.2895, quartiers: ['Matete', 'Righini'] },
+  "N'djili":      { lat: -4.3856, lng: 15.4094, quartiers: ["N'djili", 'Aéroport', 'Camp Kauka'] },
+  'Bandalungwa':  { lat: -4.3508, lng: 15.2901, quartiers: ['Bandalungwa', 'Djingarey'] },
+  'Lingwala':     { lat: -4.3162, lng: 15.3028, quartiers: ['Lingwala', 'Pont Kasai'] },
+  'Kintambo':     { lat: -4.3219, lng: 15.2889, quartiers: ['Kintambo', 'Magasin'] },
+  'Kisenso':      { lat: -4.4003, lng: 15.3288, quartiers: ['Kisenso', 'Mitendi'] },
+  'Limete':       { lat: -4.3469, lng: 15.3634, quartiers: ['Limete', 'Industriel', 'Résidentiel', 'Mombele'] },
+  'Ndjili':       { lat: -4.3731, lng: 15.4061, quartiers: ["N'djili", 'Aéroport N\'djili'] },
+};
+
+// ─── Moteur de scoring fuzzy ─────────────────────────────────────────────────
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Retire les accents
+    .split(/[\s,\-\/\(\)\.]+/)
+    .filter(t => t.length >= 2);
+}
+
+function scorePlace(place: LocalPlace, tokens: string[]): number {
+  let score = 0;
+  const nameTokens = tokenize(place.name);
+  const communeTokens = tokenize(place.commune);
+  const aliasTokens = place.aliases.flatMap(a => tokenize(a));
+  const quartierTokens = place.quartier ? tokenize(place.quartier) : [];
+  const addressTokens = tokenize(place.address);
+  const tagTokens = (place.tags || []).flatMap(t => tokenize(t));
+
+  for (const token of tokens) {
+    // Correspondance exacte dans le nom → score élevé
+    if (nameTokens.some(t => t === token)) score += 10;
+    else if (nameTokens.some(t => t.startsWith(token) || token.startsWith(t))) score += 6;
+
+    // Commune
+    if (communeTokens.some(t => t === token)) score += 8;
+    else if (communeTokens.some(t => t.startsWith(token) || token.startsWith(t))) score += 5;
+
+    // Aliases
+    if (aliasTokens.some(t => t === token)) score += 7;
+    else if (aliasTokens.some(t => t.startsWith(token) || token.startsWith(t))) score += 4;
+
+    // Quartier
+    if (quartierTokens.some(t => t === token)) score += 7;
+    else if (quartierTokens.some(t => t.startsWith(token) || token.startsWith(t))) score += 4;
+
+    // Adresse
+    if (addressTokens.some(t => t === token)) score += 4;
+    else if (addressTokens.some(t => t.startsWith(token) || token.startsWith(t))) score += 2;
+
+    // Tags
+    if (tagTokens.some(t => t === token)) score += 2;
+  }
+
+  // Bonus popularité
+  score += (place.popularity || 0) * 0.3;
+
+  return score;
+}
+
+// Recherche dans les communes de Kinshasa (pour couvrir les cas non couverts par la DB)
+function searchCommunes(tokens: string[]): SearchResult[] {
+  const results: SearchResult[] = [];
+  for (const [commune, data] of Object.entries(KINSHASA_COMMUNES)) {
+    const communeTokens = tokenize(commune);
+    const quartierResults: SearchResult[] = [];
+
+    let communeScore = 0;
+    for (const token of tokens) {
+      if (communeTokens.some(t => t === token || t.startsWith(token) || token.startsWith(t))) {
+        communeScore += 8;
+      }
+    }
+
+    // Chercher dans les quartiers
+    for (const quartier of data.quartiers) {
+      const quartierTokens = tokenize(quartier);
+      let qtScore = 0;
+      for (const token of tokens) {
+        if (quartierTokens.some(t => t === token || t.startsWith(token) || token.startsWith(t))) {
+          qtScore += 6;
+        }
+      }
+      if (qtScore > 0) {
+        quartierResults.push({
+          id: `commune-${commune}-${quartier}`.replace(/\s+/g, '-').toLowerCase(),
+          name: `${quartier}`,
+          description: `Commune de ${commune}, Kinshasa`,
+          coordinates: data,
+          type: 'commune',
+          source: 'local',
+          score: qtScore + communeScore,
+        });
+      }
+    }
+
+    if (quartierResults.length > 0) {
+      results.push(...quartierResults);
+    } else if (communeScore > 0) {
+      results.push({
+        id: `commune-${commune}`.replace(/\s+/g, '-').toLowerCase(),
+        name: commune,
+        description: `Commune de Kinshasa`,
+        coordinates: data,
+        type: 'commune',
+        source: 'local',
+        score: communeScore,
+      });
+    }
+  }
+  return results;
+}
+
+function localSearch(query: string, currentLocation?: { lat: number; lng: number }): SearchResult[] {
+  const tokens = tokenize(query);
+  if (tokens.length === 0) return [];
+
+  // Scorer la DB principale
+  const dbResults: Array<{ place: LocalPlace; score: number }> = [];
+  for (const place of kinshasaPlacesDatabase) {
+    const score = scorePlace(place, tokens);
+    if (score > 0) dbResults.push({ place, score });
+  }
+
+  // Chercher dans les communes
+  const communeResults = searchCommunes(tokens);
+
+  // Convertir DB en SearchResult
+  const dbSearchResults: SearchResult[] = dbResults.map(({ place, score }) => ({
+    id: place.id,
+    name: place.name,
+    description: `${place.address}${place.commune ? `, ${place.commune}` : ''}`,
+    coordinates: place.coordinates,
+    type: 'place' as const,
+    placeType: place.category,
+    source: 'local' as const,
+    score,
+  }));
+
+  // Merger et dédupliquer
+  const merged = [...dbSearchResults, ...communeResults];
+
+  // Calculer distance si position disponible
+  if (currentLocation) {
+    for (const r of merged) {
+      if (r.coordinates) {
+        const R = 6371;
+        const dLat = (r.coordinates.lat - currentLocation.lat) * Math.PI / 180;
+        const dLng = (r.coordinates.lng - currentLocation.lng) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) ** 2 +
+          Math.cos(currentLocation.lat * Math.PI / 180) *
+          Math.cos(r.coordinates.lat * Math.PI / 180) *
+          Math.sin(dLng / 2) ** 2;
+        r.distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+    }
+  }
+
+  // Tri : score desc, puis distance asc
+  merged.sort((a, b) => {
+    const scoreDiff = (b.score || 0) - (a.score || 0);
+    if (Math.abs(scoreDiff) > 2) return scoreDiff;
+    return (a.distance || 999) - (b.distance || 999);
+  });
+
+  return merged.slice(0, 20);
+}
+
+// Icônes par type de lieu
+const PLACE_ICONS: Record<string, string> = {
+  terminal: '🚌', market: '🛒', mall: '🏬', hotel: '🏨', restaurant: '🍽️',
+  hospital: '🏥', church: '⛪', school: '🎓', bank: '🏦', station: '⛽',
+  office: '🏢', park: '🌳', university: '🏛️', government: '🏛️', airport: '✈️',
+  stadium: '🏟️', monument: '🗽', embassy: '🏛️', gas_station: '⛽',
+  landmark: '📍', residential: '🏘️', commune: '📍', other: '📍',
+  // Types Google Maps
+  shopping_mall: '🏬', supermarket: '🛒', bus_station: '🚌', train_station: '🚆',
+  transit_station: '🚉', pharmacy: '💊', bar: '🍺', mosque: '🕌', library: '📚',
+  atm: '💳', parking: '🅿️', police: '👮', gym: '💪', movie_theater: '🎬',
+};
+
+// ─── Composant principal ──────────────────────────────────────────────────────
+
+export function YangoStyleSearch({
+  placeholder = 'Où allez-vous ?',
   onSelect,
   currentLocation,
   value: controlledValue,
   onChange: onControlledChange,
-  onManualSubmit
+  onManualSubmit,
 }: YangoStyleSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [recentSearches, setRecentSearches] = useState<SearchResult[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<SearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const googleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Utiliser la valeur contrôlée si fournie
   const displayValue = controlledValue !== undefined ? controlledValue : query;
 
-  // Charger l'historique au démarrage
+  // Charger historique
   useEffect(() => {
-    const saved = localStorage.getItem('smartcabb_recent_searches');
-    if (saved) {
-      try {
-        setRecentSearches(JSON.parse(saved));
-      } catch (e) {
-        console.error('Erreur chargement historique:', e);
-      }
-    }
+    try {
+      const saved = localStorage.getItem('smartcabb_recent_searches');
+      if (saved) setRecentSearches(JSON.parse(saved));
+    } catch {}
   }, []);
 
-  // ✅ RECHERCHE 100% GOOGLE MAPS API + FALLBACK LOCAL POUR FIGMA MAKE
+  // ─── Moteur de recherche hybride ──────────────────────────────────────────
+
   useEffect(() => {
+    if (googleTimerRef.current) clearTimeout(googleTimerRef.current);
+
     if (displayValue.length < 2) {
-      // Afficher l'historique si le champ est vide ou < 2 caractères
-      setResults(recentSearches.slice(0, 5));
+      setResults(recentSearches.slice(0, 6));
       setIsLoading(false);
       return;
     }
 
+    // 1️⃣ Résultats locaux IMMÉDIATS
+    const local = localSearch(displayValue, currentLocation);
+    if (local.length > 0) {
+      setResults(local);
+    }
     setIsLoading(true);
-    
-    // Délai anti-spam
-    const timer = setTimeout(async () => {
-      console.log('🗺️ ===== RECHERCHE ADRESSE =====');
-      console.log(`📝 Query: "${displayValue}"`);
-      console.log(`📍 Position:`, currentLocation);
-      
+
+    // 2️⃣ Recherche Google Places via backend (avec délai anti-spam)
+    googleTimerRef.current = setTimeout(async () => {
       try {
-        // ✅ DÉTECTION ENVIRONNEMENT FIGMA MAKE
-        const isFigmaMake = window.location.hostname.includes('figma.site');
-        console.log(`🏗️ Environnement: ${isFigmaMake ? 'FIGMA MAKE' : 'PRODUCTION'}`);
-        
-        let googleResults = [];
-        
-        // ✅ SEULEMENT EN PRODUCTION : Appeler Google Maps
-        if (!isFigmaMake) {
-          console.log('☁️ Recherche Google Maps...');
-          googleResults = await GoogleMapsService.searchPlaces(
-            displayValue,
-            currentLocation
-          );
-          console.log(`✅ Google Maps: ${googleResults.length} résultats`);
-        } else {
-          console.log('⚠️ Figma Make détecté - SKIP Google Maps, utilisation base locale directe');
-        }
-        
-        // 🔄 FALLBACK : Si Google Maps ne retourne rien OU si Figma Make
-        if (googleResults.length === 0) {
-          console.log('⚠️ Utilisation de la base locale de Kinshasa...');
-          
-          // Recherche dans la base locale de Kinshasa
-          const queryLower = displayValue.toLowerCase().trim();
-          const localResults = kinshasaPlacesDatabase.filter(place => {
-            const nameMatch = place.name.toLowerCase().includes(queryLower);
-            const aliasMatch = place.aliases.some(alias => alias.toLowerCase().includes(queryLower));
-            const communeMatch = place.commune.toLowerCase().includes(queryLower);
-            const quartierMatch = place.quartier?.toLowerCase().includes(queryLower);
-            const addressMatch = place.address.toLowerCase().includes(queryLower);
-            
-            return nameMatch || aliasMatch || communeMatch || quartierMatch || addressMatch;
-          });
-          
-          console.log(`🏙️ Base locale: ${localResults.length} résultats trouvés`);
-          
-          // Calculer la distance si position fournie
-          if (currentLocation) {
-            localResults.forEach(place => {
-              const R = 6371; // Rayon Terre en km
-              const dLat = (place.coordinates.lat - currentLocation.lat) * Math.PI / 180;
-              const dLng = (place.coordinates.lng - currentLocation.lng) * Math.PI / 180;
-              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.cos(currentLocation.lat * Math.PI / 180) * 
-                        Math.cos(place.coordinates.lat * Math.PI / 180) *
-                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
-              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-              place.distance = R * c;
-            });
-            
-            // Trier par distance
-            localResults.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-          } else {
-            // Trier par popularité
-            localResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-          }
-          
-          // Convertir au format SearchResult
-          const searchResults: SearchResult[] = localResults.slice(0, 15).map(place => ({
-            id: place.id,
-            name: place.name,
-            description: `${place.address}${place.commune ? `, ${place.commune}` : ''}`,
-            coordinates: place.coordinates,
+        console.log('🔍 [SmartSearch] Backend Google Places:', displayValue);
+        const googlePlaces = await GoogleMapsService.searchPlaces(displayValue, currentLocation);
+
+        if (googlePlaces && googlePlaces.length > 0) {
+          console.log(`✅ [SmartSearch] Google: ${googlePlaces.length} résultats`);
+
+          const googleResults: SearchResult[] = googlePlaces.map((p: any) => ({
+            id: p.id || p.placeId || String(Math.random()),
+            name: p.name,
+            description: p.description || p.fullAddress || '',
+            coordinates: p.coordinates,
+            placeId: p.placeId,
             type: 'place' as const,
-            placeType: place.category,
-            distance: place.distance,
-            source: 'google_maps' as const // On garde google_maps pour la cohérence
+            placeType: p.types?.[0] || 'place',
+            distance: p.distance,
+            rating: p.rating,
+            userRatingsTotal: p.userRatingsTotal,
+            source: 'google_maps' as const,
+            score: 100,
           }));
-          
-          setResults(searchResults);
-          console.log('🏙️ Résultats locaux affichés');
-          setIsLoading(false);
-          return;
+
+          // Merger Google + local (Google en priorité, local en complément)
+          const seenNames = new Set(googleResults.map(r => r.name.toLowerCase()));
+          const localComplement = local
+            .filter(r => !seenNames.has(r.name.toLowerCase()))
+            .slice(0, 5);
+
+          const merged = [...googleResults, ...localComplement];
+          setResults(merged);
+        } else if (local.length === 0) {
+          // Ni Google ni local → aucun résultat
+          setResults([]);
         }
-        
-        // Convertir les résultats Google Maps au format SearchResult
-        const searchResults: SearchResult[] = googleResults.map(place => ({
-          id: place.id,
-          name: place.name,
-          description: place.description,
-          coordinates: place.coordinates,
-          placeId: place.placeId,
-          type: 'place' as const,
-          placeType: place.types?.[0] || 'place',
-          distance: place.distance,
-          rating: place.rating,
-          userRatingsTotal: place.userRatingsTotal,
-          source: 'google_maps' as const
-        }));
-        
-        // Filtrer par distance si position fournie
-        let filtered = searchResults;
-        
-        if (currentLocation) {
-          const MAX_DISTANCE = 50; // km
-          
-          filtered = searchResults.filter(r => {
-            if (!r.distance) return true; // Garder si pas de distance
-            return r.distance <= MAX_DISTANCE;
-          });
-          
-          console.log(`🎯 ${filtered.length} résultats après filtre distance (< ${MAX_DISTANCE}km)`);
-        }
-        
-        // Trier par pertinence (distance puis rating)
-        filtered.sort((a, b) => {
-          // Priorité à la distance si disponible
-          if (a.distance !== undefined && b.distance !== undefined) {
-            if (Math.abs(a.distance - b.distance) > 1) {
-              return a.distance - b.distance;
-            }
-          }
-          
-          // Sinon, trier par rating
-          if (a.rating && b.rating) {
-            return b.rating - a.rating;
-          }
-          
-          return 0;
-        });
-        
-        // Limiter à 15 résultats max
-        const final = filtered.slice(0, 15);
-        
-        console.log('📊 Top 5:', final.slice(0, 5).map(r => 
-          `${r.name} - ${r.distance?.toFixed(1)}km ${r.rating ? `⭐${r.rating}` : ''}`
-        ));
-        console.log('🗺️ ===== RECHERCHE TERMINÉE =====');
-        
-        setResults(final);
-        
-      } catch (error) {
-        console.error('❌ Erreur recherche Google Maps:', error);
-        
-        // 🔄 FALLBACK EN CAS D'ERREUR : Utiliser la base locale
-        console.log('⚠️ Erreur Google Maps - Basculement vers base locale...');
-        
-        const queryLower = displayValue.toLowerCase().trim();
-        const localResults = kinshasaPlacesDatabase.filter(place => {
-          const nameMatch = place.name.toLowerCase().includes(queryLower);
-          const aliasMatch = place.aliases.some(alias => alias.toLowerCase().includes(queryLower));
-          const communeMatch = place.commune.toLowerCase().includes(queryLower);
-          
-          return nameMatch || aliasMatch || communeMatch;
-        });
-        
-        console.log(`🏙️ Base locale (fallback): ${localResults.length} résultats`);
-        
-        // Calculer distance et trier
-        if (currentLocation) {
-          localResults.forEach(place => {
-            const R = 6371;
-            const dLat = (place.coordinates.lat - currentLocation.lat) * Math.PI / 180;
-            const dLng = (place.coordinates.lng - currentLocation.lng) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(currentLocation.lat * Math.PI / 180) * 
-                      Math.cos(place.coordinates.lat * Math.PI / 180) *
-                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            place.distance = R * c;
-          });
-          localResults.sort((a, b) => (a.distance || 999) - (b.distance || 999));
-        } else {
-          localResults.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-        }
-        
-        const searchResults: SearchResult[] = localResults.slice(0, 15).map(place => ({
-          id: place.id,
-          name: place.name,
-          description: `${place.address}${place.commune ? `, ${place.commune}` : ''}`,
-          coordinates: place.coordinates,
-          type: 'place' as const,
-          placeType: place.category,
-          distance: place.distance,
-          source: 'google_maps' as const
-        }));
-        
-        setResults(searchResults);
-        
-        if (searchResults.length === 0) {
-          toast.error('Erreur de recherche. Veuillez réessayer.');
-        }
+        // Si Google vide mais local a des résultats, on garde les locaux
+      } catch (err) {
+        console.warn('⚠️ [SmartSearch] Google indisponible, résultats locaux uniquement');
+        // Les résultats locaux sont déjà affichés
       } finally {
         setIsLoading(false);
       }
-    }, 400); // 400ms de délai pour éviter trop de requêtes
+    }, 350);
 
-    return () => clearTimeout(timer);
-  }, [displayValue, currentLocation, recentSearches]);
+    return () => {
+      if (googleTimerRef.current) clearTimeout(googleTimerRef.current);
+    };
+  }, [displayValue, currentLocation]);
 
-  const handleSelect = async (result: SearchResult) => {
-    console.log('✅ Lieu sélectionné:', result.name);
-    console.log('🔍 Coordonnées:', result.coordinates);
-    
-    // Si placeId mais pas de coordonnées, récupérer les détails
-    if (result.placeId && !result.coordinates) {
+  // ─── Sélection d'un résultat ──────────────────────────────────────────────
+
+  const handleSelect = useCallback(async (result: SearchResult) => {
+    let finalResult = { ...result };
+
+    // Si placeId Google mais pas de coordonnées, récupérer les détails
+    if (result.source === 'google_maps' && result.placeId && !result.coordinates) {
       try {
-        console.log('📍 Récupération des détails pour place_id:', result.placeId);
-        
-        const place = await GoogleMapsService.getPlaceDetails(result.placeId);
-        
-        if (place && place.coordinates) {
-          result.coordinates = place.coordinates;
-          console.log('✅ Coordonnées récupérées:', place.coordinates);
-        } else {
-          console.error('❌ Impossible de récupérer les coordonnées');
-        }
-      } catch (error) {
-        console.error('❌ Erreur place details:', error);
-      }
+        const details = await GoogleMapsService.getPlaceDetails(result.placeId);
+        if (details?.coordinates) finalResult.coordinates = details.coordinates;
+      } catch {}
     }
-    
-    // ✅ VÉRIFICATION CRITIQUE : S'assurer que le résultat a des coordonnées
-    if (!result.coordinates) {
-      console.error('❌ ERREUR: Aucune coordonnée disponible pour:', result.name);
+
+    if (!finalResult.coordinates) {
       toast.error('Impossible de localiser cette adresse. Veuillez réessayer.');
       return;
     }
-    
+
     // Sauvegarder dans l'historique
-    if (result.type === 'place') {
-      const newRecent = [
-        { ...result, type: 'recent' as const },
-        ...recentSearches.filter(r => r.id !== result.id)
-      ].slice(0, 10);
-      
-      setRecentSearches(newRecent);
-      localStorage.setItem('smartcabb_recent_searches', JSON.stringify(newRecent));
-    }
-    
-    // Mettre à jour la valeur affichée
-    if (onControlledChange) {
-      onControlledChange(result.name);
-    } else {
-      setQuery(result.name);
-    }
-    
-    // Notifier le parent
-    console.log('📤 Envoi du résultat au parent:', {
-      name: result.name,
-      coordinates: result.coordinates,
-      description: result.description
-    });
-    onSelect(result);
-    
-    // Fermer les suggestions
+    const newRecent: SearchResult[] = [
+      { ...finalResult, type: 'recent', source: 'recent' },
+      ...recentSearches.filter(r => r.id !== finalResult.id),
+    ].slice(0, 10);
+    setRecentSearches(newRecent);
+    localStorage.setItem('smartcabb_recent_searches', JSON.stringify(newRecent));
+
+    // Mettre à jour l'input
+    if (onControlledChange) onControlledChange(finalResult.name);
+    else setQuery(finalResult.name);
+
+    onSelect(finalResult);
     setShowSuggestions(false);
     setResults([]);
+  }, [recentSearches, onControlledChange, onSelect]);
+
+  const clearInput = () => {
+    setQuery('');
+    if (onControlledChange) onControlledChange('');
+    setResults(recentSearches.slice(0, 6));
+    inputRef.current?.focus();
   };
 
   const clearRecent = () => {
@@ -345,221 +389,178 @@ export function YangoStyleSearch({
     localStorage.removeItem('smartcabb_recent_searches');
     setResults([]);
   };
-  
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && displayValue.trim()) {
       e.preventDefault();
-      
-      if (results.length > 0) {
-        // Sélectionner le premier résultat
-        handleSelect(results[0]);
-      } else if (onManualSubmit) {
-        // Saisie manuelle (pas recommandé avec Google Maps)
-        console.log('✍️ Saisie manuelle validée:', displayValue);
-        onManualSubmit(displayValue);
-      }
+      if (results.length > 0) handleSelect(results[0]);
+      else if (onManualSubmit) onManualSubmit(displayValue);
     }
   };
 
-  // Déterminer l'icône selon le type de lieu Google Maps
-  const getPlaceIcon = (types?: string[]) => {
-    if (!types || types.length === 0) {
-      return <MapPin className="w-5 h-5 text-blue-600" />;
-    }
-    
-    const type = types[0];
-    
-    // Icônes basées sur les types Google Maps
-    const iconMap: Record<string, string> = {
-      'airport': '✈️',
-      'bus_station': '🚌',
-      'train_station': '🚆',
-      'transit_station': '🚉',
-      'shopping_mall': '🏬',
-      'supermarket': '🛒',
-      'store': '🏪',
-      'restaurant': '🍽️',
-      'cafe': '☕',
-      'bar': '🍺',
-      'hospital': '🏥',
-      'pharmacy': '💊',
-      'doctor': '👨‍⚕️',
-      'church': '⛪',
-      'mosque': '🕌',
-      'hindu_temple': '🛕',
-      'school': '🎓',
-      'university': '🏛️',
-      'library': '📚',
-      'bank': '🏦',
-      'atm': '💳',
-      'hotel': '🏨',
-      'lodging': '🛏️',
-      'park': '🌳',
-      'stadium': '🏟️',
-      'gym': '💪',
-      'museum': '🏛️',
-      'art_gallery': '🎨',
-      'movie_theater': '🎬',
-      'gas_station': '⛽',
-      'car_repair': '🔧',
-      'parking': '🅿️',
-      'police': '👮',
-      'fire_station': '🚒',
-      'post_office': '📮',
-      'embassy': '🏛️'
-    };
-    
-    const emoji = iconMap[type];
-    
-    if (emoji) {
-      return <span className="text-xl">{emoji}</span>;
-    }
-    
-    return <MapPin className="w-5 h-5 text-blue-600" />;
+  // Icône pour un résultat
+  const getIcon = (result: SearchResult) => {
+    if (result.type === 'recent') return <Clock className="w-4 h-4 text-gray-500" />;
+    const key = result.placeType || result.type || 'other';
+    const emoji = PLACE_ICONS[key] || PLACE_ICONS['other'];
+    return <span className="text-lg leading-none">{emoji}</span>;
   };
+
+  const showResults = showSuggestions && results.length > 0;
+  const showEmpty = showSuggestions && !isLoading && displayValue.length >= 2 && results.length === 0;
 
   return (
     <div className="relative w-full">
-      {/* Input de recherche */}
+      {/* ── Input ────────────────────────────────────────────────────────── */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         <Input
           ref={inputRef}
           value={displayValue}
-          onChange={(e) => {
-            const newValue = e.target.value;
-            setQuery(newValue);
-            if (onControlledChange) {
-              onControlledChange(newValue);
-            }
+          onChange={e => {
+            const v = e.target.value;
+            setQuery(v);
+            if (onControlledChange) onControlledChange(v);
             setShowSuggestions(true);
           }}
           onKeyDown={handleKeyDown}
-          onFocus={() => setShowSuggestions(true)}
-          onBlur={() => {
-            setTimeout(() => setShowSuggestions(false), 300);
+          onFocus={() => {
+            setShowSuggestions(true);
+            if (displayValue.length < 2) setResults(recentSearches.slice(0, 6));
           }}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
           placeholder={placeholder}
-          className="pl-11 pr-10 h-12 text-base border border-blue-400 rounded-xl focus:border-blue-600 focus:ring-2 focus:ring-blue-200 transition-all"
+          className="pl-10 pr-9 h-11 text-sm border border-gray-200 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-200 transition-all bg-white shadow-sm"
           autoComplete="off"
+          spellCheck={false}
         />
-        {displayValue && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setQuery('');
-              if (onControlledChange) {
-                onControlledChange('');
-              }
-            }}
-            className="absolute right-1 top-1/2 transform -translate-y-1/2 w-8 h-8 hover:bg-gray-100"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        )}
+        {/* Indicateur chargement / bouton clear */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {isLoading && displayValue.length >= 2 && (
+            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          )}
+          {displayValue && !isLoading && (
+            <button
+              onMouseDown={e => { e.preventDefault(); clearInput(); }}
+              className="w-5 h-5 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
+            >
+              <X className="w-3 h-3 text-gray-600" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Liste de suggestions */}
-      {showSuggestions && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 max-h-96 overflow-y-auto z-50" ref={suggestionsRef}>
-          {/* En-tête si historique */}
-          {query.length < 2 && recentSearches.length > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-400" />
-                <span className="text-sm font-medium text-gray-600">Recherches récentes</span>
+      {/* ── Liste de suggestions ──────────────────────────────────────────── */}
+      {showResults && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-[9999]"
+          style={{ maxHeight: '70vh', overflowY: 'auto' }}
+        >
+          {/* En-tête historique */}
+          {displayValue.length < 2 && recentSearches.length > 0 && (
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-50 bg-gray-50/80">
+              <div className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Récents</span>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearRecent}
-                className="text-xs text-blue-600 hover:text-blue-700 h-auto p-1"
+              <button
+                onMouseDown={e => { e.preventDefault(); clearRecent(); }}
+                className="text-xs text-blue-500 hover:text-blue-700 font-medium"
               >
                 Effacer
-              </Button>
+              </button>
             </div>
           )}
 
-          {/* Résultats Google Maps */}
-          {results.map((result) => {
-            const icon = result.type === 'recent' 
-              ? <Clock className="w-5 h-5 text-gray-600" />
-              : getPlaceIcon(result.placeType?.split(','));
-            
-            return (
-              <button
-                key={result.id}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  handleSelect(result);
-                }}
-                className="w-full px-4 py-3.5 text-left hover:bg-gray-50 active:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 flex items-start gap-3"
-              >
-                {/* Icône */}
-                <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-blue-50">
-                  {icon}
-                </div>
+          {/* Résultats */}
+          {results.map((result, idx) => (
+            <button
+              key={`${result.id}-${idx}`}
+              onMouseDown={e => { e.preventDefault(); handleSelect(result); }}
+              className="w-full px-3 py-3 text-left hover:bg-blue-50/60 active:bg-blue-100 transition-colors border-b border-gray-50 last:border-b-0 flex items-center gap-3 group"
+            >
+              {/* Icône */}
+              <div className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-gray-50 group-hover:bg-blue-100 transition-colors">
+                {getIcon(result)}
+              </div>
 
-                {/* Texte */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-base font-semibold text-gray-900 truncate">
-                      {result.name}
-                    </p>
-                    {result.rating && (
-                      <div className="flex items-center gap-1 text-xs text-amber-600 flex-shrink-0">
-                        <Star className="w-3 h-3 fill-amber-400" />
-                        <span>{result.rating.toFixed(1)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 truncate mt-0.5">
-                    {result.description}
-                  </p>
-                  {result.userRatingsTotal && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {result.userRatingsTotal} avis
-                    </p>
+              {/* Texte */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{result.name}</p>
+                  {result.source === 'google_maps' && (
+                    <span className="flex-shrink-0 text-[10px] text-blue-500 font-medium bg-blue-50 px-1.5 py-0.5 rounded-full">
+                      Google
+                    </span>
                   )}
                 </div>
-                
-                {/* Distance si disponible */}
-                {result.distance !== undefined && (
-                  <div className="flex-shrink-0 text-sm text-gray-500">
-                    {result.distance.toFixed(1)} km
+                <p className="text-xs text-gray-500 truncate mt-0.5">{result.description}</p>
+                {result.rating && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    <span className="text-xs text-amber-600 font-medium">{result.rating.toFixed(1)}</span>
+                    {result.userRatingsTotal && (
+                      <span className="text-xs text-gray-400">({result.userRatingsTotal})</span>
+                    )}
                   </div>
                 )}
-              </button>
-            );
-          })}
+              </div>
 
-          {/* Loader */}
-          {isLoading && (
-            <div className="px-4 py-6 text-center">
-              <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-              <p className="text-sm text-gray-600 mt-2">Recherche sur Google Maps...</p>
+              {/* Distance */}
+              {result.distance !== undefined && (
+                <span className="flex-shrink-0 text-xs text-gray-400 font-medium">
+                  {result.distance < 1
+                    ? `${Math.round(result.distance * 1000)} m`
+                    : `${result.distance.toFixed(1)} km`}
+                </span>
+              )}
+            </button>
+          ))}
+
+          {/* Footer */}
+          <div className="px-4 py-2 bg-gray-50/60 border-t border-gray-100 flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">{results.length} résultat{results.length > 1 ? 's' : ''}</span>
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-gray-400">Powered by</span>
+              <span className="text-[10px] font-semibold text-gray-500">Google Maps</span>
             </div>
-          )}
-        </div>
+          </div>
+        </motion.div>
       )}
 
-      {/* Message "Aucun résultat" */}
-      {!isLoading && query.length >= 2 && results.length === 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 text-center z-50">
-          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <MapPin className="w-8 h-8 text-gray-400" />
+      {/* ── Aucun résultat ────────────────────────────────────────────────── */}
+      {showEmpty && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 text-center z-[9999]"
+        >
+          <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Navigation className="w-6 h-6 text-gray-400" />
           </div>
-          <p className="text-base font-semibold text-gray-900 mb-1">Aucun résultat</p>
-          <p className="text-sm text-gray-600">Essayez un autre lieu ou quartier</p>
-        </div>
-      )}
-      
-      {/* Badge "Powered by Google" */}
-      {showSuggestions && results.length > 0 && (
-        <div className="absolute bottom-2 right-2 text-xs text-gray-400 bg-white px-2 py-1 rounded">
-          Powered by Google Maps
-        </div>
+          <p className="text-sm font-semibold text-gray-800 mb-1">Aucun résultat pour « {displayValue} »</p>
+          <p className="text-xs text-gray-500">
+            Essayez le nom d'un quartier, d'une commune ou d'un lieu connu à Kinshasa
+          </p>
+          <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
+            {['Gombe', 'Limete', 'Masina', 'Ngaliema', "N'djili"].map(sug => (
+              <button
+                key={sug}
+                onMouseDown={e => {
+                  e.preventDefault();
+                  setQuery(sug);
+                  if (onControlledChange) onControlledChange(sug);
+                  setShowSuggestions(true);
+                }}
+                className="text-xs px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors"
+              >
+                {sug}
+              </button>
+            ))}
+          </div>
+        </motion.div>
       )}
     </div>
   );
