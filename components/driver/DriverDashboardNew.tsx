@@ -676,27 +676,39 @@ export function DriverDashboardNew() {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 safe-area-pb">
-        <div className="grid grid-cols-4 gap-1">
-          {([
-            { tab: 'home', icon: <Home className="w-6 h-6 mb-1" />, label: 'Accueil' },
-            { tab: 'rides', icon: <Navigation className="w-6 h-6 mb-1" />, label: 'Courses' },
-            { tab: 'earnings', icon: <DollarSign className="w-6 h-6 mb-1" />, label: 'Gains' },
-            { tab: 'profile', icon: <User className="w-6 h-6 mb-1" />, label: 'Profil' }
-          ] as { tab: TabType; icon: React.ReactNode; label: string }[]).map(item => (
-            <button
-              key={item.tab}
-              onClick={() => setActiveTab(item.tab)}
-              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
-                activeTab === item.tab ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'
-              }`}
-            >
-              {item.icon}
-              <span className="text-xs font-medium">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+<div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-2 safe-area-pb">
+  <div className="grid grid-cols-4 gap-1">
+    <button
+      onClick={() => setActiveTab('home')}
+      className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${activeTab === 'home' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'}`}
+    >
+      <Home className="w-6 h-6 mb-1" />
+      <span className="text-xs font-medium">Accueil</span>
+    </button>
+    <button
+      onClick={() => setActiveTab('rides')}
+      className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${activeTab === 'rides' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'}`}
+    >
+      <Navigation className="w-6 h-6 mb-1" />
+      <span className="text-xs font-medium">Courses</span>
+    </button>
+    <button
+      onClick={() => setActiveTab('earnings')}
+      className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${activeTab === 'earnings' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'}`}
+    >
+      <DollarSign className="w-6 h-6 mb-1" />
+      <span className="text-xs font-medium">Gains</span>
+    </button>
+    <button
+      onClick={() => setActiveTab('profile')}
+      className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-primary/10 text-primary' : 'text-gray-500 hover:bg-gray-100'}`}
+    >
+      <User className="w-6 h-6 mb-1" />
+      <span className="text-xs font-medium">Profil</span>
+    </button>
+  </div>
+</div>
+      
 
       {/* Modal Portefeuille */}
       {showWalletManager && driver && (
