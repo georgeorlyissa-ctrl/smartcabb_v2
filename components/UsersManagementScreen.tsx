@@ -140,89 +140,58 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
     toast.success('Fichier CSV téléchargé !');
   };
 
-  // Supprimer tous les passagers
-  const deleteAllPassengers = async () => {
+  // Supprimer TOUS les utilisateurs (passagers + conducteurs)
+  const deleteAllUsers = async () => {
     const confirmation = window.confirm(
-      `⚠️ ATTENTION : Vous êtes sur le point de supprimer TOUS les comptes passagers.\n\n` +
+      `⚠️ ATTENTION : Vous êtes sur le point de supprimer TOUS les comptes utilisateurs.\n\n` +
       `Cette action supprimera :\n` +
-      `- ${stats.passengers} passagers de Supabase Auth\n` +
-      `- Toutes leurs données du KV Store\n` +
-      `- Toutes leurs courses associées\n\n` +
-      `Cette action est IRRÉVERSIBLE.\n\n` +
-      `Êtes-vous absolument sûr de vouloir continuer ?`
+      `- Tous les passagers (${stats.passengers})\n` +
+      `- Tous les conducteurs (${stats.drivers})\n` +
+      `- Toutes leurs données KV et courses\n\n` +
+      `Les comptes ADMIN sont préservés.\n\n` +
+      `Cette action est IRRÉVERSIBLE. Continuer ?`
     );
+    if (!confirmation) return;
 
-    if (!confirmation) {
-      return;
-    }
-
-    // Double confirmation
     const doubleConfirm = window.confirm(
-      `⚠️ DERNIÈRE CONFIRMATION\n\n` +
-      `Vous allez supprimer ${stats.passengers} passagers.\n` +
-      `Cliquez sur OK pour confirmer.`
+      `🔴 DERNIÈRE CONFIRMATION\n\nSupprimer ${stats.passengers + stats.drivers} comptes utilisateurs ?\nCliquez OK pour confirmer.`
     );
-
-    if (!doubleConfirm) {
-      return;
-    }
+    if (!doubleConfirm) return;
 
     try {
-      toast.info('🗑️ Suppression en cours...', { duration: 5000 });
-      
+      toast.info('🗑️ Suppression en cours...', { duration: 8000 });
+
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/passengers/delete-all`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/delete-all-users`,
         {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
         }
       );
 
       const data = await response.json();
-      console.log('📥 Résultat suppression:', data);
+      console.log('📥 Résultat suppression totale:', data);
 
       if (data.success) {
-        // Afficher les erreurs détaillées dans la console
-        if (data.errors && data.errors.length > 0) {
-          console.error('⚠️ Erreurs détaillées:', data.errors);
-          data.errors.forEach((err: any, idx: number) => {
-            console.error(`  ${idx + 1}. ${err.name} (${err.id}): ${err.error}`);
-          });
-        }
-
-        // Afficher le résumé
-        const successMessage = 
-          `✅ Suppression terminée :\n` +
-          `• ${data.deleted.fromAuth} passagers supprimés de Supabase Auth\n` +
-          `• ${data.deleted.fromKV} entrées KV supprimées\n` +
-          `• ${data.deleted.rides} courses supprimées`;
-        
-        const errorMessage = data.errors.length > 0 
-          ? `\n\n⚠️ ${data.errors.length} erreurs (voir console pour détails)`
-          : '';
-        
-        if (data.errors.length > 0) {
-          toast.error(successMessage + errorMessage, { duration: 10000 });
-        } else {
-          toast.success(successMessage, { duration: 8000 });
-        }
-        
-        // Recharger la liste
-        setTimeout(() => {
-          loadUsers();
-        }, 1000);
+        toast.success(
+          `✅ Suppression terminée :\n• ${data.deletedAuth} compte(s) Auth supprimés\n• ${data.deletedKV} entrées KV nettoyées`,
+          { duration: 8000 }
+        );
+        setTimeout(() => loadUsers(), 1000);
       } else {
-        console.error('❌ Erreur:', data.error);
         toast.error(data.error || 'Erreur lors de la suppression');
       }
     } catch (error) {
-      console.error('❌ Erreur suppression passagers:', error);
+      console.error('❌ Erreur suppression totale:', error);
       toast.error('Erreur de connexion au serveur');
     }
   };
+
+  // Supprimer tous les passagers (gardé pour compatibilité)
+  const deleteAllPassengers = deleteAllUsers;
 
   // Badge de rôle avec couleur
   const getRoleBadge = (role: string) => {
@@ -282,28 +251,26 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setCurrentScreen('admin-users-diagnostic')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <Activity className="w-4 h-4" />
-                Diagnostic & Nettoyage
-              </button>
-              {stats.passengers > 0 && (
-                <button
-                  onClick={deleteAllPassengers}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-                  title="Supprimer tous les passagers (IRRÉVERSIBLE)"
-                >
-                  <Users className="w-4 h-4" />
-                  🗑️ Supprimer tous les passagers ({stats.passengers})
-                </button>
-              )}
-              <button
                 onClick={loadUsers}
                 className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
                 Actualiser
+              </button>
+              <button
+                onClick={exportToCSV}
+                className="px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Exporter CSV
+              </button>
+              <button
+                onClick={deleteAllUsers}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                title="Supprimer tous les passagers et conducteurs (IRRÉVERSIBLE)"
+              >
+                <Users className="w-4 h-4" />
+                💥 Supprimer TOUT ({stats.passengers + stats.drivers})
               </button>
               <button
                 onClick={onBack}
@@ -414,15 +381,6 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
                 Admins ({stats.admins})
               </button>
             </div>
-
-            {/* Export CSV */}
-            <button
-              onClick={exportToCSV}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Exporter CSV
-            </button>
           </div>
         </div>
 
