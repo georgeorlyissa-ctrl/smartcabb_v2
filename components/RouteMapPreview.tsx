@@ -113,7 +113,7 @@ export function RouteMapPreview({
   return (
     <div className={`relative ${className}`}>
       {/* 🗺️ CARTE GOOGLE MAPS INTERACTIVE avec tracé de route */}
-      <div className="relative w-full h-80 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
+      <div className="relative w-full h-44 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
         <GoogleMapView
           center={stablePickup}
           zoom={13}
