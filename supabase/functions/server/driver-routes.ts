@@ -107,6 +107,206 @@ app.get("/pending", async (c) => {
   }
 });
 
+// ─── GET /:driverId/balance — Solde principal ─────────────────────────────────
+app.get("/:driverId/balance", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    const balance = driver.balance ?? driver.creditBalance ?? 0;
+    return c.json({ success: true, balance, driverId });
+  } catch (error) {
+    console.error("❌ [DRIVERS/BALANCE-GET] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── GET /:driverId/wallets — Tous les soldes (crédit, gains, bonus) ──────────
+app.get("/:driverId/wallets", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    return c.json({
+      success: true,
+      creditBalance:   driver.creditBalance   ?? driver.balance ?? 0,
+      earningsBalance: driver.earningsBalance ?? 0,
+      bonusBalance:    driver.bonusBalance    ?? 0,
+      balance:         driver.balance         ?? driver.creditBalance ?? 0,
+    });
+  } catch (error) {
+    console.error("❌ [DRIVERS/WALLETS] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /:driverId/balance — Ajout/Soustraction de balance (useDriverBalance) ─
+app.post("/:driverId/balance", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const { operation, amount } = await c.req.json();
+
+    if (!operation || typeof amount !== "number" || amount <= 0) {
+      return c.json({ success: false, error: "Paramètres invalides" }, 400);
+    }
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    const currentBalance = driver.balance ?? driver.creditBalance ?? 0;
+    let newBalance: number;
+
+    if (operation === "add") {
+      newBalance = currentBalance + amount;
+    } else if (operation === "subtract") {
+      newBalance = Math.max(0, currentBalance - amount);
+    } else {
+      return c.json({ success: false, error: "Opération invalide. Utilisez 'add' ou 'subtract'" }, 400);
+    }
+
+    const updatedDriver = {
+      ...driver,
+      balance: newBalance,
+      creditBalance: newBalance,
+      updated_at: new Date().toISOString(),
+    };
+    await kvSet(`driver:${driverId}`, updatedDriver);
+
+    console.log(`💰 [DRIVERS/BALANCE-POST] ${driverId}: ${currentBalance} → ${newBalance} (${operation} ${amount})`);
+    return c.json({ success: true, balance: newBalance, driverId });
+  } catch (error) {
+    console.error("❌ [DRIVERS/BALANCE-POST] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /:driverId/wallet/recharge — Recharger le crédit conducteur ─────────
+app.post("/:driverId/wallet/recharge", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const { amount } = await c.req.json();
+
+    console.log(`💳 [DRIVERS/RECHARGE] ${driverId}: +${amount} CDF`);
+
+    if (typeof amount !== "number" || amount <= 0) {
+      return c.json({ success: false, error: "Montant invalide" }, 400);
+    }
+    if (amount < 1000) {
+      return c.json({ success: false, error: "Le montant minimum est 1 000 CDF" }, 400);
+    }
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    const currentCredit  = driver.creditBalance   ?? driver.balance ?? 0;
+    const currentEarnings = driver.earningsBalance ?? 0;
+    const currentBonus   = driver.bonusBalance    ?? 0;
+    const newCreditBalance = currentCredit + amount;
+
+    const updatedDriver = {
+      ...driver,
+      balance: newCreditBalance,
+      creditBalance: newCreditBalance,
+      earningsBalance: currentEarnings,
+      bonusBalance: currentBonus,
+      updated_at: new Date().toISOString(),
+    };
+    await kvSet(`driver:${driverId}`, updatedDriver);
+
+    // Enregistrer la transaction
+    const txId = `wallet_tx_${Date.now()}_${driverId}`;
+    await kvSet(`wallet_tx:${txId}`, {
+      id: txId,
+      driverId,
+      type: "recharge",
+      amount,
+      balanceBefore: currentCredit,
+      balanceAfter: newCreditBalance,
+      created_at: new Date().toISOString(),
+    });
+
+    console.log(`✅ [DRIVERS/RECHARGE] Nouveau solde crédit: ${newCreditBalance} CDF`);
+    return c.json({
+      success: true,
+      newCreditBalance,
+      creditBalance: newCreditBalance,
+      earningsBalance: currentEarnings,
+      bonusBalance: currentBonus,
+      message: `Recharge de ${amount.toLocaleString()} CDF effectuée`,
+    });
+  } catch (error) {
+    console.error("❌ [DRIVERS/RECHARGE] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /:driverId/wallet/withdraw — Retrait depuis bonus ──────────────────
+app.post("/:driverId/wallet/withdraw", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const { amount } = await c.req.json();
+
+    console.log(`💸 [DRIVERS/WITHDRAW] ${driverId}: -${amount} CDF`);
+
+    if (typeof amount !== "number" || amount <= 0) {
+      return c.json({ success: false, error: "Montant invalide" }, 400);
+    }
+    if (amount < 5000) {
+      return c.json({ success: false, error: "Le montant minimum de retrait est 5 000 CDF" }, 400);
+    }
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    const currentBonus    = driver.bonusBalance    ?? 0;
+    const currentCredit   = driver.creditBalance   ?? driver.balance ?? 0;
+    const currentEarnings = driver.earningsBalance ?? 0;
+
+    if (amount > currentBonus) {
+      return c.json({ success: false, error: "Solde bonus insuffisant" }, 400);
+    }
+
+    const newBonusBalance = currentBonus - amount;
+    const updatedDriver = {
+      ...driver,
+      bonusBalance: newBonusBalance,
+      creditBalance: currentCredit,
+      earningsBalance: currentEarnings,
+      balance: currentCredit,
+      updated_at: new Date().toISOString(),
+    };
+    await kvSet(`driver:${driverId}`, updatedDriver);
+
+    // Enregistrer la transaction
+    const txId = `wallet_tx_${Date.now()}_${driverId}`;
+    await kvSet(`wallet_tx:${txId}`, {
+      id: txId,
+      driverId,
+      type: "withdraw",
+      amount,
+      balanceBefore: currentBonus,
+      balanceAfter: newBonusBalance,
+      status: "pending", // En attente de traitement manuel
+      created_at: new Date().toISOString(),
+    });
+
+    console.log(`✅ [DRIVERS/WITHDRAW] Nouveau solde bonus: ${newBonusBalance} CDF`);
+    return c.json({
+      success: true,
+      newBonusBalance,
+      creditBalance: currentCredit,
+      earningsBalance: currentEarnings,
+      bonusBalance: newBonusBalance,
+      message: `Retrait de ${amount.toLocaleString()} CDF en cours de traitement`,
+    });
+  } catch (error) {
+    console.error("❌ [DRIVERS/WITHDRAW] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
 // ─── GET /:driverId — Un conducteur par ID ────────────────────────────────────
 app.get("/:driverId", async (c) => {
   try {
