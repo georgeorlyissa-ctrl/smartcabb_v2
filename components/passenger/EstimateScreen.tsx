@@ -146,55 +146,59 @@ export function EstimateScreen() {
   const vehicles = [
     {
       id: 'smart_standard' as VehicleCategory,
-      name: t('smart_standard'),
-      description: `${VEHICLE_PRICING.smart_standard.capacity} places · ${VEHICLE_PRICING.smart_standard.features.join(', ')}`,
+      name: 'SmartCabb Standard',
+      description: `${VEHICLE_PRICING.smart_standard.capacity} places · Climatisation · GPS`,
       capacity: VEHICLE_PRICING.smart_standard.capacity,
       icon: Car,
       color: 'bg-gray-100',
       hourlyRateUSD: VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd,
+      nightRateUSD: VEHICLE_PRICING.smart_standard.pricing.course_heure.nuit.usd,
       hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd),
-      rateText: `${formatCDF(convertUSDtoCDF(VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd))} par heure`,
-      rateTextShort: `${VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd}$/h`,
-      images: [standardVehicle1, standardVehicle2, standardVehicle3, standardVehicle4, standardVehicle5, standardVehicle6] // ✅ Images SmartCabb Standard
+      rateText: `${VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd}$/h`,
+      rateTextNight: `${VEHICLE_PRICING.smart_standard.pricing.course_heure.nuit.usd}$/h`,
+      images: [standardVehicle1, standardVehicle2, standardVehicle3, standardVehicle4, standardVehicle5, standardVehicle6]
     },
     {
       id: 'smart_confort' as VehicleCategory,
-      name: t('smart_confort'),
-      description: `${VEHICLE_PRICING.smart_confort.capacity} places · ${VEHICLE_PRICING.smart_confort.features.join(', ')}`,
+      name: 'SmartCabb Confort',
+      description: `${VEHICLE_PRICING.smart_confort.capacity} places · Data Internet · Clim Premium`,
       capacity: VEHICLE_PRICING.smart_confort.capacity,
       icon: Car,
       color: 'bg-blue-100',
       hourlyRateUSD: VEHICLE_PRICING.smart_confort.pricing.course_heure.jour.usd,
+      nightRateUSD: VEHICLE_PRICING.smart_confort.pricing.course_heure.nuit.usd,
       hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_confort.pricing.course_heure.jour.usd),
-      rateText: `${formatCDF(convertUSDtoCDF(VEHICLE_PRICING.smart_confort.pricing.course_heure.jour.usd))} par heure`,
-      rateTextShort: `${VEHICLE_PRICING.smart_confort.pricing.course_heure.jour.usd}$/h`,
-      images: [confortVehicle1, confortVehicle2, confortVehicle3] // ✅ Images SmartCabb Confort
+      rateText: `${VEHICLE_PRICING.smart_confort.pricing.course_heure.jour.usd}$/h`,
+      rateTextNight: `${VEHICLE_PRICING.smart_confort.pricing.course_heure.nuit.usd}$/h`,
+      images: [confortVehicle1, confortVehicle2, confortVehicle3]
     },
     {
       id: 'smart_plus' as VehicleCategory,
-      name: t('smart_plus'),
-      description: `${VEHICLE_PRICING.smart_plus.capacity} places · ${VEHICLE_PRICING.smart_plus.features.join(', ')}`,
+      name: 'SmartCabb Familiale',
+      description: `${VEHICLE_PRICING.smart_plus.capacity} places · Data Internet · Grand espace`,
       capacity: VEHICLE_PRICING.smart_plus.capacity,
       icon: Users,
       color: 'bg-green-100',
       hourlyRateUSD: VEHICLE_PRICING.smart_plus.pricing.course_heure.jour.usd,
+      nightRateUSD: VEHICLE_PRICING.smart_plus.pricing.course_heure.nuit.usd,
       hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_plus.pricing.course_heure.jour.usd),
-      rateText: `${formatCDF(convertUSDtoCDF(VEHICLE_PRICING.smart_plus.pricing.course_heure.jour.usd))} par heure`,
-      rateTextShort: `${VEHICLE_PRICING.smart_plus.pricing.course_heure.jour.usd}$/h`,
-      images: [plusVehicle1, plusVehicle2, plusVehicle3, plusVehicle4] // ✅ Images SmartCabb Plus/Familiale
+      rateText: `${VEHICLE_PRICING.smart_plus.pricing.course_heure.jour.usd}$/h`,
+      rateTextNight: `${VEHICLE_PRICING.smart_plus.pricing.course_heure.nuit.usd}$/h`,
+      images: [plusVehicle1, plusVehicle2, plusVehicle3, plusVehicle4]
     },
     {
       id: 'smart_business' as VehicleCategory,
-      name: t('smart_business'),
-      description: `${VEHICLE_PRICING.smart_business.capacity} places · ${VEHICLE_PRICING.smart_business.features.join(', ')}`,
+      name: 'SmartCabb Business',
+      description: `${VEHICLE_PRICING.smart_business.capacity} places VIP · Data · Rafraîchissements`,
       capacity: VEHICLE_PRICING.smart_business.capacity,
       icon: Users,
       color: 'bg-amber-100',
       hourlyRateUSD: VEHICLE_PRICING.smart_business.pricing.location_jour.usd,
+      nightRateUSD: null,
       hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_business.pricing.location_jour.usd),
-      rateText: `${formatCDF(convertUSDtoCDF(VEHICLE_PRICING.smart_business.pricing.location_jour.usd))} par jour`,
-      rateTextShort: `${VEHICLE_PRICING.smart_business.pricing.location_jour.usd}$/jour`,
-      images: [businessVehicle1, businessVehicle2, businessVehicle3, businessVehicle4, businessVehicle5, businessVehicle6] // ✅ Images SmartCabb Business
+      rateText: `${VEHICLE_PRICING.smart_business.pricing.location_jour.usd}$/jour`,
+      rateTextNight: null,
+      images: [businessVehicle1, businessVehicle2, businessVehicle3, businessVehicle4, businessVehicle5, businessVehicle6]
     }
   ];
   
