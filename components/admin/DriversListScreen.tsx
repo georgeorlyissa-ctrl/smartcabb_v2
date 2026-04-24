@@ -322,36 +322,12 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                 Exporter CSV
               </Button>
               <Button
-                onClick={debugDrivers}
-                variant="outline"
-                className="text-purple-600 border-purple-200 hover:bg-purple-50"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Debug
-              </Button>
-              <Button
-                onClick={cleanInvalidDrivers}
-                variant="outline"
-                className="text-orange-600 border-orange-200 hover:bg-orange-50"
-              >
-                <XCircle className="w-4 h-4 mr-2" />
-                Nettoyer invalides
-              </Button>
-              <Button
                 onClick={deleteAllDrivers}
                 variant="outline"
                 className="text-red-600 border-red-200 hover:bg-red-50"
               >
                 <XCircle className="w-4 h-4 mr-2" />
-                💥 SUPPRIMER TOUS
-              </Button>
-              <Button
-                onClick={fixDriverStatuses}
-                variant="outline"
-                className="text-gray-600 border-gray-200 hover:bg-gray-50"
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Fixer statuts
+                💥 Supprimer TOUS
               </Button>
             </div>
           </div>
