@@ -338,8 +338,12 @@ export function MapScreen() {
       </div>
 
       {/* ========== PANNEAU INFÉRIEUR ========== */}
-      <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-3xl shadow-2xl">
-        <div className="p-6 space-y-4">
+      <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-3xl shadow-2xl" style={{ maxHeight: '58vh' }}>
+        {/* Poignée de drag */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        </div>
+        <div className="overflow-y-auto px-5 pb-6 space-y-4" style={{ maxHeight: 'calc(58vh - 28px)' }}>
           {/* Titre */}
           <h2 className="text-xl font-bold text-gray-900">Où allez-vous ?</h2>
 
