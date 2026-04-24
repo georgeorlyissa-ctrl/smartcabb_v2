@@ -113,48 +113,53 @@ function DriverAppContent() {
     <>
       {showRLSModal && <RLSFixModal />}
 
-      <div className="h-screen">
-        {currentScreen === 'driver-welcome' && <DriverWelcomeScreen />}
-        {currentScreen === 'driver-login' && <DriverLoginScreen />}
-        {currentScreen === 'driver-registration' && <DriverRegistrationScreen />}
-        {currentScreen === 'driver-dashboard' && <DriverDashboardNew />}
-        {(currentScreen === 'driver-navigation' || currentScreen === 'navigation') && <NavigationScreen />}
-        {currentScreen === 'driver-earnings' && <EarningsScreen />}
-        {currentScreen === 'driver-settings' && <DriverSettingsScreen />}
-        {currentScreen === 'driver-profile' && <DriverProfileScreen />}
-        {(currentScreen === 'driver-client-info' || currentScreen === 'client-info') && <ClientInfoScreen />}
-        {currentScreen === 'driver-wallet' && <DriverWalletScreen />}
-        {(currentScreen === 'driver-active-ride' || currentScreen === 'active-ride') && <ActiveRideNavigationScreen />}
-        {(currentScreen === 'driver-payment-confirmation' || currentScreen === 'payment-confirmation') && <PaymentConfirmationScreen />}
-        {(currentScreen === 'welcome-back' || currentScreen === 'welcome-back-driver') && (
-          <WelcomeBackScreen
-            userName={state.currentDriver?.name || state.currentDriver?.email?.split('@')[0] || undefined}
-            userType="driver"
-            onComplete={() => setCurrentScreen('driver-dashboard')}
-          />
-        )}
-        {currentScreen === 'forgot-password-driver' && (
-          <ForgotPasswordScreen
-            onBack={() => setCurrentScreen('driver-login')}
-            userType="driver"
-          />
-        )}
-        {currentScreen === 'reset-password-otp-driver' && (
-          <ResetPasswordOTPScreen
-            onBack={() => setCurrentScreen('driver-login')}
-            onSuccess={() => setCurrentScreen('driver-login')}
-            userType="driver"
-          />
-        )}
-        {currentScreen === 'driver-deployment-check' && <DriverDeploymentCheck />}
-        {!currentScreen && <DriverWelcomeScreen />}
-        {currentScreen && !currentScreen.startsWith('driver-') &&
-         currentScreen !== 'welcome-back' &&
-         currentScreen !== 'welcome-back-driver' &&
-         currentScreen !== 'forgot-password-driver' &&
-         currentScreen !== 'reset-password-otp-driver' && (
-          <DriverWelcomeScreen />
-        )}
+      {/* Contrainte mobile 430px */}
+      <div className="min-h-screen bg-gray-100 flex justify-center">
+        <div className="w-full max-w-[430px] h-screen relative overflow-hidden bg-white shadow-2xl">
+          <div className="h-screen">
+            {currentScreen === 'driver-welcome' && <DriverWelcomeScreen />}
+            {currentScreen === 'driver-login' && <DriverLoginScreen />}
+            {currentScreen === 'driver-registration' && <DriverRegistrationScreen />}
+            {currentScreen === 'driver-dashboard' && <DriverDashboardNew />}
+            {(currentScreen === 'driver-navigation' || currentScreen === 'navigation') && <NavigationScreen />}
+            {currentScreen === 'driver-earnings' && <EarningsScreen />}
+            {currentScreen === 'driver-settings' && <DriverSettingsScreen />}
+            {currentScreen === 'driver-profile' && <DriverProfileScreen />}
+            {(currentScreen === 'driver-client-info' || currentScreen === 'client-info') && <ClientInfoScreen />}
+            {currentScreen === 'driver-wallet' && <DriverWalletScreen />}
+            {(currentScreen === 'driver-active-ride' || currentScreen === 'active-ride') && <ActiveRideNavigationScreen />}
+            {(currentScreen === 'driver-payment-confirmation' || currentScreen === 'payment-confirmation') && <PaymentConfirmationScreen />}
+            {(currentScreen === 'welcome-back' || currentScreen === 'welcome-back-driver') && (
+              <WelcomeBackScreen
+                userName={state.currentDriver?.name || state.currentDriver?.email?.split('@')[0] || undefined}
+                userType="driver"
+                onComplete={() => setCurrentScreen('driver-dashboard')}
+              />
+            )}
+            {currentScreen === 'forgot-password-driver' && (
+              <ForgotPasswordScreen
+                onBack={() => setCurrentScreen('driver-login')}
+                userType="driver"
+              />
+            )}
+            {currentScreen === 'reset-password-otp-driver' && (
+              <ResetPasswordOTPScreen
+                onBack={() => setCurrentScreen('driver-login')}
+                onSuccess={() => setCurrentScreen('driver-login')}
+                userType="driver"
+              />
+            )}
+            {currentScreen === 'driver-deployment-check' && <DriverDeploymentCheck />}
+            {!currentScreen && <DriverWelcomeScreen />}
+            {currentScreen && !currentScreen.startsWith('driver-') &&
+             currentScreen !== 'welcome-back' &&
+             currentScreen !== 'welcome-back-driver' &&
+             currentScreen !== 'forgot-password-driver' &&
+             currentScreen !== 'reset-password-otp-driver' && (
+              <DriverWelcomeScreen />
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
