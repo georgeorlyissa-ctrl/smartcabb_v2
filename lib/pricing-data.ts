@@ -86,8 +86,8 @@ export const PRICING_CONFIG = {
     vehicles: ['Toyota Marx', 'Toyota Crown', 'Mercedes C-Class', 'Toyota Harrier', 'Toyota Vanguard', 'Nissan Juke'],
     pricing: {
       course_heure: {
-        jour: { usd: 15, cdf: 15 * USD_TO_CDF },
-        nuit: { usd: 17, cdf: 17 * USD_TO_CDF }
+        jour: { usd: 9, cdf: 9 * USD_TO_CDF },
+        nuit: { usd: 12, cdf: 12 * USD_TO_CDF }
       },
       location_jour: {
         usd: 0,
@@ -108,15 +108,15 @@ export const PRICING_CONFIG = {
 
   smart_plus: {
     id: 'smart_plus',
-    name: 'SmartCabb Plus',
-    displayName: 'Plus',
-    capacity: 4,
-    features: ['4 places', 'Data Internet', 'Espace XL', 'GPS'],
-    vehicles: ['Toyota Noah', 'Toyota Alphard', 'Toyota Voxy'],
+    name: 'SmartCabb Familiale',
+    displayName: 'Familiale',
+    capacity: 7,
+    features: ['7 places', 'Data Internet', 'Grand espace', 'GPS'],
+    vehicles: ['Toyota Noah', 'Toyota Alphard', 'Toyota Voxy', 'Toyota Hiace'],
     pricing: {
       course_heure: {
-        jour: { usd: 15, cdf: 15 * USD_TO_CDF },
-        nuit: { usd: 20, cdf: 20 * USD_TO_CDF }
+        jour: { usd: 10, cdf: 10 * USD_TO_CDF },
+        nuit: { usd: 14, cdf: 14 * USD_TO_CDF }
       },
       location_jour: {
         usd: 0,
