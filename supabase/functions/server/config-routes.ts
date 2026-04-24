@@ -107,4 +107,26 @@ app.post("/update", async (c) => {
   }
 });
 
+// ─── GET /google-maps-key — Clé API Maps JavaScript (frontend) ───────────────
+app.get("/google-maps-key", async (c) => {
+  try {
+    // On expose uniquement la clé Maps JavaScript (clé navigateur, restriction par HTTP referrer)
+    const apiKey =
+      Deno.env.get("GOOGLE_MAPS_API_KEY") ||
+      Deno.env.get("GOOGLE_MAPS_SERVER_API_KEY") ||
+      "";
+
+    if (!apiKey) {
+      console.warn("⚠️ [CONFIG/MAPS-KEY] Aucune clé Google Maps configurée");
+      return c.json({ success: false, error: "Clé API non configurée" }, 404);
+    }
+
+    console.log("✅ [CONFIG/MAPS-KEY] Clé Maps renvoyée au frontend");
+    return c.json({ success: true, apiKey });
+  } catch (error) {
+    console.error("❌ [CONFIG/MAPS-KEY] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
 export default app;
