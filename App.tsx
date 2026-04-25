@@ -19,6 +19,7 @@ const BUILD_TIMESTAMP = new Date().toISOString();
 import { startUpdateDetection } from './utils/updateDetector';
 import { checkForUpdate } from './utils/cacheManager';
 import { initConfigSync } from './lib/config-sync';
+import { useMaintenanceMode } from './hooks/useAdminConfig';
 // ✅ FIX BUILD: Import conditionnel pour Firebase Service Worker
 // import { initializeFirebaseServiceWorker } from './lib/init-firebase-sw';
 
@@ -146,6 +147,20 @@ function lazyWithRetry(componentImport: () => Promise<any>) {
         });
     });
   });
+}
+
+function MaintenanceBanner() {
+  const isMaintenance = useMaintenanceMode();
+  if (!isMaintenance) return null;
+  return (
+    <div className="fixed inset-0 z-[9999] bg-orange-600 flex flex-col items-center justify-center p-6 text-white text-center">
+      <div className="text-6xl mb-4">🔧</div>
+      <h1 className="text-2xl font-bold mb-2">Maintenance en cours</h1>
+      <p className="text-orange-100 max-w-sm">
+        SmartCabb est temporairement indisponible pour maintenance. Veuillez réessayer dans quelques instants.
+      </p>
+    </div>
+  );
 }
 
 function App() {
@@ -381,11 +396,11 @@ function App() {
     }
   }, []);
 
-  // 🔧 Initialiser la synchronisation de la configuration
+  // 🔧 Initialiser la synchronisation de la configuration (cross-device via polling 60s)
   useEffect(() => {
     try {
       initConfigSync();
-      console.log('✅ Synchronisation de la configuration activée');
+      console.log('✅ Synchronisation config activée (polling 60s, BroadcastChannel)');
     } catch (error) {
       console.error('Erreur initConfigSync:', error);
     }
@@ -422,6 +437,9 @@ function App() {
 
               {/* 🔄 Synchronisation automatique du taux de change depuis le backend */}
               <ExchangeRateSync />
+
+              {/* 🔧 Bannière mode maintenance (activée depuis le panel admin) */}
+              <MaintenanceBanner />
 
               {/* Animation de transition entre pages */}
               <PageTransition />
