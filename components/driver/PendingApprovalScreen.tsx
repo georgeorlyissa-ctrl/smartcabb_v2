@@ -1,7 +1,9 @@
-import { Clock, AlertCircle, Phone, Mail } from '../../lib/icons';
+import { useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
 import { useAppState } from '../../hooks/useAppState';
-import { safeFormatDate } from '../../utils/dateHelpers'; // 🔥 IMPORT
+import { safeFormatDate } from '../../utils/dateHelpers';
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { toast } from '../../lib/toast';
 
 interface PendingApprovalScreenProps {
   driverName: string;
@@ -16,12 +18,45 @@ export function PendingApprovalScreen({
   registrationDate,
   onLogout 
 }: PendingApprovalScreenProps) {
-  const { setCurrentScreen } = useAppState();
+  const { setCurrentScreen, state, setCurrentDriver } = useAppState();
+  const driverIdRef = useRef<string | null>(state.currentDriver?.id || state.currentUser?.id || null);
+
+  // ─── Polling : détecter l'approbation admin en temps réel ────────────────
+  useEffect(() => {
+    const driverId = driverIdRef.current;
+    if (!driverId) return;
+
+    const checkApproval = async () => {
+      try {
+        const resp = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${driverId}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const driver = data.driver || data;
+        
+        if (driver?.isApproved === true || driver?.status === 'approved' || driver?.is_approved === true) {
+          console.log('✅ Compte approuvé par l\'admin !');
+          // Mettre à jour le state local
+          if (setCurrentDriver) setCurrentDriver({ ...driver });
+          toast.success('🎉 Votre compte a été approuvé !', {
+            description: 'Vous pouvez maintenant vous mettre en ligne et accepter des courses.'
+          });
+          // Rediriger vers le dashboard conducteur
+          setTimeout(() => setCurrentScreen('driver-dashboard'), 1500);
+        }
+      } catch (_) {}
+    };
+
+    // Vérifier immédiatement puis toutes les 15 secondes
+    checkApproval();
+    const interval = setInterval(checkApproval, 15_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
-    if (onLogout) {
-      onLogout();
-    }
+    if (onLogout) onLogout();
     setCurrentScreen('driver-welcome');
   };
 
