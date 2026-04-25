@@ -131,6 +131,8 @@ export function DriverDashboardNew() {
   const [pendingRideRequest, setPendingRideRequest] = useState<RideRequest | null>(null);
   const [showWalletManager, setShowWalletManager] = useState(false);
   const [showFCMDiagnostic, setShowFCMDiagnostic] = useState(false);
+  // ✅ refreshKey : incrémenté quand on revient sur driver-dashboard → recharge les données
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>({
     lat: -4.3276,
@@ -206,7 +208,15 @@ export function DriverDashboardNew() {
     };
 
     loadDriver();
-  }, [state.currentDriver?.id]);
+  }, [state.currentDriver?.id, refreshKey]); // ✅ refreshKey déclenche un rechargement
+
+  // ✅ Refresh des données quand on revient sur le dashboard (après clôture de course)
+  useEffect(() => {
+    if (state.currentScreen === 'driver-dashboard' && driver) {
+      console.log('🔄 Retour dashboard — rechargement des données conducteur...');
+      setRefreshKey(k => k + 1);
+    }
+  }, [state.currentScreen]);
 
   // ============================================================
   // 2. Vérifier URL params au démarrage (app ouverte depuis notification)
