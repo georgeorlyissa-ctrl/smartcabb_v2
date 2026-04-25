@@ -238,7 +238,9 @@ export function PaymentScreen() {
             rideId: currentRide.id,
             driverId: currentRide.driverId,
             passengerId: currentUser?.id,
-            totalCost: ridePrice,
+            // ✅ FIX : utiliser "actualCost" (nom attendu par le backend)
+            actualCost: ridePrice,
+            totalCost: ridePrice,        // fallback rétrocompatible
             paymentMethod: paymentMethodUsed,
             paymentTransactionId: transactionId,
             cashAmount: cashPart,
