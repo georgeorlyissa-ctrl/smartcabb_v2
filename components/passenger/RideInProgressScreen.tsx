@@ -122,6 +122,12 @@ export function RideInProgressScreen() {
           updateRide(updatedRide.id, updatedRide);
         }
 
+        // ✅ SYNC DIRECTE : utiliser billingElapsedTime du serveur (= timer côté driver)
+        if (updatedRide?.billingElapsedTime !== undefined && updatedRide.billingElapsedTime > 0) {
+          setBillingElapsedTime(updatedRide.billingElapsedTime);
+          if (!billingActive) setBillingActive(true);
+        }
+        
       } catch (error) {
         console.error('❌ Erreur lors du polling:', error);
       }
