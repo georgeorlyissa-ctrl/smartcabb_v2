@@ -133,6 +133,47 @@ export function DriverDashboardNew() {
   const [showFCMDiagnostic, setShowFCMDiagnostic] = useState(false);
   // ✅ refreshKey : incrémenté quand on revient sur driver-dashboard → recharge les données
   const [refreshKey, setRefreshKey] = useState(0);
+  // ✅ États pour l'historique et les stats
+  const [rideHistory, setRideHistory]       = useState<any[]>([]);
+  const [rideStats, setRideStats]           = useState<any>({ today: { count: 0, earnings: 0 }, week: { count: 0, earnings: 0 }, month: { count: 0, earnings: 0 }, total: { count: 0, earnings: 0 } });
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // ✅ Refresh des données quand on revient sur le dashboard (après clôture de course)
+  useEffect(() => {
+    if (state.currentScreen === 'driver-dashboard' && driver) {
+      console.log('🔄 Retour dashboard — rechargement des données conducteur...');
+      setRefreshKey(k => k + 1);
+    }
+  }, [state.currentScreen]);
+
+  // ============================================================
+  // ✅ Charger l'historique des courses du conducteur
+  // ============================================================
+  useEffect(() => {
+    const loadRideHistory = async () => {
+      const driverId = state.currentDriver?.id || driver?.id;
+      if (!driverId) return;
+      setLoadingHistory(true);
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/driver/${driverId}/rides`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            setRideHistory(data.rides || []);
+            if (data.stats) setRideStats(data.stats);
+          }
+        }
+      } catch (e) {
+        console.error('❌ Erreur chargement historique driver:', e);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+    loadRideHistory();
+  }, [state.currentDriver?.id, driver?.id, refreshKey]);
 
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>({
     lat: -4.3276,
@@ -209,14 +250,6 @@ export function DriverDashboardNew() {
 
     loadDriver();
   }, [state.currentDriver?.id, refreshKey]); // ✅ refreshKey déclenche un rechargement
-
-  // ✅ Refresh des données quand on revient sur le dashboard (après clôture de course)
-  useEffect(() => {
-    if (state.currentScreen === 'driver-dashboard' && driver) {
-      console.log('🔄 Retour dashboard — rechargement des données conducteur...');
-      setRefreshKey(k => k + 1);
-    }
-  }, [state.currentScreen]);
 
   // ============================================================
   // 2. Vérifier URL params au démarrage (app ouverte depuis notification)
@@ -573,16 +606,16 @@ export function DriverDashboardNew() {
               <h3 className="font-semibold text-gray-900 mb-3">Aujourd'hui</h3>
               <div className="grid grid-cols-3 gap-3">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-primary">0</p>
+                  <p className="text-2xl font-bold text-primary">{rideStats.today.count}</p>
                   <p className="text-xs text-gray-500">Courses</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">0</p>
+                  <p className="text-2xl font-bold text-green-600">{rideStats.today.earnings.toLocaleString('fr-FR')}</p>
                   <p className="text-xs text-gray-500">CDF</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-600">0h</p>
-                  <p className="text-xs text-gray-500">En ligne</p>
+                  <p className="text-2xl font-bold text-orange-600">{isOnline ? '🟢' : '🔴'}</p>
+                  <p className="text-xs text-gray-500">{isOnline ? 'En ligne' : 'Hors ligne'}</p>
                 </div>
               </div>
             </Card>
@@ -591,28 +624,73 @@ export function DriverDashboardNew() {
 
         {activeTab === 'rides' && (
           <Card className="p-4">
-            <h3 className="font-semibold text-gray-900 mb-4">Historique des courses</h3>
-            <div className="text-center py-12">
-              <Navigation className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <p className="text-gray-500">Aucune course pour le moment</p>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Historique des courses</h3>
+              {loadingHistory && (
+                <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              )}
             </div>
+            {rideHistory.length === 0 ? (
+              <div className="text-center py-12">
+                <Navigation className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500">Aucune course pour le moment</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {rideHistory.map((ride: any, i: number) => {
+                  const price = ride.totalPrice || ride.actualPrice || ride.estimatedPrice || 0;
+                  const earning = Math.round(price * 0.85);
+                  const date = new Date(ride.completedAt || ride.createdAt);
+                  const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+                  const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                  return (
+                    <div key={ride.id || i} className="border border-gray-100 rounded-xl p-3 bg-gray-50">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="text-xs text-gray-500">{dateStr} à {timeStr}</p>
+                          <p className="text-sm font-medium text-gray-800 truncate max-w-[180px]">
+                            {ride.passengerName || 'Passager'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-green-700">+{earning.toLocaleString('fr-FR')} CDF</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            ride.status === 'completed' || ride.status === 'rated'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {ride.status === 'completed' || ride.status === 'rated' ? 'Terminée' : 'Annulée'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <span className="truncate">📍 {ride.pickup?.address || ride.pickupName || '—'}</span>
+                        <span>→</span>
+                        <span className="truncate">🏁 {ride.destination?.address || ride.destinationName || '—'}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </Card>
         )}
 
         {activeTab === 'earnings' && (
           <>
             <Card className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 text-white">
-              <h3 className="font-semibold mb-2">Gains Totaux</h3>
+              <h3 className="font-semibold mb-2">Gains Totaux (85%)</h3>
               <p className="text-4xl font-bold mb-1">{(driver.earningsBalance || 0).toLocaleString('fr-FR')} CDF</p>
-              <p className="text-sm opacity-90">Argent retirable</p>
+              <p className="text-sm opacity-90">{rideStats.total.count} courses terminées</p>
             </Card>
             <Card className="p-4">
               <h3 className="font-semibold text-gray-900 mb-4">Statistiques</h3>
               <div className="space-y-4">
                 {[
-                  { label: 'Cette semaine', icon: <Clock className="w-5 h-5 text-blue-600" />, bg: 'bg-blue-100' },
-                  { label: 'Ce mois', icon: <TrendingUp className="w-5 h-5 text-green-600" />, bg: 'bg-green-100' },
-                  { label: 'Total', icon: <Star className="w-5 h-5 text-purple-600" />, bg: 'bg-purple-100' }
+                  { label: "Aujourd'hui",  icon: <Clock className="w-5 h-5 text-blue-600" />,   bg: 'bg-blue-100',   stat: rideStats.today },
+                  { label: 'Cette semaine', icon: <TrendingUp className="w-5 h-5 text-green-600" />, bg: 'bg-green-100', stat: rideStats.week },
+                  { label: 'Ce mois',      icon: <Star className="w-5 h-5 text-orange-600" />,   bg: 'bg-orange-100', stat: rideStats.month },
+                  { label: 'Total',        icon: <Star className="w-5 h-5 text-purple-600" />,   bg: 'bg-purple-100', stat: rideStats.total },
                 ].map((item, i) => (
                   <div key={i} className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
@@ -621,10 +699,10 @@ export function DriverDashboardNew() {
                       </div>
                       <div>
                         <p className="text-sm font-medium">{item.label}</p>
-                        <p className="text-xs text-gray-500">0 courses</p>
+                        <p className="text-xs text-gray-500">{item.stat.count} course{item.stat.count > 1 ? 's' : ''}</p>
                       </div>
                     </div>
-                    <p className="font-bold text-lg">0 CDF</p>
+                    <p className="font-bold text-lg">{item.stat.earnings.toLocaleString('fr-FR')} CDF</p>
                   </div>
                 ))}
               </div>
