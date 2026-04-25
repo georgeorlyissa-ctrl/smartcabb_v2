@@ -167,12 +167,12 @@ export async function autocomplete(
   input: string,
   currentLocation?: { lat: number; lng: number }
 ): Promise<GooglePlace[]> {
-  if (!input || input.trim().length < 2) {
+  if (!input || input.trim().length < 1) {
     return [];
   }
 
   try {
-    const url = new URL(`${BACKEND_URL}/google-maps/autocomplete`);
+    const url = new URL(`${BACKEND_URL}/maps/autocomplete`);
     url.searchParams.set('input', input);
     
     if (currentLocation) {
@@ -193,7 +193,7 @@ export async function autocomplete(
 
     const data = await response.json();
     
-    return data.predictions || [];
+    return data.results || data.predictions || [];
 
   } catch (error) {
     console.error('❌ Erreur autocomplete:', error);
@@ -209,7 +209,8 @@ export async function reverseGeocode(
   lng: number
 ): Promise<GooglePlace | null> {
   try {
-    const url = new URL(`${BACKEND_URL}/google-maps/reverse-geocode`);
+    // ✅ FIX : utiliser /reverse-geocode (route correcte du backend)
+    const url = new URL(`${BACKEND_URL}/maps/reverse-geocode`);
     url.searchParams.set('lat', lat.toString());
     url.searchParams.set('lng', lng.toString());
 
@@ -239,7 +240,8 @@ export async function reverseGeocode(
  */
 export async function getPlaceDetails(placeId: string): Promise<GooglePlace | null> {
   try {
-    const url = new URL(`${BACKEND_URL}/google-maps/place-details`);
+    // ✅ FIX : utiliser /place-details (route correcte du backend)
+    const url = new URL(`${BACKEND_URL}/maps/place-details`);
     url.searchParams.set('place_id', placeId);
 
     const response = await fetch(url.toString(), {
@@ -313,4 +315,45 @@ export async function hybridSearch(
 ): Promise<GooglePlace[]> {
   // Rediriger vers searchPlaces (100% Google maintenant)
   return searchPlaces(query, currentLocation);
+}
+
+/**
+ * 🚗 CALCUL D'ITINÉRAIRE (alias de getDirections pour compatibilité)
+ */
+export async function calculateRoute(
+  start: { lat: number; lng: number },
+  end: { lat: number; lng: number }
+): Promise<GoogleRoute | null> {
+  return getDirections(start, end);
+}
+
+/**
+ * 📏 CALCUL DE DISTANCE HAVERSINE
+ */
+export function calculateDistance(
+  lat1: number, lng1: number,
+  lat2: number, lng2: number
+): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * 🧪 TESTER LA DISPONIBILITÉ DE GOOGLE MAPS API
+ */
+export async function testGoogleMapsAvailability(): Promise<boolean> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/maps/search?query=kinshasa`, {
+      headers: { 'Authorization': `Bearer ${publicAnonKey}` }
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
