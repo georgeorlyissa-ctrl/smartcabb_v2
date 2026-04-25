@@ -547,6 +547,11 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
         isOpen={showCompletionDialog}
         onClose={() => {
           setShowCompletionDialog(false);
+          // ✅ FIX : effacer la course courante avant de retourner au dashboard
+          //         pour forcer le rechargement des stats et éviter un double-incrément
+          if (updateRide && ride?.id) {
+            updateRide(ride.id, { status: 'completed' });
+          }
           setCurrentScreen('driver-dashboard');
         }}
         userType="driver"
