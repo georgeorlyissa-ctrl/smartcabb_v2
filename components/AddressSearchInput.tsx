@@ -135,49 +135,78 @@ export function AddressSearchInput({
     setIsLoading(true);
     updateDropdownPosition();
     
-    // 🌍 RECHERCHE SIMPLE : JUSTE MAPBOX (comme Uber/Yango)
+    // 🌍 RECHERCHE GOOGLE PLACES (Autocomplete + Text Search)
     setTimeout(async () => {
-      const queryLower = query.toLowerCase().trim();
+      const queryTrimmed = query.trim();
       
       console.log('🌍 ===== RECHERCHE ADRESSE DÉMARRÉE =====');
       console.log(`🔍 Query: "${query}"`);
       console.log(`📍 Position actuelle:`, currentLocation);
       
       try {
-        // 🚀 RECHERCHE AVEC API PROFESSIONNELLES (Mapbox ou Google Places)
-        const professionalResults = await searchProfessionalPlaces(queryLower, currentLocation);
+        // ✅ STRATÉGIE 1 : Google Places via le backend (Autocomplete + Text Search)
+        const professionalResults = await searchProfessionalPlaces(queryTrimmed, currentLocation);
         
-        console.log(`✅ Résultats professionnels: ${professionalResults.length}`);
-        professionalResults.forEach((result, i) => {
-          console.log(`  ${i + 1}. ${result.name} (${result.source}) - ${result.distance !== undefined ? ((result.distance || 0).toFixed(1)) + ' km' : 'distance inconnue'}`);
-        });
+        console.log(`✅ Résultats Google Places: ${professionalResults.length}`);
         
-        // Convertir au format Address
-        const suggestions: Address[] = professionalResults.map((place, index) => ({
-          id: place.id,
-          name: place.name,
-          description: place.description,
-          coordinates: place.coordinates,
-          distance: place.distance,
-          placeId: place.placeId // 🆕 Pour Google Places
-        }));
-        
-        console.log(`🎯 ${suggestions.length} suggestions à afficher`);
-        console.log('🌍 ===== RECHERCHE TERMINÉE =====');
-        
-        setSuggestions(suggestions);
-        setIsOpen(suggestions.length > 0);
+        if (professionalResults.length > 0) {
+          const newSuggestions: Address[] = professionalResults.map((place) => ({
+            id: place.id,
+            name: place.name,
+            description: place.description,
+            coordinates: place.coordinates,
+            distance: place.distance,
+            placeId: place.placeId,
+          }));
+          
+          console.log(`🎯 ${newSuggestions.length} suggestions Google Places à afficher`);
+          setSuggestions(newSuggestions);
+          setIsOpen(true);
+          setIsLoading(false);
+          isUserTypingRef.current = false;
+          return;
+        }
+
+        // ✅ STRATÉGIE 2 : Base locale Kinshasa (fallback)
+        console.log('⚠️ Aucun résultat Google, fallback base locale Kinshasa');
+        const { searchQuartiers, QUARTIERS_KINSHASA } = await import('../lib/kinshasa-map-data');
+        const { searchLocationsByCommune } = await import('../lib/kinshasa-locations-database');
+
+        const queryLower = queryTrimmed.toLowerCase();
+        const localQuartiers = searchQuartiers(queryLower);
+        const localLocations = searchLocationsByCommune(queryLower);
+
+        const fallbackSuggestions: Address[] = [
+          ...localQuartiers.slice(0, 5).map((q: any) => ({
+            id: `quartier-${q.name}`,
+            name: q.name,
+            description: `${q.commune}, Kinshasa`,
+            coordinates: q.coordinates,
+            distance: undefined,
+          })),
+          ...localLocations.slice(0, 5).map((l: any) => ({
+            id: `location-${l.name}`,
+            name: l.name,
+            description: `${l.commune}, Kinshasa`,
+            coordinates: l.coordinates,
+            distance: undefined,
+          })),
+        ];
+
+        console.log(`📍 ${fallbackSuggestions.length} suggestions locales`);
+        setSuggestions(fallbackSuggestions);
+        setIsOpen(fallbackSuggestions.length > 0);
         setIsLoading(false);
         isUserTypingRef.current = false;
         
       } catch (error) {
-        console.error('❌ Erreur recherche professionnelle:', error);
+        console.error('❌ Erreur recherche adresse:', error);
         setSuggestions([]);
         setIsOpen(false);
         setIsLoading(false);
         isUserTypingRef.current = false;
       }
-    }, 300); // Délai anti-spam
+    }, 250); // Délai anti-spam réduit pour plus de réactivité
   };
 
   const handleAddressSelect = async (address: Address) => {
@@ -203,8 +232,9 @@ export function AddressSearchInput({
     setSuggestions([]);
     console.log('✅ Dropdown fermé');
     
-    // ✅ ÉTAPE 4: Si c'est un Google Places sans coordonnées, les récupérer
-    if (address.placeId && (!address.coordinates || !address.coordinates.lat)) {
+    // ✅ ÉTAPE 4: Si c'est un Google Places sans coordonnées valides, les récupérer
+    const hasValidCoords = address.coordinates?.lat && address.coordinates?.lat !== 0;
+    if (address.placeId && !hasValidCoords) {
       console.log('📍 Récupération des coordonnées pour Google Places...');
       setIsLoading(true);
       
@@ -214,7 +244,6 @@ export function AddressSearchInput({
         if (details) {
           console.log('✅ Coordonnées récupérées:', details.coordinates);
           
-          // Créer un nouvel objet address avec les coordonnées
           const completeAddress: Address = {
             ...address,
             coordinates: details.coordinates,
@@ -227,12 +256,10 @@ export function AddressSearchInput({
           console.log('✅ onAddressSelect appelé avec coordonnées complètes');
         } else {
           console.error('❌ Impossible de récupérer les coordonnées');
-          // Fallback: appeler quand même avec l'adresse originale
           onAddressSelect(address);
         }
       } catch (error) {
         console.error('❌ Erreur lors de la récupération des coordonnées:', error);
-        // Fallback: appeler quand même avec l'adresse originale
         onAddressSelect(address);
       } finally {
         setIsLoading(false);
