@@ -1,327 +1,295 @@
-import { useState, useEffect } from 'react'; // ✅ FIX: Ajout useEffect
-import { motion } from '../../lib/motion';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card'; // ✅ FIX: Ajout Card
-import { Textarea } from '../ui/textarea';
-import { Star, User, Car, ArrowLeft, Send, Home } from '../../lib/icons';
+import { useState, useEffect } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 
-// 🔧 FIX: Loader2 inline pour éviter l'erreur "Loader2 is not defined"
-const Loader2 = ({ className = '' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-  </svg>
-);
+// ── Étoile SVG inline (fill direct, pas de conflit Tailwind) ─────────────────
+function StarIcon({ filled, size = 40 }: { filled: boolean; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={filled ? '#FBBF24' : 'none'}
+      stroke={filled ? '#FBBF24' : '#D1D5DB'}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+    </svg>
+  );
+}
+
+const LABELS: Record<number, { label: string; color: string }> = {
+  1: { label: 'Très mauvais',  color: 'text-red-500' },
+  2: { label: 'Mauvais',       color: 'text-orange-500' },
+  3: { label: 'Moyen',         color: 'text-yellow-500' },
+  4: { label: 'Bien',          color: 'text-green-500' },
+  5: { label: 'Excellent !',   color: 'text-green-600' },
+};
+
+const QUICK_COMMENTS = [
+  { emoji: '👍', text: 'Excellent conducteur' },
+  { emoji: '✨', text: 'Véhicule propre' },
+  { emoji: '🛡️', text: 'Conduite sécuritaire' },
+  { emoji: '⏰', text: 'Très ponctuel' },
+  { emoji: '😊', text: 'Très sympathique' },
+  { emoji: '🗺️', text: 'Bonne connaissance des routes' },
+];
 
 export function RatingScreen() {
-  const { state, setCurrentScreen } = useAppState();
-  const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [driverData, setDriverData] = useState<any>(null);
-  const [loadingDriver, setLoadingDriver] = useState(true);
+  const { state, setCurrentScreen, updateRide } = useAppState();
   const currentRide = state.currentRide;
 
-  // 🆕 CHARGER LES VRAIES DONNÉES DU CONDUCTEUR DEPUIS LE BACKEND
+  const [rating, setRating]         = useState(0);
+  const [hovered, setHovered]       = useState(0);
+  const [comment, setComment]       = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [driverData, setDriverData] = useState<any>(null);
+
+  // Charger les données du conducteur (photo incluse)
   useEffect(() => {
-    const fetchDriverData = async () => {
-      if (!currentRide?.driverId) {
-        console.warn('⚠️ Pas de driverId dans currentRide');
-        setLoadingDriver(false);
-        return;
-      }
-
-      try {
-        console.log('🔍 Chargement des données du conducteur:', currentRide.driverId);
-        
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${currentRide.driverId}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${publicAnonKey}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('✅ Données conducteur reçues:', data);
-        
-        if (data.success && data.driver) {
-          setDriverData(data.driver);
-        }
-      } catch (error) {
-        console.error('❌ Erreur chargement conducteur:', error);
-      } finally {
-        setLoadingDriver(false);
-      }
-    };
-
-    fetchDriverData();
+    if (!currentRide?.driverId) return;
+    fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${currentRide.driverId}`,
+      { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+    )
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.driver) setDriverData(data.driver); })
+      .catch(() => {});
   }, [currentRide?.driverId]);
 
   if (!currentRide) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="p-6">
-          <p>Aucune course à évaluer</p>
-        </Card>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl p-6 text-center shadow">
+          <p className="text-gray-500">Aucune course à évaluer</p>
+          <button
+            onClick={() => setCurrentScreen('map')}
+            className="mt-4 px-6 py-2 bg-primary text-white rounded-xl font-medium"
+          >
+            Retour à l'accueil
+          </button>
+        </div>
       </div>
     );
   }
 
-  const handleSubmitRating = async () => {
+  const driverName  = driverData?.full_name || driverData?.name || currentRide.driverName || 'Votre chauffeur';
+  const photoUrl    = driverData?.photo_url  || driverData?.photo || driverData?.profile_photo || null;
+  const initials    = driverName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
+  const finalPrice  = currentRide.finalPrice || currentRide.actualPrice || currentRide.estimatedPrice || 0;
+  const activeStars = hovered > 0 ? hovered : rating;
+
+  const handleSubmit = async () => {
     if (rating === 0) {
-      toast.error('Veuillez donner une note');
+      toast.error('Veuillez choisir une note (1 à 5 étoiles)');
       return;
     }
-
     setIsSubmitting(true);
-
     try {
-      console.log('⭐ Envoi de l\'évaluation:', { 
-        rideId: currentRide.id,
-        driverId: currentRide.driverId,
-        rating, 
-        comment 
-      });
-      
-      // ✅ ROUTE CORRECTE : /rides/rate (pas /rides/${id}/rate)
-      const response = await fetch(
+      await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/rate`,
         {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            rideId: currentRide.id,
-            driverId: currentRide.driverId,
-            rating: rating,
-            comment: comment,
-            passengerId: state.currentUser?.id
-          })
+            rideId:      currentRide.id,
+            driverId:    currentRide.driverId,
+            passengerId: state.currentUser?.id,
+            rating,
+            comment,
+          }),
         }
       );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('❌ Erreur backend évaluation:', errorData);
-        throw new Error(errorData.error || 'Erreur lors de l\'évaluation');
+      // Mettre à jour l'historique local
+      if (updateRide && currentRide.id) {
+        updateRide(currentRide.id, { passengerRating: rating, passengerComment: comment, paymentStatus: 'paid' });
       }
 
-      const data = await response.json();
-      console.log('✅ Évaluation enregistrée:', data);
+      toast.success('⭐ Merci pour votre évaluation !', {
+        description: `Vous avez attribué ${rating} étoile${rating > 1 ? 's' : ''} à ${driverName}.`,
+        duration: 4000,
+      });
 
-      toast.success('Merci pour votre évaluation !');
-      
-      // Rediriger vers l'accueil
-      setTimeout(() => {
-        setCurrentScreen('map');
-      }, 1500);
-      
-    } catch (error) {
-      console.error('❌ Erreur évaluation:', error);
-      toast.error(error instanceof Error ? error.message : 'Impossible d\'enregistrer l\'évaluation');
+      setTimeout(() => setCurrentScreen('map'), 1800);
+    } catch {
+      toast.error('Impossible d\'enregistrer l\'évaluation. Réessayez.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const quickComments = [
-    { icon: Star, text: 'Excellent conducteur', emoji: '👍' },
-    { icon: Star, text: 'Véhicule propre', emoji: '✨' },
-    { icon: Star, text: 'Conduite sécuritaire', emoji: '🛡️' },
-    { icon: Star, text: 'Très ponctuel', emoji: '⏰' },
-    { icon: Star, text: 'Très sympathique', emoji: '😊' },
-    { icon: Star, text: 'Pourrait être amélioré', emoji: '⚠️' }
-  ];
-
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header - Plus compact */}
-      <div className="bg-gradient-to-br from-green-600 to-green-700 text-white p-4 text-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="w-16 h-16 bg-white/20 rounded-full mx-auto mb-2 flex items-center justify-center"
-        >
-          <Star className="w-8 h-8 fill-white" />
-        </motion.div>
-        <h1 className="text-xl font-bold mb-1">Course terminée !</h1>
-        <p className="text-green-100 text-sm">Comment s'est passée votre course ?</p>
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col">
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div className="bg-gradient-to-br from-green-600 to-emerald-600 text-white pt-8 pb-6 px-6 text-center">
+        <div className="text-4xl mb-2">🏁</div>
+        <h1 className="text-2xl font-bold">Course terminée !</h1>
+        <p className="text-green-100 text-sm mt-1">Évaluez votre expérience</p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="p-3 sm:p-4 md:p-6 space-y-3 max-w-2xl mx-auto">
-          {/* Informations conducteur - Compact */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card className="p-4">
-              <div className="text-center">
-                {loadingDriver ? (
-                  <div className="flex flex-col items-center justify-center py-4">
-                    <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                    <p className="text-sm text-gray-500">Chargement...</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="w-16 h-16 bg-blue-100 rounded-full mx-auto mb-2 flex items-center justify-center">
-                      <span className="text-2xl">👤</span>
-                    </div>
-                    <h2 className="font-semibold">
-                      {driverData?.name || currentRide.driverName || 'Conducteur'}
-                    </h2>
-                    <p className="text-gray-600 text-sm">
-                      {driverData?.vehicle?.make || driverData?.vehicle?.brand || currentRide.vehicleInfo?.make || 'Véhicule'} {driverData?.vehicle?.model || currentRide.vehicleInfo?.model || ''}
-                    </p>
-                    {(driverData?.vehicle?.licensePlate || driverData?.vehicle?.license_plate || currentRide.vehicleInfo?.licensePlate) && (
-                      <p className="text-gray-500 text-xs mt-1">
-                        {driverData?.vehicle?.licensePlate || driverData?.vehicle?.license_plate || currentRide.vehicleInfo?.licensePlate}
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-            </Card>
-          </motion.div>
+        <div className="max-w-md mx-auto p-4 space-y-4">
 
-          {/* Étoiles de notation - Compact */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card className="p-4">
-              <h3 className="text-center font-semibold mb-3 text-sm sm:text-base">Notez votre expérience</h3>
-              
-              <div className="flex justify-center space-x-2 sm:space-x-3 mb-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <motion.button
-                    key={star}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setRating(star)}
-                    className="focus:outline-none"
-                  >
-                    <Star 
-                      className={`w-10 h-10 sm:w-12 sm:h-12 transition-all ${
-                        star <= rating 
-                          ? 'fill-yellow-400 text-yellow-400' 
-                          : 'text-gray-300'
-                      }`}
-                    />
-                  </motion.button>
-                ))}
-              </div>
+          {/* ── Résumé du prix ─────────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500">Montant total</p>
+              <p className="text-2xl font-bold text-gray-900">{finalPrice.toLocaleString()} <span className="text-sm font-normal text-gray-500">CDF</span></p>
+            </div>
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
 
-              <div className="text-center">
-                {rating === 0 && <p className="text-gray-500 text-xs sm:text-sm">Tapez pour noter</p>}
-                {rating === 1 && <p className="text-red-600 text-xs sm:text-sm font-medium">Très mauvais</p>}
-                {rating === 2 && <p className="text-orange-600 text-xs sm:text-sm font-medium">Mauvais</p>}
-                {rating === 3 && <p className="text-yellow-600 text-xs sm:text-sm font-medium">Moyen</p>}
-                {rating === 4 && <p className="text-green-600 text-xs sm:text-sm font-medium">Bien</p>}
-                {rating === 5 && <p className="text-green-600 text-xs sm:text-sm font-medium">Excellent !</p>}
-              </div>
-            </Card>
-          </motion.div>
+          {/* ── Conducteur ─────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
+            {/* Photo */}
+            <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-100 flex-shrink-0 border-2 border-blue-200">
+              {photoUrl ? (
+                <img src={photoUrl} alt={driverName} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-xl">
+                  {initials}
+                </div>
+              )}
+            </div>
+            {/* Infos */}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 truncate">{driverName}</p>
+              {(driverData?.vehicle?.make || driverData?.vehicle?.model) && (
+                <p className="text-sm text-gray-500 truncate">
+                  {driverData.vehicle.color && `${driverData.vehicle.color} · `}
+                  {driverData.vehicle.make} {driverData.vehicle.model}
+                </p>
+              )}
+              {(driverData?.vehicle?.license_plate || driverData?.vehicle?.plate) && (
+                <p className="text-xs font-mono text-primary bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-1">
+                  {driverData.vehicle.license_plate || driverData.vehicle.plate}
+                </p>
+              )}
+            </div>
+          </div>
 
-          {/* Commentaires rapides - Grid adaptatif */}
-          {rating > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
+          {/* ── Étoiles ────────────────────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+            <p className="text-center font-semibold text-gray-800 mb-4">Comment s'est passée votre course ?</p>
+
+            {/* Stars row */}
+            <div
+              className="flex justify-center gap-3 mb-3"
+              onMouseLeave={() => setHovered(0)}
             >
-              <h3 className="font-semibold mb-2 text-sm">Commentaires rapides (optionnel)</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {quickComments.map((item, index) => (
-                  <motion.button
-                    key={index}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setComment(item.text)}
-                    className={`p-2 rounded-lg border text-xs transition-all ${
-                      comment === item.text 
-                        ? 'bg-green-50 border-green-500 text-green-700' 
+              {[1, 2, 3, 4, 5].map(star => (
+                <button
+                  key={star}
+                  type="button"
+                  onMouseEnter={() => setHovered(star)}
+                  onClick={() => setRating(star)}
+                  style={{
+                    transform: activeStars >= star ? 'scale(1.15)' : 'scale(1)',
+                    transition: 'transform 0.15s ease',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: 4,
+                    lineHeight: 0,
+                  }}
+                >
+                  <StarIcon filled={activeStars >= star} size={44} />
+                </button>
+              ))}
+            </div>
+
+            {/* Label */}
+            <div className="text-center min-h-[24px]">
+              {rating > 0 ? (
+                <p className={`font-semibold ${LABELS[rating].color}`}>{LABELS[rating].label}</p>
+              ) : (
+                <p className="text-gray-400 text-sm">Appuyez sur une étoile pour noter</p>
+              )}
+            </div>
+          </div>
+
+          {/* ── Commentaires rapides (visible uniquement après notation) ───── */}
+          {rating > 0 && (
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-2 px-1">Commentaire rapide (optionnel)</p>
+              <div className="grid grid-cols-2 gap-2">
+                {QUICK_COMMENTS.map(q => (
+                  <button
+                    key={q.text}
+                    type="button"
+                    onClick={() => setComment(prev => prev === q.text ? '' : q.text)}
+                    className={`text-left p-2.5 rounded-xl border text-xs font-medium transition-all ${
+                      comment === q.text
+                        ? 'bg-green-50 border-green-400 text-green-800'
                         : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    <span className="mr-1">{item.emoji}</span>
-                    {item.text}
-                  </motion.button>
+                    <span className="mr-1">{q.emoji}</span>{q.text}
+                  </button>
                 ))}
               </div>
-            </motion.div>
+            </div>
           )}
 
-          {/* Zone de commentaire - Plus compact */}
+          {/* ── Commentaire libre ───────────────────────────────────────────── */}
           {rating > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-            >
-              <Card className="p-3">
-                <label className="block text-xs sm:text-sm font-medium mb-2">
-                  Ajoutez un commentaire (optionnel)
-                </label>
-                <Textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Partagez votre expérience..."
-                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm"
-                  rows={3}
-                  maxLength={500}
-                />
-                <p className="text-xs text-gray-500 mt-1 text-right">
-                  {comment.length}/500
-                </p>
-              </Card>
-            </motion.div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Commentaire libre (optionnel)
+              </label>
+              <textarea
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+                placeholder="Partagez votre expérience..."
+                rows={3}
+                maxLength={500}
+                className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent resize-none text-sm outline-none"
+              />
+              <p className="text-right text-xs text-gray-400 mt-1">{comment.length}/500</p>
+            </div>
           )}
 
-          {/* Boutons d'action - Compact */}
-          <div className="space-y-2 pt-2">
-            <Button
-              onClick={handleSubmitRating}
-              disabled={isSubmitting || rating === 0}
-              className="w-full bg-green-600 hover:bg-green-700 h-12"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  <span className="text-sm">Envoi...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  <span className="text-sm">Envoyer l'évaluation</span>
-                </>
-              )}
-            </Button>
+          {/* ── Bouton Envoyer ──────────────────────────────────────────────── */}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || rating === 0}
+            className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
+              rating > 0 && !isSubmitting
+                ? 'bg-green-600 text-white hover:bg-green-700 active:scale-95 shadow-lg shadow-green-200'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Envoi en cours...
+              </span>
+            ) : (
+              `Envoyer mon évaluation ${rating > 0 ? `(${rating}★)` : ''}`
+            )}
+          </button>
 
-            <Button
-              onClick={() => setCurrentScreen('map')}
-              variant="outline"
-              className="w-full h-10"
-            >
-              <Home className="w-4 h-4 mr-2" />
-              <span className="text-sm">Retour à l'accueil</span>
-            </Button>
-          </div>
+          {/* ── Passer l'évaluation ─────────────────────────────────────────── */}
+          <button
+            type="button"
+            onClick={() => setCurrentScreen('map')}
+            className="w-full py-3 text-gray-500 text-sm hover:text-gray-700 transition-colors"
+          >
+            Passer pour l'instant
+          </button>
 
-          {/* Message de remerciement - Compact */}
-          <Card className="p-3 bg-blue-50 border-blue-200">
-            <p className="text-xs text-blue-800 text-center">
-              💙 Merci d'utiliser SmartCabb ! Votre avis nous aide à améliorer nos services.
-            </p>
-          </Card>
         </div>
       </div>
     </div>
