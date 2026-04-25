@@ -12,6 +12,17 @@ import { TrendingUp, Calendar, DollarSign } from '../../lib/admin-icons';
 export function StatsCharts() {
   const { rides, drivers } = useSupabaseData();
 
+  // Helper : normalise le nom de catégorie vers un label court
+  const normalizeCategory = (raw: string | null | undefined): string => {
+    if (!raw) return '';
+    const v = raw.toLowerCase().replace(/[\s_-]/g, '');
+    if (v.includes('standard') || v.includes('smart_standard') || v === 'economic') return 'Standard';
+    if (v.includes('confort') || v.includes('comfort'))  return 'Confort';
+    if (v.includes('plus') || v.includes('familiale'))   return 'Plus';
+    if (v.includes('business') || v.includes('van') || v.includes('minibus')) return 'Business';
+    return raw; // fallback au nom brut
+  };
+
   // Préparer les données des 7 derniers jours
   const last7DaysData = useMemo(() => {
     const today = new Date();
@@ -23,11 +34,11 @@ export function StatsCharts() {
       const dateStr = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
       
       const dayRides = rides.filter(r => {
-        const rideDate = new Date(r.created_at);
+        const rideDate = new Date(r.created_at || (r as any).createdAt);
         return rideDate.toDateString() === date.toDateString();
       });
       
-      const completedRides = dayRides.filter(r => r.status === 'completed');
+      const completedRides = dayRides.filter(r => r.status === 'completed' || r.status === 'rated');
       const revenue = completedRides.reduce((sum, r) => sum + (r.total_amount || 0), 0);
       
       days.push({
@@ -43,46 +54,45 @@ export function StatsCharts() {
 
   // Données par catégorie de véhicule
   const categoryData = useMemo(() => {
-    const categories = ['SmartCabb Standard', 'SmartCabb Confort', 'SmartCabb Plus', 'SmartCabb Business'];
+    const labels = ['Standard', 'Confort', 'Plus', 'Business'];
     
-    return categories.map(category => {
-      // Filtrer par vehicle_category qui vient du KV store
+    return labels.map(label => {
       const categoryRides = rides.filter(r => {
-        const vehicleType = r.vehicle_category || '';
-        return vehicleType === category && r.status === 'completed';
+        const normalized = normalizeCategory(r.vehicle_category || (r as any).vehicleCategory || (r as any).vehicleType);
+        return normalized === label && (r.status === 'completed' || r.status === 'rated');
       });
       const revenue = categoryRides.reduce((sum, r) => sum + (r.total_amount || 0), 0);
       
       return {
-        category: category.replace('SmartCabb ', ''),
+        category: label,
         courses: categoryRides.length,
-        revenus: revenue / 1000 // En milliers de CDF
+        revenus: revenue / 1000
       };
     });
   }, [rides]);
 
   // Données de performance des conducteurs (top 5)
-  // Calculer le nombre de courses et la note moyenne pour chaque conducteur
   const topDriversData = useMemo(() => {
-    // Créer un map des statistiques par conducteur
     const driverStats = new Map();
     
     rides.forEach(ride => {
-      if (ride.status === 'completed' && ride.driver_id) {
-        const currentStats = driverStats.get(ride.driver_id) || {
-          driverId: ride.driver_id,
+      const dId = (ride as any).driver_id || (ride as any).driverId;
+      if ((ride.status === 'completed' || ride.status === 'rated') && dId) {
+        const currentStats = driverStats.get(dId) || {
+          driverId: dId,
           totalRides: 0,
           totalRating: 0,
           ratingsCount: 0
         };
         
         currentStats.totalRides++;
-        if (ride.rating) {
-          currentStats.totalRating += ride.rating;
+        const rating = (ride as any).rating;
+        if (rating) {
+          currentStats.totalRating += rating;
           currentStats.ratingsCount++;
         }
         
-        driverStats.set(ride.driver_id, currentStats);
+        driverStats.set(dId, currentStats);
       }
     });
     
@@ -93,11 +103,10 @@ export function StatsCharts() {
         id: driver.id,
         nom: driver.full_name || 'Conducteur',
         courses: stats.totalRides,
-        note: stats.ratingsCount > 0 ? stats.totalRating / stats.ratingsCount : 0
+        note: stats.ratingsCount > 0 ? stats.totalRating / stats.ratingsCount : (driver.rating || 0)
       };
     });
     
-    // Trier par nombre de courses et prendre le top 5
     return enrichedDrivers
       .sort((a, b) => b.courses - a.courses)
       .slice(0, 5);
