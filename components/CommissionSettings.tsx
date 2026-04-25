@@ -68,20 +68,20 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
       );
 
       if (!response.ok) {
-        throw new Error('Erreur chargement paramètres');
+        // Route indisponible — utiliser les valeurs par défaut silencieusement
+        console.warn('⚠️ settings/load non disponible, utilisation des valeurs par défaut');
+        return;
       }
 
       const data = await response.json();
       
       if (data.success && data.settings) {
-        // Mettre à jour le state avec les paramètres chargés
         setCommissionEnabled(data.settings.commissionEnabled ?? true);
         setCommissionRate(data.settings.commissionRate ?? 15);
         setMinimumCommission(data.settings.minimumCommission ?? 500);
         setPaymentFrequency(data.settings.paymentFrequency ?? 'immediate');
         setAutoDeduction(data.settings.autoDeduction ?? true);
         
-        // Mettre à jour le state global aussi
         if (updateAdminSettings) {
           updateAdminSettings(data.settings);
         }
@@ -89,8 +89,8 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
         console.log('✅ Paramètres admin chargés depuis le backend');
       }
     } catch (error) {
-      console.error('❌ Erreur chargement paramètres admin:', error);
-      toast.error('Erreur lors du chargement des paramètres');
+      // Ne pas afficher de toast d'erreur — utiliser les valeurs par défaut
+      console.warn('⚠️ Erreur chargement paramètres admin (valeurs par défaut utilisées):', error);
     } finally {
       setLoading(false);
     }
@@ -159,7 +159,6 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
     };
 
     try {
-      // Sauvegarder dans le backend
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/settings/save`,
         {
@@ -179,11 +178,9 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
       const data = await response.json();
       
       if (data.success) {
-        // Mettre à jour le state global
         if (updateAdminSettings) {
           updateAdminSettings(newSettings);
         }
-        
         toast.success('✅ Paramètres enregistrés dans la base de données !');
         console.log('✅ Paramètres admin sauvegardés dans le backend');
       } else {
