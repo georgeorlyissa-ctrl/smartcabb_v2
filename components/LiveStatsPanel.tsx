@@ -29,7 +29,7 @@ export function LiveStatsPanel() {
     try {
       // Charger les stats d'overview depuis le backend
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/stats/overview`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/stats`,
         {
           headers: {
             'Authorization': `Bearer ${publicAnonKey}`,
@@ -43,14 +43,14 @@ export function LiveStatsPanel() {
 
         if (data.success && data.stats) {
           setStats({
-            onlineDrivers: data.stats.allTime?.onlineDrivers || 0,
-            totalDrivers: data.stats.allTime?.totalDrivers || 0,
-            activeRides: data.stats.allTime?.activeRides || 0,
-            completedToday: data.stats.today?.rides || 0,
-            totalRevenue: data.stats.allTime?.totalRevenue || 0,
-            totalPassengers: data.stats.allTime?.totalPassengers || 0,
-            totalRides: data.stats.allTime?.totalRides || 0,
-            averageRating: data.stats.allTime?.averageRating || 0
+            onlineDrivers:   data.stats.onlineDrivers   || 0,
+            totalDrivers:    data.stats.totalDrivers    || 0,
+            activeRides:     data.stats.activeRides     || 0,
+            completedToday:  data.stats.ridesToday       || 0,
+            totalRevenue:    data.stats.totalRevenueCDF  || 0,
+            totalPassengers: data.stats.totalPassengers  || 0,
+            totalRides:      data.stats.totalRides       || 0,
+            averageRating:   data.stats.averageRating    || 0
           });
         }
       } else {
