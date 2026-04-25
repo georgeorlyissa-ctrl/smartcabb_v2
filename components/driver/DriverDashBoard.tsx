@@ -243,6 +243,38 @@ export function DriverDashboard() {
     };
   }, [driver?.id]);
 
+  // ✅ 4. Watcher: quand une notif est visible, vérifier toutes les 3s si la course est encore disponible
+  useEffect(() => {
+    if (!pendingRideRequest?.id) return;
+
+    const rideId = pendingRideRequest.id;
+    console.log(`👁️ Watcher actif pour course ${rideId}`);
+
+    const checkRideTaken = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/${rideId}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        const data = await res.json();
+        if (data.success && data.ride) {
+          const status = data.ride.status;
+          // Si la course n'est plus en recherche → la dismisser
+          if (status && status !== 'searching' && status !== 'pending') {
+            console.log(`🚫 [WATCHER] Course ${rideId} prise/annulée (status: ${status}) → dismissing`);
+            setPendingRideRequest(null);
+            stopAllNotifications();
+            if (status === 'accepted') {
+              toast.info('Cette course a été acceptée par un autre chauffeur.');
+            }
+          }
+        }
+      } catch (e) {}
+    }, 3000);
+
+    return () => clearInterval(checkRideTaken);
+  }, [pendingRideRequest?.id]);
+
   const handleToggleOnline = async () => {
     if (!driver) return;
     const minimumCredit = getMinimumCreditForCategory(driver.vehicle?.category || 'smart_standard');
@@ -476,7 +508,7 @@ export function DriverDashboard() {
             setPendingRideRequest(null);
             stopAllNotifications();
           }}
-          timeoutSeconds={30}
+          timeoutSeconds={15}
         />
       )}
 
