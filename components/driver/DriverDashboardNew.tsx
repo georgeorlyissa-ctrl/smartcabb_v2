@@ -521,7 +521,8 @@ export function DriverDashboardNew() {
               <Navigation className="w-4 h-4" />
               <span className="text-xs opacity-80">Courses</span>
             </div>
-            <p className="text-xl font-bold">{driver.totalRides || 0}</p>
+            {/* ✅ FIX : lire totalRides (camelCase) OU total_rides (snake_case KV) */}
+            <p className="text-xl font-bold">{driver.totalRides || (driver as any).total_rides || 0}</p>
           </div>
           <div className="bg-white/10 backdrop-blur rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
