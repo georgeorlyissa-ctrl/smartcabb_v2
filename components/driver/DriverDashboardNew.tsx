@@ -124,7 +124,7 @@ function buildRideRequest(d: any): RideRequest {
 }
 
 export function DriverDashboardNew() {
-  const { state, setCurrentDriver, setCurrentScreen } = useAppState();
+  const { state, setCurrentDriver, setCurrentScreen, setCurrentRide } = useAppState();
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [isOnline, setIsOnline] = useState(false);
   const [driver, setDriver] = useState<Driver | null>(null);
@@ -781,25 +781,112 @@ export function DriverDashboardNew() {
             createdAt: new Date().toISOString()
           }}
           onAccept={async (rideId) => {
-            console.log('Course acceptée:', rideId);
+            if (!driver) return;
+            const snapshot = pendingRideRequest; // capturer avant setState async
+
+            try {
+              console.log('✅ Acceptation course:', rideId);
+
+              const res = await fetch(
+                `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/accept`,
+                {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    rideId,
+                    driverId: driver.id,
+                    driverName: driver.full_name || driver.name || 'Conducteur',
+                    driverPhone: driver.phone,
+                    driverVehicle: driver.vehicle
+                      ? `${driver.vehicle.color || ''} ${driver.vehicle.make || ''} ${driver.vehicle.model || ''} (${driver.vehicle.plate || ''})`.trim()
+                      : '',
+                    driverRating: driver.rating || 5.0
+                  })
+                }
+              );
+
+              const data = await res.json();
+
+              if (!data.success) {
+                toast.error(data.error || 'Erreur lors de l\'acceptation de la course');
+                setPendingRideRequest(null);
+                stopAllNotifications();
+                return;
+              }
+
+              const rideData = data.ride;
+
+              // ──── Construire le currentRide pour le state global ────
+              // Normaliser pickup / destination (le backend peut stocker sous plusieurs formes)
+              const pickupLat = parseFloat(
+                rideData.pickupLat ?? rideData.pickup?.coordinates?.lat ?? rideData.pickup?.lat ?? snapshot?.pickup.latitude ?? -4.3276
+              );
+              const pickupLng = parseFloat(
+                rideData.pickupLng ?? rideData.pickup?.coordinates?.lng ?? rideData.pickup?.lng ?? snapshot?.pickup.longitude ?? 15.3136
+              );
+              const pickupAddress =
+                rideData.pickupName ?? rideData.pickup?.name ?? rideData.pickup?.address ?? rideData.pickupAddress ?? snapshot?.pickup.address ?? 'Point de départ';
+
+              const destLat = parseFloat(
+                rideData.destinationLat ?? rideData.destination?.coordinates?.lat ?? rideData.destination?.lat ?? snapshot?.dropoff.latitude ?? -4.3276
+              );
+              const destLng = parseFloat(
+                rideData.destinationLng ?? rideData.destination?.coordinates?.lng ?? rideData.destination?.lng ?? snapshot?.dropoff.longitude ?? 15.3136
+              );
+              const destAddress =
+                rideData.destinationName ?? rideData.destination?.name ?? rideData.destination?.address ?? rideData.destinationAddress ?? snapshot?.dropoff.address ?? 'Destination';
+
+              const currentRide = {
+                id: rideId,
+                passengerId: rideData.passengerId ?? snapshot?.passengerId ?? '',
+                driverId: driver.id,
+                pickup: { lat: pickupLat, lng: pickupLng, address: pickupAddress },
+                destination: { lat: destLat, lng: destLng, address: destAddress },
+                status: 'accepted' as const,
+                estimatedPrice: rideData.estimatedPrice ?? snapshot?.estimatedPrice ?? 0,
+                estimatedDuration: rideData.duration ?? 0,
+                vehicleType: (rideData.vehicleCategory ?? snapshot?.vehicleCategory ?? 'smart_standard') as any,
+                passengerName: rideData.passengerName ?? snapshot?.passengerName ?? 'Passager',
+                passengerPhone: rideData.passengerPhone ?? snapshot?.passengerPhone ?? '',
+                confirmationCode: rideData.confirmationCode ?? '',
+                createdAt: new Date(rideData.createdAt ?? Date.now()),
+                distance: rideData.distance ?? snapshot?.distance ?? 0,
+              };
+
+              // Sauvegarder dans le state global
+              setCurrentRide(currentRide as any);
+
+              // Fermer la notification
+              setPendingRideRequest(null);
+              stopAllNotifications();
+
+              toast.success('Course acceptée ! En route vers le passager 🚗');
+
+              // Naviguer vers l'écran de navigation
+              setCurrentScreen('driver-navigation');
+
+            } catch (err) {
+              console.error('❌ Erreur acceptation course:', err);
+              toast.error('Erreur réseau lors de l\'acceptation');
+              setPendingRideRequest(null);
+              stopAllNotifications();
+            }
+          }}
+          onDecline={(rideId) => {
+            // Appeler le backend pour passer au driver suivant
+            fetch(
+              `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/decline`,
+              {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rideId, driverId: driver?.id })
+              }
+            ).catch(e => console.error('Erreur decline:', e));
+
             setPendingRideRequest(null);
             stopAllNotifications();
           }}
-          onDecline={(rideId) => {
-  // Appeler le backend pour passer au driver suivant
-  fetch(
-    `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/decline`,
-    {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rideId, driverId: driver?.id })
-    }
-  ).catch(e => console.error('Erreur decline:', e));
-
-  setPendingRideRequest(null);
-  stopAllNotifications();
-}}
-          timeoutSeconds={10}
+          timeoutSeconds={15}
         />
       )}
 
