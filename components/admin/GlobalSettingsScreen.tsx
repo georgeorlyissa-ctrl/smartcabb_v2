@@ -54,8 +54,17 @@ export function GlobalSettingsScreen() {
       
       if (success) {
         toast.success('Paramètres mis à jour avec succès', {
-          description: 'Les modifications sont appliquées partout dans l\'application en temps réel',
+          description: `Propagation en cours vers les apps conducteur et passager (délai max 60s)`,
         });
+
+        // Forcer la mise à jour du cache local immédiatement
+        // pour que les calculs de prix soient instantanés sur le même appareil
+        try {
+          const cachePayload = JSON.stringify({ ...localConfig, lastUpdated: new Date().toISOString() });
+          localStorage.setItem('smartcabb_config_cache', cachePayload);
+          localStorage.setItem('smartcab_system_settings', cachePayload);
+          window.dispatchEvent(new CustomEvent('smartcabb:config-updated', { detail: localConfig }));
+        } catch (_) {}
       } else {
         toast.error('Erreur lors de la mise à jour', {
           description: 'Les paramètres n\'ont pas pu être sauvegardés',
@@ -103,6 +112,11 @@ export function GlobalSettingsScreen() {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Indicateur de synchronisation */}
+              <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border rounded-full px-3 py-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span>Apps sync auto (60s)</span>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
