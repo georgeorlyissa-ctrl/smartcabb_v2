@@ -322,10 +322,16 @@ export function CancellationsScreen() {
                       <MapPin className="w-4 h-4 text-gray-400 mt-1" />
                       <div className="text-sm">
                         <p className="text-gray-600">
-                          <span className="font-medium">De:</span> {cancellation.pickup.address}
+                          <span className="font-medium">De:</span>{' '}
+                          {typeof cancellation.pickup === 'string'
+                            ? cancellation.pickup
+                            : (cancellation.pickup?.address || cancellation.pickup?.name || '—')}
                         </p>
                         <p className="text-gray-600">
-                          <span className="font-medium">À:</span> {cancellation.destination.address}
+                          <span className="font-medium">À:</span>{' '}
+                          {typeof cancellation.destination === 'string'
+                            ? cancellation.destination
+                            : (cancellation.destination?.address || cancellation.destination?.name || '—')}
                         </p>
                       </div>
                     </div>
