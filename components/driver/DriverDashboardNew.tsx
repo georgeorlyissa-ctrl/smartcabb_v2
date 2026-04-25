@@ -521,8 +521,11 @@ export function DriverDashboardNew() {
               <Navigation className="w-4 h-4" />
               <span className="text-xs opacity-80">Courses</span>
             </div>
-            {/* ✅ FIX : lire totalRides (camelCase) OU total_rides (snake_case KV) */}
-            <p className="text-xl font-bold">{driver.totalRides || (driver as any).total_rides || 0}</p>
+            {/* ✅ FIX : source principale = rideStats.total.count (calculé depuis le KV réel)
+                       fallback = driver.totalRides / total_rides pour les anciens drivers */}
+            <p className="text-xl font-bold">
+              {rideStats.total.count || driver.totalRides || (driver as any).total_rides || 0}
+            </p>
           </div>
           <div className="bg-white/10 backdrop-blur rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
