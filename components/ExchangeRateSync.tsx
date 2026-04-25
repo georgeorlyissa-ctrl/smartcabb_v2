@@ -1,73 +1,79 @@
 import { useEffect, useState } from 'react';
 
 /**
- * ExchangeRateSync - Synchronise le taux de change depuis le localStorage
- * Fonctionne en mode local uniquement avec localStorage
+ * ExchangeRateSync — Synchronise le taux de change depuis le cache config global
+ * Écoute les événements de mise à jour de config admin en temps réel
  */
 export function ExchangeRateSync() {
-  const [isInitialized, setIsInitialized] = useState(false);
-
   useEffect(() => {
-    const syncExchangeRate = async () => {
-      try {
-        console.log('🔄 Initialisation du taux de change...');
-        
-        // Initialiser les paramètres par défaut si nécessaire
-        const currentRate = localStorage.getItem('smartcabb_exchange_rate');
-        if (!currentRate) {
-          localStorage.setItem('smartcabb_exchange_rate', '2000');
-          const defaultSettings = {
-            exchangeRate: 2000,
-            freeWaitingMinutes: 10,
-            commission: 15,
-            smartStandardDay: 7,
-            smartStandardNight: 10,
-            smartConfortDay: 9,
-            smartConfortNight: 15,
-            smartPlusDay: 15,
-            smartPlusNight: 17,
-            smartPlusPlusDay: 15,
-            smartPlusPlusNight: 20
-          };
-          localStorage.setItem('smartcabb_settings', JSON.stringify(defaultSettings));
-          console.log('✅ Paramètres par défaut initialisés dans le localStorage (2000 CDF)');
-        } else {
-          console.log(`ℹ️ Taux de change actuel: ${currentRate} CDF`);
+    // Initialiser depuis le cache config si disponible
+    try {
+      for (const key of ['smartcabb_config_cache', 'smartcab_system_settings', 'smartcabb_settings']) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.exchangeRate && typeof parsed.exchangeRate === 'number' && parsed.exchangeRate > 0) {
+            // Synchroniser aussi la clé legacy
+            localStorage.setItem('smartcabb_exchange_rate', String(parsed.exchangeRate));
+            window.dispatchEvent(new CustomEvent('exchange-rate-updated', { detail: { rate: parsed.exchangeRate } }));
+            console.log(`✅ Taux de change initialisé : ${parsed.exchangeRate} CDF`);
+            return;
+          }
         }
-      } catch (error: any) {
-        console.log('ℹ️ Erreur lors de l\'initialisation des paramètres:', error?.message);
-      } finally {
-        setIsInitialized(true);
+      }
+      // Aucune valeur → utiliser 2800 CDF (aligné avec le backend)
+      localStorage.setItem('smartcabb_exchange_rate', '2800');
+      console.log('ℹ️ Taux de change par défaut : 2800 CDF');
+    } catch (_) {}
+
+    // Écouter les mises à jour admin en temps réel
+    const handleConfigUpdate = (event: CustomEvent) => {
+      const rate = event.detail?.exchangeRate ?? event.detail?.rate;
+      if (rate && typeof rate === 'number' && rate > 0) {
+        localStorage.setItem('smartcabb_exchange_rate', String(rate));
+        window.dispatchEvent(new CustomEvent('exchange-rate-updated', { detail: { rate } }));
+        console.log(`🔄 Taux de change mis à jour par l'admin : ${rate} CDF`);
       }
     };
 
-    // Synchroniser au montage
-    syncExchangeRate();
+    window.addEventListener('smartcabb:config-updated', handleConfigUpdate as EventListener);
+    return () => window.removeEventListener('smartcabb:config-updated', handleConfigUpdate as EventListener);
   }, []);
 
-  // Ce composant ne rend rien (composant invisible)
   return null;
 }
 
 /**
- * Hook pour récupérer le taux de change actuel
+ * Hook pour récupérer le taux de change actuel (réactif aux mises à jour admin)
  */
-export function useExchangeRate() {
-  const [exchangeRate, setExchangeRate] = useState(() => {
-    const rate = localStorage.getItem('smartcabb_exchange_rate');
-    return rate ? parseInt(rate) : 2000;
+export function useExchangeRate(): number {
+  const [exchangeRate, setExchangeRate] = useState<number>(() => {
+    try {
+      for (const key of ['smartcabb_config_cache', 'smartcab_system_settings', 'smartcabb_exchange_rate']) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const rate = typeof parsed === 'number' ? parsed : parsed?.exchangeRate;
+          if (rate && typeof rate === 'number' && rate > 0) return rate;
+        }
+      }
+    } catch (_) {}
+    return 2800;
   });
 
   useEffect(() => {
-    // Écouter les mises à jour du taux de change
-    const handleUpdate = (event: any) => {
-      setExchangeRate(event.detail.rate);
+    const handleRateUpdate = (event: CustomEvent) => {
+      const rate = event.detail?.exchangeRate ?? event.detail?.rate;
+      if (rate && typeof rate === 'number' && rate > 0) {
+        setExchangeRate(rate);
+      }
     };
 
-    window.addEventListener('exchange-rate-updated', handleUpdate);
-
+    window.addEventListener('exchange-rate-updated', handleRateUpdate as EventListener);
+    window.addEventListener('smartcabb:config-updated', handleRateUpdate as EventListener);
     return () => {
-      window.removeEventListener('exchange-rate-updated', handleUpdate);
+      window.removeEventListener('exchange-rate-updated', handleRateUpdate as EventListener);
+      window.removeEventListener('smartcabb:config-updated', handleRateUpdate as EventListener);
     };
   }, []);
 
