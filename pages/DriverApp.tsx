@@ -121,7 +121,9 @@ function DriverAppContent() {
             {currentScreen === 'driver-login' && <DriverLoginScreen />}
             {currentScreen === 'driver-registration' && <DriverRegistrationScreen />}
             {currentScreen === 'driver-dashboard' && <DriverDashboardNew />}
-            {(currentScreen === 'driver-navigation' || currentScreen === 'navigation') && <NavigationScreen />}
+            {(currentScreen === 'driver-navigation' || currentScreen === 'navigation') && (
+              <NavigationScreen onBack={() => setCurrentScreen('driver-dashboard')} />
+            )}
             {currentScreen === 'driver-earnings' && <EarningsScreen />}
             {currentScreen === 'driver-settings' && <DriverSettingsScreen />}
             {currentScreen === 'driver-profile' && <DriverProfileScreen />}
