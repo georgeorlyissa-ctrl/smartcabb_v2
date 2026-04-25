@@ -109,12 +109,16 @@ export function RideInProgressScreen() {
           return;
         }
 
-        const updatedRide = await response.json();
+        const json = await response.json();
+
+        // ✅ FIX CRITIQUE : l'API retourne { success: true, ride: {...} }
+        // Il faut lire json.ride et non json directement
+        const updatedRide = json.ride || json;
 
         console.log('📥 Mise à jour reçue:', {
-          status: updatedRide.status,
-          billingStartTime: updatedRide.billingStartTime,
-          billingElapsedTime: updatedRide.billingElapsedTime
+          status: updatedRide?.status,
+          billingStartTime: updatedRide?.billingStartTime,
+          billingElapsedTime: updatedRide?.billingElapsedTime
         });
 
         // ✅ Mettre à jour le ride dans le contexte
@@ -126,6 +130,23 @@ export function RideInProgressScreen() {
         if (updatedRide?.billingElapsedTime !== undefined && updatedRide.billingElapsedTime > 0) {
           setBillingElapsedTime(updatedRide.billingElapsedTime);
           if (!billingActive) setBillingActive(true);
+        }
+
+        // ✅ FIX : si la course est terminée, rediriger vers paiement immédiatement
+        if (updatedRide?.status === 'completed' && !rideCompleted) {
+          console.log('🏁 Course terminée détectée via polling direct');
+          setRideCompleted(true);
+          if (updatedRide.billingElapsedTime !== undefined) {
+            setBillingElapsedTime(updatedRide.billingElapsedTime);
+          }
+          const finalAmount = updatedRide.finalPrice || updatedRide.actualPrice || updatedRide.estimatedPrice || 0;
+          toast.success('🏁 Course terminée !', {
+            description: `Montant : ${finalAmount.toLocaleString()} CDF`,
+            duration: 5000
+          });
+          setTimeout(() => {
+            setCurrentScreen('payment');
+          }, 2000);
         }
         
       } catch (error) {
