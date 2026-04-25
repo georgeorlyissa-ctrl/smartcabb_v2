@@ -198,6 +198,15 @@ export function RideScreen() {
           
           // ✅ PROTECTION : Si la course est annulée, arrêter le polling
           if (ride.status === 'cancelled') {
+            // ✅ FIX : Ne pas afficher "annulée" si la course est déjà payée/terminée localement
+            const localStatus = currentRide?.status;
+            if (localStatus === 'completed' || localStatus === 'rated' || localStatus === 'paid') {
+              console.log('⏭️ Backend cancelled mais local completed/paid — polling ignoré');
+              clearInterval(checkInterval);
+              clearTimeout(timeoutTimer);
+              setSearchingDriver(false);
+              return;
+            }
             console.log('🚫 Course annulée détectée, arrêt du polling');
             clearInterval(checkInterval);
             clearTimeout(timeoutTimer);
@@ -207,6 +216,15 @@ export function RideScreen() {
               duration: 3000
             });
             setCurrentScreen('map');
+            return;
+          }
+          // ✅ FIX : Course terminée directement → paiement
+          if (ride.status === 'completed' || ride.status === 'rated') {
+            console.log('🏁 Course terminée détectée depuis RideScreen — navigation paiement');
+            clearInterval(checkInterval);
+            clearTimeout(timeoutTimer);
+            setSearchingDriver(false);
+            setCurrentScreen('payment');
             return;
           }
           
