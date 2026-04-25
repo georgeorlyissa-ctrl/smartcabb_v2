@@ -171,27 +171,50 @@ export function DriverFoundScreen({ driverData: initialDriverData, estimatedArri
 
         if (response.ok) {
           const data = await response.json();
-          
-          // Si le conducteur a confirmé le code → course démarre
-          if (data.ride?.status === 'in_progress') {
-            console.log('🚗 Conducteur a confirmé le code ! Course démarrée');
-            
-            // Mettre à jour le state
+          const rideStatus = data.ride?.status;
+
+          // ✅ FIX : Course démarrée (passage par in_progress)
+          if (rideStatus === 'in_progress') {
+            console.log('🚗 Course démarrée par le conducteur !');
             if (updateRide) {
               updateRide(state.currentRide.id, {
                 status: 'in_progress',
                 startedAt: data.ride.startedAt || new Date().toISOString()
               });
             }
-            
-            // Notification
             toast.success('Course démarrée !', {
-              description: 'Votre chauffeur a confirmé le code. Suivez votre trajet en temps réel.',
+              description: 'Votre chauffeur a démarré la course. Suivez votre trajet en temps réel.',
               duration: 5000
             });
-            
-            // Navigation vers l'écran de suivi en temps réel
             setCurrentScreen('ride-in-progress');
+          }
+
+          // ✅ FIX : Course terminée directement (sans passer par in_progress)
+          else if (rideStatus === 'completed' || rideStatus === 'rated') {
+            console.log('🏁 Course terminée détectée depuis driver-found — navigation vers paiement');
+            if (updateRide) {
+              updateRide(state.currentRide.id, {
+                status: 'completed',
+                completedAt: data.ride.completedAt || new Date().toISOString(),
+                finalPrice: data.ride.finalPrice || data.ride.totalPrice || state.currentRide.estimatedPrice,
+                duration: data.ride.duration || data.ride.billingElapsedTime || 0,
+              });
+            }
+            toast.success('🏁 Course terminée !', {
+              description: 'Procédez au paiement.',
+              duration: 4000
+            });
+            setCurrentScreen('payment');
+          }
+
+          // ✅ FIX : Course annulée
+          else if (rideStatus === 'cancelled') {
+            console.log('🚫 Course annulée détectée depuis driver-found');
+            toast.info('Course annulée', {
+              description: data.ride.cancellationReason || 'La course a été annulée.',
+              duration: 4000
+            });
+            setCurrentScreen('map');
           }
         }
       } catch (error) {
