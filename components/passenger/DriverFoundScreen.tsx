@@ -314,31 +314,79 @@ export function DriverFoundScreen({ driverData: initialDriverData, estimatedArri
       </div>
 
       {/* Contenu principal */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Animation de succès */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+        {/* 🔒 SÉCURITÉ — Photo du conducteur en avant-plan */}
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", duration: 0.6 }}
-          className="flex flex-col items-center justify-center py-6"
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", duration: 0.5 }}
+          className="bg-white rounded-2xl shadow-lg border-2 border-green-200 overflow-hidden"
         >
-          <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg mb-4">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring" }}
-            >
-              <Car className="w-12 h-12 text-white" />
-            </motion.div>
+          <div className="bg-gradient-to-r from-green-600 to-emerald-500 px-4 py-3 flex items-center gap-2">
+            <span className="text-xl">🔒</span>
+            <div>
+              <p className="text-white font-bold text-sm">Vérification de sécurité</p>
+              <p className="text-green-100 text-xs">Vérifiez la photo avant de monter dans le véhicule</p>
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-green-600 mb-2">Chauffeur en route !</h2>
-          <p className="text-muted-foreground text-center">
-            Votre conducteur arrive dans <span className="font-semibold text-primary">quelques instants</span>
-          </p>
+          <div className="p-5 flex flex-col items-center">
+            {/* Grande photo conducteur */}
+            <div className="relative w-28 h-28 mb-3">
+              <div className="w-full h-full rounded-full border-4 border-green-400 overflow-hidden bg-gray-100 shadow-lg">
+                {isLoadingDriverData ? (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : driverData.photo_url ? (
+                  <img
+                    src={driverData.photo_url}
+                    alt={driverData.full_name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fallback) fallback.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                {/* Fallback initiales */}
+                <div className={`absolute inset-0 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-3xl ${driverData.photo_url ? 'hidden' : ''}`}>
+                  {driverData.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || '?'}
+                </div>
+              </div>
+              {/* Badge vérifié */}
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center border-2 border-white shadow">
+                <span className="text-white text-xs font-bold">✓</span>
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold text-gray-900">{driverData.full_name}</h2>
+            <div className="flex items-center gap-1 mt-1 mb-3">
+              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+              <span className="font-semibold text-sm">{driverData.rating.toFixed(1)}</span>
+              <span className="text-gray-400 text-xs">({isLoadingDriverData ? '...' : driverData.total_rides} courses)</span>
+            </div>
+
+            <div className="w-full bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+              <p className="text-green-800 font-semibold text-sm">✅ Identité confirmée</p>
+              <p className="text-green-600 text-xs mt-0.5">Permis ✓ · Assurance ✓ · Dossier vérifié ✓</p>
+            </div>
+          </div>
         </motion.div>
 
-        {/* 🚫 SUPPRIMÉ : Code de confirmation pour simplifier l'UX */}
-        {/* Le conducteur démarre directement sans demander de code */}
+        {/* Animation de succès réduite */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="text-center"
+        >
+          <h2 className="text-lg font-bold text-green-600">Chauffeur en route !</h2>
+          <p className="text-muted-foreground text-sm">
+            Arrivée estimée dans <span className="font-semibold text-primary">{arrivalTime} min</span>
+          </p>
+        </motion.div>
 
         {/* Informations du chauffeur */}
         <motion.div
@@ -347,92 +395,32 @@ export function DriverFoundScreen({ driverData: initialDriverData, estimatedArri
           transition={{ delay: 0.4 }}
           className="bg-white rounded-2xl shadow-lg border border-border overflow-hidden"
         >
-          {/* En-tête avec photo */}
-          <div className="bg-gradient-to-r from-secondary to-primary p-6 text-white">
-            <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-                {driverData.photo_url ? (
-                  <img 
-                    src={driverData.photo_url} 
-                    alt={driverData.full_name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback si l'image ne charge pas
-                      e.currentTarget.style.display = 'none';
-                      const nextSibling = e.currentTarget.nextElementSibling;
-                      if (nextSibling instanceof HTMLElement) {
-                        nextSibling.classList.remove('hidden');
-                      }
-                    }}
-                  />
-                ) : null}
-                {/* Avatar avec initiales si pas de photo */}
-                {!driverData.photo_url && driverData.full_name ? (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-2xl">
-                    {driverData.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                  </div>
-                ) : null}
-                {/* Icône User en fallback final */}
-                <User className={`w-10 h-10 text-primary ${driverData.photo_url || driverData.full_name ? 'hidden' : ''}`} />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-xl font-bold">{driverData.full_name}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-semibold">{driverData.rating.toFixed(1)}</span>
-                  <span className="text-sm opacity-90">
-                    ({isLoadingDriverData ? '...' : driverData.total_rides} courses)
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Détails du véhicule */}
           {driverData.vehicle && (
-            <div className="p-6 border-b border-border">
-              <div className="flex items-center gap-3 mb-4">
+            <div className="p-5 border-b border-border">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                   <Car className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Véhicule</p>
+                  <p className="text-xs text-muted-foreground">Véhicule</p>
                   <p className="font-semibold">
                     {getVehicleDisplayName(driverData.vehicle) || 'Véhicule'}
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Couleur</p>
-                  <p className="font-medium">{driverData.vehicle.color || 'Non spécifiée'}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-lg p-2.5">
+                  <p className="text-xs text-muted-foreground mb-0.5">Couleur</p>
+                  <p className="font-medium text-sm">{driverData.vehicle.color || 'Non spécifiée'}</p>
                 </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Plaque</p>
-                  <p className="font-mono font-bold text-primary">{driverData.vehicle.license_plate || 'N/A'}</p>
+                <div className="bg-gray-50 rounded-lg p-2.5">
+                  <p className="text-xs text-muted-foreground mb-0.5">Plaque</p>
+                  <p className="font-mono font-bold text-primary text-sm">{driverData.vehicle.license_plate || 'N/A'}</p>
                 </div>
               </div>
             </div>
           )}
-
-          {/* Badges de confiance */}
-          <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50">
-            <div className="flex items-center gap-3 mb-3">
-              <Award className="w-5 h-5 text-green-600" />
-              <p className="font-semibold text-green-900">Chauffeur vérifié</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="px-3 py-1 bg-white border border-green-200 rounded-full text-xs font-medium text-green-700">
-                ✓ Permis vérifié
-              </span>
-              <span className="px-3 py-1 bg-white border border-green-200 rounded-full text-xs font-medium text-green-700">
-                ✓ Assurance valide
-              </span>
-              <span className="px-3 py-1 bg-white border border-green-200 rounded-full text-xs font-medium text-green-700">
-                ✓ Identité confirmée
-              </span>
-            </div>
-          </div>
         </motion.div>
 
         {/* Informations de trajet */}
