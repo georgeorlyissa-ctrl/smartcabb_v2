@@ -103,7 +103,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
       console.log('📤 Envoi au backend:', systemSettings);
       
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/settings/update`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/settings/save`,
         {
           method: 'POST',
           headers: {
