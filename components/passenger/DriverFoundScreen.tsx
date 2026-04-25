@@ -273,7 +273,7 @@ export function DriverFoundScreen({ driverData: initialDriverData, estimatedArri
           },
           body: JSON.stringify({
             rideId: state.currentRide.id,
-            passengerId: state.user?.id,
+            passengerId: state.currentUser?.id,
             cancelledBy: 'passenger',
             reason: 'Annulation depuis écran chauffeur trouvé'
           })
