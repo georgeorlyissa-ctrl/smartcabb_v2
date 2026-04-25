@@ -127,6 +127,28 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
         toast.success('Paramètres sauvegardés avec succès !', {
           description: `Taux de change: ${currencySettings.exchangeRateUSDToCDF} CDF - Synchronisé sur tous les appareils`
         });
+
+        // ─── Propagation immédiate côté client ────────────────────────────
+        try {
+          const patch = JSON.stringify({
+            exchangeRate: currencySettings.exchangeRateUSDToCDF,
+            postpaidInterestRate: currencySettings.postpaidInterestRate,
+          });
+          // Mettre à jour les deux clés pour que pricing.ts et config-sync.ts soient alignés
+          const existingCache = localStorage.getItem('smartcabb_config_cache');
+          const merged = existingCache
+            ? JSON.stringify({ ...JSON.parse(existingCache), exchangeRate: currencySettings.exchangeRateUSDToCDF })
+            : patch;
+          localStorage.setItem('smartcabb_config_cache', merged);
+          localStorage.setItem('smartcab_system_settings', merged);
+          localStorage.setItem('smartcabb_exchange_rate', String(currencySettings.exchangeRateUSDToCDF));
+          window.dispatchEvent(new CustomEvent('smartcabb:config-updated', {
+            detail: { exchangeRate: currencySettings.exchangeRateUSDToCDF }
+          }));
+          window.dispatchEvent(new CustomEvent('exchange-rate-updated', {
+            detail: { rate: currencySettings.exchangeRateUSDToCDF }
+          }));
+        } catch (_) {}
       }
     } catch (err) {
       console.error('⚠️ Erreur appel serveur pour KV store:', err);
