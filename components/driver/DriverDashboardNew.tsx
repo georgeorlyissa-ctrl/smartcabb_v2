@@ -521,10 +521,9 @@ export function DriverDashboardNew() {
               <Navigation className="w-4 h-4" />
               <span className="text-xs opacity-80">Courses</span>
             </div>
-            {/* ✅ FIX : source principale = rideStats.total.count (calculé depuis le KV réel)
-                       fallback = driver.totalRides / total_rides pour les anciens drivers */}
+            {/* ✅ FIX Bug 2 : total de l'historique (complétées + annulées), pas seulement les complétées */}
             <p className="text-xl font-bold">
-              {rideStats.total.count || driver.totalRides || (driver as any).total_rides || 0}
+              {rideHistory.length > 0 ? rideHistory.length : (rideStats.total.count || driver.totalRides || (driver as any).total_rides || 0)}
             </p>
           </div>
           <div className="bg-white/10 backdrop-blur rounded-lg p-3">
@@ -532,7 +531,8 @@ export function DriverDashboardNew() {
               <DollarSign className="w-4 h-4" />
               <span className="text-xs opacity-80">Gains</span>
             </div>
-            <p className="text-lg font-bold">{(driver.earningsBalance || 0).toLocaleString('fr-FR')}</p>
+            {/* ✅ FIX Bug 1 : utiliser rideStats (calculé depuis l'historique réel) pas earningsBalance KV */}
+            <p className="text-lg font-bold">{(rideStats.total.earnings || 0).toLocaleString('fr-FR')}</p>
           </div>
         </div>
       </div>
@@ -567,8 +567,9 @@ export function DriverDashboardNew() {
                 </div>
                 <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
                   <p className="text-xs text-purple-600 mb-1">Gains (Informatif)</p>
-                  <p className="text-2xl font-bold text-purple-900">{(driver.earningsBalance || 0).toLocaleString('fr-FR')} CDF</p>
-                  <p className="text-xs text-purple-600 mt-2">+85% par course</p>
+                  {/* ✅ FIX Bug 1 : gains calculés depuis l'historique réel */}
+                  <p className="text-2xl font-bold text-purple-900">{(rideStats.total.earnings || 0).toLocaleString('fr-FR')} CDF</p>
+                  <p className="text-xs text-purple-600 mt-2">+85% par course complétée</p>
                 </div>
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
                   <p className="text-xs text-green-600 mb-1">Bonus (Retirable)</p>
@@ -660,7 +661,11 @@ export function DriverDashboardNew() {
                 {rideHistory.map((ride: any, i: number) => {
                   const price = ride.totalPrice || ride.actualPrice || ride.estimatedPrice || 0;
                   const earning = Math.round(price * 0.85);
-                  const date = new Date(ride.completedAt || ride.createdAt);
+                  // ✅ FIX Bug 3 : si la course a un startedAt, elle est "Terminée" même si status = cancelled
+                  const isCompleted = ride.status === 'completed' || ride.status === 'rated' ||
+                                      (ride.status === 'cancelled' && !!ride.startedAt);
+                  const dateRef = ride.completedAt || ride.startedAt || ride.cancelledAt || ride.createdAt;
+                  const date = new Date(dateRef);
                   const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
                   const timeStr = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                   return (
@@ -673,13 +678,15 @@ export function DriverDashboardNew() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-green-700">+{earning.toLocaleString('fr-FR')} CDF</p>
+                          <p className={`text-sm font-bold ${isCompleted ? 'text-green-700' : 'text-gray-500'}`}>
+                            {isCompleted ? `+${earning.toLocaleString('fr-FR')} CDF` : '—'}
+                          </p>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${
-                            ride.status === 'completed' || ride.status === 'rated'
+                            isCompleted
                               ? 'bg-green-100 text-green-700'
                               : 'bg-red-100 text-red-700'
                           }`}>
-                            {ride.status === 'completed' || ride.status === 'rated' ? 'Terminée' : 'Annulée'}
+                            {isCompleted ? 'Terminée' : 'Annulée'}
                           </span>
                         </div>
                       </div>
@@ -700,8 +707,10 @@ export function DriverDashboardNew() {
           <>
             <Card className="p-4 bg-gradient-to-br from-green-500 to-emerald-600 text-white">
               <h3 className="font-semibold mb-2">Gains Totaux (85%)</h3>
-              <p className="text-4xl font-bold mb-1">{(driver.earningsBalance || 0).toLocaleString('fr-FR')} CDF</p>
-              <p className="text-sm opacity-90">{rideStats.total.count} courses terminées</p>
+              {/* ✅ FIX Bug 1 : utiliser rideStats.total.earnings (calculé depuis l'historique réel)
+                   PAS driver.earningsBalance (accumulé dans KV, potentiellement gonflé) */}
+              <p className="text-4xl font-bold mb-1">{(rideStats.total.earnings || 0).toLocaleString('fr-FR')} CDF</p>
+              <p className="text-sm opacity-90">{rideStats.total.count} course{rideStats.total.count > 1 ? 's' : ''} terminée{rideStats.total.count > 1 ? 's' : ''}</p>
             </Card>
             <Card className="p-4">
               <h3 className="font-semibold text-gray-900 mb-4">Statistiques</h3>
