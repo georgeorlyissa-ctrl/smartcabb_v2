@@ -36,6 +36,7 @@ import { DriverFoundScreen } from '../components/passenger/DriverFoundScreen';
 import { LiveTrackingMap } from '../components/passenger/LiveTrackingMap';
 import { RideTrackingScreen } from '../components/passenger/RideTrackingScreen';
 import { LiveTrackingScreen } from '../components/passenger/LiveTrackingScreen';
+import { SearchingDriversScreen } from '../components/passenger/SearchingDriversScreen';
 
 function PassengerAppContent() {
   const { state, setCurrentScreen, setCurrentView } = useAppState();
@@ -240,6 +241,12 @@ function PassengerAppContent() {
         return (
           <ErrorBoundary>
             <EstimateScreen />
+          </ErrorBoundary>
+        );
+      case 'searching-drivers':
+        return (
+          <ErrorBoundary>
+            <SearchingDriversScreen />
           </ErrorBoundary>
         );
       case 'ride':
