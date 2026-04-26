@@ -12,6 +12,7 @@ export { MapScreen } from './MapScreen';
 export { MapScreenSimple } from './MapScreenSimple';
 export { EstimateScreen } from './EstimateScreen';
 export { RideScreen } from './RideScreen';
+export { SearchingDriversScreen } from './SearchingDriversScreen';
 export { DriverFoundScreen } from './DriverFoundScreen';
 export { LiveTrackingMap } from './LiveTrackingMap';
 export { LiveTrackingScreen } from './LiveTrackingScreen';
