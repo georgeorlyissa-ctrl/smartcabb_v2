@@ -109,6 +109,11 @@ export function RatingScreen() {
         updateRide(currentRide.id, { passengerRating: rating, passengerComment: comment, paymentStatus: 'paid' });
       }
 
+      // 🆕 Émettre un event pour que le DriverDashboard rafraîchisse sa note en temps réel
+      window.dispatchEvent(new CustomEvent('smartcab-rating-submitted', {
+        detail: { driverId: currentRide.driverId, rating, comment }
+      }));
+
       toast.success('⭐ Merci pour votre évaluation !', {
         description: `Vous avez attribué ${rating} étoile${rating > 1 ? 's' : ''} à ${driverName}.`,
         duration: 4000,
