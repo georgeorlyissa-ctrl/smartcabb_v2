@@ -91,7 +91,7 @@ export function MapScreen() {
             updateDestination(defaultDestination);
             
             // Afficher un toast pour informer l'utilisateur
-            toast('📍 Destination par défaut définie', {
+            toast.info('📍 Destination par défaut définie', {
               description: 'Aéroport de Kinshasa N\'djili - Utilisez la recherche pour changer',
               duration: 5000
             });
@@ -103,7 +103,7 @@ export function MapScreen() {
             // Permission refusée ou bloquée par permissions policy
             console.log('📍 Géolocalisation non disponible (permissions refusées ou bloquées)');
             // Message informatif au lieu d'erreur
-            toast('📍 Sélectionnez votre position en touchant la carte', {
+            toast.info('📍 Sélectionnez votre position en touchant la carte', {
               duration: 5000,
               description: 'Ou utilisez la recherche pour trouver votre adresse'
             });
@@ -134,7 +134,7 @@ export function MapScreen() {
             updatePickup(defaultPickup);
             updateDestination(defaultDestination);
             
-            toast('📍 Adresses par défaut définies', {
+            toast.info('📍 Adresses par défaut définies', {
               description: 'Centre-ville → Aéroport N\'djili',
               duration: 5000
             });
@@ -166,7 +166,7 @@ export function MapScreen() {
         updatePickup(defaultPickup);
         updateDestination(defaultDestination);
         
-        toast('📍 Adresses par défaut définies', {
+        toast.info('📍 Adresses par défaut définies', {
           description: 'Centre-ville → Aéroport N\'djili',
           duration: 5000
         });
@@ -288,11 +288,11 @@ export function MapScreen() {
                   
                   // Feedback visuel avec toast
                   if (newState) {
-                    toast('📍 Mode sélection activé', {
+                    toast.info('📍 Mode sélection activé', {
                       description: 'Touchez la carte pour choisir votre position de départ'
                     });
                   } else {
-                    toast('✅ Mode sélection désactivé');
+                    toast.success('✅ Mode sélection désactivé');
                   }
                 }}
                 className={`p-2 rounded-lg transition-colors ${
@@ -400,9 +400,9 @@ export function MapScreen() {
                   if (state.homeAddress && updateDestination) {
                     updateDestination(state.homeAddress);
                     setCurrentScreen('estimate');
-                    toast('🏠 Destination: Domicile');
+                    toast.success('🏠 Destination: Domicile');
                   } else {
-                    toast('🏠 Configurez votre adresse domicile', {
+                    toast.info('🏠 Configurez votre adresse domicile', {
                       description: 'Utilisez la recherche ci-dessus pour trouver votre domicile'
                     });
                     setShowFavoritesModal(true);
@@ -426,9 +426,9 @@ export function MapScreen() {
                   if (state.workAddress && updateDestination) {
                     updateDestination(state.workAddress);
                     setCurrentScreen('estimate');
-                    toast('💼 Destination: Travail');
+                    toast.success('💼 Destination: Travail');
                   } else {
-                    toast('💼 Configurez votre adresse de travail', {
+                    toast.info('💼 Configurez votre adresse de travail', {
                       description: 'Utilisez la recherche ci-dessus pour trouver votre lieu de travail'
                     });
                     setShowFavoritesModal(true);
@@ -504,7 +504,7 @@ export function MapScreen() {
                     });
                     setShowFavoritesModal(false);
                     setCurrentScreen('estimate');
-                    toast('⭐ Destination: Lieu favori');
+                    toast.success('⭐ Destination: Lieu favori');
                   }
                 }}
                 currentLocation={currentLocation}
