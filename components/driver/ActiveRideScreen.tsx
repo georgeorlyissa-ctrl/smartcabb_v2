@@ -53,6 +53,8 @@ const CheckCircle = ({ className = "w-5 h-5" }: { className?: string }) => (
 export function ActiveRideScreen() {
   const { setCurrentScreen, state, updateRide } = useAppState();
   const [isCompleting, setIsCompleting] = useState(false);
+  // 🆕 Confirmation paiement — désactivé par défaut
+  const [passengerPaid, setPassengerPaid] = useState(false);
   const currentRide = state.currentRide;
 
   if (!currentRide) {
@@ -86,6 +88,10 @@ export function ActiveRideScreen() {
   };
 
   const handleCompleteRide = async () => {
+    if (!passengerPaid) {
+      toast.error('Confirmez d\'abord que le passager a payé');
+      return;
+    }
     setIsCompleting(true);
     
     try {
@@ -260,6 +266,48 @@ export function ActiveRideScreen() {
           </Card>
         </motion.div>
 
+        {/* 🆕 Confirmation paiement avant de terminer */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className={`rounded-2xl border-2 p-4 ${passengerPaid ? 'bg-green-50 border-green-400' : 'bg-orange-50 border-orange-300'}`}>
+            <p className={`font-semibold text-sm mb-3 ${passengerPaid ? 'text-green-800' : 'text-orange-800'}`}>
+              💳 Le passager a-t-il payé ?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {/* NON */}
+              <button
+                onClick={() => setPassengerPaid(false)}
+                className={`h-12 rounded-xl font-semibold text-sm transition-all border-2 ${
+                  !passengerPaid
+                    ? 'bg-orange-500 border-orange-500 text-white shadow-md'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-orange-300'
+                }`}
+              >
+                ❌ Non
+              </button>
+              {/* OUI */}
+              <button
+                onClick={() => setPassengerPaid(true)}
+                className={`h-12 rounded-xl font-semibold text-sm transition-all border-2 ${
+                  passengerPaid
+                    ? 'bg-green-500 border-green-500 text-white shadow-md'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-green-300'
+                }`}
+              >
+                ✅ Oui
+              </button>
+            </div>
+            {!passengerPaid && (
+              <p className="text-xs text-orange-600 mt-2 text-center">
+                Confirmez le paiement pour activer le bouton "Terminer"
+              </p>
+            )}
+          </div>
+        </motion.div>
+
         {/* Bouton Navigation */}
         <Button
           onClick={() => setCurrentScreen('navigation')}
@@ -273,8 +321,12 @@ export function ActiveRideScreen() {
         {/* Bouton Terminer la course */}
         <Button
           onClick={handleCompleteRide}
-          disabled={isCompleting}
-          className="w-full bg-green-600 hover:bg-green-700"
+          disabled={isCompleting || !passengerPaid}
+          className={`w-full transition-all ${
+            passengerPaid
+              ? 'bg-green-600 hover:bg-green-700'
+              : 'bg-gray-300 cursor-not-allowed'
+          }`}
           size="lg"
         >
           {isCompleting ? (
@@ -285,7 +337,7 @@ export function ActiveRideScreen() {
           ) : (
             <>
               <CheckCircle className="w-5 h-5 mr-2" />
-              Terminer la course
+              {passengerPaid ? 'Terminer la course' : '🔒 Terminer la course'}
             </>
           )}
         </Button>
