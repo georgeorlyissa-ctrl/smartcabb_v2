@@ -51,6 +51,9 @@ export function EstimateScreen() {
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [basePrice, setBasePrice] = useState(12500);
   const [estimatedDuration, setEstimatedDuration] = useState(15);
+
+  // 🔒 Désactive le bouton après 1 clic (anti double-soumission)
+  const [isBooking, setIsBooking] = useState(false);
   
   // 🆕 Commander pour quelqu'un d'autre
   const [showBookForOther, setShowBookForOther] = useState(false);
@@ -303,140 +306,67 @@ export function EstimateScreen() {
 
   const handleBookRide = async () => {
     console.log("🚨🚨🚨 BOUTON CLIQUÉ ! 🚨🚨🚨");
-    console.log("🔍 State actuel:", {
-      userId: state.currentUser?.id,
-      userName: state.currentUser?.name,
-      userPhone: state.currentUser?.phone,
-      pickup,
-      destination,
-      selectedVehicle,
-      finalPrice
-    });
-    
+
+    // 🔒 Désactiver immédiatement le bouton (anti double-soumission)
+    if (isBooking) return;
+    setIsBooking(true);
+
     const selectedVehicleData = vehicles.find(v => v.id === selectedVehicle);
     if (!selectedVehicleData) {
       console.error('❌ EstimateScreen: Aucun véhicule sélectionné');
-      alert('❌ Aucun véhicule sélectionné');
+      setIsBooking(false);
+      toast.error('Aucun véhicule sélectionné');
       return;
     }
 
-    console.log('🚗 EstimateScreen: Confirmation de réservation', {
+    if (!pickup || !destination) {
+      setIsBooking(false);
+      toast.error('Départ ou destination manquant');
+      return;
+    }
+
+    console.log('🚗 EstimateScreen: Préparation course vers searching-drivers', {
       vehicleType: selectedVehicle,
       finalPrice,
       estimatedDuration,
       passengerCount,
-      beneficiary: beneficiary ? `${beneficiary.name} (${beneficiary.phone})` : 'Pour moi-même'
     });
 
-    // Store ride details in state for the next screen
-    const rideData = {
+    // ─── Stocker les données dans sessionStorage ─────────────
+    // SearchingDriversScreen lira ces données et appellera le backend
+    const pendingRide = {
+      passengerId: state.currentUser?.id || 'temp-user',
+      passengerName: state.currentUser?.name || 'Passager',
+      passengerPhone: state.currentUser?.phone || '',
       pickup,
       destination,
-      vehicleType: selectedVehicle as 'smart_standard' | 'smart_confort' | 'smart_plus',
+      pickupInstructions: state.pickupInstructions || '',
+      vehicleType: selectedVehicle,
+      vehicleLabel: selectedVehicleData.name,
       estimatedPrice: finalPrice,
       estimatedDuration,
+      distance: distanceKm,
       passengerCount,
-      distanceKm,
       promoCode: appliedPromo?.code,
-      promoDiscount: appliedPromo ? (appliedPromo.type === 'percentage' 
-        ? Math.round(basePrice * (appliedPromo.discount / 100))
-        : appliedPromo.discount) : undefined
+      promoDiscount: appliedPromo
+        ? (appliedPromo.type === 'percentage'
+          ? Math.round(basePrice * (appliedPromo.discount / 100))
+          : appliedPromo.discount)
+        : undefined,
+      beneficiary: beneficiary
+        ? { name: beneficiary.name, phone: beneficiary.phone }
+        : null,
     };
 
     try {
-      // Create the ride with all details
-      console.log('📝 Creating ride with data:', rideData);
-      console.log('🌐 Envoi vers:', `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/create`);
-      
-      // ENVOYER LA DEMANDE AU BACKEND pour matching temps réel
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/create`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            passengerId: state.currentUser?.id || 'temp-user',
-            passengerName: state.currentUser?.name || 'Passager',
-            passengerPhone: state.currentUser?.phone || '',
-            pickup: rideData.pickup,
-            destination: rideData.destination,
-            pickupInstructions: state.pickupInstructions,
-            vehicleType: rideData.vehicleType,
-            estimatedPrice: rideData.estimatedPrice,
-            estimatedDuration: rideData.estimatedDuration,
-            distance: rideData.distanceKm,
-            passengerCount: rideData.passengerCount,
-            // 🆕 Ajouter les informations du bénéficiaire si la course est pour quelqu'un d'autre
-            beneficiary: beneficiary ? {
-              name: beneficiary.name,
-              phone: beneficiary.phone
-            } : null
-          })
-        }
-      );
-
-      console.log('📡 Response status:', response.status, response.statusText);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Erreur serveur:', response.status, errorText);
-        toast.error(`Erreur ${response.status}`, {
-          description: 'Impossible de créer la course. Vérifiez votre connexion.',
-          duration: 5000
-        });
-        throw new Error(`Erreur ${response.status}: ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Réponse backend:', result);
-      
-      if (!result.success || !result.rideId) {
-        console.error('❌ Backend a retourné success=false ou pas de rideId:', result);
-        toast.error('Erreur création course', {
-          description: result.error || 'Le backend n\'a pas retourné d\'ID de course',
-          duration: 5000
-        });
-        throw new Error(result.error || 'Erreur lors de la création de la course');
-      }
-
-      console.log('✅ Demande de course envoyée au backend avec ID:', result.rideId);
-      
-      // ❌ SUPPRIMÉ: Plus besoin d'attendre côté frontend car le backend garantit la persistance
-      // Le backend attend déjà 200ms + fait une vérification avant de retourner le rideId
-      // await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Créer aussi localement pour compatibilité avec l'UI existante, avec l'ID du backend
-      createRide({
-        id: result.rideId, // Utiliser l'ID du backend
-        passengerId: state.currentUser?.id || 'temp-user',
-        pickup: rideData.pickup,
-        destination: rideData.destination,
-        pickupInstructions: state.pickupInstructions, // Instructions de prise en charge
-        status: 'pending',
-        estimatedPrice: rideData.estimatedPrice,
-        estimatedDuration: rideData.estimatedDuration,
-        vehicleType: rideData.vehicleType,
-        passengerCount: rideData.passengerCount,
-        distanceKm: rideData.distanceKm,
-        promoCode: rideData.promoCode,
-        promoDiscount: rideData.promoDiscount
-      } as any);
-
-      console.log('✅ Course créée localement, navigation vers RideScreen pour recherche de chauffeur');
-      
-      // Navigate to ride screen to search for driver
-      setTimeout(() => {
-        setCurrentScreen('ride');
-      }, 100);
-    } catch (error) {
-      console.error('❌ Erreur lors de la création de la course:', error);
-      // Show error toast
-      if (!toast) {
-        alert('Erreur lors de la réservation. Veuillez réessayer.');
-      }
+      sessionStorage.setItem('smartcab_pending_ride', JSON.stringify(pendingRide));
+      console.log('✅ pendingRide stocké, navigation vers searching-drivers');
+      // Navigation immédiate — bouton reste désactivé jusqu'au unmount
+      setCurrentScreen('searching-drivers');
+    } catch (err) {
+      console.error('❌ Erreur stockage sessionStorage:', err);
+      setIsBooking(false);
+      toast.error('Erreur lors de la pr��paration de la course');
     }
   };
 
@@ -473,7 +403,7 @@ export function EstimateScreen() {
       {/* Scrollable Content Area — tout le contenu + bouton Commander */}
       <div className="flex-1 overflow-y-auto">
         <div className="pb-8">
-          {/* 🆕 AFFICHAGE DE DISTANCE ET DURÉE PRÉCISES - VERSION COMPACTE */}
+          {/* ���� AFFICHAGE DE DISTANCE ET DURÉE PRÉCISES - VERSION COMPACTE */}
           <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50">
             <div className="bg-white rounded-xl p-3 shadow-md border border-cyan-200">
               <div className="flex items-center justify-between mb-3">
@@ -781,9 +711,22 @@ export function EstimateScreen() {
 
         <Button
           onClick={handleBookRide}
-          className="w-full h-14 bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white rounded-xl shadow-lg shadow-secondary/30 transition-all duration-300 hover:shadow-xl text-base font-semibold"
+          disabled={isBooking}
+          className={`w-full h-14 rounded-xl shadow-lg transition-all duration-300 text-base font-semibold ${
+            isBooking
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+              : 'bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white shadow-secondary/30 hover:shadow-xl'
+          }`}
         >
-          {t('confirm_booking')}
+          {isBooking ? (
+            <span className="flex items-center gap-2 justify-center">
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Recherche en cours…
+            </span>
+          ) : t('confirm_booking')}
         </Button>
       </motion.div>
     </motion.div>
