@@ -208,6 +208,19 @@ export function ActiveRideNavigationScreen() {
           });
         }
 
+        // ✅ Détecter si le serveur a forcé le driver hors ligne (solde insuffisant)
+        if (data.ride?._driverForcedOffline) {
+          const newBal = data.ride._driverNewBalance ?? 0;
+          toast.error(
+            `⚠️ Solde insuffisant (${Math.round(newBal).toLocaleString()} CDF). Vous avez été mis hors ligne. Rechargez votre compte.`,
+            { duration: 8000 }
+          );
+          // Notifier le DriverDashboard de recharger
+          window.dispatchEvent(new CustomEvent('smartcab-driver-forced-offline', {
+            detail: { newBalance: newBal }
+          }));
+        }
+
         setTimeout(() => {
           setCurrentScreen('driver-payment-confirmation');
         }, 1500);
