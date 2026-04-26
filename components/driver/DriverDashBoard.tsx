@@ -197,9 +197,23 @@ export function DriverDashboard() {
     };
     window.addEventListener('smartcab-rating-submitted', handleRatingEvent);
 
+    // ✅ Écoute auto-offline : forcer le switch et recharger les données
+    const handleForcedOffline = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      console.log('⚠️ Driver forcé hors ligne — rechargement des données', detail);
+      setIsOnline(false);
+      loadDriver(driverId, true);
+      toast.error(
+        `⚠️ Solde insuffisant (${Math.round(detail?.newBalance ?? 0).toLocaleString()} CDF). Rechargez pour vous remettre en ligne.`,
+        { duration: 8000 }
+      );
+    };
+    window.addEventListener('smartcab-driver-forced-offline', handleForcedOffline);
+
     return () => {
       clearInterval(pollRating);
       window.removeEventListener('smartcab-rating-submitted', handleRatingEvent);
+      window.removeEventListener('smartcab-driver-forced-offline', handleForcedOffline);
     };
   }, [state.currentDriver?.id]);
 
