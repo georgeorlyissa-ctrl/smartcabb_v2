@@ -19,6 +19,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { Button } from '../ui/button';
 import { FreeWaitingToggle } from '../FreeWaitingToggle';
+import { motion, AnimatePresence } from '../../lib/motion';
 
 interface Location {
   lat: number;
@@ -34,6 +35,9 @@ export function ActiveRideNavigationScreen() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+  // 🆕 Confirmation paiement passager
+  const [passengerPaid, setPassengerPaid] = useState<boolean | null>(null); // null = pas encore répondu
+  const [isCompleting, setIsCompleting] = useState(false);
 
   // Protection: Si pas de course, retourner au tableau de bord
   if (!currentRide) {
@@ -161,10 +165,9 @@ export function ActiveRideNavigationScreen() {
 
   // 🏁 Terminer la course
   const handleEndRide = async () => {
+    if (!passengerPaid) return; // sécurité supplémentaire
     if (!currentRide || !state.userId) return;
-
-    const confirmEnd = window.confirm('Voulez-vous vraiment terminer cette course ?');
-    if (!confirmEnd) return;
+    setIsCompleting(true);
 
     try {
       toast.info('Finalisation de la course...');
@@ -194,7 +197,6 @@ export function ActiveRideNavigationScreen() {
       if (data.success) {
         toast.success('Course terminée avec succès !');
         
-        // Mettre à jour la course locale
         if (updateRide) {
           updateRide({
             ...currentRide,
@@ -206,7 +208,6 @@ export function ActiveRideNavigationScreen() {
           });
         }
 
-        // Rediriger vers l'écran de paiement
         setTimeout(() => {
           setCurrentScreen('driver-payment-confirmation');
         }, 1500);
@@ -216,6 +217,8 @@ export function ActiveRideNavigationScreen() {
     } catch (error) {
       console.error('❌ Erreur fin de course:', error);
       toast.error('Erreur lors de la finalisation de la course');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -276,17 +279,122 @@ export function ActiveRideNavigationScreen() {
           </div>
         )}
 
-        {/* Bouton Terminer la course */}
-        <Button
-          onClick={handleEndRide}
-          className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-4 rounded-xl shadow-lg transition-all transform hover:scale-[1.02]"
-        >
-          <svg className="w-5 h-5 mr-2 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 11l3 3L22 4"/>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
-          Terminer la course
-        </Button>
+        {/* ━━━ CONFIRMATION PAIEMENT ━━━ */}
+        <div className="border-t border-gray-200 pt-4">
+          <AnimatePresence mode="wait">
+            {passengerPaid !== true ? (
+              /* ── Étape 1 : Question paiement ── */
+              <motion.div
+                key="payment-question"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className={`rounded-2xl border-2 p-4 ${
+                  passengerPaid === false
+                    ? 'bg-red-50 border-red-300'
+                    : 'bg-orange-50 border-orange-300'
+                }`}
+              >
+                {/* Icône + question */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 text-xl ${
+                    passengerPaid === false ? 'bg-red-100' : 'bg-orange-100'
+                  }`}>
+                    💳
+                  </div>
+                  <div>
+                    <p className={`font-bold text-base ${
+                      passengerPaid === false ? 'text-red-800' : 'text-orange-800'
+                    }`}>
+                      Le passager a-t-il payé ?
+                    </p>
+                    <p className={`text-xs mt-0.5 ${
+                      passengerPaid === false ? 'text-red-600' : 'text-orange-600'
+                    }`}>
+                      {passengerPaid === false
+                        ? 'Veuillez d\'abord encaisser le montant'
+                        : 'Confirmez avant de terminer la course'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Boutons Non / Oui */}
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPassengerPaid(false)}
+                    className={`h-14 rounded-xl font-bold text-sm transition-all border-2 flex items-center justify-center gap-2 ${
+                      passengerPaid === false
+                        ? 'bg-red-500 border-red-500 text-white shadow-lg shadow-red-200'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-red-300 hover:bg-red-50'
+                    }`}
+                  >
+                    <span className="text-lg">❌</span>
+                    <span>Non</span>
+                  </button>
+                  <button
+                    onClick={() => setPassengerPaid(true)}
+                    className="h-14 rounded-xl font-bold text-sm transition-all border-2 border-green-400 bg-green-50 text-green-800 hover:bg-green-500 hover:text-white hover:border-green-500 hover:shadow-lg hover:shadow-green-200 flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <span className="text-lg">✅</span>
+                    <span>Oui, encaissé</span>
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              /* ── Étape 2 : Paiement confirmé → bouton Terminer ── */
+              <motion.div
+                key="payment-confirmed"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                className="space-y-3"
+              >
+                {/* Badge paiement confirmé */}
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-2">
+                  <span className="text-green-600 text-lg">✅</span>
+                  <p className="text-green-800 font-semibold text-sm">Paiement confirmé</p>
+                  <button
+                    onClick={() => setPassengerPaid(null)}
+                    className="ml-auto text-xs text-gray-400 hover:text-gray-600 underline"
+                  >
+                    Modifier
+                  </button>
+                </div>
+
+                {/* Bouton Terminer la course — n'apparaît QU'ICI */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <Button
+                    onClick={handleEndRide}
+                    disabled={isCompleting}
+                    className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-4 rounded-xl shadow-lg transition-all transform hover:scale-[1.02] disabled:opacity-70 disabled:scale-100"
+                  >
+                    {isCompleting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        Finalisation...
+                      </span>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M9 11l3 3L22 4"/>
+                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                        </svg>
+                        Terminer la course
+                      </span>
+                    )}
+                  </Button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   );
