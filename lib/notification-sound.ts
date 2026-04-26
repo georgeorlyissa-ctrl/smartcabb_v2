@@ -144,7 +144,7 @@ export async function playRideNotification(rideDetails?: {
   vibrate([300, 100, 300, 100, 300]);
 
   // Message vocal intelligent avec départ et destination réels
-  let message = 'Bonjour, vous avez une nouvelle course SmartCabb. ';
+  let message = 'Nouvelle course SmartCabb. ';
 
   if (rideDetails?.pickup && rideDetails.pickup !== 'Point de départ') {
     message += `Départ : ${rideDetails.pickup}. `;
@@ -154,15 +154,7 @@ export async function playRideNotification(rideDetails?: {
     message += `Destination : ${rideDetails.destination}. `;
   }
 
-  if (rideDetails?.distance && rideDetails.distance > 0) {
-    message += `Distance : ${rideDetails.distance.toFixed(1)} kilomètres. `;
-  }
-
-  if (rideDetails?.estimatedEarnings && rideDetails.estimatedEarnings > 0) {
-    message += `Gain estimé : ${Math.round(rideDetails.estimatedEarnings).toLocaleString('fr-FR')} francs congolais. `;
-  }
-
-  message += 'Merci de confirmer rapidement.';
+  message += 'Confirmez rapidement.';
 
   try {
     await speakMessage(message, 'fr-FR');
@@ -172,7 +164,7 @@ export async function playRideNotification(rideDetails?: {
 
   // Notification navigateur
   const notifBody = rideDetails
-    ? `${rideDetails.pickup || ''} → ${rideDetails.destination || ''} • ${rideDetails.distance?.toFixed(1) || 0} km • ${Math.round(rideDetails.estimatedEarnings || 0).toLocaleString('fr-FR')} FC`
+    ? `${rideDetails.pickup || 'Départ'} → ${rideDetails.destination || 'Destination'}`
     : 'Une nouvelle course est disponible';
 
   await showBrowserNotification('SmartCabb - Nouvelle Course', notifBody, {
@@ -224,4 +216,3 @@ export async function testNotification() {
 
 // 🔄 Alias pour compatibilité avec les composants
 export { playRideNotification as playRideNotificationSound };
-
