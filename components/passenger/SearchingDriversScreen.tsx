@@ -236,8 +236,32 @@ export function SearchingDriversScreen() {
   }, [phase, pendingRide]);
 
   // ─── Cancel ──────────────────────────────────────────────────
-  const handleCancel = () => {
+  const handleCancel = async () => {
     setIsCancelling(true);
+
+    // Si une course a déjà été créée (phase 'notifying'), l'annuler côté serveur
+    if (phase === 'notifying' && state.currentRide?.id) {
+      try {
+        await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/cancel`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${publicAnonKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              rideId: state.currentRide.id,
+              cancelledBy: 'passenger',
+              reason: 'Annulée par le passager',
+            }),
+          }
+        );
+      } catch (err) {
+        console.error('❌ Erreur annulation course:', err);
+      }
+    }
+
     sessionStorage.removeItem('smartcab_pending_ride');
     // Retour à estimate : le bouton se réactive automatiquement (remount d'EstimateScreen)
     setCurrentScreen('estimate');
@@ -284,7 +308,7 @@ export function SearchingDriversScreen() {
         </div>
         <button
           onClick={handleCancel}
-          disabled={isCancelling || phase === 'notifying'}
+          disabled={isCancelling}
           className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors disabled:opacity-40"
         >
           <XIcon className="w-5 h-5 text-white" />
@@ -496,7 +520,7 @@ export function SearchingDriversScreen() {
         ) : (
           <button
             onClick={handleCancel}
-            disabled={isCancelling || phase === 'notifying'}
+            disabled={isCancelling}
             className="w-full h-12 bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white rounded-xl font-medium text-sm transition-colors border border-white/10"
           >
             {isCancelling ? 'Annulation…' : 'Annuler la recherche'}
