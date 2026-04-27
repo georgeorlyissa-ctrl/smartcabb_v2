@@ -24,6 +24,13 @@ const User = ({ className = "w-5 h-5" }: { className?: string }) => (<svg classN
 
 const DARK_KEY = 'smartcabb_dark_mode';
 
+// Chevron icon for accordion
+const ChevronDown = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
 export function DriverSettingsScreen() {
   const { setCurrentScreen, state, setCurrentDriver, setCurrentView } = useAppState();
   
@@ -104,6 +111,11 @@ export function DriverSettingsScreen() {
       }
     }));
   };
+
+  // État des accordéons — toutes fermées par défaut
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const toggleSection = (title: string) =>
+    setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
 
   const settingSections = [
     {
@@ -332,9 +344,10 @@ export function DriverSettingsScreen() {
           </Card>
         </motion.div>
 
-        {/* Paramètres détaillés */}
+        {/* Paramètres détaillés — accordéons */}
         {settingSections.map((section, sectionIndex) => {
           const SectionIcon = section.icon;
+          const isOpen = !!openSections[section.title];
           return (
             <motion.div
               key={section.title}
@@ -342,42 +355,53 @@ export function DriverSettingsScreen() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 + sectionIndex * 0.1 }}
             >
-              <Card className="p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <SectionIcon className="w-4 h-4 text-blue-600" />
+              <Card className="overflow-hidden">
+                {/* En-tête cliquable */}
+                <button
+                  onClick={() => toggleSection(section.title)}
+                  className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center">
+                      <SectionIcon className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <span className="text-base font-semibold">{section.title}</span>
+                    <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
+                      {section.items.length} option{section.items.length > 1 ? 's' : ''}
+                    </span>
                   </div>
-                  <h3 className="text-lg font-semibold">{section.title}</h3>
-                </div>
-                
-                <div className="space-y-4">
-                  {section.items.map((item, itemIndex) => (
-                    <motion.div
-                      key={item.key}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + sectionIndex * 0.1 + itemIndex * 0.05 }}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <Label htmlFor={item.key} className="text-sm font-medium">
-                          {item.label}
-                        </Label>
-                        <p className="text-xs text-gray-600 mt-1">{item.description}</p>
+                  <ChevronDown
+                    className={`w-5 h-5 text-gray-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {/* Contenu dépliable */}
+                {isOpen && (
+                  <div className="border-t border-gray-100 divide-y divide-gray-50">
+                    {section.items.map((item) => (
+                      <div
+                        key={item.key}
+                        className="flex items-center justify-between px-5 py-4"
+                      >
+                        <div className="flex-1 pr-4">
+                          <Label htmlFor={item.key} className="text-sm font-medium cursor-pointer">
+                            {item.label}
+                          </Label>
+                          <p className="text-xs text-gray-500 mt-0.5">{item.description}</p>
+                        </div>
+                        {item.type === 'switch' && (
+                          <Switch
+                            id={item.key}
+                            checked={settings[item.category as keyof typeof settings][item.key as keyof any]}
+                            onCheckedChange={(checked) =>
+                              updateSetting(item.category, item.key, checked)
+                            }
+                          />
+                        )}
                       </div>
-                      
-                      {item.type === 'switch' && (
-                        <Switch
-                          id={item.key}
-                          checked={settings[item.category as keyof typeof settings][item.key as keyof any]}
-                          onCheckedChange={(checked) => 
-                            updateSetting(item.category, item.key, checked)
-                          }
-                        />
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </Card>
             </motion.div>
           );
