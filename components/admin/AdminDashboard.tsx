@@ -60,6 +60,22 @@ export function AdminDashboard() {
   const { state, setCurrentScreen, setCurrentView, setIsAdmin, setCurrentUser } = useAppState();
   const navigate = useNavigate();
 
+  // 🌙 Dark mode — persisté dans localStorage
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try { return localStorage.getItem('smartcabb_dark_mode') === 'true'; } catch { return false; }
+  });
+  const toggleDark = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('smartcabb_dark_mode', String(next));
+        if (next) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      } catch {}
+      return next;
+    });
+  };
+
   // ─── Live backend stats ────────────────────────────────────────────────────
   const [liveStats, setLiveStats] = useState<any>(null);
   const fetchLiveStats = useCallback(async () => {
@@ -1043,6 +1059,15 @@ export function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
+              {/* 🌙 Dark mode toggle */}
+              <button
+                onClick={toggleDark}
+                title={isDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 flex-shrink-0"
+              >
+                <span className="text-base leading-none">{isDark ? '☀️' : '🌙'}</span>
+                <span className="hidden sm:inline">{isDark ? 'Clair' : 'Sombre'}</span>
+              </button>
               <Button
                 onClick={refresh}
                 variant="outline"
