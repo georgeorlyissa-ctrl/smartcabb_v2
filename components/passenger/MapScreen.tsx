@@ -339,40 +339,31 @@ export function MapScreen() {
       </div>
 
       {/* ========== PANNEAU INFÉRIEUR ========== */}
-      <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-3xl shadow-2xl" style={{ maxHeight: '72vh' }}>
+      <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-3xl shadow-2xl" style={{ maxHeight: '52vh' }}>
         {/* Poignée de drag */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+        <div className="flex justify-center pt-2 pb-1">
+          <div className="w-8 h-1 bg-gray-300 rounded-full" />
         </div>
-        <div className="overflow-y-auto px-5 pb-6 space-y-3" style={{ maxHeight: 'calc(72vh - 28px)' }}>
+        <div className="overflow-y-auto px-4 pb-5 space-y-2.5" style={{ maxHeight: 'calc(52vh - 24px)' }}>
 
-          {/* ── Affichage du DÉPART ─────────────────────────────────── */}
-          <div className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
-            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-4 h-4 text-green-600" />
+          {/* ── Barre DÉPART compacte ──────────────────────────────── */}
+          <div className="flex items-center gap-2 px-2.5 py-2 bg-gray-50 rounded-xl border border-gray-100">
+            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <MapPin className="w-3 h-3 text-white" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-semibold text-green-700 uppercase tracking-wide">Départ</p>
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {pickupLocation?.address || 'Ma position actuelle'}
-              </p>
-            </div>
+            <p className="flex-1 text-xs font-medium text-gray-700 truncate">
+              {pickupLocation?.address || 'Ma position actuelle'}
+            </p>
             <button
               onClick={() => setIsSelectingOnMap(true)}
-              className="text-xs text-blue-500 font-medium hover:text-blue-700 flex-shrink-0"
+              className="text-[10px] text-blue-500 font-semibold hover:text-blue-700 flex-shrink-0 bg-blue-50 px-2 py-0.5 rounded-full"
             >
               Modifier
             </button>
           </div>
 
-          {/* Séparateur avec ligne pointillée */}
-          <div className="flex items-center gap-2 px-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mx-3" />
-            <div className="flex-1 border-l-2 border-dashed border-gray-200 h-4 ml-1.5" />
-          </div>
-
           {/* Titre destination */}
-          <h2 className="text-lg font-bold text-gray-900">Où allez-vous ?</h2>
+          <h2 className="text-base font-bold text-gray-900 px-0.5">Où allez-vous ?</h2>
 
           {/* Recherche de destination */}
           <YangoStyleSearch
@@ -383,83 +374,59 @@ export function MapScreen() {
             onChange={setSearchQuery}
           />
 
-          {/* Lieux favoris */}
-          <div className="space-y-2">
-            {/* Bouton Lieux favoris - CLIQUABLE */}
+          {/* Domicile + Travail — côte à côte compact */}
+          <div className="grid grid-cols-2 gap-2">
             <button
-              onClick={() => setShowFavoritesModal(true)}
-              className="flex items-center gap-2 text-sm text-gray-600 mb-2 hover:text-primary transition-colors"
+              onClick={() => {
+                if (state.homeAddress && updateDestination) {
+                  updateDestination(state.homeAddress);
+                  setCurrentScreen('estimate');
+                  toast.success('🏠 Destination: Domicile');
+                } else {
+                  toast.info('🏠 Configurez votre adresse domicile', {
+                    description: 'Utilisez la recherche ci-dessus pour trouver votre domicile'
+                  });
+                  setShowFavoritesModal(true);
+                }
+              }}
+              className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
             >
-              <Star className="w-4 h-4" />
-              <span>Lieux favoris</span>
+              <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Home className="w-3.5 h-3.5 text-orange-500" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-xs font-semibold text-gray-900">Domicile</p>
+                <p className="text-[9px] text-gray-400 truncate">
+                  {state.homeAddress ? state.homeAddress.address : 'Non configuré'}
+                </p>
+              </div>
             </button>
 
-            {/* Domicile + Travail — côte à côte compact */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => {
-                  if (state.homeAddress && updateDestination) {
-                    updateDestination(state.homeAddress);
-                    setCurrentScreen('estimate');
-                    toast.success('🏠 Destination: Domicile');
-                  } else {
-                    toast.info('🏠 Configurez votre adresse domicile', {
-                      description: 'Utilisez la recherche ci-dessus pour trouver votre domicile'
-                    });
-                    setShowFavoritesModal(true);
-                  }
-                }}
-                className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <Home className="w-4 h-4 text-orange-500" />
-                </div>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-medium text-gray-900">Domicile</p>
-                  <p className="text-[10px] text-gray-400 truncate">
-                    {state.homeAddress ? state.homeAddress.address : 'Non configuré'}
-                  </p>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  if (state.workAddress && updateDestination) {
-                    updateDestination(state.workAddress);
-                    setCurrentScreen('estimate');
-                    toast.success('💼 Destination: Travail');
-                  } else {
-                    toast.info('💼 Configurez votre adresse de travail', {
-                      description: 'Utilisez la recherche ci-dessus pour trouver votre lieu de travail'
-                    });
-                    setShowFavoritesModal(true);
-                  }
-                }}
-                className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <Briefcase className="w-4 h-4 text-blue-500" />
-                </div>
-                <div className="flex-1 text-left min-w-0">
-                  <p className="text-sm font-medium text-gray-900">Travail</p>
-                  <p className="text-[10px] text-gray-400 truncate">
-                    {state.workAddress ? state.workAddress.address : 'Non configuré'}
-                  </p>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Instructions de prise en charge (optionnel) */}
-          <div>
-            <label className="text-xs font-medium text-gray-500 block mb-1.5">
-              Instructions de prise en charge (optionnel)
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: Devant l'entrée principale"
-              className="w-full px-4 py-3 bg-gray-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border border-gray-100"
-            />
+            <button
+              onClick={() => {
+                if (state.workAddress && updateDestination) {
+                  updateDestination(state.workAddress);
+                  setCurrentScreen('estimate');
+                  toast.success('💼 Destination: Travail');
+                } else {
+                  toast.info('💼 Configurez votre adresse de travail', {
+                    description: 'Utilisez la recherche ci-dessus pour trouver votre lieu de travail'
+                  });
+                  setShowFavoritesModal(true);
+                }
+              }}
+              className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+            >
+              <div className="w-7 h-7 bg-white rounded-full flex items-center justify-center flex-shrink-0 shadow-sm">
+                <Briefcase className="w-3.5 h-3.5 text-blue-500" />
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-xs font-semibold text-gray-900">Travail</p>
+                <p className="text-[9px] text-gray-400 truncate">
+                  {state.workAddress ? state.workAddress.address : 'Non configuré'}
+                </p>
+              </div>
+            </button>
           </div>
 
           {/* ── ESPACE PROMO SMARTCABB ────────────────────────── */}
