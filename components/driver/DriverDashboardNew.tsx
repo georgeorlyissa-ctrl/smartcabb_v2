@@ -965,6 +965,32 @@ export function DriverDashboardNew() {
               const data = await res.json();
 
               if (!data.success) {
+                // ✅ Gestion spécifique du solde insuffisant
+                if (data.error === "SOLDE_INSUFFISANT" || res.status === 403) {
+                  console.error('💰 Solde insuffisant:', data);
+
+                  // Message d'alerte détaillé
+                  toast.error(
+                    data.message || `Solde insuffisant ! Votre solde: ${data.balance?.toLocaleString()} CDF. Prix: ${data.ridePrice?.toLocaleString()} CDF. Rechargez ${data.required?.toLocaleString()} CDF minimum.`,
+                    { duration: 8000 }
+                  );
+
+                  // ✅ Mettre le conducteur hors ligne localement
+                  setIsOnline(false);
+
+                  // ✅ Afficher un message d'information supplémentaire
+                  setTimeout(() => {
+                    toast.warning('Vous avez été mis hors ligne automatiquement. Rechargez votre crédit pour continuer.', {
+                      duration: 6000
+                    });
+                  }, 1000);
+
+                  setPendingRideRequest(null);
+                  stopAllNotifications();
+                  return;
+                }
+
+                // Autres erreurs
                 toast.error(data.error || 'Erreur lors de l\'acceptation de la course');
                 setPendingRideRequest(null);
                 stopAllNotifications();
