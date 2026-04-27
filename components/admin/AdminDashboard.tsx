@@ -1,6 +1,6 @@
 import { motion } from '../../lib/motion';
 import { useNavigate } from '../../lib/simple-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
@@ -12,6 +12,7 @@ import { LiveStatsPanel } from '../LiveStatsPanel';
 import { StatsCharts } from './StatsCharts';
 import { ContactMessagesScreen } from './ContactMessagesScreen';
 import { DataCleanupPanel } from './DataCleanupPanel';
+import { AdminLiveFeed } from './AdminLiveFeed';
 import { AutoCleanupBanner } from './AutoCleanupBanner';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import { CancellationsScreen } from './CancellationsScreen';
@@ -58,6 +59,27 @@ export function AdminDashboard() {
   
   const { state, setCurrentScreen, setCurrentView, setIsAdmin, setCurrentUser } = useAppState();
   const navigate = useNavigate();
+
+  // ─── Live backend stats ────────────────────────────────────────────────────
+  const [liveStats, setLiveStats] = useState<any>(null);
+  const fetchLiveStats = useCallback(async () => {
+    try {
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/stats`,
+        { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.success) setLiveStats(data.stats);
+      }
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    fetchLiveStats();
+    const interval = setInterval(fetchLiveStats, 15000);
+    return () => clearInterval(interval);
+  }, [fetchLiveStats]);
 
   // ✅ Vérification d'authentification au montage
   useEffect(() => {
@@ -206,21 +228,20 @@ export function AdminDashboard() {
   const stats = getStats();
   const passengers = getPassengers();
 
-  // KPI calculations basées sur les données Supabase
-  const activeRides = rides.filter(r => r.status === 'started').length;
+  // KPI calculations — priorité aux stats live du backend
+  // ✅ FIX: Courses actives = 'in_progress' ET 'started' (pour compatibilité)
+  const activeRides    = liveStats?.activeRides   ?? rides.filter(r => r.status === 'in_progress' || r.status === 'started').length;
   const completedRides = rides.filter(r => r.status === 'completed');
-  const onlineDrivers = drivers.filter(d => d.is_available).length;
-  
-  // ✅ FIX: Filtrer par status ET isApproved pour les conducteurs en attente
-  const pendingDrivers = drivers.filter(d => 
+  const onlineDrivers  = liveStats?.onlineDrivers ?? drivers.filter(d => d.is_available).length;
+  const pendingDrivers = drivers.filter(d =>
     (d.status === 'pending' || !d.isApproved || d.isApproved === false)
   );
-  
-  const totalRevenue = stats.totalRevenue;
-  
-  const averageRating = drivers.length > 0
+  const totalRevenue    = liveStats?.totalRevenueCDF ?? stats.totalRevenue;
+  const revenueTodayCDF = liveStats?.revenueTodayCDF ?? 0;
+  const cancelledToday  = liveStats?.cancelledToday  ?? 0;
+  const averageRating   = liveStats?.averageRating   ?? (drivers.length > 0
     ? drivers.reduce((sum, d) => sum + (d.rating || 0), 0) / drivers.length
-    : 0;
+    : 0);
 
   // Fonction pour créer un nouvel admin
   const handleCreateAdmin = async () => {
@@ -646,29 +667,55 @@ export function AdminDashboard() {
       title: 'Courses actives',
       value: activeRides.toString(),
       icon: TrendingUp,
-      color: 'bg-blue-500'
+      color: 'bg-blue-500',
+      subtitle: liveStats ? '🟢 temps réel' : undefined,
     },
     {
       id: 'stat-online-drivers',
       title: 'Chauffeurs en ligne',
-      value: `${onlineDrivers}/${drivers.length}`,
+      value: `${onlineDrivers}/${liveStats?.totalDrivers ?? drivers.length}`,
       icon: Car,
-      color: 'bg-green-500'
+      color: 'bg-green-500',
+      subtitle: `${liveStats?.pendingDrivers ?? pendingDrivers.length} en attente`,
     },
     {
-      id: 'stat-total-revenue',
-      title: 'Revenus totaux',
-      value: `${totalRevenue.toLocaleString()} CDF`,
+      id: 'stat-revenue-today',
+      title: "Revenus aujourd'hui",
+      value: `${Math.round(revenueTodayCDF).toLocaleString('fr-FR')} FC`,
       icon: DollarSign,
-      color: 'bg-purple-500'
+      color: 'bg-emerald-500',
+      subtitle: `Total: ${Math.round(totalRevenue).toLocaleString('fr-FR')} FC`,
+    },
+    {
+      id: 'stat-cancelled-today',
+      title: "Annulations aujourd'hui",
+      value: cancelledToday.toString(),
+      icon: XCircle,
+      color: cancelledToday > 0 ? 'bg-red-500' : 'bg-gray-400',
+      subtitle: `${liveStats?.cancelledRides ?? 0} total`,
+    },
+    {
+      id: 'stat-total-passengers',
+      title: 'Passagers inscrits',
+      value: (liveStats?.totalPassengers ?? passengers.length).toString(),
+      icon: Users,
+      color: 'bg-purple-500',
+    },
+    {
+      id: 'stat-total-rides',
+      title: 'Courses totales',
+      value: (liveStats?.totalRides ?? rides.length).toString(),
+      icon: TrendingUp,
+      color: 'bg-indigo-500',
+      subtitle: `${liveStats?.completedRides ?? 0} terminées`,
     },
     {
       id: 'stat-average-rating',
       title: 'Note moyenne',
       value: (averageRating || 0).toFixed(1),
       icon: Star,
-      color: 'bg-yellow-500'
-    }
+      color: 'bg-yellow-500',
+    },
   ];
 
   const quickActions = [
@@ -1179,35 +1226,61 @@ export function AdminDashboard() {
               <SMSBalanceCard />
             </motion.div>
 
-            {/* Stats Grid */}
+            {/* Stats Grid — Live Backend */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8"
+              className="mb-8"
             >
-              {statCards.map((stat, index) => {
-                const Icon = stat.icon;
-                return (
-                  <motion.div
-                    key={stat.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Card className="p-4 sm:p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm text-gray-600 mb-1 truncate">{stat.title}</p>
-                          <p className="text-lg sm:text-2xl font-bold truncate">{stat.value}</p>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">KPIs en direct</h2>
+                {liveStats && (
+                  <span className="flex items-center gap-1.5 text-xs text-green-600 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
+                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                    Mise à jour auto (15s)
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-4">
+                {statCards.map((stat, index) => {
+                  const Icon = stat.icon;
+                  return (
+                    <motion.div
+                      key={stat.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <Card className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-500 mb-1 leading-tight">{stat.title}</p>
+                            <p className="text-base sm:text-lg font-bold text-gray-900 truncate">{stat.value}</p>
+                            {(stat as any).subtitle && (
+                              <p className="text-xs text-gray-400 mt-0.5 truncate">{(stat as any).subtitle}</p>
+                            )}
+                          </div>
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${stat.color}`}>
+                            <Icon className="w-4 h-4 text-white" />
+                          </div>
                         </div>
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center flex-shrink-0 ml-2 ${stat.color}`}>
-                          <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                        </div>
-                      </div>
-                    </Card>
-                  </motion.div>
-                );
-              })}
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+
+            {/* Flux d'activité en temps réel */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mb-8"
+            >
+              <Card className="p-4 sm:p-6">
+                <AdminLiveFeed limit={25} pollInterval={10000} showHeader />
+              </Card>
             </motion.div>
 
             {/* Quick Actions */}
