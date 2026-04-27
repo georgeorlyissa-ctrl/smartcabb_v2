@@ -3,6 +3,7 @@ import { useAppState } from '../../hooks/useAppState';
 import { GoogleMapView } from '../GoogleMapView';
 import { YangoStyleSearch } from './YangoStyleSearch';
 import { FavoriteLocations } from './FavoriteLocations';
+import { SmartCabbPromoSection } from './SmartCabbPromoSection';
 import { reverseGeocode } from '../../lib/precise-gps';
 import { toast } from '../../lib/toast';
 
@@ -460,6 +461,9 @@ export function MapScreen() {
               className="w-full px-4 py-3 bg-gray-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border border-gray-100"
             />
           </div>
+
+          {/* ── ESPACE PROMO SMARTCABB ────────────────────────── */}
+          <SmartCabbPromoSection />
 
         </div>
       </div>
