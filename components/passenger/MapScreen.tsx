@@ -6,6 +6,7 @@ import { FavoriteLocations } from './FavoriteLocations';
 import { SmartCabbPromoSection } from './SmartCabbPromoSection';
 import { reverseGeocode } from '../../lib/precise-gps';
 import { toast } from '../../lib/toast';
+import { useDarkMode } from '../../contexts/DarkModeContext';
 
 // Icônes SVG inline
 const MapPin = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>);
@@ -39,6 +40,7 @@ export function MapScreen() {
   const { state, setCurrentScreen } = appState;
   const updatePickup = appState.updatePickup || appState.setPickup;
   const updateDestination = appState.updateDestination || appState.setDestination;
+  const { isDark, toggle: toggleDark } = useDarkMode();
   
   const [currentLocation, setCurrentLocation] = useState<Location>({
     lat: -4.3276,
@@ -248,13 +250,22 @@ export function MapScreen() {
           {/* Titre */}
           <h1 className="text-lg font-bold text-gray-900">SmartCabb</h1>
 
-          {/* Profil */}
-          <button
-            onClick={handleProfileClick}
-            className="w-10 h-10 rounded-full bg-primary text-white shadow-md flex items-center justify-center hover:opacity-90 transition-opacity"
-          >
-            <User className="w-5 h-5" />
-          </button>
+          {/* Profil + dark mode toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleDark}
+              className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors text-base"
+              aria-label="Mode sombre"
+            >
+              {isDark ? '☀️' : '🌙'}
+            </button>
+            <button
+              onClick={handleProfileClick}
+              className="w-10 h-10 rounded-full bg-primary text-white shadow-md flex items-center justify-center hover:opacity-90 transition-opacity"
+            >
+              <User className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Position actuelle */}
