@@ -243,6 +243,15 @@ export function DriverSettingsScreen() {
               <p className="text-sm text-gray-600">Configuration de votre compte chauffeur</p>
             </div>
           </div>
+          {/* 🌙 Dark mode toggle */}
+          <button
+            onClick={() => updateSetting('preferences', 'darkMode', !settings.preferences.darkMode)}
+            title={settings.preferences.darkMode ? 'Passer en mode clair' : 'Passer en mode sombre'}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700"
+          >
+            <span className="text-lg leading-none">{settings.preferences.darkMode ? '☀️' : '🌙'}</span>
+            <span className="text-xs">{settings.preferences.darkMode ? 'Clair' : 'Sombre'}</span>
+          </button>
         </div>
       </div>
 
