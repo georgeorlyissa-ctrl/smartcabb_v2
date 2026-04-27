@@ -13,7 +13,7 @@ import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
 import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
 // ✅ BUILD VERSION - Défini directement ici pour éviter les erreurs d'import
-const BUILD_VERSION = '518.3.1'; // ✅ FIX: Correction boucle infinie iPhone (RangeError: Maximum call stack)
+const BUILD_VERSION = '518.3.1'; // ✅ FIX: Boucle infinie iPhone + Mise à jour automatique silencieuse
 const BUILD_TIMESTAMP = new Date().toISOString();
 
 import { startUpdateDetection } from './utils/updateDetector';
@@ -23,10 +23,10 @@ import { useMaintenanceMode } from './hooks/useAdminConfig';
 // ✅ FIX BUILD: Import conditionnel pour Firebase Service Worker
 // import { initializeFirebaseServiceWorker } from './lib/init-firebase-sw';
 
-// ⚡ BUILD v518.3.1 - FIX CRITIQUE IPHONE
+// ⚡ BUILD v518.3.1 - FIX CRITIQUE IPHONE + AUTO UPDATE
 console.log('');
 console.log('═══════════════════════════════════════════════════════════════');
-console.log('🚀 BUILD v518.3.1 - 🐛 FIX CRITIQUE IPHONE');
+console.log('🚀 BUILD v518.3.1 - 🐛 FIX IPHONE + 🔄 AUTO UPDATE');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('');
 console.log('🐛 CORRECTIONS MAJEURES:');
@@ -36,12 +36,20 @@ console.log('  ✅ Gardes anti-récursion dans setViewportHeight');
 console.log('  ✅ useEffect optimisés dans PassengerApp et DriverApp');
 console.log('  ✅ Dépendances stables (IDs au lieu d\'objets complets)');
 console.log('');
+console.log('🔄 MISE À JOUR AUTOMATIQUE:');
+console.log('  ✅ Rechargement automatique silencieux après déploiement');
+console.log('  ✅ Détection toutes les 5 min via ETag/Last-Modified');
+console.log('  ✅ Service Worker v518.31 notifie les clients');
+console.log('  ✅ Report intelligent si action critique en cours');
+console.log('  ✅ Toast discret "Mise à jour..." avant rechargement');
+console.log('  📖 Voir AUTO_UPDATE.md pour plus de détails');
+console.log('');
 console.log('📱 COMPATIBILITÉ MOBILE:');
 console.log('  ✅ iPhone/Safari: Stack overflow corrigé');
 console.log('  ✅ Android: Performances optimisées');
 console.log('  ✅ PWA: Installation fluide sur tous devices');
 console.log('');
-console.log('✅ APPLICATION STABLE SUR TOUS LES DEVICES !');
+console.log('✅ APPLICATION STABLE + MISES À JOUR TRANSPARENTES !');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('');
 
