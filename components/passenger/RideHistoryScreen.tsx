@@ -147,7 +147,12 @@ export function RideHistoryScreen() {
             </Button>
             <div>
               <h1 className="text-xl">Historique des courses</h1>
-              <p className="text-sm text-gray-600">{rides.length} course(s) réalisée(s)</p>
+              <p className="text-sm text-gray-600">
+                {rides.length} course(s) au total
+                {rides.filter(r => r.status === 'completed' || r.status === 'rated').length !== rides.length &&
+                  ` (${rides.filter(r => r.status === 'completed' || r.status === 'rated').length} terminées)`
+                }
+              </p>
             </div>
           </div>
         </div>
