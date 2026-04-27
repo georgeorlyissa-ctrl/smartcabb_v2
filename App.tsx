@@ -13,7 +13,7 @@ import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
 import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
 // ✅ BUILD VERSION - Défini directement ici pour éviter les erreurs d'import
-const BUILD_VERSION = '518.3.2'; // ✅ FIX: WhatsApp intégration + Compteur courses actives
+const BUILD_VERSION = '518.3.3'; // ✅ FIX: Compteur courses terminées (profil passager)
 const BUILD_TIMESTAMP = new Date().toISOString();
 
 import { startUpdateDetection } from './utils/updateDetector';
