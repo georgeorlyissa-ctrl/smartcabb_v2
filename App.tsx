@@ -9,7 +9,7 @@ import { PageTransition } from './components/PageTransition';
 import { AppProvider } from './hooks/useAppState';
 import { BackendSyncProvider } from './components/BackendSyncProvider';
 import { LanguageProvider } from './contexts/LanguageContext';
-import { DarkModeProvider } from './contexts/DarkModeContext';
+// DarkModeProvider supprimé — dark mode géré via localStorage dans chaque composant
 import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
 import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
@@ -166,6 +166,15 @@ function MaintenanceBanner() {
 function App() {
   console.log(`🚀 SmartCabb v${BUILD_VERSION} - Build ${BUILD_TIMESTAMP} - Démarrage...`);
   
+  // 🌙 Initialiser le dark mode depuis localStorage au démarrage
+  useEffect(() => {
+    try {
+      const isDark = localStorage.getItem('smartcabb_dark_mode') === 'true';
+      if (isDark) document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+    } catch {}
+  }, []);
+
   // Appliquer les optimisations navigateur au démarrage
   useEffect(() => {
     try {
@@ -441,7 +450,6 @@ function App() {
           {/* 🔄 BackendSyncProvider DÉSACTIVÉ TEMPORAIREMENT - Mode standalone */}
           {/* <BackendSyncProvider /> */}
           <LanguageProvider>
-            <DarkModeProvider>
             <div className="app-container">
               {/* Online/Offline Indicator */}
               <OnlineStatusIndicator />
@@ -546,7 +554,6 @@ function App() {
                 </Routes>
               </Suspense>
             </div>
-            </DarkModeProvider>
           </LanguageProvider>
         </AppProvider>
       </Router>
