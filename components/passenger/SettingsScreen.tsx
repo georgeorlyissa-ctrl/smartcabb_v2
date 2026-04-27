@@ -1,16 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toast } from '../../lib/toast';
-import { motion } from '../../lib/motion'; // ✅ FIX: Utiliser l'implémentation locale
-import { Button } from '../ui/button'; // ✅ FIX: Import manquant
-import { Card, CardContent } from '../ui/card'; // ✅ FIX: Import manquant
-import { Switch } from '../ui/switch'; // ✅ FIX: Import manquant
+import { motion } from '../../lib/motion';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
+import { Switch } from '../ui/switch';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select'; // ✅ FIX: Import manquant
+} from '../ui/select';
 import { 
   ArrowLeft, 
   Globe, 
@@ -23,25 +23,96 @@ import {
   Settings,
   ChevronRight
 } from '../../lib/icons';
-import { useTranslation } from '../../hooks/useTranslation'; // ✅ FIX: Import manquant
-import { useAppState } from '../../hooks/useAppState'; // ✅ FIX: Import manquant
-import { DarkModeToggle } from '../DarkModeToggle';
-import { useDarkMode } from '../../contexts/DarkModeContext';
+import { useTranslation } from '../../hooks/useTranslation';
+import { useAppState } from '../../hooks/useAppState';
+
+// ─── Dark Mode inline hook (pas de dépendance externe) ───────────────────────
+const DARK_KEY = 'smartcabb_dark_mode';
+
+function useDarkModeLocal() {
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try { return localStorage.getItem(DARK_KEY) === 'true'; } catch { return false; }
+  });
+
+  const toggle = useCallback(() => {
+    setIsDark(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem(DARK_KEY, String(next));
+        if (next) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  // Sync avec l'état réel du DOM au montage
+  useEffect(() => {
+    const stored = localStorage.getItem(DARK_KEY) === 'true';
+    setIsDark(stored);
+    if (stored) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  }, []);
+
+  return { isDark, toggle };
+}
+
+// ─── Mini-composant toggle ────────────────────────────────────────────────────
+function InlineDarkToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-label="Basculer mode sombre"
+      style={{
+        position: 'relative',
+        display: 'inline-flex',
+        alignItems: 'center',
+        width: 52,
+        height: 28,
+        borderRadius: 999,
+        backgroundColor: isDark ? '#0098FF' : '#d1d5db',
+        border: 'none',
+        cursor: 'pointer',
+        transition: 'background-color 300ms',
+        flexShrink: 0,
+      }}
+    >
+      <span
+        style={{
+          position: 'absolute',
+          left: 3,
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          backgroundColor: 'white',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+          transform: isDark ? 'translateX(24px)' : 'translateX(0px)',
+          transition: 'transform 300ms cubic-bezier(0.34,1.56,0.64,1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: 11,
+        }}
+      >
+        {isDark ? '🌙' : '☀️'}
+      </span>
+    </button>
+  );
+}
 
 export function SettingsScreen() {
   const { t, language } = useTranslation();
-  const { state, setCurrentScreen, setLanguage, setCurrentUser, setCurrentView } = useAppState();
-  const { isDark, toggle: toggleDark } = useDarkMode();
+  const { state, setCurrentScreen, setLanguage, setCurrentUser } = useAppState();
+  const { isDark, toggle: toggleDark } = useDarkModeLocal();
   
-  // État pour les notifications (sauvegardé dans localStorage)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
-  // Charger les préférences au montage
   useEffect(() => {
-    const savedNotifPref = localStorage.getItem('smartcabb_notifications_enabled');
-    if (savedNotifPref !== null) {
-      setNotificationsEnabled(savedNotifPref === 'true');
-    }
+    const saved = localStorage.getItem('smartcabb_notifications_enabled');
+    if (saved !== null) setNotificationsEnabled(saved === 'true');
   }, []);
 
   const handleLanguageChange = (newLanguage: 'fr' | 'en') => {
@@ -56,7 +127,6 @@ export function SettingsScreen() {
   };
 
   const handleLogout = () => {
-    console.log('🚪 Déconnexion du passager');
     setCurrentUser(null);
     setCurrentScreen('landing');
     toast.success('Déconnexion réussie 👋');
@@ -66,7 +136,7 @@ export function SettingsScreen() {
     {
       icon: Globe,
       title: t('language'),
-      description: 'Choisir la langue de l\'application',
+      description: "Choisir la langue de l'application",
       content: (
         <Select value={language} onValueChange={handleLanguageChange}>
           <SelectTrigger className="w-32">
@@ -167,7 +237,7 @@ export function SettingsScreen() {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Paramètres</h2>
 
-          {/* ── Mode sombre ─────────────────────────────────────────── */}
+          {/* ── Apparence / Mode sombre ─────────────────────── */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -177,10 +247,12 @@ export function SettingsScreen() {
                   </div>
                   <div>
                     <p className="font-medium text-sm">Apparence</p>
-                    <p className="text-xs text-gray-500">{isDark ? 'Mode sombre activé' : 'Mode clair activé'}</p>
+                    <p className="text-xs text-gray-500">
+                      {isDark ? 'Mode sombre activé' : 'Mode clair activé'}
+                    </p>
                   </div>
                 </div>
-                <DarkModeToggle showLabel={false} />
+                <InlineDarkToggle isDark={isDark} onToggle={toggleDark} />
               </div>
             </CardContent>
           </Card>
@@ -218,7 +290,6 @@ export function SettingsScreen() {
         {/* Menu Items */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Menu</h2>
-          
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
