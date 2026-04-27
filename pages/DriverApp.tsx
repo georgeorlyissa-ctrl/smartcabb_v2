@@ -38,61 +38,84 @@ function DriverAppContent() {
     console.log('🚗 DriverApp - currentView:', state.currentView);
     console.log('🚗 DriverApp - currentDriver:', state.currentDriver?.id || 'none');
 
-    if (location.pathname.includes('/driver')) {
-      try {
-        const savedDriverStr = localStorage.getItem('smartcab_current_driver');
-        if (savedDriverStr) {
-          const savedDriver = JSON.parse(savedDriverStr);
-          const driverStatus = savedDriver.status;
-          if (driverStatus === 'rejected' || driverStatus === 'suspended') {
-            console.warn(`🧹 Nettoyage automatique : conducteur "${driverStatus}" détecté dans localStorage`);
-            localStorage.removeItem('smartcab_current_driver');
-            localStorage.removeItem('smartcab_current_user');
-            if (state.currentDriver?.id === savedDriver.id) {
-              setCurrentDriver(null);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('❌ Erreur lors du nettoyage du localStorage:', error);
-      }
+    if (!location.pathname.includes('/driver')) {
+      return;
+    }
 
-      setCurrentView('driver');
+    // ✅ FIX: Utiliser une garde pour éviter les mises à jour infinies
+    let shouldUpdateView = false;
+    let shouldUpdateScreen = false;
+    let shouldUpdateDriver = false;
+    let newScreen: string | null = null;
 
-      if (state.currentDriver) {
-        const driverStatus = state.currentDriver.status;
+    try {
+      const savedDriverStr = localStorage.getItem('smartcab_current_driver');
+      if (savedDriverStr) {
+        const savedDriver = JSON.parse(savedDriverStr);
+        const driverStatus = savedDriver.status;
         if (driverStatus === 'rejected' || driverStatus === 'suspended') {
-          setCurrentDriver(null);
+          console.warn(`🧹 Nettoyage automatique : conducteur "${driverStatus}" détecté dans localStorage`);
           localStorage.removeItem('smartcab_current_driver');
-          if (currentScreen !== 'driver-registration') {
-            setCurrentScreen('driver-login');
+          localStorage.removeItem('smartcab_current_user');
+          if (state.currentDriver?.id === savedDriver.id) {
+            shouldUpdateDriver = true;
           }
-          return;
         }
       }
+    } catch (error) {
+      console.error('❌ Erreur lors du nettoyage du localStorage:', error);
+    }
 
-      if (state.currentDriver && currentScreen && currentScreen.startsWith('driver-') && currentScreen !== 'driver-welcome' && currentScreen !== 'driver-login') {
-        return;
-      }
+    if (state.currentView !== 'driver') {
+      shouldUpdateView = true;
+    }
 
-      if (state.currentDriver && (!currentScreen || !currentScreen.startsWith('driver-'))) {
-        setCurrentScreen('driver-dashboard');
-        return;
-      }
-
-      if (currentScreen && currentScreen.startsWith('driver-')) {
-        return;
-      }
-
-      if (!currentScreen ||
-          currentScreen === 'landing' ||
-          currentScreen === 'user-selection' ||
-          currentScreen.startsWith('admin-') ||
-          currentScreen.startsWith('passenger-')) {
-        setCurrentScreen('driver-welcome');
+    if (state.currentDriver) {
+      const driverStatus = state.currentDriver.status;
+      if (driverStatus === 'rejected' || driverStatus === 'suspended') {
+        shouldUpdateDriver = true;
+        localStorage.removeItem('smartcab_current_driver');
+        if (currentScreen !== 'driver-registration') {
+          newScreen = 'driver-login';
+          shouldUpdateScreen = true;
+        }
       }
     }
-  }, [location.pathname, currentScreen, state.currentView, state.currentDriver, setCurrentView, setCurrentScreen, setCurrentDriver]);
+
+    // ✅ Appliquer les changements une seule fois
+    if (shouldUpdateDriver) {
+      setCurrentDriver(null);
+    }
+    if (shouldUpdateView) {
+      setCurrentView('driver');
+    }
+    if (shouldUpdateScreen && newScreen) {
+      setCurrentScreen(newScreen);
+      return;
+    }
+
+    // Logique de navigation
+    if (state.currentDriver && currentScreen && currentScreen.startsWith('driver-') && currentScreen !== 'driver-welcome' && currentScreen !== 'driver-login') {
+      return;
+    }
+
+    if (state.currentDriver && (!currentScreen || !currentScreen.startsWith('driver-'))) {
+      setCurrentScreen('driver-dashboard');
+      return;
+    }
+
+    if (currentScreen && currentScreen.startsWith('driver-')) {
+      return;
+    }
+
+    if (!currentScreen ||
+        currentScreen === 'landing' ||
+        currentScreen === 'user-selection' ||
+        currentScreen.startsWith('admin-') ||
+        currentScreen.startsWith('passenger-')) {
+      setCurrentScreen('driver-welcome');
+    }
+  }, [location.pathname, currentScreen, state.currentView, state.currentDriver?.id, state.currentDriver?.status]); // ✅ Dépendances minimales et stables
 
   // ✅ FCM géré entièrement par DriverDashboardNew — ne pas appeler setupFCMForUser ici
   // setupFCMForUser court-circuitait le système FCM et empêchait la popup RideNotification
