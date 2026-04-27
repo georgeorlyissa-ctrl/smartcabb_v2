@@ -140,6 +140,22 @@ export function DriverDashboardNew() {
   const [rideStats, setRideStats]           = useState<any>({ today: { count: 0, earnings: 0 }, week: { count: 0, earnings: 0 }, month: { count: 0, earnings: 0 }, total: { count: 0, earnings: 0 } });
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // 🌙 Dark mode
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try { return localStorage.getItem('smartcabb_dark_mode') === 'true'; } catch { return false; }
+  });
+  const toggleDark = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('smartcabb_dark_mode', String(next));
+        if (next) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      } catch {}
+      return next;
+    });
+  };
+
   // ✅ Refresh des données quand on revient sur le dashboard (après clôture de course)
   useEffect(() => {
     if (state.currentScreen === 'driver-dashboard' && driver) {
@@ -492,15 +508,25 @@ export function DriverDashboardNew() {
               <p className="text-sm opacity-90">{driver.phone}</p>
             </div>
           </div>
-          <button
-            onClick={handleToggleOnline}
-            className={`px-4 py-2 rounded-lg font-medium transition-all shadow-lg ${
-              isOnline ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-white text-primary hover:bg-gray-50 border-2 border-white'
-            }`}
-          >
-            <Power className="w-4 h-4 inline mr-1" />
-            {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* 🌙 Dark mode toggle */}
+            <button
+              onClick={toggleDark}
+              title={isDark ? 'Mode clair' : 'Mode sombre'}
+              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors flex-shrink-0"
+            >
+              <span className="text-lg leading-none">{isDark ? '☀️' : '🌙'}</span>
+            </button>
+            <button
+              onClick={handleToggleOnline}
+              className={`px-4 py-2 rounded-lg font-medium transition-all shadow-lg ${
+                isOnline ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-white text-primary hover:bg-gray-50 border-2 border-white'
+              }`}
+            >
+              <Power className="w-4 h-4 inline mr-1" />
+              {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
