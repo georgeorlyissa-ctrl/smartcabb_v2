@@ -25,10 +25,13 @@ import {
 } from '../../lib/icons';
 import { useTranslation } from '../../hooks/useTranslation'; // ✅ FIX: Import manquant
 import { useAppState } from '../../hooks/useAppState'; // ✅ FIX: Import manquant
+import { DarkModeToggle } from '../DarkModeToggle';
+import { useDarkMode } from '../../contexts/DarkModeContext';
 
 export function SettingsScreen() {
   const { t, language } = useTranslation();
   const { state, setCurrentScreen, setLanguage, setCurrentUser, setCurrentView } = useAppState();
+  const { isDark, toggle: toggleDark } = useDarkMode();
   
   // État pour les notifications (sauvegardé dans localStorage)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -163,7 +166,25 @@ export function SettingsScreen() {
         {/* Settings */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Paramètres</h2>
-          
+
+          {/* ── Mode sombre ─────────────────────────────────────────── */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span className="text-lg">{isDark ? '🌙' : '☀️'}</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">Apparence</p>
+                    <p className="text-xs text-gray-500">{isDark ? 'Mode sombre activé' : 'Mode clair activé'}</p>
+                  </div>
+                </div>
+                <DarkModeToggle showLabel={false} />
+              </div>
+            </CardContent>
+          </Card>
+
           {settings.map((setting) => {
             const Icon = setting.icon;
             return (
