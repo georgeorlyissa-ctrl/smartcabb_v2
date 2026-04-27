@@ -1,10 +1,9 @@
-import { motion } from '../../lib/motion'; // ✅ FIX: Import depuis lib/motion
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { useAppState } from '../../hooks/useAppState';
-import { useState, useMemo } from 'react';
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 
 // Icônes SVG inline
@@ -22,6 +21,8 @@ const Settings = ({ className = "w-5 h-5" }: { className?: string }) => (<svg cl
 const HelpCircle = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>);
 const LogOut = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>);
 const User = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>);
+
+const DARK_KEY = 'smartcabb_dark_mode';
 
 export function DriverSettingsScreen() {
   const { setCurrentScreen, state, setCurrentDriver, setCurrentView } = useAppState();
@@ -56,28 +57,43 @@ export function DriverSettingsScreen() {
     return null;
   }, [state.currentDriver]);
   
-  const [settings, setSettings] = useState({
-    notifications: {
-      newRides: true,
-      payments: true,
-      promotions: false,
-      system: true
-    },
-    privacy: {
-      shareLocation: true,
-      showProfile: true,
-      allowDirectContact: false
-    },
-    preferences: {
-      darkMode: false,
-      soundEffects: true,
-      autoAcceptRadius: 5,
-      workHours: {
-        start: '06:00',
-        end: '22:00'
+  const [settings, setSettings] = useState(() => {
+    // Lire le dark mode depuis localStorage au démarrage
+    let savedDark = false;
+    try { savedDark = localStorage.getItem(DARK_KEY) === 'true'; } catch {}
+    return {
+      notifications: {
+        newRides: true,
+        payments: true,
+        promotions: false,
+        system: true
+      },
+      privacy: {
+        shareLocation: true,
+        showProfile: true,
+        allowDirectContact: false
+      },
+      preferences: {
+        darkMode: savedDark,
+        soundEffects: true,
+        autoAcceptRadius: 5,
+        workHours: {
+          start: '06:00',
+          end: '22:00'
+        }
       }
-    }
+    };
   });
+
+  // Appliquer le dark mode au DOM à chaque changement
+  useEffect(() => {
+    const dark = settings.preferences.darkMode;
+    try {
+      localStorage.setItem(DARK_KEY, String(dark));
+      if (dark) document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark');
+    } catch {}
+  }, [settings.preferences.darkMode]);
 
   const updateSetting = (category: string, key: string, value: any) => {
     setSettings(prev => ({
