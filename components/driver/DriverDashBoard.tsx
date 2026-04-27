@@ -141,6 +141,22 @@ export function DriverDashboard() {
   // 🆕 Animation de mise à jour de la note
   const [ratingUpdated, setRatingUpdated] = useState(false);
 
+  // 🌙 Dark mode
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try { return localStorage.getItem('smartcabb_dark_mode') === 'true'; } catch { return false; }
+  });
+  const toggleDark = () => {
+    setIsDark(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('smartcabb_dark_mode', String(next));
+        if (next) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      } catch {}
+      return next;
+    });
+  };
+
   // ─── Helper : récupérer le profil conducteur ─────────────────────────
   const loadDriver = async (driverId: string, silent = false) => {
     try {
@@ -398,15 +414,25 @@ export function DriverDashboard() {
               <p className="text-sm opacity-90">{driver.phone}</p>
             </div>
           </div>
-          <button
-            onClick={handleToggleOnline}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              isOnline ? 'bg-green-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'
-            }`}
-          >
-            <Power className="w-4 h-4 inline mr-1" />
-            {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* 🌙 Dark mode toggle */}
+            <button
+              onClick={toggleDark}
+              title={isDark ? 'Mode clair' : 'Mode sombre'}
+              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+            >
+              <span className="text-lg leading-none">{isDark ? '☀️' : '🌙'}</span>
+            </button>
+            <button
+              onClick={handleToggleOnline}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                isOnline ? 'bg-green-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'
+              }`}
+            >
+              <Power className="w-4 h-4 inline mr-1" />
+              {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {/* ⭐ Note — animation si mise à jour */}
