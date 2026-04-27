@@ -9,6 +9,7 @@ import { PageTransition } from './components/PageTransition';
 import { AppProvider } from './hooks/useAppState';
 import { BackendSyncProvider } from './components/BackendSyncProvider';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { DarkModeProvider } from './contexts/DarkModeContext';
 import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
 import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
@@ -343,7 +344,7 @@ function App() {
           const isViewPassengerButScreenDriver = savedView === 'passenger' && savedScreen.startsWith('driver-');
           
           const isViewAdminButScreenDriver = savedView === 'admin' && savedScreen.startsWith('driver-');
-          const isViewAdminButScreenPassenger = savedView === 'admin' && !isNeutralScreen && !savedScreen.startsWith('admin-');
+          const isViewAdminButScreenPassenger = savedView === 'admin' && !neutralScreen && !savedScreen.startsWith('admin-');
           
           if (isViewDriverButScreenAdmin || isViewDriverButScreenPassenger ||
               isViewPassengerButScreenAdmin || isViewPassengerButScreenDriver ||
@@ -440,6 +441,7 @@ function App() {
           {/* 🔄 BackendSyncProvider DÉSACTIVÉ TEMPORAIREMENT - Mode standalone */}
           {/* <BackendSyncProvider /> */}
           <LanguageProvider>
+            <DarkModeProvider>
             <div className="app-container">
               {/* Online/Offline Indicator */}
               <OnlineStatusIndicator />
@@ -544,6 +546,7 @@ function App() {
                 </Routes>
               </Suspense>
             </div>
+            </DarkModeProvider>
           </LanguageProvider>
         </AppProvider>
       </Router>
