@@ -51,24 +51,38 @@ export function startUpdateDetection() {
     updateCheckInterval = setInterval(checkForUpdates, 5 * 60 * 1000);
   }
 
-  // 4. Écouter les messages du Service Worker - désactivé temporairement
-  // 🚫 Code désactivé pour éviter les erreurs de Service Worker
-  /*
+  // 4. ✅ Écouter les messages du Service Worker (mise à jour automatique)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'SW_UPDATED') {
+        console.log('🆕 Service Worker mis à jour - version:', event.data.version);
+        console.log('🔄 Rechargement automatique dans 3 secondes...');
+
+        // Petit délai pour laisser le SW finir son activation
+        setTimeout(() => {
+          forceReload();
+        }, 3000);
+      }
+
       if (event.data && event.data.type === 'FORCE_RELOAD') {
         console.log('🔥 Rechargement forcé par le Service Worker');
-        window.location.reload();
+        forceReload();
       }
     });
 
-    // 5. Détecter un nouveau Service Worker
+    // 5. Détecter un nouveau Service Worker qui prend le contrôle
+    let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      console.log('🆕 Nouveau Service Worker détecté - rechargement...');
+      if (refreshing) return;
+      refreshing = true;
+
+      console.log('🆕 Nouveau Service Worker a pris le contrôle');
+      console.log('🔄 Rechargement automatique...');
+
+      // Rechargement immédiat car le SW est déjà actif
       window.location.reload();
     });
   }
-  */
 }
 
 export function stopUpdateDetection() {
@@ -168,23 +182,104 @@ export async function checkForUpdates() {
 export const checkForUpdate = checkForUpdates;
 
 function forceReload() {
-  // Afficher une notification à l'utilisateur
-  const shouldReload = confirm(
-    '🆕 Une nouvelle version de SmartCabb est disponible!\n\n' +
-    'Voulez-vous recharger maintenant pour obtenir les dernières améliorations?'
-  );
+  console.log('🔄 Mise à jour automatique détectée - Préparation du rechargement...');
 
-  if (shouldReload) {
-    // Vider tous les caches
-    if ('caches' in window) {
-      caches.keys().then(names => {
-        names.forEach(name => caches.delete(name));
-      });
-    }
+  // ✅ MISE À JOUR AUTOMATIQUE SILENCIEUSE
+  // Vérifier si l'utilisateur est en pleine action (course en cours, paiement, etc.)
+  const currentScreen = localStorage.getItem('smartcab_current_screen');
+  const currentRide = localStorage.getItem('smartcab_current_ride');
 
+  // Liste des écrans où on NE DOIT PAS recharger immédiatement
+  const criticalScreens = [
+    'payment',
+    'payment-confirmation',
+    'driver-active-ride',
+    'active-ride',
+    'ride-in-progress',
+    'booking',
+    'searching-drivers',
+    'driver-found'
+  ];
+
+  // Si l'utilisateur a une course en cours, on attend
+  const hasActiveRide = currentRide && currentRide !== 'null';
+  const isCriticalScreen = criticalScreens.some(screen => currentScreen?.includes(screen));
+
+  if (hasActiveRide || isCriticalScreen) {
+    console.log('⏳ Mise à jour reportée - Utilisateur en cours d\'action');
+    console.log('   Screen:', currentScreen);
+    console.log('   Active ride:', hasActiveRide);
+
+    // Réessayer dans 2 minutes
+    setTimeout(() => {
+      console.log('🔄 Nouvelle tentative de mise à jour...');
+      forceReload();
+    }, 2 * 60 * 1000);
+
+    return;
+  }
+
+  // ✅ Afficher un toast discret (2 secondes) avant de recharger
+  const toast = document.createElement('div');
+  toast.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      animation: slideDown 0.3s ease-out;
+    ">
+      <span style="font-size: 18px;">✨</span>
+      <span>Mise à jour en cours...</span>
+    </div>
+    <style>
+      @keyframes slideDown {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+    </style>
+  `;
+  document.body.appendChild(toast);
+
+  // ✅ Vider tous les caches en arrière-plan
+  if ('caches' in window) {
+    caches.keys().then(names => {
+      Promise.all(names.map(name => caches.delete(name)))
+        .then(() => console.log('✅ Caches vidés:', names))
+        .catch(err => console.warn('⚠️ Erreur vidage cache:', err));
+    });
+  }
+
+  // ✅ Envoyer un message au Service Worker pour forcer la mise à jour
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+    navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+  }
+
+  // ✅ Recharger automatiquement après 2 secondes (pour que l'utilisateur voie le toast)
+  setTimeout(() => {
+    console.log('🔄 Rechargement automatique...');
     // Forcer le rechargement complet (bypass cache)
     window.location.reload();
-  }
+  }, 2000);
 }
 
 // Mode debug pour forcer le rechargement
