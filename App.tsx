@@ -13,7 +13,7 @@ import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
 import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
 // ✅ BUILD VERSION - Défini directement ici pour éviter les erreurs d'import
-const BUILD_VERSION = '518.3.3'; // ✅ FIX: Compteur courses terminées (profil passager)
+const BUILD_VERSION = '518.4.0'; // ✅ FEATURE: Annulation passager + Vérification solde conducteur
 const BUILD_TIMESTAMP = new Date().toISOString();
 
 import { startUpdateDetection } from './utils/updateDetector';
@@ -23,29 +23,31 @@ import { useMaintenanceMode } from './hooks/useAdminConfig';
 // ✅ FIX BUILD: Import conditionnel pour Firebase Service Worker
 // import { initializeFirebaseServiceWorker } from './lib/init-firebase-sw';
 
-// ⚡ BUILD v518.3.2 - WHATSAPP + COURSES ACTIVES
+// ⚡ BUILD v518.4.0 - ANNULATION PASSAGER + SOLDE CONDUCTEUR
 console.log('');
 console.log('═══════════════════════════════════════════════════════════════');
-console.log('🚀 BUILD v518.3.2 - 📱 WHATSAPP + 📊 COURSES ACTIVES');
+console.log('🚀 BUILD v518.4.0 - 🚫 ANNULATION + 💰 SOLDE CONDUCTEUR');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('');
-console.log('📱 INTÉGRATION WHATSAPP:');
-console.log('  ✅ Bouton "Appeler" → Ouvre WhatsApp au lieu d\'appel normal');
-console.log('  ✅ Bouton "Partager course" → Partage direct via WhatsApp');
-console.log('  ✅ Message pré-rempli pour le conducteur');
-console.log('  ✅ Formatage automatique des infos de course');
+console.log('🚫 ANNULATION PASSAGER:');
+console.log('  ✅ Bouton d\'annulation ajouté (course en cours)');
+console.log('  ✅ Confirmation obligatoire avant annulation');
+console.log('  ✅ Appel API backend pour enregistrer l\'annulation');
+console.log('  ✅ Alerte sur frais d\'annulation potentiels');
 console.log('');
-console.log('📊 DASHBOARD ADMIN:');
-console.log('  ✅ Compteur courses actives corrigé (status in_progress)');
-console.log('  ✅ Frontend + Backend alignés sur les mêmes statuts');
-console.log('  ✅ Affichage en temps réel des courses en cours');
+console.log('💰 VÉRIFICATION SOLDE CONDUCTEUR (CRITIQUE):');
+console.log('  ✅ Vérification stricte : solde >= prix course');
+console.log('  ✅ Désactivation auto si solde insuffisant');
+console.log('  ✅ Message détaillé (solde actuel + montant à recharger)');
+console.log('  ✅ Toutes catégories (Standard, Confort, Plus)');
+console.log('  ✅ Protection contre fraude + logs complets');
 console.log('');
-console.log('🐛 CORRECTIONS v518.3.1 (PRÉCÉDENTE):');
-console.log('  ✅ Fix boucle infinie iPhone (RangeError: Maximum call stack)');
-console.log('  ✅ Mise à jour automatique silencieuse après déploiement');
-console.log('  ✅ Service Worker v518.31 + Toast discret');
+console.log('🔒 SÉCURITÉ RENFORCÉE:');
+console.log('  ✅ Conducteurs sans crédit = hors ligne automatique');
+console.log('  ✅ Impossible d\'accepter si solde < prix course');
+console.log('  ✅ Passagers protégés (conducteur solvable uniquement)');
 console.log('');
-console.log('✅ APPLICATION COMPLÈTE + COMMUNICATION WHATSAPP !');
+console.log('✅ APPLICATION SÉCURISÉE + CONTRÔLE TOTAL !');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('');
 
