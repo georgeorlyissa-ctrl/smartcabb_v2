@@ -406,7 +406,7 @@ export function SearchingDriversScreen() {
             <p className="text-white/80 text-sm leading-tight">{pendingRide.destination.address}</p>
           </div>
           <div className="border-t border-white/10 pt-2 flex items-center justify-between">
-            <span className="text-white/50 text-xs">{pendingRide.distance.toFixed(1)} km</span>
+            <span className="text-white/50 text-xs">{(pendingRide.distance || 0).toFixed(1)} km</span>
             <span className="text-cyan-300 text-sm font-bold">
               {formatCDF(pendingRide.estimatedPrice)}
             </span>
