@@ -56,7 +56,11 @@ const PERKS = [
   { e: '⭐', l: '4.8/5' },
   { e: '🎁', l: 'Bonus' },
   { e: '📍', l: 'GPS live' },
-  { e: '💬', l: '24/7' },
+  { e: '💬', l: 'Support 24/7' },
+  { e: '🚗', l: 'Chauffeur vérifié' },
+  { e: '💳', l: 'Mobile Money' },
+  { e: '🔒', l: 'Sécurisé' },
+  { e: '🏆', l: 'N°1 Kinshasa' },
 ];
 
 // ─── SITE SMARTCABB ───────────────────────────────────────────
@@ -90,15 +94,40 @@ export function SmartCabbPromoSection() {
         <div className="flex-1 h-px bg-gray-100" />
       </div>
 
-      {/* ── Pills avantages ───────────────────────────────────── */}
-      <div className="flex gap-1.5 overflow-x-auto pb-0.5 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
-        {PERKS.map(p => (
-          <div key={p.l} className="flex items-center gap-1 bg-blue-50 border border-blue-100 rounded-full px-2.5 py-1 flex-shrink-0">
-            <span className="text-[11px]">{p.e}</span>
-            <span className="text-[10px] font-bold text-blue-700 whitespace-nowrap">{p.l}</span>
-          </div>
-        ))}
+      {/* ── Pills avantages — défilement infini ───────────────── */}
+      <div className="overflow-hidden -mx-4 px-0 relative">
+        {/* Fondu gauche */}
+        <div className="absolute left-0 top-0 bottom-0 w-6 z-10 pointer-events-none"
+          style={{ background: 'linear-gradient(to right, white, transparent)' }} />
+        {/* Fondu droite */}
+        <div className="absolute right-0 top-0 bottom-0 w-6 z-10 pointer-events-none"
+          style={{ background: 'linear-gradient(to left, white, transparent)' }} />
+
+        <div className="flex gap-2 py-1 px-2"
+          style={{
+            display: 'flex',
+            width: 'max-content',
+            animation: 'perks-scroll 18s linear infinite',
+          }}>
+          {/* Dupliqué 3× pour un loop parfaitement fluide */}
+          {[...PERKS, ...PERKS, ...PERKS].map((p, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-full px-3 py-1.5 flex-shrink-0"
+            >
+              <span className="text-sm leading-none">{p.e}</span>
+              <span className="text-[11px] font-bold text-blue-700 whitespace-nowrap">{p.l}</span>
+            </div>
+          ))}
+        </div>
       </div>
+
+      <style>{`
+        @keyframes perks-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-33.333%); }
+        }
+      `}</style>
 
       {/* ── Hero carousel ─────────────────────────────────────── */}
       <div className="relative rounded-2xl overflow-hidden shadow-md" style={{ height: 120 }}>
