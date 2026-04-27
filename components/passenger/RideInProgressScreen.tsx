@@ -477,29 +477,14 @@ export function RideInProgressScreen() {
   const categoryConfig = PRICING_CONFIG[category as keyof typeof PRICING_CONFIG];
   const hourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 7;
 
-  // 🆕 Fonction de partage de course
+  // 🆕 Fonction de partage de course via WhatsApp
   const handleShareRide = async () => {
     const shareText = `🚗 Je suis en course avec SmartCabb\n📍 De: ${currentRide.pickup.address}\n🎯 Vers: ${currentRide.destination.address}\n💰 Prix estimé: ${currentRide.estimatedPrice?.toLocaleString()} CDF\n⏱️ Temps écoulé: ${formatTime(elapsedTime)}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Ma course SmartCabb',
-          text: shareText,
-        });
-        toast.success('Course partagée avec succès !');
-      } catch (error) {
-        console.log('Erreur partage:', error);
-      }
-    } else {
-      // Fallback: copier dans le presse-papiers
-      try {
-        await navigator.clipboard.writeText(shareText);
-        toast.success('Informations copiées dans le presse-papiers !');
-      } catch (error) {
-        toast.error('Impossible de partager la course');
-      }
-    }
+
+    // ✅ TOUJOURS partager via WhatsApp
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, '_blank');
+    toast.success('🚀 Partage WhatsApp ouvert !');
   };
 
   // Créer le driver avec la position simulée
@@ -559,11 +544,14 @@ export function RideInProgressScreen() {
                   <Share2 className="w-4 h-4 text-primary" />
                 </button>
                 
-                {/* Bouton d'appel */}
+                {/* Bouton d'appel WhatsApp */}
                 <button
                   onClick={() => {
                     if (currentRide.driverPhone) {
-                      window.location.href = `tel:${currentRide.driverPhone}`;
+                      // ✅ Ouvrir WhatsApp au lieu d'un appel normal
+                      const phoneNumber = currentRide.driverPhone.replace(/[^0-9]/g, ''); // Nettoyer le numéro
+                      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent('Bonjour, je suis votre passager SmartCabb 🚗')}`;
+                      window.open(whatsappUrl, '_blank');
                     } else {
                       toast.info('Numéro du conducteur non disponible');
                     }
