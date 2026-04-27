@@ -56,53 +56,67 @@ function PassengerAppContent() {
     console.log('🚀 PassengerApp - currentUser:', state.currentUser?.id || 'none');
     console.log('🚀 PassengerApp - pickup:', state.pickup?.address);
     console.log('🚀 PassengerApp - destination:', state.destination?.address);
-    
+
+    // ✅ FIX: Utiliser une garde pour éviter les mises à jour infinies
+    let shouldUpdate = false;
+    let newView: 'passenger' | 'driver' | 'admin' | null = null;
+    let newScreen: string | null = null;
+
     // ✅ Si on est sur /app/passenger, forcer la vue à 'passenger'
-    if (location.pathname.includes('/passenger')) {
+    if (location.pathname.includes('/passenger') && state.currentView !== 'passenger') {
       console.log('🔄 Forçage de la vue à passenger');
-      setCurrentView('passenger');
+      newView = 'passenger';
+      shouldUpdate = true;
     }
-    
+
     // ❌ NE PAS charger PassengerApp si on est sur un écran admin ou driver
     if (currentScreen?.startsWith('admin-') || currentScreen?.startsWith('driver-')) {
-      console.log('⚠️ Écran admin/driver dtecté, on ne touche pas à la vue');
+      console.log('⚠️ Écran admin/driver détecté, on ne touche pas à la vue');
       return;
     }
-    
+
     // ✅ FIX: Si l'utilisateur est connecté et a un écran passager valide, ne rien changer
     if (state.currentUser && currentScreen && !['landing', 'user-selection', 'login', 'register'].includes(currentScreen)) {
       console.log('✅ Passager connecté avec écran valide, on garde:', currentScreen);
       return; // Important : ne pas continuer pour éviter les redirections
     }
-    
+
     // ✅ FIX: Si l'utilisateur est connecté mais n'a pas d'écran valide (refresh), aller à map
     if (state.currentUser && (!currentScreen || ['landing', 'user-selection', 'login', 'register'].includes(currentScreen))) {
       console.log('🔄 Passager connecté après refresh, redirection vers map');
-      setCurrentScreen('map');
-      return;
+      newScreen = 'map';
+      shouldUpdate = true;
     }
-    
+
     // 🆕 CORRECTION : Ne pas écraser l'écran restauré depuis localStorage
     // Si currentScreen existe déjà (restauré depuis localStorage), le garder
-    if (currentScreen && currentScreen !== '') {
+    else if (currentScreen && currentScreen !== '') {
       console.log('✅ Écran restauré depuis localStorage:', currentScreen);
       // Ne rien faire, l'écran est déjà correct
       return;
     }
-    
+
     // Si on arrive sur /app sans écran défini ET sans données sauvegardées, initialiser à 'landing'
-    if (!currentScreen || currentScreen === '') {
+    else if (!currentScreen || currentScreen === '') {
       console.log('🔄 Initialisation vers landing depuis PassengerApp (aucun état sauvegardé)');
-      setCurrentView('passenger');
-      setCurrentScreen('landing');
+      newView = 'passenger';
+      newScreen = 'landing';
+      shouldUpdate = true;
     }
-    
+
     // Si on est sur user-selection et qu'on a déjà un utilisateur, aller à map
-    if (currentScreen === 'user-selection' && user) {
+    else if (currentScreen === 'user-selection' && user) {
       console.log('✅ Utilisateur déjà connecté, redirection vers map');
-      setCurrentScreen('map');
+      newScreen = 'map';
+      shouldUpdate = true;
     }
-  }, [location.pathname, currentScreen, state.currentView, state.currentUser, user, setCurrentView, setCurrentScreen]); // Toutes les dépendances
+
+    // ✅ N'appliquer les changements qu'une seule fois pour éviter les boucles
+    if (shouldUpdate) {
+      if (newView !== null) setCurrentView(newView);
+      if (newScreen !== null) setCurrentScreen(newScreen);
+    }
+  }, [location.pathname, currentScreen, state.currentView, state.currentUser?.id, user?.id]); // ✅ Dépendances minimales et stables
 
   // ✅ FCM : Initialiser les notifications push pour le passager
   useEffect(() => {
