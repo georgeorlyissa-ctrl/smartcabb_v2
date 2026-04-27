@@ -487,6 +487,67 @@ export function RideInProgressScreen() {
     toast.success('🚀 Partage WhatsApp ouvert !');
   };
 
+  // 🆕 Fonction d'annulation de course (passager)
+  const handleCancelRide = async () => {
+    if (!currentRide?.id) return;
+
+    // Confirmation de l'utilisateur
+    const confirmed = window.confirm(
+      '⚠️ Voulez-vous vraiment annuler cette course en cours ?\n\n' +
+      'Note: Des frais d\'annulation pourraient s\'appliquer.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      console.log('🚫 Annulation de la course:', currentRide.id);
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/cancel`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            rideId: currentRide.id,
+            passengerId: state.currentUser?.id,
+            cancelledBy: 'passenger',
+            reason: 'Annulation par le passager pendant la course'
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.success) {
+        toast.error(data.error || 'Impossible d\'annuler la course');
+        return;
+      }
+
+      // Mettre à jour le state
+      if (updateRide) {
+        updateRide(currentRide.id, {
+          status: 'cancelled',
+          cancelledBy: 'passenger',
+          cancelledAt: new Date().toISOString()
+        });
+      }
+
+      toast.success('Course annulée avec succès');
+
+      // Retour à l'écran principal
+      setTimeout(() => {
+        setCurrentScreen('map');
+      }, 1500);
+
+    } catch (error) {
+      console.error('❌ Erreur annulation:', error);
+      toast.error('Erreur lors de l\'annulation');
+    }
+  };
+
   // Créer le driver avec la position simulée
   const simulatedDriver = currentRide ? {
     id: currentRide.driverId || 'driver-1',
@@ -536,14 +597,24 @@ export function RideInProgressScreen() {
                 <p className="text-xs text-white/90 drop-shadow-md">Trajet vers votre destination</p>
               </div>
               <div className="flex items-center space-x-2">
+                {/* Bouton d'annulation */}
+                <button
+                  onClick={handleCancelRide}
+                  className="p-2.5 bg-red-500/90 backdrop-blur-md rounded-full shadow-xl hover:bg-red-600 transition-all active:scale-95"
+                  title="Annuler la course"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+
                 {/* Bouton de partage */}
                 <button
                   onClick={handleShareRide}
                   className="p-2.5 bg-white/90 backdrop-blur-md rounded-full shadow-xl hover:bg-white transition-all active:scale-95"
+                  title="Partager la course"
                 >
                   <Share2 className="w-4 h-4 text-primary" />
                 </button>
-                
+
                 {/* Bouton d'appel WhatsApp */}
                 <button
                   onClick={() => {
@@ -557,6 +628,7 @@ export function RideInProgressScreen() {
                     }
                   }}
                   className="p-2.5 bg-green-500/90 backdrop-blur-md rounded-full shadow-xl hover:bg-green-600 transition-all active:scale-95"
+                  title="Contacter le conducteur"
                 >
                   <Phone className="w-4 h-4 text-white" />
                 </button>
