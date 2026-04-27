@@ -51,7 +51,19 @@ export function DriverFoundScreen() {
 
         if (response.ok) {
           const data = await response.json();
-          setDriverData(data);
+          if (data.success && data.driver) {
+            setDriverData({
+              full_name: data.driver.name || data.driver.full_name || '',
+              phone: data.driver.phone || '',
+              rating: data.driver.rating || 4.8,
+              total_rides: data.driver.total_rides || 0,
+              photo_url: data.driver.photo || data.driver.photo_url,
+              vehicle: data.driver.vehicleInfo || data.driver.vehicle_info
+            });
+          } else {
+            // Fallback si la structure de réponse est différente
+            setDriverData(prev => ({ ...prev, ...data }));
+          }
         }
       } catch (error) {
         console.error('Erreur chargement données chauffeur:', error);
@@ -219,7 +231,7 @@ export function DriverFoundScreen() {
             <h2 className="text-xl font-bold text-gray-900">{driverData.full_name}</h2>
             <div className="flex items-center gap-1 mt-1 mb-3">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="font-semibold text-sm">{driverData.rating.toFixed(1)}</span>
+              <span className="font-semibold text-sm">{(driverData.rating ?? 4.8).toFixed(1)}</span>
               <span className="text-gray-400 text-xs">({isLoadingDriverData ? '...' : driverData.total_rides} courses)</span>
             </div>
 
