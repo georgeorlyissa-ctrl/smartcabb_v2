@@ -123,18 +123,10 @@ export function applyBrowserOptimizations(): void {
   // Optimisations spécifiques Safari
   if (browser.isSafari || browser.isIOS) {
     console.log('🍎 Application des optimisations Safari/iOS...');
-    
-    // Fix pour les problèmes de hauteur viewport sur Safari mobile
-    if (browser.isIOS) {
-      const setVh = () => {
-        const vh = window.innerHeight * 0.01;
-        document.documentElement.style.setProperty('--vh', `${vh}px`);
-      };
-      setVh();
-      window.addEventListener('resize', setVh);
-      window.addEventListener('orientationchange', setVh);
-    }
-    
+
+    // ✅ FIX: Ne pas ajouter les écouteurs ici, ils sont gérés dans App.tsx
+    // pour éviter les duplications et les boucles infinies
+
     // Ajouter une classe CSS pour les optimisations Safari
     document.documentElement.classList.add('safari-browser');
   }
