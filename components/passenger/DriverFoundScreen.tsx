@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { motion } from '../../lib/motion';
 import { toast } from '../../lib/toast';
@@ -30,23 +30,24 @@ export function DriverFoundScreen() {
   });
   const [isLoadingDriverData, setIsLoadingDriverData] = useState(true);
   const [arrivalTime, setArrivalTime] = useState(5);
+  const [rideStatus, setRideStatus] = useState<string>('accepted');
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasNavigatedRef = useRef(false);
 
+  // ─── Charger les données du chauffeur ───────────────────────
   useEffect(() => {
     if (!state.currentRide) {
       setCurrentScreen('map');
       return;
     }
 
-    // Charger les données du chauffeur
     const loadDriverData = async () => {
       try {
         if (!state.currentRide.driverId) return;
 
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${state.currentRide.driverId}`,
-          {
-            headers: { Authorization: `Bearer ${publicAnonKey}` }
-          }
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } }
         );
 
         if (response.ok) {
@@ -60,9 +61,17 @@ export function DriverFoundScreen() {
               photo_url: data.driver.photo || data.driver.photo_url,
               vehicle: data.driver.vehicleInfo || data.driver.vehicle_info
             });
-          } else {
-            // Fallback si la structure de réponse est différente
-            setDriverData(prev => ({ ...prev, ...data }));
+          } else if (data.rating !== undefined) {
+            // Réponse plate (sans champ "driver")
+            setDriverData(prev => ({
+              ...prev,
+              full_name: data.name || data.full_name || prev.full_name,
+              phone: data.phone || prev.phone,
+              rating: data.rating ?? prev.rating,
+              total_rides: data.total_rides ?? prev.total_rides,
+              photo_url: data.photo || data.photo_url || prev.photo_url,
+              vehicle: data.vehicleInfo || data.vehicle_info || data.vehicle || prev.vehicle
+            }));
           }
         }
       } catch (error) {
@@ -73,7 +82,85 @@ export function DriverFoundScreen() {
     };
 
     loadDriverData();
-  }, [state.currentRide]);
+  }, [state.currentRide?.driverId]);
+
+  // ─── Polling du statut de la course ─────────────────────────
+  useEffect(() => {
+    if (!state.currentRide?.id || hasNavigatedRef.current) return;
+
+    const checkStatus = async () => {
+      if (hasNavigatedRef.current) return;
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/status/${state.currentRide!.id}`,
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } }
+        );
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const ride = data.ride || data;
+        const status = ride?.status;
+
+        console.log('🔍 [DriverFoundScreen] Statut course:', status);
+        setRideStatus(status || 'accepted');
+
+        if (hasNavigatedRef.current) return;
+
+        if (status === 'in_progress') {
+          hasNavigatedRef.current = true;
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          if (updateRide && state.currentRide?.id) {
+            updateRide(state.currentRide.id, {
+              status: 'in_progress',
+              startedAt: ride.startedAt || new Date().toISOString()
+            });
+          }
+          toast.success('🚗 Course démarrée !', {
+            description: 'Votre course est en cours. Bon voyage !',
+            duration: 3000
+          });
+          setCurrentScreen('ride-in-progress');
+          return;
+        }
+
+        if (status === 'completed' || status === 'rated') {
+          hasNavigatedRef.current = true;
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setCurrentScreen('payment');
+          return;
+        }
+
+        if (status === 'cancelled') {
+          hasNavigatedRef.current = true;
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          toast.error('Course annulée', {
+            description: 'Le chauffeur a annulé la course.',
+            duration: 4000
+          });
+          setCurrentScreen('map');
+          return;
+        }
+      } catch (err) {
+        console.debug('Polling driver-found:', err);
+      }
+    };
+
+    // Vérification immédiate, puis toutes les 3 secondes
+    checkStatus();
+    pollingRef.current = setInterval(checkStatus, 3000);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [state.currentRide?.id]);
+
+  // ─── Compte à rebours de l'arrivée ──────────────────────────
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setArrivalTime(prev => (prev > 1 ? prev - 1 : 1));
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const getVehicleDisplayName = (vehicle: DriverData['vehicle']) => {
     if (!vehicle) return null;
@@ -103,7 +190,6 @@ export function DriverFoundScreen() {
     const confirmed = window.confirm(
       'Voulez-vous vraiment annuler cette course ? Le chauffeur a déjà accepté et est en route.'
     );
-
     if (!confirmed) return;
 
     try {
@@ -124,17 +210,14 @@ export function DriverFoundScreen() {
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('✅ Course annulée avec succès:', data);
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      hasNavigatedRef.current = true;
 
-        // Notification
+      if (response.ok) {
         toast.success('Course annulée', {
           description: 'Votre course a été annulée. Le chauffeur a été notifié.',
           duration: 5000
         });
-
-        // Mettre à jour le state local
         if (updateRide) {
           updateRide(state.currentRide.id, {
             status: 'cancelled',
@@ -142,23 +225,14 @@ export function DriverFoundScreen() {
             cancelledAt: new Date().toISOString()
           });
         }
-
-        // Retour à la carte
-        setCurrentScreen('map');
       } else {
-        const error = await response.json();
-        console.error('❌ Erreur annulation:', error);
-        toast.error('Erreur', {
-          description: error.error || 'Impossible d\'annuler la course',
-          duration: 5000
-        });
+        toast.error('Impossible d\'annuler la course. Réessayez.');
       }
     } catch (error) {
-      console.error('❌ Erreur annulation course:', error);
-      toast.error('Erreur', {
-        description: 'Impossible de contacter le serveur',
-        duration: 5000
-      });
+      console.error('Erreur annulation course:', error);
+      toast.error('Erreur de connexion');
+    } finally {
+      setCurrentScreen('map');
     }
   };
 
@@ -175,7 +249,7 @@ export function DriverFoundScreen() {
           >
             <ArrowLeft className="w-5 h-5 text-primary" />
           </Button>
-          <h1 className="text-primary">Chauffeur trouvé !</h1>
+          <h1 className="text-primary font-semibold">Chauffeur trouvé !</h1>
           <div className="w-10" />
         </div>
       </div>
@@ -183,7 +257,7 @@ export function DriverFoundScreen() {
       {/* Contenu principal */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
-        {/* 🔒 SÉCURITÉ — Photo du conducteur en avant-plan */}
+        {/* 🔒 SÉCURITÉ — Photo du conducteur */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -228,7 +302,7 @@ export function DriverFoundScreen() {
               </div>
             </div>
 
-            <h2 className="text-xl font-bold text-gray-900">{driverData.full_name}</h2>
+            <h2 className="text-xl font-bold text-gray-900">{driverData.full_name || '...'}</h2>
             <div className="flex items-center gap-1 mt-1 mb-3">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
               <span className="font-semibold text-sm">{(driverData.rating ?? 4.8).toFixed(1)}</span>
@@ -242,7 +316,7 @@ export function DriverFoundScreen() {
           </div>
         </motion.div>
 
-        {/* Animation de succès réduite */}
+        {/* Statut : En route */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -253,17 +327,25 @@ export function DriverFoundScreen() {
           <p className="text-muted-foreground text-sm">
             Arrivée estimée dans <span className="font-semibold text-primary">{arrivalTime} min</span>
           </p>
+          {/* Indicateur de polling actif */}
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-xs text-gray-400">
+              {rideStatus === 'in_progress'
+                ? 'Course démarrée'
+                : 'En attente du démarrage de la course…'}
+            </span>
+          </div>
         </motion.div>
 
-        {/* Informations du chauffeur */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-white rounded-2xl shadow-lg border border-border overflow-hidden"
-        >
-          {/* Détails du véhicule */}
-          {driverData.vehicle && (
+        {/* Véhicule */}
+        {driverData.vehicle && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white rounded-2xl shadow-lg border border-border overflow-hidden"
+          >
             <div className="p-5 border-b border-border">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -287,20 +369,20 @@ export function DriverFoundScreen() {
                 </div>
               </div>
             </div>
-          )}
-        </motion.div>
+          </motion.div>
+        )}
 
-        {/* Informations de trajet */}
+        {/* Détails du trajet */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="bg-white rounded-2xl shadow-lg border border-border p-6 space-y-4"
+          className="bg-white rounded-2xl shadow-lg border border-border p-5 space-y-4"
         >
-          <h3 className="font-semibold text-lg mb-4">Détails du trajet</h3>
+          <h3 className="font-semibold text-lg">Détails du trajet</h3>
 
           <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-secondary mt-1" />
+            <MapPin className="w-5 h-5 text-secondary mt-1 flex-shrink-0" />
             <div>
               <p className="text-sm text-muted-foreground">Point de départ</p>
               <p className="font-medium">{state.pickup?.address || 'Chargement...'}</p>
@@ -308,7 +390,7 @@ export function DriverFoundScreen() {
           </div>
 
           <div className="flex items-start gap-3">
-            <MapPin className="w-5 h-5 text-accent mt-1" />
+            <MapPin className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
             <div>
               <p className="text-sm text-muted-foreground">Destination</p>
               <p className="font-medium">{state.destination?.address || 'Chargement...'}</p>
@@ -316,7 +398,7 @@ export function DriverFoundScreen() {
           </div>
 
           <div className="flex items-start gap-3">
-            <Clock className="w-5 h-5 text-blue-600 mt-1" />
+            <Clock className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
             <div>
               <p className="text-sm text-muted-foreground">Durée estimée</p>
               <p className="font-medium">{state.currentRide?.estimatedDuration || 15} minutes</p>
@@ -329,7 +411,7 @@ export function DriverFoundScreen() {
       <div className="bg-white border-t border-border p-4 space-y-3">
         <Button
           onClick={handleWhatsAppCall}
-          className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"
+          className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-base"
         >
           <MessageCircle className="w-5 h-5 mr-2" />
           Contacter sur WhatsApp
@@ -338,14 +420,14 @@ export function DriverFoundScreen() {
         <Button
           onClick={handlePhoneCall}
           variant="outline"
-          className="w-full border-2 border-primary text-primary py-6 text-lg hover:bg-primary hover:text-white"
+          className="w-full border-2 border-primary text-primary py-6 text-base hover:bg-primary hover:text-white"
         >
           <Phone className="w-5 h-5 mr-2" />
           Appeler le chauffeur
         </Button>
 
         <p className="text-xs text-center text-muted-foreground">
-          Votre chauffeur arrive. Il démarrera la course à son arrivée.
+          La course démarrera automatiquement quand le chauffeur confirmera votre montée.
         </p>
       </div>
     </div>
