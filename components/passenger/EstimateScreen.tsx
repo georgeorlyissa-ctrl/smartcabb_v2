@@ -366,7 +366,7 @@ export function EstimateScreen() {
     } catch (err) {
       console.error('❌ Erreur stockage sessionStorage:', err);
       setIsBooking(false);
-      toast.error('Erreur lors de la pr��paration de la course');
+      toast.error('Erreur lors de la prparation de la course');
     }
   };
 
@@ -403,7 +403,7 @@ export function EstimateScreen() {
       {/* Scrollable Content Area — tout le contenu + bouton Commander */}
       <div className="flex-1 overflow-y-auto">
         <div className="pb-8">
-          {/* ���� AFFICHAGE DE DISTANCE ET DURÉE PRÉCISES - VERSION COMPACTE */}
+          {/* AFFICHAGE DE DISTANCE ET DURÉE PRÉCISES - VERSION COMPACTE */}
           <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50">
             <div className="bg-white rounded-xl p-3 shadow-md border border-cyan-200">
               <div className="flex items-center justify-between mb-3">
@@ -704,7 +704,7 @@ export function EstimateScreen() {
             </div>
             <div className="bg-muted/40 rounded-xl px-3 py-2">
               <p className="text-[10px] text-muted-foreground">Dist.</p>
-              <p className="text-sm font-bold text-primary">{distanceKm.toFixed(1)} km</p>
+              <p className="text-sm font-bold text-primary">{(distanceKm || 0).toFixed(1)} km</p>
             </div>
           </div>
         </div>
