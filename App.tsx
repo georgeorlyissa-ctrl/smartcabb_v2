@@ -13,7 +13,7 @@ import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
 import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
 // ✅ BUILD VERSION - Défini directement ici pour éviter les erreurs d'import
-const BUILD_VERSION = '518.3.1'; // ✅ FIX: Boucle infinie iPhone + Mise à jour automatique silencieuse
+const BUILD_VERSION = '518.3.2'; // ✅ FIX: WhatsApp intégration + Compteur courses actives
 const BUILD_TIMESTAMP = new Date().toISOString();
 
 import { startUpdateDetection } from './utils/updateDetector';
@@ -23,33 +23,29 @@ import { useMaintenanceMode } from './hooks/useAdminConfig';
 // ✅ FIX BUILD: Import conditionnel pour Firebase Service Worker
 // import { initializeFirebaseServiceWorker } from './lib/init-firebase-sw';
 
-// ⚡ BUILD v518.3.1 - FIX CRITIQUE IPHONE + AUTO UPDATE
+// ⚡ BUILD v518.3.2 - WHATSAPP + COURSES ACTIVES
 console.log('');
 console.log('═══════════════════════════════════════════════════════════════');
-console.log('🚀 BUILD v518.3.1 - 🐛 FIX IPHONE + 🔄 AUTO UPDATE');
+console.log('🚀 BUILD v518.3.2 - 📱 WHATSAPP + 📊 COURSES ACTIVES');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('');
-console.log('🐛 CORRECTIONS MAJEURES:');
+console.log('📱 INTÉGRATION WHATSAPP:');
+console.log('  ✅ Bouton "Appeler" → Ouvre WhatsApp au lieu d\'appel normal');
+console.log('  ✅ Bouton "Partager course" → Partage direct via WhatsApp');
+console.log('  ✅ Message pré-rempli pour le conducteur');
+console.log('  ✅ Formatage automatique des infos de course');
+console.log('');
+console.log('📊 DASHBOARD ADMIN:');
+console.log('  ✅ Compteur courses actives corrigé (status in_progress)');
+console.log('  ✅ Frontend + Backend alignés sur les mêmes statuts');
+console.log('  ✅ Affichage en temps réel des courses en cours');
+console.log('');
+console.log('🐛 CORRECTIONS v518.3.1 (PRÉCÉDENTE):');
 console.log('  ✅ Fix boucle infinie iPhone (RangeError: Maximum call stack)');
-console.log('  ✅ Écouteurs d\'événements resize/orientationchange optimisés');
-console.log('  ✅ Gardes anti-récursion dans setViewportHeight');
-console.log('  ✅ useEffect optimisés dans PassengerApp et DriverApp');
-console.log('  ✅ Dépendances stables (IDs au lieu d\'objets complets)');
+console.log('  ✅ Mise à jour automatique silencieuse après déploiement');
+console.log('  ✅ Service Worker v518.31 + Toast discret');
 console.log('');
-console.log('🔄 MISE À JOUR AUTOMATIQUE:');
-console.log('  ✅ Rechargement automatique silencieux après déploiement');
-console.log('  ✅ Détection toutes les 5 min via ETag/Last-Modified');
-console.log('  ✅ Service Worker v518.31 notifie les clients');
-console.log('  ✅ Report intelligent si action critique en cours');
-console.log('  ✅ Toast discret "Mise à jour..." avant rechargement');
-console.log('  📖 Voir AUTO_UPDATE.md pour plus de détails');
-console.log('');
-console.log('📱 COMPATIBILITÉ MOBILE:');
-console.log('  ✅ iPhone/Safari: Stack overflow corrigé');
-console.log('  ✅ Android: Performances optimisées');
-console.log('  ✅ PWA: Installation fluide sur tous devices');
-console.log('');
-console.log('✅ APPLICATION STABLE + MISES À JOUR TRANSPARENTES !');
+console.log('✅ APPLICATION COMPLÈTE + COMMUNICATION WHATSAPP !');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('');
 
