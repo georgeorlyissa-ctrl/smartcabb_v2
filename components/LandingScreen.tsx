@@ -149,18 +149,6 @@ export function LandingScreen() {
           </Button>
         </div>
 
-        {/* Bouton Devenir chauffeur */}
-        <div className="animate-in fade-in slide-in-from-bottom duration-700 mb-4" style={{ animationDelay: '300ms' }}>
-          <Button
-            type="button"
-            onClick={handleBecomeDriver}
-            className="w-full h-14 bg-yellow-400 hover:bg-yellow-300 text-gray-900 rounded-2xl font-bold text-base shadow-xl shadow-yellow-400/40 transition-all hover:scale-105 flex items-center justify-center gap-2"
-          >
-            <Car className="w-5 h-5" />
-            Devenir chauffeur
-          </Button>
-        </div>
-
         {/* Help text en bas */}
         <div className="text-center mt-8 flex items-center justify-center gap-6 animate-in fade-in duration-1000" style={{ animationDelay: '400ms' }}>
           <button 
