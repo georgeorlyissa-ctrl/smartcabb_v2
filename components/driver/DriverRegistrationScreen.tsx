@@ -292,8 +292,12 @@ export function DriverRegistrationScreen() {
           }
         }
         
-        // ✅ FIX FINAL: Rediriger IMMÉDIATEMENT vers l'écran de connexion
-        // Ne PAS attendre 2 secondes pour éviter toute détection du profil
+        // ✅ FIX : Sortir d'abord de l'URL /signup pour que le useEffect
+        // de DriverApp ne remette pas le screen à 'driver-registration'
+        if (window.location.pathname.includes('/signup')) {
+          window.history.replaceState({}, '', '/driver');
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
         setCurrentScreen('driver-login');
       } else {
         toast.error(result.error || 'Erreur lors de l\'inscription');
@@ -728,7 +732,14 @@ export function DriverRegistrationScreen() {
         <p className="text-center text-gray-600 text-sm">
           Déjà inscrit ?{' '}
           <button 
-            onClick={() => setCurrentScreen('driver-login')}
+            onClick={() => {
+              // ✅ Sortir de l'URL /signup avant de changer d'écran
+              if (window.location.pathname.includes('/signup')) {
+                window.history.replaceState({}, '', '/driver');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }
+              setCurrentScreen('driver-login');
+            }}
             className="text-blue-500 hover:underline"
           >
             Se connecter
