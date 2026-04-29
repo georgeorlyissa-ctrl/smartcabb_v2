@@ -19,6 +19,7 @@ interface User {
   status?: string;
   rating?: number;
   totalTrips?: number;
+  totalEarnings?: number; // ✅ NOUVEAU
   createdAt: string;
   lastLoginAt?: string;
 }
@@ -507,24 +508,30 @@ export function UsersManagementScreen({ onBack }: UsersManagementScreenProps) {
                               Type: <span className="text-gray-900">{user.accountType === 'prepaid' ? 'Prépayé' : 'Postpayé'}</span>
                             </div>
                           )}
-                          {user.vehicleCategory && (
+                          {user.vehicleCategory && user.vehicleCategory !== '-' && (
                             <div className="text-gray-600">
-                              Véhicule: <span className="text-gray-900">{user.vehicleCategory}</span>
+                              Véhicule: <span className="text-blue-600">{user.vehicleCategory}</span>
                             </div>
                           )}
-                          {user.vehiclePlate && (
+                          {user.vehiclePlate && user.vehiclePlate !== '-' && (
                             <div className="text-gray-600">
                               Plaque: <span className="text-gray-900">{user.vehiclePlate}</span>
                             </div>
                           )}
-                          {user.rating !== undefined && (
+                          {user.role === 'Conducteur' && (
                             <div className="text-gray-600">
-                              Note: <span className="text-gray-900">⭐ {(user.rating || 0).toFixed(1)}</span>
+                              Note: <span className="text-yellow-600">⭐ {(user.rating || 0).toFixed(1)}</span>
                             </div>
                           )}
-                          {user.totalTrips !== undefined && (
+                          {user.role === 'Conducteur' && (
                             <div className="text-gray-600">
-                              Courses: <span className="text-gray-900">{user.totalTrips}</span>
+                              Courses: <span className="text-gray-900">{user.totalTrips ?? 0}</span>
+                            </div>
+                          )}
+                          {/* ✅ NOUVEAU : Gains totaux conducteur */}
+                          {user.role === 'Conducteur' && (
+                            <div className="text-gray-600">
+                              Gains: <span className="text-green-600">{(user.totalEarnings || 0).toLocaleString('fr-FR')} CDF</span>
                             </div>
                           )}
                           {user.status && (
