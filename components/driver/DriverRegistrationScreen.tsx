@@ -44,7 +44,9 @@ export function DriverRegistrationScreen() {
     if (cameFromWeb) {
       // Vient du site → retour navigateur (ex: /drivers)
       console.log('⬅️ Retour au site depuis /signup');
-      navigate(-1);
+      window.history.back();
+      // Déclencher la mise à jour du router (simple-router écoute popstate)
+      setTimeout(() => window.dispatchEvent(new PopStateEvent('popstate')), 0);
     } else {
       // Vient de l'intérieur de l'app → retour écran welcome
       console.log('⬅️ Retour à l\'écran de bienvenue conducteur');
