@@ -62,9 +62,32 @@ export function logStartupDiagnostics() {
  */
 export function setupErrorInterceptors() {
   if (typeof window === 'undefined') return;
-  
+
+  // ✅ Erreurs bénignes à ignorer (n'affichent PAS l'overlay)
+  const BENIGN_PATTERNS = [
+    'ResizeObserver loop',                          // Erreur cosmétique du navigateur
+    'ResizeObserver loop completed',
+    'ResizeObserver loop limit exceeded',
+    'Non-Error exception captured',
+    'Non-Error promise rejection captured',
+    'chrome-extension://',
+    'moz-extension://',
+    'webkit-masked-url',
+    'Script error',                                 // Erreur cross-origin sans détail
+  ];
+
+  const isBenign = (message: string) =>
+    BENIGN_PATTERNS.some(p => message?.includes(p));
+
   // Intercepter les erreurs JavaScript
   window.addEventListener('error', (event) => {
+    // ✅ Ignorer les erreurs bénignes
+    if (isBenign(event.message)) {
+      event.preventDefault();
+      console.warn('⚠️ Erreur bénigne ignorée (pas d\'overlay):', event.message);
+      return;
+    }
+
     console.error('❌ ERREUR NON CAPTURÉE:', {
       message: event.message,
       filename: event.filename,
@@ -80,6 +103,15 @@ export function setupErrorInterceptors() {
   
   // Intercepter les promesses rejetées
   window.addEventListener('unhandledrejection', (event) => {
+    const reason = String(event.reason || '');
+
+    // ✅ Ignorer les rejets bénins
+    if (isBenign(reason)) {
+      event.preventDefault();
+      console.warn('⚠️ Rejet bénin ignoré:', reason);
+      return;
+    }
+
     console.error('❌ PROMESSE NON GÉRÉE:', {
       reason: event.reason,
       promise: event.promise
@@ -89,7 +121,7 @@ export function setupErrorInterceptors() {
     showErrorOverlay(errorMessage);
   });
   
-  console.log('✅ Intercepteurs d\'erreurs configurés');
+  console.log('✅ Intercepteurs d\'erreurs configurés (ResizeObserver filtré)');
 }
 
 /**
