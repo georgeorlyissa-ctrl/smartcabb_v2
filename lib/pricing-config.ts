@@ -27,18 +27,20 @@ export type { VehicleCategory, ServiceType, TimeOfDay };
  */
 function getExchangeRate(): number {
   try {
-    const settingsStr = localStorage.getItem('smartcab_system_settings');
-    if (settingsStr) {
-      const settings = JSON.parse(settingsStr);
-      if (settings.exchangeRate && typeof settings.exchangeRate === 'number') {
-        return settings.exchangeRate;
+    // ✅ FIX : Lire depuis les deux clés localStorage (config-sync écrit dans les deux)
+    for (const key of ['smartcabb_config_cache', 'smartcab_system_settings']) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.exchangeRate && typeof parsed.exchangeRate === 'number' && parsed.exchangeRate > 0) {
+          return parsed.exchangeRate;
+        }
       }
     }
   } catch (error) {
     console.warn('⚠️ Erreur lecture taux de conversion, utilisation valeur par défaut:', error);
   }
-  // ⚠️ FALLBACK : Utiliser 2000 CDF comme valeur par défaut (à synchroniser avec le backend)
-  return 2000;
+  return 2800; // Valeur par défaut alignée avec le backend
 }
 
 /**
@@ -150,10 +152,20 @@ export function getDisplayPrice(
 
 /**
  * 💳 Obtenir le crédit minimum requis pour une catégorie de véhicule
- * Le conducteur doit avoir au moins ce montant pour pouvoir se mettre en ligne
+ * = 15% du tarif de base de la catégorie, calculé avec le taux de change admin
+ * Le conducteur doit avoir au moins ce montant pour pouvoir se mettre en ligne / accepter une course.
  */
 export function getMinimumCreditForCategory(category: VehicleCategory): number {
-  return MINIMUM_CREDITS_BY_CATEGORY[category] || 5000; // Default: 5 000 CDF (réduit pour l'accessibilité)
+  // Tarifs USD de base (jour) par catégorie
+  const BASE_USD: Record<VehicleCategory, number> = {
+    smart_standard: 7,
+    smart_confort:  9,
+    smart_plus:     10,
+    smart_business: 160,
+  };
+  const baseUSD = BASE_USD[category] ?? 7;
+  const rate    = getExchangeRate(); // taux dynamique depuis le panel admin
+  return Math.round(0.15 * baseUSD * rate);
 }
 
 /**
