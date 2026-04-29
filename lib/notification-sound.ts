@@ -318,14 +318,15 @@ function showBrowserNotification(
 /**
  * Déclenche la notification complète : beep × 3 + TTS + vibration.
  * Beep et TTS démarrent en parallèle, zéro latence si tout est pré-chauffé.
+ * Retourne une Promise qui se résout quand le TTS est terminé.
  */
-export function playRideNotification(rideDetails?: {
+export async function playRideNotification(rideDetails?: {
   passengerName?: string;
   pickup?: string;
   destination?: string;
   distance?: number;
   estimatedEarnings?: number;
-}): void {
+}): Promise<void> {
   console.log('🚖 playRideNotification');
 
   // Beeps — 3×, espacés de 700 ms
@@ -344,14 +345,14 @@ export function playRideNotification(rideDetails?: {
   if (dest   && dest   !== 'Destination')     msg += `Destination : ${dest}. `;
   msg += 'Confirmez vite.';
 
-  // TTS en parallèle (sans await)
-  speakMessage(msg, 'fr-FR').catch(e => console.error('TTS:', e));
-
   // Notification navigateur — non-bloquante (fire-and-forget)
   const body = pickup && dest ? `${pickup} → ${dest}` : 'Nouvelle course disponible';
   showBrowserNotification('SmartCabb — Nouvelle Course 🚖', body, {
     tag: 'smartcabb-ride', renotify: true, data: rideDetails,
   });
+
+  // TTS — awaité pour que la Promise se résolve quand la voix est terminée
+  await speakMessage(msg, 'fr-FR').catch(e => console.error('TTS:', e));
 }
 
 /** Arrête tout (son + vibration) */
