@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react';
 import { Router, Routes, Route, Navigate } from './lib/simple-router';
+import { useLocation } from './lib/simple-router';
 import { Toaster } from './lib/toast';
 import { LoadingScreen } from './components/LoadingScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -10,6 +11,37 @@ import { AppProvider } from './hooks/useAppState';
 import { BackendSyncProvider } from './components/BackendSyncProvider';
 import { LanguageProvider } from './contexts/LanguageContext';
 // DarkModeProvider supprimé — dark mode géré via localStorage dans chaque composant
+// ─── Routes vitrine : jamais de dark mode ───────────────────────────────────
+const VITRINE_ROUTES = ['/', '/services', '/drivers', '/contact', '/about', '/terms', '/privacy', '/legal'];
+
+/**
+ * Retire la classe `dark` sur les pages vitrine, la restaure sur les pages app.
+ * Doit être monté à l'intérieur de <Router>.
+ */
+function DarkModeGuard() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const isVitrine = VITRINE_ROUTES.some(route =>
+      location.pathname === route || location.pathname === route + '/'
+    );
+
+    if (isVitrine) {
+      // Site vitrine → toujours clair, peu importe le localStorage
+      document.documentElement.classList.remove('dark');
+    } else {
+      // Pages app → appliquer la préférence sauvegardée
+      try {
+        const isDark = localStorage.getItem('smartcabb_dark_mode') === 'true';
+        if (isDark) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      } catch {}
+    }
+  }, [location.pathname]);
+
+  return null;
+}
+// ────────────────────────────────────────────────────────────────────────────
 import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
 import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
@@ -166,15 +198,6 @@ function MaintenanceBanner() {
 function App() {
   console.log(`🚀 SmartCabb v${BUILD_VERSION} - Build ${BUILD_TIMESTAMP} - Démarrage...`);
   
-  // 🌙 Initialiser le dark mode depuis localStorage au démarrage
-  useEffect(() => {
-    try {
-      const isDark = localStorage.getItem('smartcabb_dark_mode') === 'true';
-      if (isDark) document.documentElement.classList.add('dark');
-      else document.documentElement.classList.remove('dark');
-    } catch {}
-  }, []);
-
   // Appliquer les optimisations navigateur au démarrage
   useEffect(() => {
     try {
@@ -314,7 +337,7 @@ function App() {
         // ✅ NOUVEAU: Forcer la vue basée sur l'URL actuelle
         if (currentPath.includes('/driver')) {
           if (savedView !== 'driver') {
-            console.log('🔄 URL contient /driver, forçage de la vue à driver dans localStorage');
+            console.log('��� URL contient /driver, forçage de la vue à driver dans localStorage');
             localStorage.setItem('smartcab_current_view', 'driver');
           }
         } else if (currentPath.includes('/admin')) {
@@ -450,6 +473,8 @@ function App() {
           {/* 🔄 BackendSyncProvider DÉSACTIVÉ TEMPORAIREMENT - Mode standalone */}
           {/* <BackendSyncProvider /> */}
           <LanguageProvider>
+            {/* 🌙 Guard dark mode : off sur vitrine, on selon prefs sur app */}
+            <DarkModeGuard />
             <div className="app-container">
               {/* Online/Offline Indicator */}
               <OnlineStatusIndicator />
