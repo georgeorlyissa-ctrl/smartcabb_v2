@@ -64,10 +64,6 @@ export function DriverSettingsScreen() {
   const updateSetting = (category: string, key: string, value: any) =>
     setSettings(prev => ({ ...prev, [category]: { ...(prev as any)[category], [key]: value } }));
 
-  /* Accordéon */
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
-  const toggle = (title: string) => setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
-
   /* Données */
   const settingSections = [
     {
@@ -97,10 +93,10 @@ export function DriverSettingsScreen() {
   ];
 
   const quickActions = [
-    { title: 'Zone de travail',      description: 'Définir votre zone de service',        icon: MapPin },
+    { title: 'Zone de travail',       description: 'Définir votre zone de service',          icon: MapPin },
     { title: 'Informations véhicule', description: 'Modifier les détails de votre véhicule', icon: Car },
-    { title: 'Paramètres de gain',   description: 'Configuration des revenus et bonus',   icon: DollarSign },
-    { title: 'Navigation GPS',       description: 'Préférences de navigation',             icon: Navigation },
+    { title: 'Paramètres de gain',    description: 'Configuration des revenus et bonus',      icon: DollarSign },
+    { title: 'Navigation GPS',        description: 'Préférences de navigation',               icon: Navigation },
   ];
 
   return (
@@ -167,6 +163,7 @@ export function DriverSettingsScreen() {
             {quickActions.map(({ title, description, icon: Icon }) => (
               <button
                 key={title}
+                type="button"
                 className="flex flex-col items-start gap-1 p-3 rounded-xl border border-gray-100 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition-colors text-left"
               >
                 <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mb-1">
@@ -179,57 +176,46 @@ export function DriverSettingsScreen() {
           </div>
         </div>
 
-        {/* ── Sections accordéon ── */}
+        {/* ── Sections accordéon — <details> natif, zéro JS ── */}
         {settingSections.map(({ title, icon: Icon, color, iconColor, items }) => {
-          const isOpen = !!openSections[title];
           const catKey = items[0]?.category as keyof typeof settings;
           return (
-            <div key={title} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-
-              {/* En-tête cliquable */}
-              <button
-                type="button"
-                onClick={() => toggle(title)}
-                className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-              >
+            <details key={title} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden group">
+              <summary className="flex items-center justify-between px-5 py-4 cursor-pointer select-none list-none hover:bg-gray-50 active:bg-gray-100 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center`}>
                     <Icon className={`w-4 h-4 ${iconColor}`} />
                   </div>
-                  <div className="text-left">
+                  <div>
                     <p className="text-sm font-semibold text-gray-900">{title}</p>
                     <p className="text-xs text-gray-400">{items.length} option{items.length > 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <ChevronDown
-                  className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                />
-              </button>
+                {/* Chevron via CSS transform sur details[open] */}
+                <span className="text-gray-400 transition-transform duration-200 group-open:rotate-180 inline-block">
+                  <ChevronDown className="w-5 h-5" />
+                </span>
+              </summary>
 
-              {/* Contenu dépliable */}
-              {isOpen && (
-                <div className="border-t border-gray-100">
-                  {items.map(({ key, label, description }, idx) => (
-                    <div
-                      key={key}
-                      className={`flex items-center justify-between px-5 py-4 ${idx < items.length - 1 ? 'border-b border-gray-50' : ''}`}
-                    >
-                      <div className="flex-1 pr-4">
-                        <Label htmlFor={`setting-${key}`} className="text-sm font-medium text-gray-800 cursor-pointer">
-                          {label}
-                        </Label>
-                        <p className="text-xs text-gray-400 mt-0.5">{description}</p>
-                      </div>
-                      <Switch
-                        id={`setting-${key}`}
-                        checked={!!(settings as any)[catKey]?.[key]}
-                        onCheckedChange={(checked) => updateSetting(catKey as string, key, checked)}
-                      />
+              {/* Contenu */}
+              <div className="border-t border-gray-100">
+                {items.map(({ key, label, description }, idx) => (
+                  <div
+                    key={key}
+                    className={`flex items-center justify-between px-5 py-4 ${idx < items.length - 1 ? 'border-b border-gray-50' : ''}`}
+                  >
+                    <div className="flex-1 pr-4">
+                      <p className="text-sm font-medium text-gray-800">{label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{description}</p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <Switch
+                      checked={!!(settings as any)[catKey]?.[key]}
+                      onCheckedChange={(checked) => updateSetting(catKey as string, key, checked)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </details>
           );
         })}
 
@@ -276,19 +262,20 @@ export function DriverSettingsScreen() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-3">
           <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">Support et aide</p>
 
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-left">
+          <button type="button" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-left">
             <HelpCircle className="w-5 h-5 text-gray-500" />
             <span className="text-sm font-medium text-gray-700">Centre d'aide</span>
           </button>
 
           <a href="tel:+243990666661" className="block">
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-left">
+            <button type="button" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-left">
               <Smartphone className="w-5 h-5 text-gray-500" />
               <span className="text-sm font-medium text-gray-700">Support (+243 990 666 661)</span>
             </button>
           </a>
 
           <button
+            type="button"
             onClick={() => { setCurrentDriver(null); setCurrentScreen('landing'); }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-red-100 bg-red-50 hover:bg-red-100 transition-colors text-left"
           >
