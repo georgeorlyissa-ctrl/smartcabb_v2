@@ -16,6 +16,7 @@ import { FCMDiagnostic } from './FCMDiagnostic';
 import { PreciseGPSTracker, reverseGeocode } from '../../lib/precise-gps';
 import { registerDriverFCMToken } from '../../lib/driver-fcm';
 import { stopAllNotifications } from '../../lib/notification-sound';
+import { preloadVoices } from '../../lib/notification-sound';
 
 function isDriverFCMTokenRegistered(driverId: string): boolean {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return false;
@@ -343,6 +344,9 @@ export function DriverDashboardNew() {
     // Initialiser FCM et démarrer le listener foreground
     const initFCM = async () => {
       try {
+        // ✅ Pré-charger les voix TTS dès le démarrage (améliore réactivité 1ère notification)
+        preloadVoices();
+
         const success = await registerDriverFCMToken(driver.id);
         if (!success) {
           console.warn('⚠️ Échec enregistrement FCM');
