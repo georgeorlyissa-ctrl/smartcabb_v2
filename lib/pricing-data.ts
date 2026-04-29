@@ -34,14 +34,20 @@ export const USD_TO_CDF = 2800;
 
 /**
  * 💳 CRÉDITS MINIMUMS PAR CATÉGORIE DE VÉHICULE
- * Montant minimum requis en CDF pour qu'un conducteur puisse se mettre en ligne
- * Équivalent à ~1-2 courses moyennes (réduit pour l'accessibilité)
+ * = 15% du tarif de base de chaque catégorie (taux fixe 2 800 CDF/USD)
+ * C'est la commission SmartCabb prélevée à chaque course.
+ * Un conducteur doit disposer d'au moins ce montant pour se mettre en ligne.
+ *
+ *  Standard  : 15% × 7 USD × 2 800 =  2 940 CDF
+ *  Confort   : 15% × 9 USD × 2 800 =  3 780 CDF
+ *  Plus      : 15% × 10 USD × 2 800 = 4 200 CDF
+ *  Business  : 15% × 160 USD × 2 800 = 67 200 CDF
  */
 export const MINIMUM_CREDITS_BY_CATEGORY = {
-  smart_standard: 5000,        // ~2 USD (1-2 courses courtes)
-  smart_confort: 7000,          // ~3 USD (1-2 courses courtes)
-  smart_plus: 10000,            // ~4 USD (1-2 courses courtes)
-  smart_business: 50000         // ~20 USD (location partielle)
+  smart_standard: Math.round(0.15 * 7   * USD_TO_CDF), // 2 940 CDF
+  smart_confort:  Math.round(0.15 * 9   * USD_TO_CDF), // 3 780 CDF
+  smart_plus:     Math.round(0.15 * 10  * USD_TO_CDF), // 4 200 CDF
+  smart_business: Math.round(0.15 * 160 * USD_TO_CDF), // 67 200 CDF
 } as const;
 
 /**
