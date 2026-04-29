@@ -92,6 +92,9 @@ export function DriverDetailModal({
 
   if (!driver) return null;
 
+  // ✅ Vrai statut en ligne : isOnline > is_online > is_available (ordre de priorité)
+  const isDriverOnline = (driver as any).isOnline === true || (driver as any).is_online === true || driver.is_available === true;
+
   // Calculer les statistiques du conducteur
   const driverRides = rides.filter(r => r.driver_id === driver.id);
   const completedRides = driverRides.filter(r => r.status === 'completed');
@@ -244,32 +247,41 @@ export function DriverDetailModal({
   const handleToggleAvailability = async () => {
     setLoading(true);
     try {
-      const newAvailability = !driver.is_available;
-      
-      const updated = await driverService.updateDriver(driver.id, {
-        is_available: newAvailability,
-      });
+      // Lire le vrai statut en ligne (isOnline > is_online > is_available)
+      const currentlyOnline = driver.isOnline === true || (driver as any).is_online === true || driver.is_available === true;
+      const newOnline = !currentlyOnline;
 
-      if (updated) {
-        toast.success(driver.is_available ? 'Conducteur mis hors ligne' : 'Conducteur mis en ligne');
-        
-        // 📱 Envoyer SMS de notification au conducteur
+      // ✅ Appel à la route admin dédiée qui écrit TOUS les champs :
+      //    isOnline, is_online, is_available, available — synchronisé avec le dashboard chauffeur
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/drivers/${driver.id}/set-online-status`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isOnline: newOnline }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success(newOnline ? '✅ Conducteur forcé EN LIGNE' : '🔴 Conducteur forcé HORS LIGNE');
+
+        // 📱 SMS de notification au conducteur
         if (driver.phone) {
           try {
-            await notifyAvailabilityChanged(driver.phone, driver.full_name || 'Conducteur', newAvailability);
-            toast.success('SMS de notification envoyé');
-          } catch (smsError) {
-            console.error('❌ Erreur envoi SMS:', smsError);
-            toast.warning('Statut modifié, mais SMS non envoyé');
+            await notifyAvailabilityChanged(driver.phone, driver.full_name || 'Conducteur', newOnline);
+          } catch (smsErr) {
+            console.warn('SMS non envoyé:', smsErr);
           }
         }
-        
+
         handleRefresh();
       } else {
-        toast.error('Erreur lors de la modification du statut');
+        toast.error(data.error || 'Erreur lors de la modification du statut');
       }
     } catch (error) {
-      toast.error('Erreur lors de la modification du statut');
+      toast.error('Erreur réseau lors de la modification du statut');
       console.error(error);
     } finally {
       setLoading(false);
@@ -594,7 +606,7 @@ export function DriverDetailModal({
             </DialogDescription>
             <div className="flex space-x-2">
               {getStatusBadge(driver.status)}
-              {driver.is_available ? (
+              {isDriverOnline ? (
                 <Badge className="bg-green-600 h-6">En ligne</Badge>
               ) : (
                 <Badge variant="secondary" className="h-6">Hors ligne</Badge>
@@ -781,12 +793,12 @@ export function DriverDetailModal({
                 )}
 
                 <Button
-                  variant={driver.is_available ? "outline" : "default"}
+                  variant={isDriverOnline ? "outline" : "default"}
                   className="w-full justify-start"
                   onClick={handleToggleAvailability}
                   disabled={loading}
                 >
-                  {driver.is_available ? (
+                  {isDriverOnline ? (
                     <>
                       <Ban className="w-4 h-4 mr-2" />
                       Mettre hors ligne
