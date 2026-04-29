@@ -42,6 +42,14 @@ function DriverAppContent() {
       return;
     }
 
+    // ✅ FIX : Détecter /signup dans l'URL → aller directement au formulaire d'inscription
+    const isSignupUrl = location.pathname.includes('/signup');
+    if (isSignupUrl && currentScreen !== 'driver-registration') {
+      console.log('✅ URL /signup détectée → driver-registration');
+      setCurrentScreen('driver-registration');
+      return;
+    }
+
     // ✅ FIX: Utiliser une garde pour éviter les mises à jour infinies
     let shouldUpdateView = false;
     let shouldUpdateScreen = false;
@@ -113,7 +121,10 @@ function DriverAppContent() {
         currentScreen === 'user-selection' ||
         currentScreen.startsWith('admin-') ||
         currentScreen.startsWith('passenger-')) {
-      setCurrentScreen('driver-welcome');
+      // ✅ FIX : Ne pas écraser si on est en train d'aller vers l'inscription
+      if (!isSignupUrl) {
+        setCurrentScreen('driver-welcome');
+      }
     }
   }, [location.pathname, currentScreen, state.currentView, state.currentDriver?.id, state.currentDriver?.status]); // ✅ Dépendances minimales et stables
 
