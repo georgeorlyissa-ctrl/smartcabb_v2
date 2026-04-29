@@ -36,6 +36,21 @@ export function DriverRegistrationScreen() {
   const navigate = useNavigate();
   
   const { setCurrentScreen, setCurrentDriver } = useAppState();
+
+  // ✅ Détecter si l'utilisateur vient du site web via /signup
+  const cameFromWeb = window.location.pathname.includes('/signup');
+
+  const handleBack = () => {
+    if (cameFromWeb) {
+      // Vient du site → retour navigateur (ex: /drivers)
+      console.log('⬅️ Retour au site depuis /signup');
+      navigate(-1);
+    } else {
+      // Vient de l'intérieur de l'app → retour écran welcome
+      console.log('⬅️ Retour à l\'écran de bienvenue conducteur');
+      setCurrentScreen('driver-welcome');
+    }
+  };
     
   const [step, setStep] = useState(1);
   
@@ -304,10 +319,7 @@ export function DriverRegistrationScreen() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => {
-            console.log('⬅️ Retour à l\'écran de bienvenue conducteur');
-            setCurrentScreen('driver-welcome');
-          }}
+          onClick={handleBack}
           className="w-10 h-10"
         >
           <ArrowLeft className="w-5 h-5" />
