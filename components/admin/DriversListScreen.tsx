@@ -46,6 +46,18 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // ✅ FIX CRITIQUE : Synchroniser selectedDriver avec les données fraîches après chaque refresh
+  // Sans ça, la modale garde un snapshot figé → le badge En ligne/Hors ligne ne se met pas à jour
+  useEffect(() => {
+    if (selectedDriver && showDetailModal && drivers) {
+      const fresh = drivers.find(d => d.id === selectedDriver.id);
+      if (fresh) {
+        setSelectedDriver(fresh);
+        setSelectedVehicle(fresh.vehicle || null);
+      }
+    }
+  }, [drivers]);
+
   const handleBackClick = () => {
     // ✅ Fix: Utiliser onBack() si disponible, sinon fallback vers setCurrentScreen
     if (onBack) {
@@ -466,7 +478,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
               <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="w-8 h-8 text-gray-400" />
               </div>
-              <h3 className="text-lg mb-2">Aucun conducteur trouvé</h3>
+              <h3 className="text-lg mb-2">Aucun conducteur trouv��</h3>
               <p className="text-gray-600">
                 {searchTerm ? 'Aucun conducteur ne correspond à votre recherche' : 'Aucun conducteur enregistré'}
               </p>
