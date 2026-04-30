@@ -11,7 +11,7 @@ import { motion } from '../../lib/motion';
 import { toast } from '../../lib/toast';
 import { useAppState } from '../../hooks/useAppState';
 import { ArrowLeft, Lock, User, Car, Upload, FileCheck, AlertCircle, Camera } from '../../lib/icons';
-import smartcabbLogo from '../../imports/image_(3).png';
+//import smartcabbLogo from '../../imports/image_(3).png';
 import { signUpDriver } from '../../lib/auth-service-driver-signup';
 import { sendSMS } from '../../lib/sms-service';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
