@@ -11,6 +11,7 @@ import { motion } from '../../lib/motion';
 import { toast } from '../../lib/toast';
 import { useAppState } from '../../hooks/useAppState';
 import { ArrowLeft, Lock, User, Car, Upload, FileCheck, AlertCircle, Camera } from '../../lib/icons';
+import smartcabbLogo from '../../imports/image_(3).png';
 import { signUpDriver } from '../../lib/auth-service-driver-signup';
 import { sendSMS } from '../../lib/sms-service';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -71,6 +72,8 @@ export function DriverRegistrationScreen() {
   // const [documents, setDocuments] = useState<File[]>([]);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState<string>('');
+  const [vehiclePhoto, setVehiclePhoto] = useState<File | null>(null);
+  const [vehiclePhotoPreview, setVehiclePhotoPreview] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
@@ -168,6 +171,24 @@ export function DriverRegistrationScreen() {
       };
       reader.readAsDataURL(file);
       toast.success('Photo de profil ajoutée');
+    }
+  };
+
+  const handleVehiclePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const extension = file.name.toLowerCase().split('.').pop();
+      if (extension !== 'jpg' && extension !== 'jpeg') {
+        toast.error('Seuls les fichiers JPG sont acceptés pour la photo du véhicule');
+        return;
+      }
+      setVehiclePhoto(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVehiclePhotoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      toast.success('Photo du véhicule ajoutée');
     }
   };
 
@@ -331,9 +352,11 @@ export function DriverRegistrationScreen() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-            <Car className="w-4 h-4 text-white" />
-          </div>
+          <img
+            src={smartcabbLogo}
+            alt="SmartCabb"
+            className="w-9 h-9 object-contain"
+          />
           <h1 className="text-xl">Devenir Conducteur</h1>
         </div>
         <div className="w-10" />
@@ -461,6 +484,49 @@ export function DriverRegistrationScreen() {
           {/* Vehicle Information */}
           <div className="bg-white rounded-xl p-4 space-y-4">
             <h3 className="font-medium text-gray-800">Informations du véhicule</h3>
+
+            {/* Photo du véhicule — SmartCabb logo par défaut */}
+            <div>
+              <Label>Photo du véhicule</Label>
+              <div className="mt-2">
+                <input
+                  type="file"
+                  accept=".jpg,.jpeg"
+                  onChange={handleVehiclePhotoUpload}
+                  className="hidden"
+                  id="vehicle-photo-upload"
+                />
+                <label htmlFor="vehicle-photo-upload" className="cursor-pointer block">
+                  <div className="relative rounded-xl overflow-hidden border-2 border-dashed border-gray-200 hover:border-blue-400 transition-colors bg-gray-50 flex flex-col items-center justify-center" style={{ height: 160 }}>
+                    {vehiclePhotoPreview ? (
+                      <img
+                        src={vehiclePhotoPreview}
+                        alt="Photo du véhicule"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <>
+                        <img
+                          src={smartcabbLogo}
+                          alt="SmartCabb"
+                          className="h-20 object-contain mb-2 opacity-80"
+                        />
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <Camera className="w-3 h-3" /> Ajouter une photo (optionnel)
+                        </span>
+                      </>
+                    )}
+                    {vehiclePhotoPreview && (
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                        <span className="text-white text-xs font-medium flex items-center gap-1">
+                          <Camera className="w-4 h-4" /> Changer la photo
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </div>
+            </div>
             
             <div>
               <Label htmlFor="vehicleSelect">Marque et Modèle *</Label>
