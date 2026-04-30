@@ -43,157 +43,18 @@ function PassengerAppContent() {
   const { currentScreen, currentUser: user } = state;
   const navigate = useNavigate();
   const location = useLocation();
-  const showRLSModal = false; // Désactivé pour passager
-  const showRLSBlockingScreen = false; // Désactivé pour passager
-  
-  // Pour l'app passager, on ne charge pas les données Supabase
-  const dataLoading = false; // Désactivé pour app passager
+  const showRLSModal = false;
+  const showRLSBlockingScreen = false;
+  const dataLoading = false;
 
-  // ✅ Initialisation: définir l'écran par défaut
-  useEffect(() => {
-    console.log('🚀 PassengerApp monté - currentScreen:', currentScreen, 'location:', location.pathname);
-    console.log('🚀 PassengerApp - currentView:', state.currentView);
-    console.log('🚀 PassengerApp - currentUser:', state.currentUser?.id || 'none');
-    console.log('🚀 PassengerApp - pickup:', state.pickup?.address);
-    console.log('🚀 PassengerApp - destination:', state.destination?.address);
+  // ✅ FIX CRITIQUE: screenToShow calculé SANS useMemo pour éviter les violations de règles de hooks
+  // Le useMemo était après des return conditionnels → crash sur iOS Safari
+  const screenToShow = currentScreen && currentScreen !== '' ? currentScreen : 'landing';
 
-    // ✅ FIX: Utiliser une garde pour éviter les mises à jour infinies
-    let shouldUpdate = false;
-    let newView: 'passenger' | 'driver' | 'admin' | null = null;
-    let newScreen: string | null = null;
-
-    // ✅ Si on est sur /app/passenger, forcer la vue à 'passenger'
-    if (location.pathname.includes('/passenger') && state.currentView !== 'passenger') {
-      console.log('🔄 Forçage de la vue à passenger');
-      newView = 'passenger';
-      shouldUpdate = true;
-    }
-
-    // ❌ NE PAS charger PassengerApp si on est sur un écran admin ou driver
-    if (currentScreen?.startsWith('admin-') || currentScreen?.startsWith('driver-')) {
-      console.log('⚠️ Écran admin/driver détecté, on ne touche pas à la vue');
-      return;
-    }
-
-    // ✅ FIX: Si l'utilisateur est connecté et a un écran passager valide, ne rien changer
-    if (state.currentUser && currentScreen && !['landing', 'user-selection', 'login', 'register'].includes(currentScreen)) {
-      console.log('✅ Passager connecté avec écran valide, on garde:', currentScreen);
-      return; // Important : ne pas continuer pour éviter les redirections
-    }
-
-    // ✅ FIX: Si l'utilisateur est connecté mais n'a pas d'écran valide (refresh), aller à map
-    if (state.currentUser && (!currentScreen || ['landing', 'user-selection', 'login', 'register'].includes(currentScreen))) {
-      console.log('🔄 Passager connecté après refresh, redirection vers map');
-      newScreen = 'map';
-      shouldUpdate = true;
-    }
-
-    // 🆕 CORRECTION : Ne pas écraser l'écran restauré depuis localStorage
-    // Si currentScreen existe déjà (restauré depuis localStorage), le garder
-    else if (currentScreen && currentScreen !== '') {
-      console.log('✅ Écran restauré depuis localStorage:', currentScreen);
-      // Ne rien faire, l'écran est déjà correct
-      return;
-    }
-
-    // Si on arrive sur /app sans écran défini ET sans données sauvegardées, initialiser à 'landing'
-    else if (!currentScreen || currentScreen === '') {
-      console.log('🔄 Initialisation vers landing depuis PassengerApp (aucun état sauvegardé)');
-      newView = 'passenger';
-      newScreen = 'landing';
-      shouldUpdate = true;
-    }
-
-    // Si on est sur user-selection et qu'on a déjà un utilisateur, aller à map
-    else if (currentScreen === 'user-selection' && user) {
-      console.log('✅ Utilisateur déjà connecté, redirection vers map');
-      newScreen = 'map';
-      shouldUpdate = true;
-    }
-
-    // ✅ N'appliquer les changements qu'une seule fois pour éviter les boucles
-    if (shouldUpdate) {
-      if (newView !== null) setCurrentView(newView);
-      if (newScreen !== null) setCurrentScreen(newScreen);
-    }
-  }, [location.pathname, currentScreen, state.currentView, state.currentUser?.id, user?.id]); // ✅ Dépendances minimales et stables
-
-  // ✅ FCM : Initialiser les notifications push pour le passager
-  useEffect(() => {
-    // Ne rien faire si pas d'utilisateur connecté
-    if (!state.currentUser || !state.currentUser.id) {
-      console.log('⏭️ FCM : Pas d\'utilisateur connecté, skip');
-      return;
-    }
-
-    // Vérifier que c'est bien un passager
-    if (state.currentView !== 'passenger') {
-      console.log('⏭️ FCM : Pas un passager, skip');
-      return;
-    }
-
-    console.log('🔥 Initialisation FCM pour passager:', state.currentUser.id);
-
-    // Configuration FCM complète
-    setupFCMForUser(state.currentUser.id, 'passenger', (payload) => {
-      console.log('🔔 Notification passager reçue:', payload);
-      
-      const { title, body } = payload.notification || {};
-      const data = payload.data || {};
-
-      // Gérer selon le type de notification
-      switch (data.type) {
-        case 'ride_accepted':
-          console.log('✅ Course acceptée !', { title, body });
-          // TODO : Afficher un toast de succès
-          break;
-
-        case 'driver_arriving':
-          console.log('🚗 Conducteur arrive !', { title, body });
-          // TODO : Jouer un son d'alerte
-          break;
-
-        case 'ride_started':
-          console.log('🚀 Course démarrée !', { title, body });
-          break;
-
-        case 'ride_completed':
-          console.log('✅ Course terminée !', { title, body });
-          // TODO : Rediriger vers paiement
-          break;
-
-        case 'ride_cancelled':
-          console.log('❌ Course annulée', { title, body, reason: data.reason });
-          // TODO : Afficher alerte d'annulation
-          break;
-
-        default:
-          console.log('🔔 Notification générique:', { title, body, data });
-      }
-    });
-  }, [state.currentUser?.id, state.currentView]);
-
-  // ✅ Gérer le cas où currentScreen est vide PENDANT le render
-  const screenToShow = useMemo(() => {
-    const screen = currentScreen && currentScreen !== '' ? currentScreen : 'landing';
-    console.log('📺 PassengerApp - screenToShow calculé:', screen, '| currentUser:', user?.name || 'aucun');
-    return screen;
-  }, [currentScreen, user]);
-
-  console.log('🎯 PassengerApp render - currentScreen:', currentScreen, '-> screenToShow:', screenToShow);
-
-  // Show RLS blocking screen if there's a critical RLS issue
-  if (showRLSBlockingScreen) {
-    return <RLSBlockingScreen />;
-  }
-
-  // Show loading screen
-  if (dataLoading) {
-    return <LoadingScreen />;
-  }
-
-  // Mémoïser le rendu des écrans
+  // ✅ FIX CRITIQUE: useMemo AVANT tous les return conditionnels
+  // Sur iOS Safari, les hooks doivent toujours être appelés dans le même ordre
   const screenComponent = useMemo(() => {
+    console.log('📺 PassengerApp - screenToShow calculé:', screenToShow, '| currentUser:', user?.name || 'aucun');
     switch(screenToShow) {
       case 'landing':
         return <LandingScreen />;
@@ -345,11 +206,6 @@ function PassengerAppContent() {
           </ErrorBoundary>
         );
       case 'settings':
-        return (
-          <ErrorBoundary>
-            <SettingsScreen />
-          </ErrorBoundary>
-        );
       case 'passenger-settings':
         return (
           <ErrorBoundary>
@@ -393,11 +249,6 @@ function PassengerAppContent() {
           </ErrorBoundary>
         );
       case 'payment-methods':
-        return (
-          <ErrorBoundary>
-            <PaymentSettingsScreen />
-          </ErrorBoundary>
-        );
       case 'payment-settings':
         return (
           <ErrorBoundary>
@@ -413,11 +264,111 @@ function PassengerAppContent() {
       default:
         return <LandingScreen />;
     }
-  }, [screenToShow]);
+  }, [screenToShow, user?.name, user?.email, state.currentRide, state.pickup, state.destination, setCurrentScreen]);
+
+  // ✅ useEffect APRÈS tous les useMemo — ordre des hooks toujours respecté
+  useEffect(() => {
+    console.log('🚀 PassengerApp monté - currentScreen:', currentScreen, 'location:', location.pathname);
+    console.log('🚀 PassengerApp - currentView:', state.currentView);
+    console.log('🚀 PassengerApp - currentUser:', state.currentUser?.id || 'none');
+
+    // ❌ NE PAS charger PassengerApp si on est sur un écran admin ou driver
+    if (currentScreen?.startsWith('admin-') || currentScreen?.startsWith('driver-')) {
+      console.log('⚠️ Écran admin/driver détecté, on ne touche pas à la vue');
+      return;
+    }
+
+    let shouldUpdate = false;
+    let newView: 'passenger' | 'driver' | 'admin' | null = null;
+    let newScreen: string | null = null;
+
+    // ✅ Si on est sur /app/passenger, forcer la vue à 'passenger'
+    if (location.pathname.includes('/passenger') && state.currentView !== 'passenger') {
+      newView = 'passenger';
+      shouldUpdate = true;
+    }
+
+    // ✅ Si l'utilisateur est connecté avec un écran valide, ne rien changer
+    if (state.currentUser && currentScreen && !['landing', 'user-selection', 'login', 'register'].includes(currentScreen)) {
+      console.log('✅ Passager connecté avec écran valide, on garde:', currentScreen);
+      if (shouldUpdate && newView) setCurrentView(newView);
+      return;
+    }
+
+    // ✅ Si connecté mais pas d'écran valide (refresh), aller à map
+    if (state.currentUser && (!currentScreen || ['landing', 'user-selection', 'login', 'register'].includes(currentScreen))) {
+      console.log('🔄 Passager connecté après refresh, redirection vers map');
+      newScreen = 'map';
+      shouldUpdate = true;
+    } else if (currentScreen && currentScreen !== '') {
+      console.log('✅ Écran restauré depuis localStorage:', currentScreen);
+      if (shouldUpdate && newView) setCurrentView(newView);
+      return;
+    } else if (!currentScreen || currentScreen === '') {
+      console.log('🔄 Initialisation vers landing depuis PassengerApp');
+      newView = 'passenger';
+      newScreen = 'landing';
+      shouldUpdate = true;
+    } else if (currentScreen === 'user-selection' && user) {
+      console.log('✅ Utilisateur déjà connecté, redirection vers map');
+      newScreen = 'map';
+      shouldUpdate = true;
+    }
+
+    if (shouldUpdate) {
+      if (newView !== null) setCurrentView(newView);
+      if (newScreen !== null) setCurrentScreen(newScreen);
+    }
+  }, [location.pathname, currentScreen, state.currentView, state.currentUser?.id, user?.id]);
+
+  // ✅ FCM : Initialiser les notifications push pour le passager
+  useEffect(() => {
+    if (!state.currentUser || !state.currentUser.id) return;
+    if (state.currentView !== 'passenger') return;
+
+    console.log('🔥 Initialisation FCM pour passager:', state.currentUser.id);
+
+    setupFCMForUser(state.currentUser.id, 'passenger', (payload) => {
+      console.log('🔔 Notification passager reçue:', payload);
+      
+      const { title, body } = payload.notification || {};
+      const data = payload.data || {};
+
+      switch (data.type) {
+        case 'ride_accepted':
+          console.log('✅ Course acceptée !', { title, body });
+          break;
+        case 'driver_arriving':
+          console.log('🚗 Conducteur arrive !', { title, body });
+          break;
+        case 'ride_started':
+          console.log('🚀 Course démarrée !', { title, body });
+          break;
+        case 'ride_completed':
+          console.log('✅ Course terminée !', { title, body });
+          break;
+        case 'ride_cancelled':
+          console.log('❌ Course annulée', { title, body, reason: data.reason });
+          break;
+        default:
+          console.log('🔔 Notification générique:', { title, body, data });
+      }
+    });
+  }, [state.currentUser?.id, state.currentView]);
+
+  console.log('🎯 PassengerApp render - screenToShow:', screenToShow);
+
+  // ✅ Les return conditionnels sont APRÈS tous les hooks
+  if (showRLSBlockingScreen) {
+    return <RLSBlockingScreen />;
+  }
+
+  if (dataLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <ErrorBoundary>
-      {/* RLS Fix Modal (non-blocking) */}
       {showRLSModal && <RLSFixModal />}
 
       {/* Main App Screens — contrainte mobile 430px */}
