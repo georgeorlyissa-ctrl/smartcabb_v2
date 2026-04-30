@@ -338,7 +338,7 @@ export async function playRideNotification(rideDetails?: {
   vibrate([300, 100, 300, 100, 300]);
 
   // Message vocal (construit avec adresses courtes pour réduire la durée)
-  let msg = 'Nouvelle course ! ';
+  let msg = 'Bonjour, vous avez une nouvelle course SmartCabb ! ';
   const pickup = rideDetails?.pickup;
   const dest   = rideDetails?.destination;
   if (pickup && pickup !== 'Point de départ') msg += `Départ : ${pickup}. `;
