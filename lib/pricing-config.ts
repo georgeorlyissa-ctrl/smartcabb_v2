@@ -152,20 +152,21 @@ export function getDisplayPrice(
 
 /**
  * 💳 Obtenir le crédit minimum requis pour une catégorie de véhicule
- * = 15% du tarif de base de la catégorie, calculé avec le taux de change admin
- * Le conducteur doit avoir au moins ce montant pour pouvoir se mettre en ligne / accepter une course.
+ * = 15% du tarif de base de la catégorie, calculé avec le TAUX FIXE 2 800 CDF/USD.
+ * ⚠️ On utilise volontairement le taux fixe (pas dynamique) pour éviter que
+ * les ajustements de taux de change de l'admin ne bloquent des drivers éligibles.
+ * Ex: standard = 15% × 7 USD × 2 800 = 2 940 CDF → un driver avec 4 000 CDF est éligible.
  */
 export function getMinimumCreditForCategory(category: VehicleCategory): number {
-  // Tarifs USD de base (jour) par catégorie
+  const FIXED_RATE = 2800; // Taux de référence fixe pour le calcul du seuil
   const BASE_USD: Record<VehicleCategory, number> = {
-    smart_standard: 7,
-    smart_confort:  9,
-    smart_plus:     10,
-    smart_business: 160,
+    smart_standard: 7,    // → 2 940 CDF
+    smart_confort:  9,    // → 3 780 CDF
+    smart_plus:     10,   // → 4 200 CDF
+    smart_business: 160,  // → 67 200 CDF
   };
   const baseUSD = BASE_USD[category] ?? 7;
-  const rate    = getExchangeRate(); // taux dynamique depuis le panel admin
-  return Math.round(0.15 * baseUSD * rate);
+  return Math.round(0.15 * baseUSD * FIXED_RATE);
 }
 
 /**
