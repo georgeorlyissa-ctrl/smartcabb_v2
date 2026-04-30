@@ -10,14 +10,10 @@ import { PageTransition } from './components/PageTransition';
 import { AppProvider } from './hooks/useAppState';
 import { BackendSyncProvider } from './components/BackendSyncProvider';
 import { LanguageProvider } from './contexts/LanguageContext';
-// DarkModeProvider supprimé — dark mode géré via localStorage dans chaque composant
+
 // ─── Routes vitrine : jamais de dark mode ───────────────────────────────────
 const VITRINE_ROUTES = ['/', '/services', '/drivers', '/contact', '/about', '/terms', '/privacy', '/legal'];
 
-/**
- * Retire la classe `dark` sur les pages vitrine, la restaure sur les pages app.
- * Doit être monté à l'intérieur de <Router>.
- */
 function DarkModeGuard() {
   const location = useLocation();
 
@@ -27,10 +23,8 @@ function DarkModeGuard() {
     );
 
     if (isVitrine) {
-      // Site vitrine → toujours clair, peu importe le localStorage
       document.documentElement.classList.remove('dark');
     } else {
-      // Pages app → appliquer la préférence sauvegardée
       try {
         const isDark = localStorage.getItem('smartcabb_dark_mode') === 'true';
         if (isDark) document.documentElement.classList.add('dark');
@@ -41,60 +35,41 @@ function DarkModeGuard() {
 
   return null;
 }
-// ────────────────────────────────────────────────────────────────────────────
+
 import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
-import './lib/cache-buster'; // ✅ Force le rechargement du cache à chaque version
-// ✅ BUILD VERSION - Défini directement ici pour éviter les erreurs d'import
-const BUILD_VERSION = '518.4.0'; // ✅ FEATURE: Annulation passager + Vérification solde conducteur
+import './lib/cache-buster';
+
+const BUILD_VERSION = '518.4.1'; // ✅ FIX: Maximum call stack size exceeded (iOS Safari)
 const BUILD_TIMESTAMP = new Date().toISOString();
 
 import { startUpdateDetection } from './utils/updateDetector';
 import { checkForUpdate } from './utils/cacheManager';
 import { initConfigSync } from './lib/config-sync';
 import { useMaintenanceMode } from './hooks/useAdminConfig';
-// ✅ FIX BUILD: Import conditionnel pour Firebase Service Worker
-// import { initializeFirebaseServiceWorker } from './lib/init-firebase-sw';
 
-// ⚡ BUILD v518.4.0 - ANNULATION PASSAGER + SOLDE CONDUCTEUR
 console.log('');
 console.log('═══════════════════════════════════════════════════════════════');
-console.log('🚀 BUILD v518.4.0 - 🚫 ANNULATION + 💰 SOLDE CONDUCTEUR');
+console.log('🚀 BUILD v518.4.1 - 🐛 FIX iOS SAFARI CALL STACK');
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('');
-console.log('🚫 ANNULATION PASSAGER:');
-console.log('  ✅ Bouton d\'annulation ajouté (course en cours)');
-console.log('  ✅ Confirmation obligatoire avant annulation');
-console.log('  ✅ Appel API backend pour enregistrer l\'annulation');
-console.log('  ✅ Alerte sur frais d\'annulation potentiels');
-console.log('');
-console.log('💰 VÉRIFICATION SOLDE CONDUCTEUR (CRITIQUE):');
-console.log('  ✅ Vérification stricte : solde >= prix course');
-console.log('  ✅ Désactivation auto si solde insuffisant');
-console.log('  ✅ Message détaillé (solde actuel + montant à recharger)');
-console.log('  ✅ Toutes catégories (Standard, Confort, Plus)');
-console.log('  ✅ Protection contre fraude + logs complets');
-console.log('');
-console.log('🔒 SÉCURITÉ RENFORCÉE:');
-console.log('  ✅ Conducteurs sans crédit = hors ligne automatique');
-console.log('  ✅ Impossible d\'accepter si solde < prix course');
-console.log('  ✅ Passagers protégés (conducteur solvable uniquement)');
-console.log('');
-console.log('✅ APPLICATION SÉCURISÉE + CONTRÔLE TOTAL !');
-console.log('═══════════════════════════════════════════════════════════════');
+console.log('🐛 CORRECTIONS:');
+console.log('  ✅ PassengerApp: useMemo déplacé avant les return conditionnels');
+console.log('  ✅ App.tsx: Variable neutralScreen (undefined) → isNeutralScreen');
+console.log('  ✅ Hooks React: Ordre garanti sur iOS Safari (pas de violation)');
 console.log('');
 
-// 🌐 Landing Page (Site Vitrine) - Import direct pour fiabilité
+// 🌐 Landing Page
 import { LandingPage } from './pages/LandingPage';
 import AdminCleanSystem from './src/pages/AdminCleanSystem';
 
-// 🚀 LandingScreen (Sélection Passager/Conducteur) - Import direct
+// 🚀 LandingScreen
 import { LandingScreen } from './components/LandingScreen';
 
-// 🎯 AppRouter (Gère LandingScreen et PassengerApp) - Import direct
+// 🎯 AppRouter
 import { AppRouter } from './components/AppRouter';
 
-// 🌐 Pages secondaires - ✅ Import directs pour éviter erreurs de lazy loading
+// 🌐 Pages secondaires
 import { ServicesPage } from './pages/ServicesPage';
 import { DriversLandingPage } from './pages/DriversLandingPage';
 import { ContactPage } from './pages/ContactPage';
@@ -103,13 +78,13 @@ import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { LegalPage } from './pages/LegalPage';
 
-// 📱 Passenger App - Import direct pour fiabilité
+// 📱 Passenger App
 import { PassengerApp } from './pages/PassengerApp';
 
-// 🚗 Driver App - ✅ FIX: Import direct pour éviter les erreurs de lazy loading
+// 🚗 Driver App
 import { DriverApp } from './pages/DriverApp';
 
-// 👨‍💼 Admin Panel - Import direct pour fiabilité
+// 👨‍💼 Admin Panel
 import { AdminApp } from './pages/AdminApp';
 
 // 🔐 Reset Password Page
@@ -124,11 +99,7 @@ import { AdminQuickSetup } from './components/admin/AdminQuickSetup';
 import { AdminAccountSync } from './components/admin/AdminAccountSync';
 import { QuickAdminSignup } from './components/admin/QuickAdminSignup';
 import { AdminForgotPasswordScreen } from './components/admin/AdminForgotPasswordScreen';
-// ✅ Page de création d'utilisateurs de test (pour résoudre "Invalid login credentials")
-// import { CreateTestUsers } from './components/admin/CreateTestUsers';
-// 🔧 Page de réparation des emails malformés
 import { FixEmailsPage } from './components/admin/FixEmailsPage';
-// 🗑️ Page de purge d'utilisateur (pour libérer les emails bloqués)
 import { PurgeUserPage } from './components/admin/PurgeUserPage';
 
 // 🔍 Driver Diagnostic
@@ -158,12 +129,9 @@ function lazyWithRetry(componentImport: () => Promise<any>) {
           resolve(component);
         })
         .catch((error) => {
-          // ✅ FIX: Ne pas recharger automatiquement la page, juste retenter une fois
-          // La redirection automatique causait des boucles infinies et redirigeait vers 'landing'
           if (!hasRefreshed) {
             console.log('⚠️ Échec chargement lazy module, retry...');
             window.sessionStorage.setItem('retry-lazy-refreshed', 'true');
-            // Retenter une seule fois après un court délai
             setTimeout(() => {
               componentImport()
                 .then(resolve)
@@ -198,27 +166,19 @@ function MaintenanceBanner() {
 function App() {
   console.log(`🚀 SmartCabb v${BUILD_VERSION} - Build ${BUILD_TIMESTAMP} - Démarrage...`);
   
-  // Appliquer les optimisations navigateur au démarrage
   useEffect(() => {
     try {
       applyBrowserOptimizations();
-      
-      // 🍎 Appliquer les correctifs Safari/iOS
       applySafariFixes();
 
-      // 📱 FIX UNIVERSEL: Calculer la vraie hauteur du viewport sur mobile
       let lastVh: number | null = null;
       let isUpdating = false;
 
       const setViewportHeight = () => {
-        // ✅ Garde contre les appels récursifs
         if (isUpdating) return;
-
         try {
           isUpdating = true;
           const vh = window.innerHeight * 0.01;
-
-          // ✅ Ne mettre à jour que si la valeur a changé (éviter les re-renders inutiles)
           if (lastVh === null || Math.abs(lastVh - vh) > 0.01) {
             document.documentElement.style.setProperty('--vh', `${vh}px`);
             lastVh = vh;
@@ -228,64 +188,36 @@ function App() {
         }
       };
 
-      // Appliquer au chargement
       setViewportHeight();
 
-      // Ré-appliquer lors du redimensionnement (rotation, clavier mobile, etc.)
       let resizeTimeout: number | undefined;
       const handleResize = () => {
-        if (resizeTimeout !== undefined) {
-          clearTimeout(resizeTimeout);
-        }
+        if (resizeTimeout !== undefined) clearTimeout(resizeTimeout);
         resizeTimeout = window.setTimeout(() => {
           setViewportHeight();
         }, 150) as unknown as number;
       };
 
       const handleOrientationChange = () => {
-        // Délai plus long pour orientationchange car iOS a besoin de temps
-        setTimeout(() => {
-          setViewportHeight();
-        }, 300);
+        setTimeout(() => setViewportHeight(), 300);
       };
 
       window.addEventListener('resize', handleResize, { passive: true });
       window.addEventListener('orientationchange', handleOrientationChange, { passive: true });
       
-      // ⚠️ Vérifier si on est en mode navigation privée Safari
       isPrivateBrowsing().then(isPrivate => {
         if (isPrivate) {
           console.warn('⚠️ Mode navigation privée détecté - Certaines fonctionnalités peuvent être limitées');
         }
       });
       
-      // Vérifier si une nouvelle version est disponible
       if (checkForUpdate()) {
         console.log('🔄 Nouvelle version détectée - Cache rafraîchi');
       }
 
-      // 🧹 NETTOYAGE DU LOCALSTORAGE : Détecter et supprimer les données corrompues
+      // 🧹 Vérification intégrité données localStorage
       try {
         console.log('🧹 Vérification de l\'intégrité des données...');
-        
-        // ✅ DÉSACTIVÉ: Ne plus supprimer systématiquement les tokens Supabase
-        // Cela causait la déconnexion à chaque rafraîchissement de page
-        /*
-        // 🔥 NOUVEAU: Nettoyer les tokens Supabase invalides
-        const supabaseAuthKeys = Object.keys(localStorage).filter(key => 
-          key.startsWith('sb-') && key.includes('-auth-token')
-        );
-        
-        if (supabaseAuthKeys.length > 0) {
-          console.log('🔍 Tokens Supabase trouvés:', supabaseAuthKeys.length);
-          // Supprimer tous les anciens tokens pour forcer une nouvelle connexion
-          supabaseAuthKeys.forEach(key => {
-            console.log('🗑️ Suppression du token:', key);
-            localStorage.removeItem(key);
-          });
-          console.log('✅ Tokens Supabase nettoyés - Connexion fraîche requise');
-        }
-        */
         
         const keysToValidate = [
           'smartcab_current_user',
@@ -300,7 +232,6 @@ function App() {
             if (data) {
               const parsed = JSON.parse(data);
               
-              // Validation spécifique pour éviter les erreurs toLocaleString
               if (key === 'smartcab_system_settings' && parsed) {
                 if (parsed.exchangeRate !== undefined && (typeof parsed.exchangeRate !== 'number' || isNaN(parsed.exchangeRate))) {
                   console.warn(`⚠️ exchangeRate invalide, suppression de ${key}`);
@@ -326,7 +257,7 @@ function App() {
         console.error('❌ Erreur lors de la vérification:', error);
       }
 
-      // 🧹 NETTOYAGE DU LOCALSTORAGE : Détecter et corriger les incohérences
+      // 🧹 Vérification cohérence localStorage
       try {
         const savedView = localStorage.getItem('smartcab_current_view');
         const savedScreen = localStorage.getItem('smartcab_current_screen');
@@ -334,28 +265,21 @@ function App() {
         
         console.log('🔍 Vérification cohérence:', { savedView, savedScreen, currentPath });
         
-        // ✅ NOUVEAU: Forcer la vue basée sur l'URL actuelle
         if (currentPath.includes('/driver')) {
           if (savedView !== 'driver') {
-            console.log('��� URL contient /driver, forçage de la vue à driver dans localStorage');
             localStorage.setItem('smartcab_current_view', 'driver');
           }
         } else if (currentPath.includes('/admin')) {
           if (savedView !== 'admin') {
-            console.log('🔄 URL contient /admin, forçage de la vue à admin dans localStorage');
             localStorage.setItem('smartcab_current_view', 'admin');
           }
         } else if (currentPath.includes('/passenger') || currentPath.includes('/app')) {
-          // Ne forcer que si on n'est pas sur /app/driver ou /app/admin
           if (!currentPath.includes('/driver') && !currentPath.includes('/admin') && savedView !== 'passenger') {
-            console.log('🔄 URL contient /passenger ou /app, forçage de la vue à passenger dans localStorage');
             localStorage.setItem('smartcab_current_view', 'passenger');
           }
         }
         
-        // Détecter les incohérences
         if (savedView && savedScreen) {
-          // Écrans neutres qui sont OK pour n'importe quelle vue
           const neutralScreens = [
             'landing', 
             'user-selection', 
@@ -366,9 +290,9 @@ function App() {
             'reset-password-otp'
           ];
           
+          // ✅ FIX CRITIQUE: Utiliser isNeutralScreen partout (neutralScreen était undefined → crash)
           const isNeutralScreen = neutralScreens.includes(savedScreen);
           
-          // Seulement détecter les vraies incohérences (pas les écrans neutres)
           const isViewDriverButScreenAdmin = savedView === 'driver' && savedScreen.startsWith('admin-');
           const isViewDriverButScreenPassenger = savedView === 'driver' && !isNeutralScreen && !savedScreen.startsWith('driver-') && (savedScreen.startsWith('passenger-') || ['map', 'welcome', 'login', 'register', 'booking', 'ride', 'payment', 'rating'].includes(savedScreen));
           
@@ -376,7 +300,8 @@ function App() {
           const isViewPassengerButScreenDriver = savedView === 'passenger' && savedScreen.startsWith('driver-');
           
           const isViewAdminButScreenDriver = savedView === 'admin' && savedScreen.startsWith('driver-');
-          const isViewAdminButScreenPassenger = savedView === 'admin' && !neutralScreen && !savedScreen.startsWith('admin-');
+          // ✅ FIX: Était "!neutralScreen" (undefined) → maintenant "!isNeutralScreen"
+          const isViewAdminButScreenPassenger = savedView === 'admin' && !isNeutralScreen && !savedScreen.startsWith('admin-');
           
           if (isViewDriverButScreenAdmin || isViewDriverButScreenPassenger ||
               isViewPassengerButScreenAdmin || isViewPassengerButScreenDriver ||
@@ -384,12 +309,6 @@ function App() {
             console.warn('⚠️ Incohérence détectée entre view et screen - Nettoyage...', {
               savedView,
               savedScreen,
-              isViewDriverButScreenAdmin,
-              isViewDriverButScreenPassenger,
-              isViewPassengerButScreenAdmin,
-              isViewPassengerButScreenDriver,
-              isViewAdminButScreenDriver,
-              isViewAdminButScreenPassenger
             });
             localStorage.removeItem('smartcab_current_view');
             localStorage.removeItem('smartcab_current_screen');
@@ -400,7 +319,7 @@ function App() {
         console.warn('⚠️ Erreur nettoyage localStorage:', error);
       }
 
-      // 🔧 Détecter et gérer les tokens de réinitialisation de mot de passe
+      // 🔧 Détecter tokens de réinitialisation de mot de passe
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const accessToken = hashParams.get('access_token');
       const type = hashParams.get('type');
@@ -408,15 +327,11 @@ function App() {
       if (accessToken && type === 'recovery') {
         console.log('🔐 Token de réinitialisation détecté dans l\'URL');
         const currentPath = window.location.pathname;
-        
-        // Si on n'est pas déjà sur la page de réinitialisation, y rediriger
         if (currentPath !== '/auth/reset-password') {
-          console.log('➡️ Redirection vers /auth/reset-password');
           window.location.href = '/auth/reset-password' + window.location.hash;
         }
       }
 
-      // 🧹 NETTOYER LES ANCIENNES DEMANDES DE COURSE AU DÉMARRAGE
       const cleanupOldRides = async () => {
         try {
           console.log('🧹 Nettoyage des anciennes demandes de course...');
@@ -426,14 +341,10 @@ function App() {
         }
       };
 
-      // Lancer le nettoyage après 2 secondes (ne pas bloquer le démarrage)
       setTimeout(cleanupOldRides, 2000);
       
-      // Cleanup lors du démontage
       return () => {
-        if (resizeTimeout !== undefined) {
-          clearTimeout(resizeTimeout);
-        }
+        if (resizeTimeout !== undefined) clearTimeout(resizeTimeout);
         window.removeEventListener('resize', handleResize);
         window.removeEventListener('orientationchange', handleOrientationChange);
       };
@@ -442,7 +353,6 @@ function App() {
     }
   }, []);
 
-  // 🔥 DÉTECTER LES MISES À JOUR
   useEffect(() => {
     try {
       if (typeof startUpdateDetection === 'function') {
@@ -456,7 +366,6 @@ function App() {
     }
   }, []);
 
-  // 🔧 Initialiser la synchronisation de la configuration (cross-device via polling 60s)
   useEffect(() => {
     try {
       initConfigSync();
@@ -470,19 +379,11 @@ function App() {
     <ErrorBoundary>
       <Router>
         <AppProvider>
-          {/* 🔄 BackendSyncProvider DÉSACTIVÉ TEMPORAIREMENT - Mode standalone */}
-          {/* <BackendSyncProvider /> */}
           <LanguageProvider>
-            {/* 🌙 Guard dark mode : off sur vitrine, on selon prefs sur app */}
             <DarkModeGuard />
             <div className="app-container">
-              {/* Online/Offline Indicator */}
               <OnlineStatusIndicator />
-              
-              {/* PWA Install Prompt */}
               <PWAInstallPrompt />
-              
-              {/* Toast Notifications */}
               <Toaster 
                 position="top-center"
                 toastOptions={{
@@ -496,85 +397,60 @@ function App() {
                   },
                 }}
               />
-
-              {/* 🔄 Synchronisation automatique du taux de change depuis le backend */}
               <ExchangeRateSync />
-
-              {/* 🔧 Bannière mode maintenance (activée depuis le panel admin) */}
               <MaintenanceBanner />
-
-              {/* Animation de transition entre pages */}
               <PageTransition />
 
-              {/* Main Routing - Sans AnimatePresence pour compatibilité Figma Make */}
               <Suspense fallback={<SuspenseFallback />}>
                 <Routes>
-                  {/* Site Vitrine - PAGE D'ACCUEIL */}
+                  {/* Site Vitrine */}
                   <Route path="/" element={<LandingPage />} />
-                  
-                  {/* Services Page */}
                   <Route path="/services" element={<ServicesPage />} />
-                  
-                  {/* Drivers Landing Page */}
                   <Route path="/drivers" element={<DriversLandingPage />} />
-                  
-                  {/* Contact Page */}
                   <Route path="/contact" element={<ContactPage />} />
-                  
-                  {/* About Page */}
                   <Route path="/about" element={<AboutPage />} />
-                  
-                  {/* Terms Page */}
                   <Route path="/terms" element={<TermsPage />} />
-
-                  {/* Privacy Page */}
                   <Route path="/privacy" element={<PrivacyPage />} />
-
-                  {/* Legal Page */}
                   <Route path="/legal" element={<LegalPage />} />
                   
                   {/* Driver App */}
                   <Route path="/driver/*" element={<DriverApp />} />
                   
-                  {/* Admin Routes Spécifiques - AVANT /admin/* pour éviter les conflits */}
+                  {/* Admin Routes Spécifiques */}
                   <Route path="/admin/diagnostic" element={<AdminLoginDiagnostic />} />
                   <Route path="/admin/setup" element={<AdminQuickSetup />} />
                   <Route path="/admin/sync" element={<AdminAccountSync />} />
                   <Route path="/admin/signup" element={<QuickAdminSignup />} />
                   <Route path="/admin/forgot-password" element={<AdminForgotPasswordScreen />} />
                   <Route path="/admin/clean-system" element={<AdminCleanSystem />} />
-                  {/* ✅ Page de création d'utilisateurs de test (pour résoudre "Invalid login credentials") */}
-                  {/* <Route path="/admin/create-test-users" element={<CreateTestUsers />} /> */}
-                  {/* 🔧 Page de réparation des emails malformés */}
                   <Route path="/admin/fix-emails" element={<FixEmailsPage />} />
-                  {/* 🗑️ Page de purge d'utilisateur (pour libérer les emails bloqués) */}
                   <Route path="/admin/purge-user" element={<PurgeUserPage />} />
                   
-                  {/* 🔍 Driver Diagnostic Route */}
+                  {/* Driver Diagnostic */}
                   <Route path="/driver/signup-diagnostic" element={<DriverSignupDiagnostic />} />
                   
-                  {/* Admin Panel - Route générique APRÈS les routes spécifiques */}
+                  {/* Admin Panel */}
                   <Route path="/admin/*" element={<AdminApp />} />
                   
-                  {/* Reset Password Page */}
+                  {/* Auth Pages */}
                   <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
                   <Route path="/auth/reset-password-by-phone" element={<ResetPasswordByPhonePage />} />
                   <Route path="/auth/create-auth-from-profile" element={<CreateAuthFromProfilePage />} />
                   
-                  {/* Redirections pour compatibilité */}
+                  {/* Redirections */}
                   <Route path="/passenger" element={<Navigate to="/app" replace />} />
                   <Route path="/passager" element={<Navigate to="/app" replace />} />
                   <Route path="/conducteur" element={<Navigate to="/driver" replace />} />
                   
-                  {/* Application SmartCabb - DÉPLACÉE SUR /app */}
+                  {/* Application SmartCabb */}
                   <Route path="/app/*" element={<AppRouter />} />
                   
-                  {/* Anciennes pages - Redirection vers accueil */}
+                  {/* Anciennes pages */}
                   <Route path="/preview_page_v2.html" element={<Navigate to="/" replace />} />
                   <Route path="/index.html" element={<Navigate to="/" replace />} />
                   
-                  {/* Catch-all route - Redirige vers la page d'accueil */}
+                  {/* Catch-all */}
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>
