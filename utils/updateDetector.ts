@@ -1,15 +1,12 @@
 // 🔄 DÉTECTEUR DE MISE À JOUR AUTOMATIQUE
-// Vérifie les nouvelles versions et force le rechargement
 
 let updateCheckInterval: ReturnType<typeof setInterval> | null = null;
+// ✅ FIX: Compteur pour limiter les tentatives de report (évite la récursion infinie)
+let reloadRetryCount = 0;
+const MAX_RELOAD_RETRIES = 3;
 
-// 🔧 Détection d'environnement robuste
 const isDevelopment = () => {
-  // ✅ SSR FIX: Vérifier que nous sommes côté client
-  if (typeof window === 'undefined') {
-    return false;
-  }
-  
+  if (typeof window === 'undefined') return false;
   try {
     return (
       window.location.hostname === 'localhost' ||
@@ -24,62 +21,40 @@ const isDevelopment = () => {
 };
 
 export function startUpdateDetection() {
-  // ✅ SSR FIX: Vérifier que nous sommes côté client
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-    return;
-  }
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
   
   console.log('🔍 Détection de mise à jour activée');
 
-  // Ne pas activer en mode prévisualisation ou si on ne peut pas accéder à index.html
-  // Cela évite les erreurs "Failed to fetch" dans Figma Make
   if (!isDevelopment() && window.location.hostname.includes('figma')) {
     console.log('⚠️ Détection de mise à jour désactivée en mode prévisualisation Figma');
     return;
   }
 
-  // 1. Vérifier au chargement
   checkForUpdates();
 
-  // 2. Vérifier toutes les 30 secondes en développement
   if (isDevelopment()) {
     updateCheckInterval = setInterval(checkForUpdates, 30000);
-  }
-
-  // 3. Vérifier toutes les 5 minutes en production
-  if (!isDevelopment()) {
+  } else {
     updateCheckInterval = setInterval(checkForUpdates, 5 * 60 * 1000);
   }
 
-  // 4. ✅ Écouter les messages du Service Worker (mise à jour automatique)
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.addEventListener('message', (event) => {
       if (event.data && event.data.type === 'SW_UPDATED') {
         console.log('🆕 Service Worker mis à jour - version:', event.data.version);
-        console.log('🔄 Rechargement automatique dans 3 secondes...');
-
-        // Petit délai pour laisser le SW finir son activation
-        setTimeout(() => {
-          forceReload();
-        }, 3000);
+        setTimeout(() => forceReload(), 3000);
       }
-
       if (event.data && event.data.type === 'FORCE_RELOAD') {
         console.log('🔥 Rechargement forcé par le Service Worker');
         forceReload();
       }
     });
 
-    // 5. Détecter un nouveau Service Worker qui prend le contrôle
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (refreshing) return;
       refreshing = true;
-
       console.log('🆕 Nouveau Service Worker a pris le contrôle');
-      console.log('🔄 Rechargement automatique...');
-
-      // Rechargement immédiat car le SW est déjà actif
       window.location.reload();
     });
   }
@@ -93,16 +68,13 @@ export function stopUpdateDetection() {
 }
 
 export async function checkForUpdates() {
-  // Ne pas vérifier en mode prévisualisation Figma
   if (window.location.hostname.includes('figma') || 
       window.location.hostname.includes('preview') ||
       window.location.hostname.includes('--')) {
-    // Mode prévisualisation détecté, skip silencieusement
     return;
   }
 
   try {
-    // Vérifier si une nouvelle version existe en interrogeant index.html
     const response = await fetch('/index.html', {
       method: 'HEAD',
       cache: 'no-cache',
@@ -113,11 +85,7 @@ export async function checkForUpdates() {
       }
     });
 
-    // Vérifier si la réponse est OK
-    if (!response.ok) {
-      // Échec silencieux en mode prévisualisation
-      return;
-    }
+    if (!response.ok) return;
 
     const lastModified = response.headers.get('Last-Modified');
     const etag = response.headers.get('ETag');
@@ -125,14 +93,12 @@ export async function checkForUpdates() {
     const storedLastModified = localStorage.getItem('app-last-modified');
     const storedEtag = localStorage.getItem('app-etag');
 
-    // Première visite
     if (!storedLastModified && !storedEtag) {
       if (lastModified) localStorage.setItem('app-last-modified', lastModified);
       if (etag) localStorage.setItem('app-etag', etag);
       return;
     }
 
-    // Détecter un changement
     const hasChanged = 
       (lastModified && lastModified !== storedLastModified) ||
       (etag && etag !== storedEtag);
@@ -142,54 +108,42 @@ export async function checkForUpdates() {
       console.log('Old ETag:', storedEtag, 'New ETag:', etag);
       console.log('Old Last-Modified:', storedLastModified, 'New Last-Modified:', lastModified);
       
-      // Mettre à jour le stockage
       if (lastModified) localStorage.setItem('app-last-modified', lastModified);
       if (etag) localStorage.setItem('app-etag', etag);
 
-      // Vider le cache du Service Worker - désactivé temporairement
-      // 🚫 Code désactivé pour éviter les erreurs de Service Worker
+      // ✅ FIX: Réinitialiser le compteur à chaque nouvelle version détectée
+      reloadRetryCount = 0;
       forceReload();
-      
-      /*
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        const messageChannel = new MessageChannel();
-        navigator.serviceWorker.controller.postMessage(
-          { type: 'CLEAR_CACHE' },
-          [messageChannel.port2]
-        );
-        
-        messageChannel.port1.onmessage = (event) => {
-          if (event.data.success) {
-            console.log('✅ Cache Service Worker vidé');
-            forceReload();
-          }
-        };
-      } else {
-        forceReload();
-      }
-      */
     }
     
     return hasChanged;
   } catch (error) {
-    // Ignorer complètement toutes les erreurs en mode prévisualisation
-    // Ne rien logger pour éviter de polluer la console
     return false;
   }
 }
 
-// Export alias pour compatibilité
 export const checkForUpdate = checkForUpdates;
+
+function isActiveRide(rideStr: string | null): boolean {
+  // ✅ FIX CRITIQUE: Vérifier que la course n'est pas annulée/terminée
+  // Avant, hasActiveRide = !!rideStr → true même pour les courses annulées
+  if (!rideStr || rideStr === 'null') return false;
+  try {
+    const ride = JSON.parse(rideStr);
+    // Seulement les courses vraiment actives bloquent la mise à jour
+    const activeStatuses = ['pending', 'accepted', 'arriving', 'in_progress', 'started'];
+    return activeStatuses.includes(ride?.status);
+  } catch {
+    return false;
+  }
+}
 
 function forceReload() {
   console.log('🔄 Mise à jour automatique détectée - Préparation du rechargement...');
 
-  // ✅ MISE À JOUR AUTOMATIQUE SILENCIEUSE
-  // Vérifier si l'utilisateur est en pleine action (course en cours, paiement, etc.)
   const currentScreen = localStorage.getItem('smartcab_current_screen');
-  const currentRide = localStorage.getItem('smartcab_current_ride');
+  const currentRideStr = localStorage.getItem('smartcab_current_ride');
 
-  // Liste des écrans où on NE DOIT PAS recharger immédiatement
   const criticalScreens = [
     'payment',
     'payment-confirmation',
@@ -201,25 +155,39 @@ function forceReload() {
     'driver-found'
   ];
 
-  // Si l'utilisateur a une course en cours, on attend
-  const hasActiveRide = currentRide && currentRide !== 'null';
+  // ✅ FIX CRITIQUE: Utiliser isActiveRide() au lieu de !!currentRideStr
+  // Une course cancelled/completed ne doit pas bloquer la mise à jour
+  const hasActiveRide = isActiveRide(currentRideStr);
   const isCriticalScreen = criticalScreens.some(screen => currentScreen?.includes(screen));
 
   if (hasActiveRide || isCriticalScreen) {
-    console.log('⏳ Mise à jour reportée - Utilisateur en cours d\'action');
+    // ✅ FIX: Limiter le nombre de retries pour éviter la récursion infinie
+    reloadRetryCount++;
+    
+    if (reloadRetryCount > MAX_RELOAD_RETRIES) {
+      console.log(`⚠️ Trop de tentatives de report (${reloadRetryCount}/${MAX_RELOAD_RETRIES}) - mise à jour ignorée jusqu'au prochain check`);
+      reloadRetryCount = 0; // Reset pour le prochain cycle
+      return; // ✅ SORTIR au lieu de boucler indéfiniment
+    }
+
+    console.log(`⏳ Mise à jour reportée (${reloadRetryCount}/${MAX_RELOAD_RETRIES}) - Utilisateur en cours d'action`);
     console.log('   Screen:', currentScreen);
     console.log('   Active ride:', hasActiveRide);
 
-    // Réessayer dans 2 minutes
+    // ✅ FIX: setTimeout non-récursif — utilise checkForUpdates au lieu de forceReload
+    // pour laisser le prochain cycle de polling décider si on peut mettre à jour
     setTimeout(() => {
       console.log('🔄 Nouvelle tentative de mise à jour...');
-      forceReload();
+      // ✅ On re-vérifie plutôt que de rappeler forceReload directement
+      checkForUpdates();
     }, 2 * 60 * 1000);
 
     return;
   }
 
-  // ✅ Afficher un toast discret (2 secondes) avant de recharger
+  // Reset compteur si on arrive ici (pas de course active)
+  reloadRetryCount = 0;
+
   const toast = document.createElement('div');
   toast.innerHTML = `
     <div style="
@@ -246,20 +214,13 @@ function forceReload() {
     </div>
     <style>
       @keyframes slideDown {
-        from {
-          opacity: 0;
-          transform: translateX(-50%) translateY(-20px);
-        }
-        to {
-          opacity: 1;
-          transform: translateX(-50%) translateY(0);
-        }
+        from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
       }
     </style>
   `;
   document.body.appendChild(toast);
 
-  // ✅ Vider tous les caches en arrière-plan
   if ('caches' in window) {
     caches.keys().then(names => {
       Promise.all(names.map(name => caches.delete(name)))
@@ -268,26 +229,23 @@ function forceReload() {
     });
   }
 
-  // ✅ Envoyer un message au Service Worker pour forcer la mise à jour
   if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
     navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
     navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
   }
 
-  // ✅ Recharger automatiquement après 2 secondes (pour que l'utilisateur voie le toast)
   setTimeout(() => {
     console.log('🔄 Rechargement automatique...');
-    // Forcer le rechargement complet (bypass cache)
     window.location.reload();
   }, 2000);
 }
 
-// Mode debug pour forcer le rechargement
 if (isDevelopment()) {
   (window as any).forceUpdate = () => {
     console.log('🔥 Force update déclenché manuellement');
     localStorage.removeItem('app-last-modified');
     localStorage.removeItem('app-etag');
+    reloadRetryCount = 0;
     forceReload();
   };
   
@@ -297,12 +255,6 @@ if (isDevelopment()) {
       await Promise.all(names.map(name => caches.delete(name)));
       console.log('✅ Tous les caches supprimés:', names);
     }
-    // 🚫 Service Worker désactivé temporairement
-    /*
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
-    }
-    */
     localStorage.clear();
     sessionStorage.clear();
     window.location.reload();
