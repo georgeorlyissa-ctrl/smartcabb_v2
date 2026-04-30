@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { GoogleMapView } from '../GoogleMapView';
 import { YangoStyleSearch } from './YangoStyleSearch';
@@ -6,7 +6,6 @@ import { FavoriteLocations } from './FavoriteLocations';
 import { SmartCabbPromoSection } from './SmartCabbPromoSection';
 import { reverseGeocode } from '../../lib/precise-gps';
 import { toast } from '../../lib/toast';
-// Dark mode géré via localStorage directement — pas de contexte externe
 
 // Icônes SVG inline
 const MapPin = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>);
@@ -25,23 +24,13 @@ interface Location {
   address?: string;
 }
 
-/**
- * 🗺️ ÉCRAN PRINCIPAL DE LA CARTE - PASSAGER
- * 
- * Fonctionnalités :
- * - Affichage de la carte avec position actuelle
- * - Sélection de destination par clic sur carte
- * - Recherche de lieu
- * - Suggestions (Domicile, Travail)
- * - Affichage du nom de lieu via geocoding inverse
- */
 export function MapScreen() {
   const appState = useAppState();
   const { state, setCurrentScreen } = appState;
   const updatePickup = appState.updatePickup || appState.setPickup;
   const updateDestination = appState.updateDestination || appState.setDestination;
 
-  // 🌙 Dark mode local (lit/écrit localStorage + classe HTML)
+  // 🌙 Dark mode local
   const [isDark, setIsDark] = useState<boolean>(() => {
     try { return localStorage.getItem('smartcabb_dark_mode') === 'true'; } catch { return false; }
   });
@@ -67,12 +56,19 @@ export function MapScreen() {
   const [loadingAddress, setLoadingAddress] = useState(false);
   const [isSelectingOnMap, setIsSelectingOnMap] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // 🏠 État pour afficher le modal de lieux favoris
   const [showFavoritesModal, setShowFavoritesModal] = useState(false);
 
-  // 📍 Charger la position GPS au démarrage
+  // ✅ FIX CRITIQUE: Ref pour éviter de définir la destination plusieurs fois
+  // Sans ce ref, l'effet se déclenchait en boucle infinie car state.destination
+  // était en dépendance ET était modifié par l'effet lui-même
+  const defaultDestinationSet = useRef(false);
+
+  // 📍 Charger la position GPS au démarrage — UNE SEULE FOIS ([] comme dépendances)
   useEffect(() => {
+    // ✅ FIX: Pas de state.destination dans les dépendances
+    // On utilise le ref pour savoir si on a déjà défini la destination
+    const shouldSetDefaultDestination = !defaultDestinationSet.current && !state.destination;
+
     if ('geolocation' in navigator) {
       console.log('📍 Demande de géolocalisation...');
       setLoadingLocation(true);
@@ -83,7 +79,6 @@ export function MapScreen() {
           const lat = position.coords.latitude;
           const lng = position.coords.longitude;
           
-          // Obtenir l'adresse
           setLoadingAddress(true);
           const address = await reverseGeocode(lat, lng);
           console.log('📍 Adresse obtenue:', address);
@@ -97,18 +92,16 @@ export function MapScreen() {
           setLoadingAddress(false);
           setLoadingLocation(false);
           
-          // 🎯 DESTINATION PAR DÉFAUT POUR LES TESTS
-          // Mettre une destination par défaut (Aéroport de Kinshasa N'djili)
-          if (!state.destination && updateDestination) {
-            console.log('🎯 Définition d\'une destination par défaut pour les tests');
+          // ✅ FIX: Utiliser le ref pour n'exécuter qu'une seule fois
+          if (shouldSetDefaultDestination && updateDestination) {
+            defaultDestinationSet.current = true;
+            console.log('🎯 Définition destination par défaut (une seule fois)');
             const defaultDestination = {
               lat: -4.3856,
               lng: 15.4446,
               address: 'Aéroport International de N\'djili, Kinshasa'
             };
             updateDestination(defaultDestination);
-            
-            // Afficher un toast pour informer l'utilisateur
             toast.info('📍 Destination par défaut définie', {
               description: 'Aéroport de Kinshasa N\'djili - Utilisez la recherche pour changer',
               duration: 5000
@@ -116,11 +109,8 @@ export function MapScreen() {
           }
         },
         (error) => {
-          // Message utilisateur selon le code d'erreur - SANS afficher d'erreur alarmante
           if (error.code === 1) {
-            // Permission refusée ou bloquée par permissions policy
-            console.log('📍 Géolocalisation non disponible (permissions refusées ou bloquées)');
-            // Message informatif au lieu d'erreur
+            console.log('📍 Géolocalisation non disponible');
             toast.info('📍 Sélectionnez votre position en touchant la carte', {
               duration: 5000,
               description: 'Ou utilisez la recherche pour trouver votre adresse'
@@ -133,25 +123,16 @@ export function MapScreen() {
             toast.error('Délai de géolocalisation dépassé');
           }
           
-          // Garder la position par défaut (Kinshasa)
           setLoadingLocation(false);
           
-          // 🎯 DESTINATION PAR DÉFAUT MÊME EN CAS D'ERREUR GPS
-          if (!state.destination && updatePickup && updateDestination) {
-            console.log('🎯 Définition d\'une destination par défaut (fallback)');
-            const defaultPickup = {
-              lat: -4.3276,
-              lng: 15.3136,
-              address: 'Centre-ville de Kinshasa'
-            };
-            const defaultDestination = {
-              lat: -4.3856,
-              lng: 15.4446,
-              address: 'Aéroport International de N\'djili, Kinshasa'
-            };
+          // ✅ FIX: Utiliser le ref pour n'exécuter qu'une seule fois
+          if (shouldSetDefaultDestination && updatePickup && updateDestination) {
+            defaultDestinationSet.current = true;
+            console.log('🎯 Définition destination par défaut (fallback, une seule fois)');
+            const defaultPickup = { lat: -4.3276, lng: 15.3136, address: 'Centre-ville de Kinshasa' };
+            const defaultDestination = { lat: -4.3856, lng: 15.4446, address: 'Aéroport International de N\'djili, Kinshasa' };
             updatePickup(defaultPickup);
             updateDestination(defaultDestination);
-            
             toast.info('📍 Adresses par défaut définies', {
               description: 'Centre-ville → Aéroport N\'djili',
               duration: 5000
@@ -160,7 +141,7 @@ export function MapScreen() {
         },
         {
           enableHighAccuracy: false,
-          timeout: 15000, // Augmenté à 15 secondes pour éviter les timeouts
+          timeout: 15000,
           maximumAge: 60000
         }
       );
@@ -168,57 +149,36 @@ export function MapScreen() {
       console.warn('⚠️ Géolocalisation non supportée');
       setLoadingLocation(false);
       
-      // 🎯 DESTINATION PAR DÉFAUT SI PAS DE GÉOLOCALISATION
-      if (!state.destination && updatePickup && updateDestination) {
-        console.log('🎯 Définition d\'une destination par défaut (pas de géolocalisation)');
-        const defaultPickup = {
-          lat: -4.3276,
-          lng: 15.3136,
-          address: 'Centre-ville de Kinshasa'
-        };
-        const defaultDestination = {
-          lat: -4.3856,
-          lng: 15.4446,
-          address: 'Aéroport International de N\'djili, Kinshasa'
-        };
+      // ✅ FIX: Utiliser le ref pour n'exécuter qu'une seule fois
+      if (shouldSetDefaultDestination && updatePickup && updateDestination) {
+        defaultDestinationSet.current = true;
+        const defaultPickup = { lat: -4.3276, lng: 15.3136, address: 'Centre-ville de Kinshasa' };
+        const defaultDestination = { lat: -4.3856, lng: 15.4446, address: 'Aéroport International de N\'djili, Kinshasa' };
         updatePickup(defaultPickup);
         updateDestination(defaultDestination);
-        
-        toast.info('📍 Adresses par défaut définies', {
-          description: 'Centre-ville → Aéroport N\'djili',
-          duration: 5000
-        });
       }
     }
-  }, [state.destination, setCurrentScreen]);
+  // ✅ FIX CRITIQUE: [] — s'exécute UNE SEULE FOIS au montage
+  // On n'inclut PAS state.destination car ça créait la boucle infinie
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 🖱️ Gestion du clic sur la carte
   const handleMapClick = useCallback(async (lat: number, lng: number) => {
     console.log('🖱️ Clic sur carte:', lat, lng);
-    
-    // ❌ NE PAS afficher les coordonnées immédiatement
-    // ✅ Afficher "Recherche du nom..." pendant la recherche
     setLoadingAddress(true);
     
-    // Obtenir le nom de lieu immédiatement
     try {
       const address = await reverseGeocode(lat, lng);
       console.log('📍 Nom de lieu obtenu:', address);
-      
       const location = { lat, lng, address };
       setPickupLocation(location);
-      if (updatePickup) {
-        updatePickup(location);
-      }
+      if (updatePickup) updatePickup(location);
     } catch (error) {
       console.error('❌ Erreur geocoding:', error);
-      // En cas d'erreur, afficher le nom de quartier par défaut
-      const fallbackAddress = 'Position sélectionnée';
-      const location = { lat, lng, address: fallbackAddress };
+      const location = { lat, lng, address: 'Position sélectionnée' };
       setPickupLocation(location);
-      if (updatePickup) {
-        updatePickup(location);
-      }
+      if (updatePickup) updatePickup(location);
     } finally {
       setLoadingAddress(false);
     }
@@ -227,7 +187,6 @@ export function MapScreen() {
   // 🔍 Sélection depuis la recherche
   const handleSearchSelect = (result: any) => {
     console.log('🔍 Sélection recherche:', result);
-    
     if (result.coordinates && updateDestination) {
       const location = {
         lat: result.coordinates.lat,
@@ -239,12 +198,8 @@ export function MapScreen() {
     }
   };
 
-  // 👤 Profil
-  const handleProfileClick = () => {
-    setCurrentScreen('profile');
-  };
+  const handleProfileClick = () => setCurrentScreen('profile');
 
-  // Adresse affichée
   const displayAddress = pickupLocation?.address || currentLocation.address;
   const displayLat = pickupLocation?.lat || currentLocation.lat;
   const displayLng = pickupLocation?.lng || currentLocation.lng;
@@ -254,18 +209,13 @@ export function MapScreen() {
       {/* ========== HEADER ========== */}
       <div className="absolute top-0 left-0 right-0 z-[1000] bg-white shadow-md">
         <div className="flex items-center justify-between p-4">
-          {/* Menu */}
           <button
             onClick={handleProfileClick}
             className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-50 transition-colors"
           >
             <Menu className="w-5 h-5 text-gray-700" />
           </button>
-
-          {/* Titre */}
           <h1 className="text-lg font-bold text-gray-900">SmartCabb</h1>
-
-          {/* Profil + dark mode toggle */}
           <div className="flex items-center gap-2">
             <button
               onClick={toggleDark}
@@ -283,7 +233,6 @@ export function MapScreen() {
           </div>
         </div>
 
-        {/* Position actuelle */}
         <div className="px-4 pb-3">
           <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-3">
             <div className="bg-green-500 p-2 rounded-full">
@@ -302,9 +251,7 @@ export function MapScreen() {
                 )}
               </p>
               {!loadingLocation && (
-                <p className="text-xs text-gray-400">
-                  ±{Math.round(33)}m
-                </p>
+                <p className="text-xs text-gray-400">±{Math.round(33)}m</p>
               )}
             </div>
             {!loadingLocation && (
@@ -312,8 +259,6 @@ export function MapScreen() {
                 onClick={() => {
                   const newState = !isSelectingOnMap;
                   setIsSelectingOnMap(newState);
-                  
-                  // Feedback visuel avec toast
                   if (newState) {
                     toast.info('📍 Mode sélection activé', {
                       description: 'Touchez la carte pour choisir votre position de départ'
@@ -354,8 +299,6 @@ export function MapScreen() {
           onMapClick={handleMapClick}
           isSelectingOnMap={isSelectingOnMap}
         />
-
-        {/* Indicateur de sélection */}
         {isSelectingOnMap && (
           <div className="absolute top-48 left-1/2 -translate-x-1/2 bg-primary text-white px-6 py-3 rounded-full shadow-2xl text-sm font-semibold z-[900] flex items-center gap-2">
             <MapPin className="w-4 h-4" />
@@ -366,13 +309,11 @@ export function MapScreen() {
 
       {/* ========== PANNEAU INFÉRIEUR ========== */}
       <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-3xl shadow-2xl" style={{ maxHeight: '52vh' }}>
-        {/* Poignée de drag */}
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-8 h-1 bg-gray-300 rounded-full" />
         </div>
         <div className="overflow-y-auto px-4 pb-5 space-y-2.5" style={{ maxHeight: 'calc(52vh - 24px)' }}>
 
-          {/* ── Barre DÉPART compacte ──────────────────────────────── */}
           <div className="flex items-center gap-2 px-2.5 py-2 bg-gray-50 rounded-xl border border-gray-100">
             <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
               <MapPin className="w-3 h-3 text-white" />
@@ -388,10 +329,8 @@ export function MapScreen() {
             </button>
           </div>
 
-          {/* Titre destination */}
           <h2 className="text-base font-bold text-gray-900 px-0.5">Où allez-vous ?</h2>
 
-          {/* Recherche de destination */}
           <YangoStyleSearch
             placeholder="Rechercher une destination..."
             onSelect={handleSearchSelect}
@@ -400,7 +339,6 @@ export function MapScreen() {
             onChange={setSearchQuery}
           />
 
-          {/* Domicile + Travail — côte à côte compact */}
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => {
@@ -455,13 +393,11 @@ export function MapScreen() {
             </button>
           </div>
 
-          {/* ── ESPACE PROMO SMARTCABB ────────────────────────── */}
           <SmartCabbPromoSection />
-
         </div>
       </div>
 
-      {/* Debug en bas */}
+      {/* Debug en développement */}
       {process.env.NODE_ENV === 'development' && (
         <div className="absolute bottom-2 left-2 bg-black/80 text-white text-xs p-2 rounded z-[2000] pointer-events-none">
           <div>📍 Lat: {displayLat.toFixed(6)}</div>
@@ -470,11 +406,10 @@ export function MapScreen() {
         </div>
       )}
 
-      {/* ========== MODAL TOUS LES LIEUX FAVORIS ========== */}
+      {/* ========== MODAL LIEUX FAVORIS ========== */}
       {showFavoritesModal && (
         <div className="fixed inset-0 bg-black/50 z-[2000] flex items-end justify-center p-0 sm:items-center sm:p-4">
           <div className="bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b">
               <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Star className="w-6 h-6 text-yellow-500 fill-yellow-500" />
@@ -487,18 +422,12 @@ export function MapScreen() {
                 ✕
               </button>
             </div>
-
-            {/* FavoriteLocations Component */}
             <div className="flex-1 overflow-y-auto p-6">
               <FavoriteLocations
                 onSelectLocation={(location) => {
                   console.log('🎯 Favori sélectionné:', location);
                   if (updateDestination) {
-                    updateDestination({
-                      lat: location.lat,
-                      lng: location.lng,
-                      address: location.address
-                    });
+                    updateDestination({ lat: location.lat, lng: location.lng, address: location.address });
                     setShowFavoritesModal(false);
                     setCurrentScreen('estimate');
                     toast.success('⭐ Destination: Lieu favori');
@@ -508,8 +437,6 @@ export function MapScreen() {
                 className=""
               />
             </div>
-
-            {/* Footer - Actions */}
             <div className="p-6 border-t bg-gray-50">
               <button
                 onClick={() => setShowFavoritesModal(false)}
