@@ -48,3 +48,6 @@ export { DriverAvailabilityCheck } from './DriverAvailabilityCheck';
 export { GooglePlacesSearch } from './GooglePlacesSearch';
 export { NominatimPlacesSearch } from './NominatimPlacesSearch';
 export { YangoStyleSearch } from './YangoStyleSearch';
+
+// i18n / Language
+export { PassengerLanguageSelector } from './PassengerLanguageSelector';
