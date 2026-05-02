@@ -136,23 +136,23 @@ export function SettingsScreen() {
     {
       icon: Globe,
       title: t('language'),
-      description: "Choisir la langue de l'application",
+      description: t('language_desc'),
       content: (
         <Select value={language} onValueChange={handleLanguageChange}>
           <SelectTrigger className="w-32">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="fr">{t('french')}</SelectItem>
-            <SelectItem value="en">{t('english')}</SelectItem>
+            <SelectItem value="fr">🇫🇷 {t('french')}</SelectItem>
+            <SelectItem value="en">🇬🇧 {t('english')}</SelectItem>
           </SelectContent>
         </Select>
       )
     },
     {
       icon: Bell,
-      title: 'Notifications',
-      description: 'Gérer les notifications push',
+      title: t('notifications'),
+      description: t('notifications_desc'),
       content: (
         <Switch 
           checked={notificationsEnabled} 
@@ -162,14 +162,14 @@ export function SettingsScreen() {
     },
     {
       icon: Shield,
-      title: 'Confidentialité',
-      description: 'Paramètres de confidentialité',
+      title: t('privacy'),
+      description: t('privacy_desc'),
       action: () => setCurrentScreen('privacy-settings')
     },
     {
       icon: CreditCard,
-      title: 'Moyens de paiement',
-      description: 'Gérer vos cartes et comptes',
+      title: t('payment_settings'),
+      description: t('payment_desc'),
       action: () => setCurrentScreen('payment-settings')
     }
   ];
@@ -177,14 +177,14 @@ export function SettingsScreen() {
   const menuItems = [
     {
       icon: User,
-      title: 'Mon profil',
-      description: 'Informations personnelles',
+      title: t('my_profile'),
+      description: t('my_profile_desc'),
       action: () => setCurrentScreen('profile')
     },
     {
       icon: HelpCircle,
-      title: 'Aide et support',
-      description: 'FAQ et contact support',
+      title: t('help_support'),
+      description: t('help_desc'),
       action: () => setCurrentScreen('support')
     }
   ];
@@ -235,7 +235,7 @@ export function SettingsScreen() {
 
         {/* Settings */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Paramètres</h2>
+          <h2 className="text-lg font-semibold">{t('settings')}</h2>
 
           {/* ── Apparence / Mode sombre ─────────────────────── */}
           <Card>
@@ -329,8 +329,8 @@ export function SettingsScreen() {
 
         {/* App Info */}
         <div className="text-center py-4">
-          <p className="text-sm text-gray-500">SmartCabb v1.0.0</p>
-          <p className="text-xs text-gray-400">© 2026 SmartCabb. Tous droits réservés.</p>
+          <p className="text-sm text-gray-500">{t('app_version')}</p>
+          <p className="text-xs text-gray-400">{t('rights')}</p>
         </div>
       </div>
     </motion.div>
