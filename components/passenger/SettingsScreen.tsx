@@ -4,16 +4,8 @@ import { motion } from '../../lib/motion';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Switch } from '../ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../ui/select';
 import { 
   ArrowLeft, 
-  Globe, 
   Bell, 
   Shield, 
   CreditCard,
@@ -21,12 +13,15 @@ import {
   HelpCircle,
   LogOut,
   Settings,
-  ChevronRight
+  ChevronRight,
+  Globe,
 } from '../../lib/icons';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useAppState } from '../../hooks/useAppState';
+// ✅ AJOUT: Sélecteur de langue passager (remplace le Select shadcn)
+import { PassengerLanguageSelector } from './PassengerLanguageSelector';
 
-// ─── Dark Mode inline hook (pas de dépendance externe) ───────────────────────
+// ─── Dark Mode inline hook ────────────────────────────────────────────────────
 const DARK_KEY = 'smartcabb_dark_mode';
 
 function useDarkModeLocal() {
@@ -39,17 +34,13 @@ function useDarkModeLocal() {
       const next = !prev;
       try {
         localStorage.setItem(DARK_KEY, String(next));
-        if (next) {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
+        if (next) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
       } catch {}
       return next;
     });
   }, []);
 
-  // Sync avec l'état réel du DOM au montage
   useEffect(() => {
     const stored = localStorage.getItem(DARK_KEY) === 'true';
     setIsDark(stored);
@@ -60,7 +51,7 @@ function useDarkModeLocal() {
   return { isDark, toggle };
 }
 
-// ─── Mini-composant toggle ────────────────────────────────────────────────────
+// ─── Toggle sombre inline ─────────────────────────────────────────────────────
 function InlineDarkToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => void }) {
   return (
     <button
@@ -105,7 +96,7 @@ function InlineDarkToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () 
 
 export function SettingsScreen() {
   const { t, language } = useTranslation();
-  const { state, setCurrentScreen, setLanguage, setCurrentUser } = useAppState();
+  const { state, setCurrentScreen, setCurrentUser } = useAppState();
   const { isDark, toggle: toggleDark } = useDarkModeLocal();
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -114,11 +105,6 @@ export function SettingsScreen() {
     const saved = localStorage.getItem('smartcabb_notifications_enabled');
     if (saved !== null) setNotificationsEnabled(saved === 'true');
   }, []);
-
-  const handleLanguageChange = (newLanguage: 'fr' | 'en') => {
-    setLanguage(newLanguage);
-    toast.success(`Langue changée en ${newLanguage === 'fr' ? 'Français' : 'English'}`);
-  };
 
   const handleNotificationsToggle = (enabled: boolean) => {
     setNotificationsEnabled(enabled);
@@ -132,22 +118,18 @@ export function SettingsScreen() {
     toast.success('Déconnexion réussie 👋');
   };
 
+  // ✅ Label langue affiché dans la description
+  const currentLangLabel = language === 'fr' ? '🇫🇷 Français' : '🇬🇧 English';
+
   const settings = [
     {
       icon: Globe,
       title: t('language'),
-      description: t('language_desc'),
+      description: currentLangLabel,
+      // ✅ REMPLACÉ: PassengerLanguageSelector au lieu de <Select>
       content: (
-        <Select value={language} onValueChange={handleLanguageChange}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="fr">🇫🇷 {t('french')}</SelectItem>
-            <SelectItem value="en">🇬🇧 {t('english')}</SelectItem>
-          </SelectContent>
-        </Select>
-      )
+        <PassengerLanguageSelector compact={false} />
+      ),
     },
     {
       icon: Bell,
@@ -158,20 +140,20 @@ export function SettingsScreen() {
           checked={notificationsEnabled} 
           onCheckedChange={handleNotificationsToggle}
         />
-      )
+      ),
     },
     {
       icon: Shield,
       title: t('privacy'),
       description: t('privacy_desc'),
-      action: () => setCurrentScreen('privacy-settings')
+      action: () => setCurrentScreen('privacy-settings'),
     },
     {
       icon: CreditCard,
       title: t('payment_settings'),
       description: t('payment_desc'),
-      action: () => setCurrentScreen('payment-settings')
-    }
+      action: () => setCurrentScreen('payment-settings'),
+    },
   ];
 
   const menuItems = [
@@ -179,14 +161,14 @@ export function SettingsScreen() {
       icon: User,
       title: t('my_profile'),
       description: t('my_profile_desc'),
-      action: () => setCurrentScreen('profile')
+      action: () => setCurrentScreen('profile'),
     },
     {
       icon: HelpCircle,
       title: t('help_support'),
       description: t('help_desc'),
-      action: () => setCurrentScreen('support')
-    }
+      action: () => setCurrentScreen('support'),
+    },
   ];
 
   return (
@@ -209,7 +191,7 @@ export function SettingsScreen() {
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-green-600" />
+              <Settings className="w-5 h-5 text-cyan-600" />
               <h1 className="text-xl font-semibold">{t('settings')}</h1>
             </div>
           </div>
@@ -217,11 +199,12 @@ export function SettingsScreen() {
       </div>
 
       <div className="p-4 space-y-6">
+
         {/* User Info */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-cyan-500 to-cyan-700 rounded-full flex items-center justify-center">
                 <User className="w-8 h-8 text-white" />
               </div>
               <div className="flex-1">
@@ -233,11 +216,11 @@ export function SettingsScreen() {
           </CardContent>
         </Card>
 
-        {/* Settings */}
+        {/* Paramètres */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">{t('settings')}</h2>
 
-          {/* ── Apparence / Mode sombre ─────────────────────── */}
+          {/* Apparence / Dark mode */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -257,28 +240,35 @@ export function SettingsScreen() {
             </CardContent>
           </Card>
 
+          {/* Liste des paramètres (Langue, Notifications, Confidentialité, Paiement) */}
           {settings.map((setting) => {
             const Icon = setting.icon;
             return (
-              <Card 
+              <Card
                 key={setting.title}
                 className={setting.action ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}
                 onClick={setting.action}
               >
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <Icon className="w-5 h-5 text-gray-600" />
                       </div>
-                      <div>
-                        <h3 className="font-medium">{setting.title}</h3>
-                        <p className="text-sm text-gray-600">{setting.description}</p>
+                      <div className="min-w-0">
+                        <h3 className="font-medium text-sm">{setting.title}</h3>
+                        <p className="text-xs text-gray-500 truncate">{setting.description}</p>
                       </div>
                     </div>
-                    {setting.content && setting.content}
-                    {setting.action && (
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                    {/* ✅ content (PassengerLanguageSelector ou Switch) */}
+                    {setting.content && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        {setting.content}
+                      </div>
+                    )}
+                    {/* Flèche pour les actions navigation */}
+                    {setting.action && !setting.content && (
+                      <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
                     )}
                   </div>
                 </CardContent>
@@ -287,13 +277,17 @@ export function SettingsScreen() {
           })}
         </div>
 
-        {/* Menu Items */}
+        {/* Menu */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Menu</h2>
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
-              <Card key={item.title} className="cursor-pointer hover:shadow-md transition-shadow" onClick={item.action}>
+              <Card
+                key={item.title}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={item.action}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -301,8 +295,8 @@ export function SettingsScreen() {
                         <Icon className="w-5 h-5 text-gray-600" />
                       </div>
                       <div>
-                        <h3 className="font-medium">{item.title}</h3>
-                        <p className="text-sm text-gray-600">{item.description}</p>
+                        <h3 className="font-medium text-sm">{item.title}</h3>
+                        <p className="text-xs text-gray-500">{item.description}</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -313,7 +307,7 @@ export function SettingsScreen() {
           })}
         </div>
 
-        {/* Logout */}
+        {/* Déconnexion */}
         <Card className="border-red-200 bg-red-50">
           <CardContent className="p-4">
             <Button
