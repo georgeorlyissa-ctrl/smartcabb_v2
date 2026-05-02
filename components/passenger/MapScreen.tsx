@@ -4,6 +4,7 @@ import { GoogleMapView } from '../GoogleMapView';
 import { YangoStyleSearch } from './YangoStyleSearch';
 import { FavoriteLocations } from './FavoriteLocations';
 import { SmartCabbPromoSection } from './SmartCabbPromoSection';
+import { PassengerLanguageSelector } from './PassengerLanguageSelector';
 import { reverseGeocode } from '../../lib/precise-gps';
 import { toast } from '../../lib/toast';
 
