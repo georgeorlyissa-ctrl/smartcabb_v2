@@ -1,4 +1,6 @@
 // 🔄 DÉTECTEUR DE MISE À JOUR AUTOMATIQUE
+// 🔄 DÉTECTEUR DE MISE À JOUR AUTOMATIQUE
+// 🔄 DÉTECTEUR DE MISE À JOUR AUTOMATIQUE
 
 let updateCheckInterval: ReturnType<typeof setInterval> | null = null;
 // ✅ FIX: Compteur pour limiter les tentatives de report (évite la récursion infinie)
