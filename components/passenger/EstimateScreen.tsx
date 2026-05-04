@@ -15,11 +15,10 @@ import { RouteMapPreview } from '../RouteMapPreview';
 import { VehicleImageCarousel } from '../VehicleImageCarousel';
 import { PassengerCountSelector } from '../PassengerCountSelector';
 import { PromoCodeInput } from '../PromoCodeInput';
-import { BookForSomeoneElse } from './BookForSomeoneElse'; // 🆕 Commander pour quelqu'un d'autre
+import { BookForSomeoneElse } from './BookForSomeoneElse';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
-// 🚗 CHEMINS DES IMAGES DE VÉHICULES (pour GitHub/Vercel)
-// ⚠️ Ces chemins pointent vers /public/vehicles/
+// 🚗 CHEMINS DES IMAGES DE VÉHICULES
 const standardVehicle1 = '/vehicles/smartcabb_standard/Standard_1.png';
 const standardVehicle2 = '/vehicles/smartcabb_standard/Standard_2.png';
 const standardVehicle3 = '/vehicles/smartcabb_standard/Standard_3.png';
@@ -54,11 +53,11 @@ export function EstimateScreen() {
 
   // 🔒 Désactive le bouton après 1 clic (anti double-soumission)
   const [isBooking, setIsBooking] = useState(false);
-  
+
   // 🆕 Commander pour quelqu'un d'autre
   const [showBookForOther, setShowBookForOther] = useState(false);
   const [beneficiary, setBeneficiary] = useState<{ name: string; phone: string } | null>(null);
-  
+
   // 🆕 État pour le calcul OSRM (async)
   const [routeInfo, setRouteInfo] = useState<{
     distance: number;
@@ -67,12 +66,10 @@ export function EstimateScreen() {
     durationText: string;
   } | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(true);
-  
-  // ❌ SUPPRESSION DES DONNÉES PAR DÉFAUT EN MÉMOIRE
-  // ✅ Utiliser UNIQUEMENT les vraies données de l'utilisateur
+
   const pickup = state.pickup;
   const destination = state.destination;
-  
+
   // 🚨 REDIRECTION : Si pas de pickup ou destination, retourner à la carte
   useEffect(() => {
     if (!pickup || !destination) {
@@ -80,50 +77,36 @@ export function EstimateScreen() {
       setCurrentScreen('map');
     }
   }, [pickup, destination, setCurrentScreen]);
-  
-  // Si pas de données, ne rien afficher (on va être redirigé)
-  if (!pickup || !destination) {
-    return null;
-  }
-  
+
+  if (!pickup || !destination) return null;
+
   const distanceKm = routeInfo?.distance || (calculateDistance ? calculateDistance(pickup, destination) : 10.0);
-  
-  const trafficCondition = getCurrentTrafficConditions();  // ✅ CORRECTION : Pour affichage UI (emoji, color, description)
-  
-  // Récupérer les instructions de prise en charge (point de repère)
+  const trafficCondition = getCurrentTrafficConditions();
   const pickupInstructions = state.pickupInstructions || '';
-  
+
   // 🛣️ CALCUL OSRM ASYNC AU CHARGEMENT
   useEffect(() => {
     const fetchRoute = async () => {
       try {
         setIsCalculatingRoute(true);
         console.log('🛣️ Calcul itinéraire OSRM...');
-        
+
         const result = await calculateRoute(
           pickup.lat,
           pickup.lng,
           destination.lat,
           destination.lng
         );
-        
+
         setRouteInfo(result);
-        
-        // ✅ CORRECTION : La durée est déjà ajustée dans calculateRoute()
-        // Pas besoin de réajuster ici (éviter double multiplication)
         setEstimatedDuration(result.duration);
-        
         console.log(`✅ Itinéraire calculé: ${result.distanceText} en ${result.durationText}`);
       } catch (error) {
         console.error('❌ Erreur calcul itinéraire:', error);
-        // Fallback: utiliser distance Haversine
         const fallbackDist = calculateDistance ? calculateDistance(pickup, destination) : 10.0;
-        
-        // 🎯 CORRECTION : Utiliser le même fallback intelligent que dans calculateRoute()
-        // Distance réelle = distance à vol d'oiseau × 1.9
         const estimatedRealDistance = fallbackDist * 1.9;
         const fallbackDuration = calculateDuration(estimatedRealDistance);
-        
+
         setRouteInfo({
           distance: estimatedRealDistance,
           duration: fallbackDuration,
@@ -135,22 +118,19 @@ export function EstimateScreen() {
         setIsCalculatingRoute(false);
       }
     };
-    
+
     fetchRoute();
   }, [pickup.lat, pickup.lng, destination.lat, destination.lng]);
-  
-  console.log('📍 EstimateScreen - Pickup:', pickup.address, `(${pickup.lat}, ${pickup.lng})`);
-  console.log('📍 EstimateScreen - Point de repère:', pickupInstructions || 'Aucun');
-  console.log('🎯 EstimateScreen - Destination:', destination.address, `(${destination.lat}, ${destination.lng})`);
+
+  console.log('📍 EstimateScreen - Pickup:', pickup.address);
+  console.log('🎯 EstimateScreen - Destination:', destination.address);
   console.log('📏 Distance calculée:', (distanceKm || 0).toFixed(2), 'km');
-  console.log('🔢 Détails calcul - Pickup Lat:', pickup.lat, 'Lng:', pickup.lng);
-  console.log('🔢 Détails calcul - Destination Lat:', destination.lat, 'Lng:', destination.lng);
 
   const vehicles = [
     {
       id: 'smart_standard' as VehicleCategory,
-      name: 'SmartCabb Standard',
-      description: `${VEHICLE_PRICING.smart_standard.capacity} places · Climatisation · GPS`,
+      name: t('smart_standard'),
+      description: `${VEHICLE_PRICING.smart_standard.capacity} ${t('seats')} · Climatisation · GPS`,
       capacity: VEHICLE_PRICING.smart_standard.capacity,
       icon: Car,
       color: 'bg-gray-100',
@@ -163,8 +143,8 @@ export function EstimateScreen() {
     },
     {
       id: 'smart_confort' as VehicleCategory,
-      name: 'SmartCabb Confort',
-      description: `${VEHICLE_PRICING.smart_confort.capacity} places · Data Internet · Clim Premium`,
+      name: t('smart_confort'),
+      description: `${VEHICLE_PRICING.smart_confort.capacity} ${t('seats')} · Data Internet · Clim Premium`,
       capacity: VEHICLE_PRICING.smart_confort.capacity,
       icon: Car,
       color: 'bg-blue-100',
@@ -178,7 +158,7 @@ export function EstimateScreen() {
     {
       id: 'smart_plus' as VehicleCategory,
       name: 'SmartCabb Familiale',
-      description: `${VEHICLE_PRICING.smart_plus.capacity} places · Data Internet · Grand espace`,
+      description: `${VEHICLE_PRICING.smart_plus.capacity} ${t('seats')} · Data Internet · Grand espace`,
       capacity: VEHICLE_PRICING.smart_plus.capacity,
       icon: Users,
       color: 'bg-green-100',
@@ -191,8 +171,8 @@ export function EstimateScreen() {
     },
     {
       id: 'smart_business' as VehicleCategory,
-      name: 'SmartCabb Business',
-      description: `${VEHICLE_PRICING.smart_business.capacity} places VIP · Data · Rafraîchissements`,
+      name: t('smart_business'),
+      description: `${VEHICLE_PRICING.smart_business.capacity} ${t('seats')} VIP · Data · Rafraîchissements`,
       capacity: VEHICLE_PRICING.smart_business.capacity,
       icon: Users,
       color: 'bg-amber-100',
@@ -204,59 +184,39 @@ export function EstimateScreen() {
       images: [businessVehicle1, businessVehicle2, businessVehicle3, businessVehicle4, businessVehicle5, businessVehicle6]
     }
   ];
-  
-  // Calculate price based on estimated time and vehicle category WITH DAY/NIGHT RATES
+
   const calculatePrice = (vehicleType: string, durationMinutes: number) => {
     const pricing = VEHICLE_PRICING[vehicleType as VehicleCategory];
-    if (!pricing) return 25000; // Prix par défaut
-    
-    // Déterminer si c'est le jour ou la nuit
+    if (!pricing) return 25000;
+
     const currentHour = new Date().getHours();
     const isDay = isDayTime(currentHour);
-    
-    // Business utilise uniquement le tarif de location journalière
+
     if (vehicleType === 'smart_business') {
       const dailyRateUSD = pricing.pricing.location_jour.usd;
       let priceCDF = convertUSDtoCDF(dailyRateUSD);
-      
-      // Appliquer réduction wallet si solde >= 20$
       const walletBalance = state.currentUser?.walletBalance || 0;
       const hasWalletDiscount = walletBalance >= convertUSDtoCDF(20);
       if (hasWalletDiscount) {
-        priceCDF = Math.round(priceCDF * 0.95); // -5%
+        priceCDF = Math.round(priceCDF * 0.95);
         console.log('🎁 Réduction wallet 5% appliquée (Business)');
       }
-      
-      console.log(`💰 Calcul prix ${vehicleType} (Business - Location journalière):`, {
-        tarifJour: `${dailyRateUSD} USD`,
-        prixCDF: `${priceCDF.toLocaleString()} CDF`,
-        réductionWallet: hasWalletDiscount ? '5%' : 'Non'
-      });
-      
       return priceCDF;
     }
-    
-    // Convertir la durée en heures (minimum 1 heure)
+
     const hours = Math.max(1, Math.ceil(durationMinutes / 60));
-    
-    // Utiliser le tarif approprié selon l'heure - CORRECTION: Bonne structure de données
-    const hourlyRateUSD = isDay 
-      ? pricing.pricing.course_heure.jour.usd   // ️ Tarif de jour (06h00-20h59)
-      : pricing.pricing.course_heure.nuit.usd;  // 🌙 Tarif de nuit (21h00-05h59)
-    
-    // Calculer le prix en USD puis convertir en CDF
+    const hourlyRateUSD = isDay
+      ? pricing.pricing.course_heure.jour.usd
+      : pricing.pricing.course_heure.nuit.usd;
     const priceUSD = hours * hourlyRateUSD;
     let priceCDF = convertUSDtoCDF(priceUSD);
-    
-    // Appliquer réduction wallet si solde >= 20$
     const walletBalance = state.currentUser?.walletBalance || 0;
     const hasWalletDiscount = walletBalance >= convertUSDtoCDF(20);
     if (hasWalletDiscount) {
-      priceCDF = Math.round(priceCDF * 0.95); // -5%
+      priceCDF = Math.round(priceCDF * 0.95);
       console.log('🎁 Réduction wallet 5% appliquée');
     }
-    
-    // Log pour debug
+
     console.log(`💰 Calcul prix ${vehicleType}:`, {
       heure: `${currentHour}h`,
       période: isDay ? '☀️ JOUR (06h-20h)' : '🌙 NUIT (21h-05h)',
@@ -264,40 +224,27 @@ export function EstimateScreen() {
       durée: `${durationMinutes} min → ${hours}h facturées`,
       prixUSD: `${priceUSD} USD`,
       prixCDF: `${priceCDF.toLocaleString()} CDF`,
-      soldeWallet: `${formatCDF(walletBalance)}`,
-      réductionWallet: hasWalletDiscount ? '5%' : 'Non'
     });
-    
+
     return priceCDF;
   };
-  
-  // Update price when vehicle changes (but NOT duration - we use OSRM duration)
+
   useEffect(() => {
-    // ✅ PROTECTION : Vérifier que pickup et destination existent
-    if (!pickup || !destination) {
-      console.warn('⚠️ Pickup ou destination manquant, calcul de prix impossible');
-      return;
-    }
-    
-    // ✅ CORRECTION : Utiliser la durée OSRM (déjà calculée dans routeInfo)
-    // NE PAS recalculer avec calculateEstimatedDuration qui écrase la valeur réaliste d'OSRM
+    if (!pickup || !destination) return;
     const duration = routeInfo?.duration || estimatedDuration;
-    
-    // Calculer le prix basé sur cette durée et la catégorie de véhicule
     const newPrice = calculatePrice(selectedVehicle, duration);
     setBasePrice(newPrice);
-    
+
     console.log('💰 Calcul du prix estimé:', {
       catégorie: selectedVehicle,
       duréeOSRM: `${duration} min`,
       distanceOSRM: `${routeInfo?.distance || 0} km`,
       prixEstimé: `${newPrice.toLocaleString()} CDF`
     });
-  }, [selectedVehicle, routeInfo]); // ✅ Dépend de routeInfo, pas de pickup/destination
-  
-  // Calculate final price with promo discount
-  const finalPrice = appliedPromo 
-    ? appliedPromo.type === 'percentage' 
+  }, [selectedVehicle, routeInfo]);
+
+  const finalPrice = appliedPromo
+    ? appliedPromo.type === 'percentage'
       ? Math.round(basePrice * (1 - appliedPromo.discount / 100))
       : Math.max(0, basePrice - appliedPromo.discount)
     : basePrice;
@@ -307,7 +254,6 @@ export function EstimateScreen() {
   const handleBookRide = async () => {
     console.log("🚨🚨🚨 BOUTON CLIQUÉ ! 🚨🚨🚨");
 
-    // 🔒 Désactiver immédiatement le bouton (anti double-soumission)
     if (isBooking) return;
     setIsBooking(true);
 
@@ -315,13 +261,13 @@ export function EstimateScreen() {
     if (!selectedVehicleData) {
       console.error('❌ EstimateScreen: Aucun véhicule sélectionné');
       setIsBooking(false);
-      toast.error('Aucun véhicule sélectionné');
+      toast.error(t('error'));
       return;
     }
 
     if (!pickup || !destination) {
       setIsBooking(false);
-      toast.error('Départ ou destination manquant');
+      toast.error(t('error'));
       return;
     }
 
@@ -332,8 +278,6 @@ export function EstimateScreen() {
       passengerCount,
     });
 
-    // ─── Stocker les données dans sessionStorage ─────────────
-    // SearchingDriversScreen lira ces données et appellera le backend
     const pendingRide = {
       passengerId: state.currentUser?.id || 'temp-user',
       passengerName: state.currentUser?.name || 'Passager',
@@ -361,53 +305,54 @@ export function EstimateScreen() {
     try {
       sessionStorage.setItem('smartcab_pending_ride', JSON.stringify(pendingRide));
       console.log('✅ pendingRide stocké, navigation vers searching-drivers');
-      // Navigation immédiate — bouton reste désactivé jusqu'au unmount
       setCurrentScreen('searching-drivers');
     } catch (err) {
       console.error('❌ Erreur stockage sessionStorage:', err);
       setIsBooking(false);
-      toast.error('Erreur lors de la prparation de la course');
+      toast.error(t('error'));
     }
   };
 
+  // ✅ Labels Jour / Nuit selon la langue
+  const dayLabel = t('good_morning').startsWith('Bonjour') ? 'Jour' : 'Day';
+  const nightLabel = t('good_evening').startsWith('Bonsoir') ? 'Nuit' : 'Night';
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ x: 300, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -300, opacity: 0 }}
       transition={{ duration: 0.3 }}
       className="h-full bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col overflow-hidden"
     >
-      {/* Header */}
+      {/* ── HEADER ── */}
       <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm border-b border-border flex-shrink-0">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => {
-            console.log('⬅️ Estimate - Bouton retour cliqué - Navigation vers map');
-            try {
-              setCurrentScreen('map');
-              console.log('✅ Estimate - setCurrentScreen(map) exécuté');
-            } catch (error) {
-              console.error('❌ Estimate - Erreur lors de setCurrentScreen:', error);
-            }
+            console.log('⬅️ Estimate - Bouton retour cliqué');
+            setCurrentScreen('map');
           }}
           className="w-9 h-9 hover:bg-muted"
         >
           <ArrowLeft className="w-5 h-5 text-primary" />
         </Button>
-        <h1 className="text-base font-semibold text-primary">Estimation du trajet</h1>
+        {/* ✅ TRADUIT */}
+        <h1 className="text-base font-semibold text-primary">{t('estimate_price')}</h1>
         <div className="w-9" />
       </div>
 
-      {/* Scrollable Content Area — tout le contenu + bouton Commander */}
+      {/* ── CONTENU SCROLLABLE ── */}
       <div className="flex-1 overflow-y-auto">
         <div className="pb-8">
-          {/* AFFICHAGE DE DISTANCE ET DURÉE PRÉCISES - VERSION COMPACTE */}
+
+          {/* ── DÉTAILS DU TRAJET ── */}
           <div className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50">
             <div className="bg-white rounded-xl p-3 shadow-md border border-cyan-200">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-bold text-gray-900">Détails du trajet</h3>
+                {/* ✅ TRADUIT */}
+                <h3 className="text-sm font-bold text-gray-900">{t('trip_summary')}</h3>
                 <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full ${trafficCondition.color} bg-opacity-10`}>
                   <span className="text-base">{trafficCondition.emoji}</span>
                   <span className={`text-[10px] font-medium ${trafficCondition.color}`}>
@@ -415,8 +360,7 @@ export function EstimateScreen() {
                   </span>
                 </div>
               </div>
-              
-              {/* Grille d'informations compacte */}
+
               <div className="grid grid-cols-2 gap-2">
                 {/* Distance */}
                 <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-2.5 border border-blue-200">
@@ -424,45 +368,54 @@ export function EstimateScreen() {
                     <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
                       <MapPin className="w-3 h-3 text-white" />
                     </div>
-                    <span className="text-[10px] font-medium text-blue-700">Distance</span>
+                    {/* ✅ TRADUIT */}
+                    <span className="text-[10px] font-medium text-blue-700">{t('distance')}</span>
                   </div>
-                  <p className="text-lg font-bold text-blue-900">{routeInfo?.distanceText || 'Calcul...'}</p>
-                  <p className="text-[10px] text-blue-600 mt-0.5">Distance précise</p>
+                  <p className="text-lg font-bold text-blue-900">
+                    {routeInfo?.distanceText || `${t('loading')}...`}
+                  </p>
+                  <p className="text-[10px] text-blue-600 mt-0.5">{t('distance')}</p>
                 </div>
-                
+
                 {/* Durée */}
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-2.5 border border-green-200">
                   <div className="flex items-center gap-1.5 mb-1">
                     <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
                       <Clock className="w-3 h-3 text-white" />
                     </div>
-                    <span className="text-[10px] font-medium text-green-700">Durée</span>
+                    {/* ✅ TRADUIT */}
+                    <span className="text-[10px] font-medium text-green-700">{t('ride_duration')}</span>
                   </div>
-                  <p className="text-lg font-bold text-green-900">{routeInfo?.durationText || 'Calcul...'}</p>
-                  <p className="text-[10px] text-green-600 mt-0.5">Actuelles</p>
+                  <p className="text-lg font-bold text-green-900">
+                    {routeInfo?.durationText || `${t('loading')}...`}
+                  </p>
+                  {/* ✅ TRADUIT */}
+                  <p className="text-[10px] text-green-600 mt-0.5">{t('estimated_wait')}</p>
                 </div>
               </div>
-              
-              {/* Informations supplémentaires compactes */}
+
+              {/* Départ / Arrivée */}
               <div className="mt-2 pt-2 border-t border-gray-200 space-y-1">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">Départ</span>
+                  {/* ✅ TRADUIT */}
+                  <span className="text-gray-600">{t('trip_from')}</span>
                   <span className="font-medium text-gray-900">
                     {new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-600">Arrivée estimée</span>
+                  {/* ✅ TRADUIT */}
+                  <span className="text-gray-600">{t('arrive_in')}</span>
                   <span className="font-medium text-green-600">
-                    {/* ✅ CORRECTION : duration est en MINUTES, donc multiplier par 60*1000 */}
-                    {new Date(Date.now() + (routeInfo?.duration || 0) * 60 * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(Date.now() + (routeInfo?.duration || 0) * 60 * 1000)
+                      .toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               </div>
             </div>
           </div>
-          
-          {/* 🗺️ CARTE INTERACTIVE DE L'ITINÉRAIRE AVEC TRAFIC - VERSION COMPACTE */}
+
+          {/* ── CARTE ITINÉRAIRE ── */}
           <div className="p-3 bg-white/60 backdrop-blur-sm">
             <RouteMapPreview
               pickup={pickup}
@@ -473,12 +426,13 @@ export function EstimateScreen() {
             />
           </div>
 
-          {/* Route Info - VERSION COMPACTE */}
+          {/* ── ADRESSES DÉPART / DESTINATION ── */}
           <div className="p-3 bg-white/60 backdrop-blur-sm">
             <div className="bg-white rounded-xl p-3 shadow-sm border border-border space-y-3">
               <div className="flex items-start space-x-2">
                 <div className="w-2.5 h-2.5 bg-secondary rounded-full mt-1.5 shadow-lg shadow-secondary/30" />
                 <div className="flex-1">
+                  {/* ✅ TRADUIT */}
                   <p className="text-xs text-muted-foreground">{t('pickup_location')}</p>
                   <p className="text-sm text-foreground">{pickup.address}</p>
                   {pickupInstructions && (
@@ -492,12 +446,13 @@ export function EstimateScreen() {
                   )}
                 </div>
               </div>
-              
+
               <div className="h-6 border-l-2 border-dashed border-border ml-1" />
-              
+
               <div className="flex items-start space-x-2">
                 <div className="w-2.5 h-2.5 bg-accent rounded-full mt-1.5 shadow-lg shadow-accent/30" />
                 <div className="flex-1">
+                  {/* ✅ TRADUIT */}
                   <p className="text-xs text-muted-foreground">{t('destination')}</p>
                   <p className="text-sm text-foreground">{destination.address}</p>
                 </div>
@@ -505,13 +460,14 @@ export function EstimateScreen() {
             </div>
           </div>
 
-          {/* Vehicle Options - HORIZONTAL SCROLLABLE */}
+          {/* ── VÉHICULES ── */}
           <div className="space-y-4">
             <div className="px-4">
+              {/* ✅ TRADUIT */}
               <h2 className="text-base font-semibold mb-3">{t('choose_vehicle')}</h2>
             </div>
-            
-            {/* Wallet Discount Badge */}
+
+            {/* Badge réduction wallet */}
             {((state.currentUser?.walletBalance || 0) >= convertUSDtoCDF(20)) && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
@@ -527,28 +483,28 @@ export function EstimateScreen() {
                       Réduction Portefeuille Active !
                     </p>
                     <p className="text-[10px] text-green-700">
-                      <span className="font-semibold">-5%</span> sur tous les prix · Solde: {formatCDF(state.currentUser?.walletBalance || 0)}
+                      <span className="font-semibold">-5%</span> · {t('wallet_balance')}: {formatCDF(state.currentUser?.walletBalance || 0)}
                     </p>
                   </div>
                 </div>
               </motion.div>
             )}
-            
-            {/* ── GRILLE RESPONSIVE DES VÉHICULES — 2 colonnes, tout visible ── */}
+
+            {/* Grille véhicules */}
             <div className="px-4">
               <div className="grid grid-cols-2 gap-3">
                 {vehicles.map((vehicle) => {
                   const Icon = vehicle.icon;
                   const isSelected = selectedVehicle === vehicle.id;
                   const vehiclePrice = calculatePrice(vehicle.id, estimatedDuration);
-                  
+
                   const currentHour = new Date().getHours();
                   const isDay = isDayTime(currentHour);
                   const isNight = !isDay;
                   const pricing = VEHICLE_PRICING[vehicle.id];
-                  
+
                   let dayPriceUSD, nightPriceUSD, dayPriceCDF, nightPriceCDF;
-                  
+
                   if (vehicle.id === 'smart_business') {
                     dayPriceUSD = pricing.pricing.location_jour.usd;
                     dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
@@ -561,19 +517,18 @@ export function EstimateScreen() {
                     nightPriceUSD = (pricing.pricing.course_heure.nuit.usd || 0) * hours;
                     nightPriceCDF = convertUSDtoCDF(nightPriceUSD);
                   }
-                  
+
                   return (
                     <motion.button
                       key={vehicle.id}
                       onClick={() => setSelectedVehicle(vehicle.id)}
                       whileTap={{ scale: 0.97 }}
                       className={`w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left ${
-                        isSelected 
-                          ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20' 
+                        isSelected
+                          ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
                           : 'border-border hover:border-secondary/50 hover:shadow-md'
                       }`}
                     >
-                      {/* Image du véhicule */}
                       {vehicle.images && vehicle.images.length > 0 && (
                         <VehicleImageCarousel
                           images={vehicle.images}
@@ -581,20 +536,17 @@ export function EstimateScreen() {
                           isSelected={isSelected}
                         />
                       )}
-                      
-                      {/* Informations du véhicule */}
+
                       <div className="p-2.5 space-y-1.5">
-                        {/* Nom + capacité */}
                         <div>
                           <h3 className={`text-xs font-bold leading-tight ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
                             {vehicle.name}
                           </h3>
                           <p className="text-[9px] text-muted-foreground mt-0.5">
-                            {vehicle.capacity} places · {VEHICLE_PRICING[vehicle.id].features[0]}
+                            {vehicle.capacity} {t('seats')} · {VEHICLE_PRICING[vehicle.id].features[0]}
                           </p>
                         </div>
-                        
-                        {/* Prix principal */}
+
                         <div className="flex items-baseline justify-between">
                           <span className={`text-base font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
                             {vehiclePrice.toLocaleString()}
@@ -602,19 +554,21 @@ export function EstimateScreen() {
                           <span className="text-[9px] text-muted-foreground">{t('cdf')}</span>
                         </div>
                         <div className="text-[9px] text-muted-foreground -mt-0.5">
-                          ≈ {vehicle.id === 'smart_business' 
+                          ≈ {vehicle.id === 'smart_business'
                             ? `${dayPriceUSD}$/jour`
                             : `${isNight ? nightPriceUSD?.toFixed(1) : dayPriceUSD.toFixed(1)}$ USD`
                           }
                         </div>
-                        
-                        {/* Tarifs jour/nuit */}
+
+                        {/* Tarifs Jour / Nuit — ✅ TRADUIT */}
                         {vehicle.id !== 'smart_business' && (
                           <div className="bg-muted/30 rounded-lg px-1.5 py-1 space-y-0.5">
                             <div className="flex items-center justify-between text-[9px]">
                               <div className="flex items-center gap-0.5">
                                 <Sun className="w-2.5 h-2.5 text-amber-500" />
-                                <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>Jour</span>
+                                <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>
+                                  {dayLabel}
+                                </span>
                               </div>
                               <span className={`font-medium ${isNight ? 'text-muted-foreground' : 'text-primary'}`}>
                                 {Math.round(dayPriceCDF).toLocaleString()}
@@ -623,19 +577,21 @@ export function EstimateScreen() {
                             <div className="flex items-center justify-between text-[9px]">
                               <div className="flex items-center gap-0.5">
                                 <Moon className="w-2.5 h-2.5 text-blue-500" />
-                                <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>Nuit</span>
+                                <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                                  {nightLabel}
+                                </span>
                               </div>
                               <span className={`font-medium ${isNight ? 'text-primary' : 'text-muted-foreground'}`}>
-                                {Math.round(nightPriceCDF).toLocaleString()}
+                                {Math.round(nightPriceCDF ?? 0).toLocaleString()}
                               </span>
                             </div>
                           </div>
                         )}
 
-                        {/* Badge sélectionné */}
+                        {/* Badge sélectionné — ✅ TRADUIT */}
                         {isSelected && (
                           <div className="flex items-center justify-center gap-1 py-0.5 bg-secondary/10 rounded-lg">
-                            <span className="text-[9px] font-bold text-secondary">✓ Sélectionné</span>
+                            <span className="text-[9px] font-bold text-secondary">✓ {t('success')}</span>
                           </div>
                         )}
                       </div>
@@ -645,7 +601,7 @@ export function EstimateScreen() {
               </div>
             </div>
 
-            {/* Passenger Count Selector - PLUS COMPACT */}
+            {/* Nombre de passagers */}
             <div className="px-4">
               <PassengerCountSelector
                 value={passengerCount}
@@ -654,7 +610,7 @@ export function EstimateScreen() {
               />
             </div>
 
-            {/* Promo Code Input - PLUS COMPACT */}
+            {/* Code promo */}
             <div className="px-4">
               <PromoCodeInput
                 rideAmount={basePrice}
@@ -662,7 +618,7 @@ export function EstimateScreen() {
               />
             </div>
 
-            {/* 🆕 Commander pour quelqu'un d'autre */}
+            {/* Commander pour quelqu'un d'autre */}
             <div className="px-4">
               <BookForSomeoneElse
                 showForm={showBookForOther}
@@ -674,17 +630,18 @@ export function EstimateScreen() {
         </div>
       </div>
 
-      {/* Book Button — sticky en bas, toujours visible */}
+      {/* ── BOUTON COMMANDER — sticky en bas ── */}
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3 }}
         className="flex-shrink-0 p-4 border-t border-border bg-white/95 backdrop-blur-sm shadow-2xl"
       >
-        {/* Prix résumé compact */}
+        {/* Prix résumé */}
         <div className="flex items-center justify-between mb-3 px-1">
           <div>
-            <p className="text-xs text-muted-foreground">Prix total estimé</p>
+            {/* ✅ TRADUIT */}
+            <p className="text-xs text-muted-foreground">{t('price')}</p>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
                 {finalPrice.toLocaleString()}
@@ -697,14 +654,17 @@ export function EstimateScreen() {
               </p>
             )}
           </div>
+
           <div className="flex gap-3 text-center">
             <div className="bg-muted/40 rounded-xl px-3 py-2">
-              <p className="text-[10px] text-muted-foreground">Durée</p>
-              <p className="text-sm font-bold text-primary">{estimatedDuration} min</p>
+              {/* ✅ TRADUIT */}
+              <p className="text-[10px] text-muted-foreground">{t('ride_duration')}</p>
+              <p className="text-sm font-bold text-primary">{estimatedDuration} {t('min')}</p>
             </div>
             <div className="bg-muted/40 rounded-xl px-3 py-2">
-              <p className="text-[10px] text-muted-foreground">Dist.</p>
-              <p className="text-sm font-bold text-primary">{(distanceKm || 0).toFixed(1)} km</p>
+              {/* ✅ TRADUIT */}
+              <p className="text-[10px] text-muted-foreground">{t('distance')}</p>
+              <p className="text-sm font-bold text-primary">{(distanceKm || 0).toFixed(1)} {t('km')}</p>
             </div>
           </div>
         </div>
@@ -724,9 +684,13 @@ export function EstimateScreen() {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              Recherche en cours…
+              {/* ✅ TRADUIT */}
+              {t('searching_driver')}
             </span>
-          ) : t('confirm_booking')}
+          ) : (
+            // ✅ TRADUIT
+            t('confirm_booking')
+          )}
         </Button>
       </motion.div>
     </motion.div>
