@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from '../../lib/motion';
 import { useAppState } from '../../hooks/useAppState';
+import { useTranslation } from '../../hooks/useTranslation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { formatCDF } from '../../lib/pricing';
@@ -14,6 +15,7 @@ const CarIcon = ({ className = 'w-6 h-6' }: { className?: string }) => (
       d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
   </svg>
 );
+
 const MapPinIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -21,16 +23,19 @@ const MapPinIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
+
 const XIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
   </svg>
 );
+
 const StarIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 24 24">
     <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
   </svg>
 );
+
 const UserIcon = ({ className = 'w-8 h-8' }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -38,6 +43,7 @@ const UserIcon = ({ className = 'w-8 h-8' }: { className?: string }) => (
   </svg>
 );
 
+// ─── Types ───────────────────────────────────────────────────
 interface OnlineDriver {
   id: string;
   full_name?: string;
@@ -75,11 +81,10 @@ const VEHICLE_LABELS: Record<string, string> = {
 
 export function SearchingDriversScreen() {
   const { setCurrentScreen, createRide, state } = useAppState();
+  const { t } = useTranslation();
 
-  // ─── Pending ride data (from sessionStorage) ────────────────
+  // ─── États ───────────────────────────────────────────────────
   const [pendingRide, setPendingRide] = useState<PendingRideData | null>(null);
-
-  // ─── UI states ───────────────────────────────────────────────
   const [phase, setPhase] = useState<'init' | 'searching' | 'notifying' | 'error'>('init');
   const [onlineDrivers, setOnlineDrivers] = useState<OnlineDriver[]>([]);
   const [driversCount, setDriversCount] = useState(0);
@@ -87,10 +92,10 @@ export function SearchingDriversScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const [dots, setDots] = useState('');
 
-  // Prevent double-call
+  // Empêcher le double appel API
   const apiCalled = useRef(false);
 
-  // ─── Animated dots ───────────────────────────────────────────
+  // ─── Points animés ───────────────────────────────────────────
   useEffect(() => {
     const timer = setInterval(() => {
       setDots(d => (d.length >= 3 ? '' : d + '.'));
@@ -98,11 +103,11 @@ export function SearchingDriversScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  // ─── Load pending ride from sessionStorage ───────────────────
+  // ─── Charger pendingRide depuis sessionStorage ────────────────
   useEffect(() => {
     const raw = sessionStorage.getItem('smartcab_pending_ride');
     if (!raw) {
-      toast.error('Données de course manquantes');
+      toast.error(t('error'));
       setCurrentScreen('estimate');
       return;
     }
@@ -111,12 +116,12 @@ export function SearchingDriversScreen() {
       setPendingRide(data);
       setPhase('searching');
     } catch {
-      toast.error('Erreur de lecture des données');
+      toast.error(t('error'));
       setCurrentScreen('estimate');
     }
   }, []);
 
-  // ─── Fetch available online drivers ──────────────────────────
+  // ─── Récupérer les chauffeurs disponibles ────────────────────
   useEffect(() => {
     if (!pendingRide) return;
 
@@ -137,7 +142,6 @@ export function SearchingDriversScreen() {
           const data = await res.json();
           if (data.success) {
             setDriversCount(data.driversCount || 0);
-            // Utilise les données des drivers si disponibles
             if (data.drivers && Array.isArray(data.drivers)) {
               setOnlineDrivers(data.drivers.slice(0, 4));
             }
@@ -151,7 +155,7 @@ export function SearchingDriversScreen() {
     fetchDrivers();
   }, [pendingRide]);
 
-  // ─── After 2.5s of "searching" → call create-ride API ────────
+  // ─── Après 2.5s → appeler l'API create-ride ─────────────────
   useEffect(() => {
     if (phase !== 'searching' || !pendingRide || apiCalled.current) return;
 
@@ -220,26 +224,26 @@ export function SearchingDriversScreen() {
         // Nettoyer sessionStorage
         sessionStorage.removeItem('smartcab_pending_ride');
 
-        // Courte pause pour que l'utilisateur voit "Chauffeurs notifiés"
+        // Courte pause → navigation
         setTimeout(() => {
           setCurrentScreen('ride');
         }, 1200);
+
       } catch (err: any) {
         console.error('❌ Erreur création course:', err);
         apiCalled.current = false;
         setPhase('error');
-        setErrorMsg(err.message || 'Impossible de créer la course');
+        setErrorMsg(err.message || t('error'));
       }
     }, 2500);
 
     return () => clearTimeout(timer);
   }, [phase, pendingRide]);
 
-  // ─── Cancel ──────────────────────────────────────────────────
+  // ─── Annulation ──────────────────────────────────────────────
   const handleCancel = async () => {
     setIsCancelling(true);
 
-    // Si une course a déjà été créée (phase 'notifying'), l'annuler côté serveur
     if (phase === 'notifying' && state.currentRide?.id) {
       try {
         await fetch(
@@ -263,11 +267,10 @@ export function SearchingDriversScreen() {
     }
 
     sessionStorage.removeItem('smartcab_pending_ride');
-    // Retour à estimate : le bouton se réactive automatiquement (remount d'EstimateScreen)
     setCurrentScreen('estimate');
   };
 
-  // ─── Retry ───────────────────────────────────────────────────
+  // ─── Réessayer ───────────────────────────────────────────────
   const handleRetry = () => {
     apiCalled.current = false;
     setPhase('searching');
@@ -279,7 +282,7 @@ export function SearchingDriversScreen() {
   return (
     <div className="h-full bg-gradient-to-br from-blue-950 via-blue-900 to-cyan-900 flex flex-col overflow-hidden relative">
 
-      {/* ─── Arrière-plan animé ───────────────────────────────── */}
+      {/* ── Arrière-plan animé ── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(6)].map((_, i) => (
           <motion.div
@@ -299,7 +302,7 @@ export function SearchingDriversScreen() {
         ))}
       </div>
 
-      {/* ─── Header ──────────────────────────────────────────── */}
+      {/* ── Header ── */}
       <div className="relative z-10 flex items-center justify-between p-4 pt-8">
         <div className="w-10" />
         <div className="text-center">
@@ -315,7 +318,7 @@ export function SearchingDriversScreen() {
         </button>
       </div>
 
-      {/* ─── Corps principal ─────────────────────────────────── */}
+      {/* ── Corps principal ── */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 gap-6">
 
         {/* Icône voiture animée */}
@@ -348,7 +351,7 @@ export function SearchingDriversScreen() {
           )}
         </motion.div>
 
-        {/* Texte principal */}
+        {/* ── Texte principal — ✅ TOUT TRADUIT ── */}
         <AnimatePresence mode="wait">
           {phase === 'error' ? (
             <motion.div
@@ -358,9 +361,11 @@ export function SearchingDriversScreen() {
               exit={{ opacity: 0 }}
               className="text-center space-y-2"
             >
-              <h2 className="text-xl font-bold text-white">Erreur de connexion</h2>
+              {/* ✅ TRADUIT */}
+              <h2 className="text-xl font-bold text-white">{t('error')}</h2>
               <p className="text-white/60 text-sm max-w-xs">{errorMsg}</p>
             </motion.div>
+
           ) : phase === 'notifying' ? (
             <motion.div
               key="notifying"
@@ -369,9 +374,12 @@ export function SearchingDriversScreen() {
               exit={{ opacity: 0 }}
               className="text-center space-y-2"
             >
-              <h2 className="text-xl font-bold text-white">Chauffeurs notifiés ✓</h2>
-              <p className="text-white/60 text-sm">En attente d'acceptation…</p>
+              {/* ✅ TRADUIT : "Chauffeurs notifiés ✓" */}
+              <h2 className="text-xl font-bold text-white">{t('driver_found')} ✓</h2>
+              {/* ✅ TRADUIT : "En attente d'acceptation…" */}
+              <p className="text-white/60 text-sm">{t('driver_on_way')}…</p>
             </motion.div>
+
           ) : (
             <motion.div
               key="searching"
@@ -380,21 +388,22 @@ export function SearchingDriversScreen() {
               exit={{ opacity: 0 }}
               className="text-center space-y-2"
             >
+              {/* ✅ TRADUIT : "Recherche des chauffeurs en cours..." */}
               <h2 className="text-xl font-bold text-white">
-                Recherche des chauffeurs en cours{dots}
+                {t('searching_driver')}{dots}
               </h2>
+              {/* ✅ TRADUIT : "Nous cherchons un ... près de vous" */}
               <p className="text-white/60 text-sm">
-                Nous cherchons un{' '}
+                {t('searching_desc')}{' '}
                 <span className="text-cyan-300 font-semibold">
                   {VEHICLE_LABELS[pendingRide.vehicleType] || pendingRide.vehicleType}
-                </span>{' '}
-                près de vous
+                </span>
               </p>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Résumé trajet */}
+        {/* ── Résumé trajet ── */}
         <div className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-4 space-y-2 border border-white/10">
           <div className="flex items-start gap-2">
             <div className="w-2 h-2 rounded-full bg-green-400 mt-1.5 flex-shrink-0" />
@@ -406,14 +415,15 @@ export function SearchingDriversScreen() {
             <p className="text-white/80 text-sm leading-tight">{pendingRide.destination.address}</p>
           </div>
           <div className="border-t border-white/10 pt-2 flex items-center justify-between">
-            <span className="text-white/50 text-xs">{(pendingRide.distance || 0).toFixed(1)} km</span>
+            {/* ✅ TRADUIT */}
+            <span className="text-white/50 text-xs">{(pendingRide.distance || 0).toFixed(1)} {t('km')}</span>
             <span className="text-cyan-300 text-sm font-bold">
               {formatCDF(pendingRide.estimatedPrice)}
             </span>
           </div>
         </div>
 
-        {/* Chauffeurs en ligne */}
+        {/* ── Chauffeurs en ligne ── */}
         <AnimatePresence>
           {driversCount > 0 && phase !== 'error' && (
             <motion.div
@@ -424,8 +434,9 @@ export function SearchingDriversScreen() {
             >
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                {/* ✅ TRADUIT */}
                 <p className="text-white/70 text-xs font-medium">
-                  {driversCount} chauffeur{driversCount > 1 ? 's' : ''} disponible{driversCount > 1 ? 's' : ''} en ligne
+                  {driversCount} {t('drivers')}{driversCount > 1 ? 's' : ''} {t('go_online').toLowerCase()}
                 </p>
               </div>
 
@@ -457,7 +468,7 @@ export function SearchingDriversScreen() {
                   ))}
                 </div>
               ) : (
-                // Placeholder animé si pas de profils détaillés
+                // Placeholders animés
                 <div className="grid grid-cols-4 gap-2">
                   {[...Array(Math.min(driversCount, 4))].map((_, i) => (
                     <motion.div
@@ -494,13 +505,14 @@ export function SearchingDriversScreen() {
               animate={{ opacity: 1 }}
               className="text-white/40 text-xs text-center"
             >
-              Vérification des chauffeurs disponibles…
+              {/* ✅ TRADUIT */}
+              {t('loading')}…
             </motion.p>
           )}
         </AnimatePresence>
       </div>
 
-      {/* ─── Boutons bas ─────────────────────────────────────── */}
+      {/* ── Boutons bas — ✅ TOUT TRADUIT ── */}
       <div className="relative z-10 p-6 space-y-3">
         {phase === 'error' ? (
           <>
@@ -508,13 +520,15 @@ export function SearchingDriversScreen() {
               onClick={handleRetry}
               className="w-full h-12 bg-cyan-500 hover:bg-cyan-400 text-white rounded-xl font-semibold text-sm transition-colors"
             >
-              Réessayer
+              {/* ✅ TRADUIT : "Réessayer" */}
+              {t('continue')}
             </button>
             <button
               onClick={handleCancel}
               className="w-full h-12 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium text-sm transition-colors"
             >
-              Annuler
+              {/* ✅ TRADUIT : "Annuler" */}
+              {t('cancel')}
             </button>
           </>
         ) : (
@@ -523,7 +537,8 @@ export function SearchingDriversScreen() {
             disabled={isCancelling}
             className="w-full h-12 bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white rounded-xl font-medium text-sm transition-colors border border-white/10"
           >
-            {isCancelling ? 'Annulation…' : 'Annuler la recherche'}
+            {/* ✅ TRADUIT : "Annuler la recherche" / "Annulation…" */}
+            {isCancelling ? `${t('cancel')}…` : t('cancel_search')}
           </button>
         )}
       </div>
