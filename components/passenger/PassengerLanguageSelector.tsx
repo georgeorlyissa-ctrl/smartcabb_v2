@@ -10,6 +10,12 @@ import { toast } from '../../lib/toast';
  * dans document.body — évite les problèmes de z-index causés par les
  * contextes de stacking (motion.div, Card shadcn, transform CSS, etc.)
  */
+/**
+ * PassengerLanguageSelector
+ * ✅ FIX: Utilise ReactDOM.createPortal pour rendre le modal directement
+ * dans document.body — évite les problèmes de z-index causés par les
+ * contextes de stacking (motion.div, Card shadcn, transform CSS, etc.)
+ */
 
 interface PassengerLanguageSelectorProps {
   compact?: boolean;
