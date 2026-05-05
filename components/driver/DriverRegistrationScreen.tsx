@@ -11,7 +11,7 @@ import { motion } from '../../lib/motion';
 import { toast } from '../../lib/toast';
 import { useAppState } from '../../hooks/useAppState';
 import { ArrowLeft, Lock, User, Car, Upload, FileCheck, AlertCircle, Camera } from '../../lib/icons';
-//import smartcabbLogo from '../../imports/image_(3).png';
+import { SmartCabbLogo } from '../SmartCabbLogo';
 import { signUpDriver } from '../../lib/auth-service-driver-signup';
 import { sendSMS } from '../../lib/sms-service';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -352,11 +352,7 @@ export function DriverRegistrationScreen() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
         <div className="flex items-center space-x-2">
-          <img
-            src={smartcabbLogo}
-            alt="SmartCabb"
-            className="w-9 h-9 object-contain"
-          />
+          <SmartCabbLogo size="small" plain />
           <h1 className="text-xl">Devenir Conducteur</h1>
         </div>
         <div className="w-10" />
@@ -506,11 +502,7 @@ export function DriverRegistrationScreen() {
                       />
                     ) : (
                       <>
-                        <img
-                          src={smartcabbLogo}
-                          alt="SmartCabb"
-                          className="h-20 object-contain mb-2 opacity-80"
-                        />
+                        <SmartCabbLogo className="h-20 w-20 mx-auto mb-2 opacity-80" plain />
                         <span className="text-xs text-gray-500 flex items-center gap-1">
                           <Camera className="w-3 h-3" /> Ajouter une photo (optionnel)
                         </span>
