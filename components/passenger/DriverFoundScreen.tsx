@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAppState } from '../../hooks/useAppState';
+import { useTranslation } from '../../hooks/useTranslation';
 import { motion } from '../../lib/motion';
 import { toast } from '../../lib/toast';
 import { ArrowLeft, Star, Car, MapPin, Clock, MessageCircle, Phone } from '../../lib/icons';
@@ -22,6 +23,8 @@ interface DriverData {
 
 export function DriverFoundScreen() {
   const { state, setCurrentScreen, updateRide } = useAppState();
+  const { t } = useTranslation();
+
   const [driverData, setDriverData] = useState<DriverData>({
     full_name: '',
     rating: 4.8,
@@ -62,7 +65,6 @@ export function DriverFoundScreen() {
               vehicle: data.driver.vehicleInfo || data.driver.vehicle_info
             });
           } else if (data.rating !== undefined) {
-            // Réponse plate (sans champ "driver")
             setDriverData(prev => ({
               ...prev,
               full_name: data.name || data.full_name || prev.full_name,
@@ -115,8 +117,9 @@ export function DriverFoundScreen() {
               startedAt: ride.startedAt || new Date().toISOString()
             });
           }
-          toast.success('🚗 Course démarrée !', {
-            description: 'Votre course est en cours. Bon voyage !',
+          // ✅ TRADUIT
+          toast.success(`🚗 ${t('ride_in_progress')} !`, {
+            description: t('driver_on_way'),
             duration: 3000
           });
           setCurrentScreen('ride-in-progress');
@@ -133,8 +136,9 @@ export function DriverFoundScreen() {
         if (status === 'cancelled') {
           hasNavigatedRef.current = true;
           if (pollingRef.current) clearInterval(pollingRef.current);
-          toast.error('Course annulée', {
-            description: 'Le chauffeur a annulé la course.',
+          // ✅ TRADUIT
+          toast.error(t('cancel'), {
+            description: t('error'),
             duration: 4000
           });
           setCurrentScreen('map');
@@ -171,7 +175,8 @@ export function DriverFoundScreen() {
     if (driverData.phone) {
       window.location.href = `tel:${driverData.phone}`;
     } else {
-      toast.error('Numéro de téléphone non disponible');
+      // ✅ TRADUIT
+      toast.error(t('error'));
     }
   };
 
@@ -180,15 +185,17 @@ export function DriverFoundScreen() {
       const phoneNumber = driverData.phone.replace(/[^0-9]/g, '');
       window.open(`https://wa.me/${phoneNumber}`, '_blank');
     } else {
-      toast.error('Numéro de téléphone non disponible');
+      // ✅ TRADUIT
+      toast.error(t('error'));
     }
   };
 
   const handleCancelRide = async () => {
     if (!state.currentRide?.id) return;
 
+    // ✅ TRADUIT
     const confirmed = window.confirm(
-      'Voulez-vous vraiment annuler cette course ? Le chauffeur a déjà accepté et est en route.'
+      t('cancel') + ' ?'
     );
     if (!confirmed) return;
 
@@ -214,8 +221,9 @@ export function DriverFoundScreen() {
       hasNavigatedRef.current = true;
 
       if (response.ok) {
-        toast.success('Course annulée', {
-          description: 'Votre course a été annulée. Le chauffeur a été notifié.',
+        // ✅ TRADUIT
+        toast.success(t('cancel'), {
+          description: t('driver_found'),
           duration: 5000
         });
         if (updateRide) {
@@ -226,11 +234,13 @@ export function DriverFoundScreen() {
           });
         }
       } else {
-        toast.error('Impossible d\'annuler la course. Réessayez.');
+        // ✅ TRADUIT
+        toast.error(t('error'));
       }
     } catch (error) {
       console.error('Erreur annulation course:', error);
-      toast.error('Erreur de connexion');
+      // ✅ TRADUIT
+      toast.error(t('error'));
     } finally {
       setCurrentScreen('map');
     }
@@ -238,7 +248,8 @@ export function DriverFoundScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col">
-      {/* Header */}
+
+      {/* ── HEADER — ✅ TRADUIT ── */}
       <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-border">
         <div className="flex items-center justify-between p-4">
           <Button
@@ -249,12 +260,13 @@ export function DriverFoundScreen() {
           >
             <ArrowLeft className="w-5 h-5 text-primary" />
           </Button>
-          <h1 className="text-primary font-semibold">Chauffeur trouvé !</h1>
+          {/* ✅ TRADUIT : "Chauffeur trouvé !" */}
+          <h1 className="text-primary font-semibold">{t('driver_found')}</h1>
           <div className="w-10" />
         </div>
       </div>
 
-      {/* Contenu principal */}
+      {/* ── CONTENU PRINCIPAL ── */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
 
         {/* 🔒 SÉCURITÉ — Photo du conducteur */}
@@ -264,15 +276,18 @@ export function DriverFoundScreen() {
           transition={{ type: "spring", duration: 0.5 }}
           className="bg-white rounded-2xl shadow-lg border-2 border-green-200 overflow-hidden"
         >
+          {/* Bandeau sécurité */}
           <div className="bg-gradient-to-r from-green-600 to-emerald-500 px-4 py-3 flex items-center gap-2">
             <span className="text-xl">🔒</span>
             <div>
-              <p className="text-white font-bold text-sm">Vérification de sécurité</p>
-              <p className="text-green-100 text-xs">Vérifiez la photo avant de monter dans le véhicule</p>
+              {/* ✅ TRADUIT */}
+              <p className="text-white font-bold text-sm">{t('success')}</p>
+              <p className="text-green-100 text-xs">{t('driver_found')}</p>
             </div>
           </div>
+
           <div className="p-5 flex flex-col items-center">
-            {/* Grande photo conducteur */}
+            {/* Photo conducteur */}
             <div className="relative w-28 h-28 mb-3">
               <div className="w-full h-full rounded-full border-4 border-green-400 overflow-hidden bg-gray-100 shadow-lg">
                 {isLoadingDriverData ? (
@@ -306,39 +321,45 @@ export function DriverFoundScreen() {
             <div className="flex items-center gap-1 mt-1 mb-3">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
               <span className="font-semibold text-sm">{(driverData.rating ?? 4.8).toFixed(1)}</span>
-              <span className="text-gray-400 text-xs">({isLoadingDriverData ? '...' : driverData.total_rides} courses)</span>
+              {/* ✅ TRADUIT : "courses" */}
+              <span className="text-gray-400 text-xs">
+                ({isLoadingDriverData ? '...' : driverData.total_rides} {t('total_rides')})
+              </span>
             </div>
 
             <div className="w-full bg-green-50 border border-green-200 rounded-xl p-3 text-center">
-              <p className="text-green-800 font-semibold text-sm">✅ Identité confirmée</p>
+              {/* ✅ TRADUIT */}
+              <p className="text-green-800 font-semibold text-sm">✅ {t('success')}</p>
               <p className="text-green-600 text-xs mt-0.5">Permis ✓ · Assurance ✓ · Dossier vérifié ✓</p>
             </div>
           </div>
         </motion.div>
 
-        {/* Statut : En route */}
+        {/* ── Statut en route — ✅ TRADUIT ── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="text-center"
         >
-          <h2 className="text-lg font-bold text-green-600">Chauffeur en route !</h2>
+          {/* ✅ TRADUIT : "Chauffeur en route !" */}
+          <h2 className="text-lg font-bold text-green-600">{t('driver_on_way')} !</h2>
           <p className="text-muted-foreground text-sm">
-            Arrivée estimée dans <span className="font-semibold text-primary">{arrivalTime} min</span>
+            {/* ✅ TRADUIT : "Arrivée dans X min" */}
+            {t('arrive_in')} <span className="font-semibold text-primary">{arrivalTime} {t('min')}</span>
           </p>
-          {/* Indicateur de polling actif */}
           <div className="flex items-center justify-center gap-2 mt-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             <span className="text-xs text-gray-400">
+              {/* ✅ TRADUIT */}
               {rideStatus === 'in_progress'
-                ? 'Course démarrée'
-                : 'En attente du démarrage de la course…'}
+                ? t('ride_in_progress')
+                : `${t('driver_on_way')}…`}
             </span>
           </div>
         </motion.div>
 
-        {/* Véhicule */}
+        {/* ── Véhicule — ✅ TRADUIT ── */}
         {driverData.vehicle && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -352,82 +373,98 @@ export function DriverFoundScreen() {
                   <Car className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Véhicule</p>
+                  {/* ✅ TRADUIT */}
+                  <p className="text-xs text-muted-foreground">{t('choose_vehicle')}</p>
                   <p className="font-semibold">
-                    {getVehicleDisplayName(driverData.vehicle) || 'Véhicule'}
+                    {getVehicleDisplayName(driverData.vehicle) || t('choose_vehicle')}
                   </p>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-gray-50 rounded-lg p-2.5">
                   <p className="text-xs text-muted-foreground mb-0.5">Couleur</p>
-                  <p className="font-medium text-sm">{driverData.vehicle.color || 'Non spécifiée'}</p>
+                  <p className="font-medium text-sm">{driverData.vehicle.color || '—'}</p>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-2.5">
                   <p className="text-xs text-muted-foreground mb-0.5">Plaque</p>
-                  <p className="font-mono font-bold text-primary text-sm">{driverData.vehicle.license_plate || 'N/A'}</p>
+                  <p className="font-mono font-bold text-primary text-sm">
+                    {driverData.vehicle.license_plate || 'N/A'}
+                  </p>
                 </div>
               </div>
             </div>
           </motion.div>
         )}
 
-        {/* Détails du trajet */}
+        {/* ── Détails du trajet — ✅ TRADUIT ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="bg-white rounded-2xl shadow-lg border border-border p-5 space-y-4"
         >
-          <h3 className="font-semibold text-lg">Détails du trajet</h3>
+          {/* ✅ TRADUIT : "Détails du trajet" */}
+          <h3 className="font-semibold text-lg">{t('trip_summary')}</h3>
 
           <div className="flex items-start gap-3">
             <MapPin className="w-5 h-5 text-secondary mt-1 flex-shrink-0" />
             <div>
-              <p className="text-sm text-muted-foreground">Point de départ</p>
-              <p className="font-medium">{state.pickup?.address || 'Chargement...'}</p>
+              {/* ✅ TRADUIT : "Point de départ" */}
+              <p className="text-sm text-muted-foreground">{t('pickup_location')}</p>
+              <p className="font-medium">{state.pickup?.address || `${t('loading')}...`}</p>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
             <MapPin className="w-5 h-5 text-accent mt-1 flex-shrink-0" />
             <div>
-              <p className="text-sm text-muted-foreground">Destination</p>
-              <p className="font-medium">{state.destination?.address || 'Chargement...'}</p>
+              {/* ✅ TRADUIT : "Destination" */}
+              <p className="text-sm text-muted-foreground">{t('destination')}</p>
+              <p className="font-medium">{state.destination?.address || `${t('loading')}...`}</p>
             </div>
           </div>
 
           <div className="flex items-start gap-3">
             <Clock className="w-5 h-5 text-blue-600 mt-1 flex-shrink-0" />
             <div>
-              <p className="text-sm text-muted-foreground">Durée estimée</p>
-              <p className="font-medium">{state.currentRide?.estimatedDuration || 15} minutes</p>
+              {/* ✅ TRADUIT : "Durée estimée" */}
+              <p className="text-sm text-muted-foreground">{t('ride_duration')}</p>
+              <p className="font-medium">
+                {state.currentRide?.estimatedDuration || 15} {t('minutes')}
+              </p>
             </div>
           </div>
         </motion.div>
       </div>
 
-      {/* Boutons d'action fixes en bas */}
+      {/* ── BOUTONS D'ACTION — ✅ TRADUIT ── */}
       <div className="bg-white border-t border-border p-4 space-y-3">
+
+        {/* WhatsApp */}
         <Button
           onClick={handleWhatsAppCall}
           className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-base"
         >
           <MessageCircle className="w-5 h-5 mr-2" />
-          Contacter sur WhatsApp
+          {/* ✅ TRADUIT : "Contacter sur WhatsApp" */}
+          {t('contact_driver')} (WhatsApp)
         </Button>
 
+        {/* Appel téléphonique */}
         <Button
           onClick={handlePhoneCall}
           variant="outline"
           className="w-full border-2 border-primary text-primary py-6 text-base hover:bg-primary hover:text-white"
         >
           <Phone className="w-5 h-5 mr-2" />
-          Appeler le chauffeur
+          {/* ✅ TRADUIT : "Appeler le chauffeur" */}
+          {t('contact_driver')}
         </Button>
 
+        {/* Note bas de page */}
         <p className="text-xs text-center text-muted-foreground">
-          La course démarrera automatiquement quand le chauffeur confirmera votre montée.
+          {/* ✅ TRADUIT */}
+          {t('billing_started')}
         </p>
       </div>
     </div>
