@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppState } from '../../hooks/useAppState';
+import { useTranslation } from '../../hooks/useTranslation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 
@@ -21,32 +22,35 @@ function StarIcon({ filled, size = 40 }: { filled: boolean; size?: number }) {
   );
 }
 
-const LABELS: Record<number, { label: string; color: string }> = {
-  1: { label: 'Très mauvais',  color: 'text-red-500' },
-  2: { label: 'Mauvais',       color: 'text-orange-500' },
-  3: { label: 'Moyen',         color: 'text-yellow-500' },
-  4: { label: 'Bien',          color: 'text-green-500' },
-  5: { label: 'Excellent !',   color: 'text-green-600' },
-};
-
-const QUICK_COMMENTS = [
-  { emoji: '👍', text: 'Excellent conducteur' },
-  { emoji: '✨', text: 'Véhicule propre' },
-  { emoji: '🛡️', text: 'Conduite sécuritaire' },
-  { emoji: '⏰', text: 'Très ponctuel' },
-  { emoji: '😊', text: 'Très sympathique' },
-  { emoji: '🗺️', text: 'Bonne connaissance des routes' },
-];
-
 export function RatingScreen() {
   const { state, setCurrentScreen, updateRide } = useAppState();
+  const { t } = useTranslation();
   const currentRide = state.currentRide;
 
-  const [rating, setRating]         = useState(0);
-  const [hovered, setHovered]       = useState(0);
-  const [comment, setComment]       = useState('');
+  const [rating, setRating]             = useState(0);
+  const [hovered, setHovered]           = useState(0);
+  const [comment, setComment]           = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [driverData, setDriverData] = useState<any>(null);
+  const [driverData, setDriverData]     = useState<any>(null);
+
+  // ── Labels d'étoiles traduits (construits à partir du hook) ──────────────
+  const STAR_LABELS: Record<number, { label: string; color: string }> = {
+    1: { label: t('star_very_bad'),  color: 'text-red-500'    },
+    2: { label: t('star_bad'),       color: 'text-orange-500' },
+    3: { label: t('star_average'),   color: 'text-yellow-500' },
+    4: { label: t('star_good'),      color: 'text-green-500'  },
+    5: { label: t('star_excellent'), color: 'text-green-600'  },
+  };
+
+  // ── Commentaires rapides traduits ─────────────────────────────────────────
+  const QUICK_COMMENTS = [
+    { emoji: '👍', key: 'qc_great_driver'  },
+    { emoji: '✨', key: 'qc_clean_car'     },
+    { emoji: '🛡️', key: 'qc_safe_driving' },
+    { emoji: '⏰', key: 'qc_punctual'      },
+    { emoji: '😊', key: 'qc_friendly'      },
+    { emoji: '🗺️', key: 'qc_knows_routes' },
+  ];
 
   // Charger les données du conducteur (photo incluse)
   useEffect(() => {
@@ -60,23 +64,24 @@ export function RatingScreen() {
       .catch(() => {});
   }, [currentRide?.driverId]);
 
+  // ── Garde : pas de course courante ───────────────────────────────────────
   if (!currentRide) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl p-6 text-center shadow">
-          <p className="text-gray-500">Aucune course à évaluer</p>
+          <p className="text-gray-500">{t('no_ride_to_rate')}</p>
           <button
             onClick={() => setCurrentScreen('map')}
             className="mt-4 px-6 py-2 bg-primary text-white rounded-xl font-medium"
           >
-            Retour à l'accueil
+            {t('back_home')}
           </button>
         </div>
       </div>
     );
   }
 
-  const driverName  = driverData?.full_name || driverData?.name || currentRide.driverName || 'Votre chauffeur';
+  const driverName  = driverData?.full_name || driverData?.name || currentRide.driverName || t('your_driver');
   const photoUrl    = driverData?.photo_url  || driverData?.photo || driverData?.profile_photo || null;
   const initials    = driverName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
   const finalPrice  = currentRide.finalPrice || currentRide.actualPrice || currentRide.estimatedPrice || 0;
@@ -84,7 +89,7 @@ export function RatingScreen() {
 
   const handleSubmit = async () => {
     if (rating === 0) {
-      toast.error('Veuillez choisir une note (1 à 5 étoiles)');
+      toast.error(t('please_select_rating'));
       return;
     }
     setIsSubmitting(true);
@@ -114,14 +119,14 @@ export function RatingScreen() {
         detail: { driverId: currentRide.driverId, rating, comment }
       }));
 
-      toast.success('⭐ Merci pour votre évaluation !', {
-        description: `Vous avez attribué ${rating} étoile${rating > 1 ? 's' : ''} à ${driverName}.`,
+      toast.success(t('rating_thanks'), {
+        description: `${t('rating_stars_given')} ${rating} ${t('rating_stars_to')} ${driverName}.`,
         duration: 4000,
       });
 
       setTimeout(() => setCurrentScreen('map'), 1800);
     } catch {
-      toast.error('Impossible d\'enregistrer l\'évaluation. Réessayez.');
+      toast.error(t('rating_save_error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -129,11 +134,12 @@ export function RatingScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col">
+
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-green-600 to-emerald-600 text-white pt-8 pb-6 px-6 text-center">
         <div className="text-4xl mb-2">🏁</div>
-        <h1 className="text-2xl font-bold">Course terminée !</h1>
-        <p className="text-green-100 text-sm mt-1">Évaluez votre expérience</p>
+        <h1 className="text-2xl font-bold">{t('ride_completed')}</h1>
+        <p className="text-green-100 text-sm mt-1">{t('rate_experience')}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -142,8 +148,11 @@ export function RatingScreen() {
           {/* ── Résumé du prix ─────────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between">
             <div>
-              <p className="text-xs text-gray-500">Montant total</p>
-              <p className="text-2xl font-bold text-gray-900">{finalPrice.toLocaleString()} <span className="text-sm font-normal text-gray-500">CDF</span></p>
+              <p className="text-xs text-gray-500">{t('total_amount')}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {finalPrice.toLocaleString()}{' '}
+                <span className="text-sm font-normal text-gray-500">{t('cdf')}</span>
+              </p>
             </div>
             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
               <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,7 +166,12 @@ export function RatingScreen() {
             {/* Photo */}
             <div className="w-16 h-16 rounded-full overflow-hidden bg-blue-100 flex-shrink-0 border-2 border-blue-200">
               {photoUrl ? (
-                <img src={photoUrl} alt={driverName} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display = 'none'; }} />
+                <img
+                  src={photoUrl}
+                  alt={driverName}
+                  className="w-full h-full object-cover"
+                  onError={e => { e.currentTarget.style.display = 'none'; }}
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 text-white font-bold text-xl">
                   {initials}
@@ -183,7 +197,7 @@ export function RatingScreen() {
 
           {/* ── Étoiles ────────────────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <p className="text-center font-semibold text-gray-800 mb-4">Comment s'est passée votre course ?</p>
+            <p className="text-center font-semibold text-gray-800 mb-4">{t('how_was_ride')}</p>
 
             {/* Stars row */}
             <div
@@ -211,35 +225,40 @@ export function RatingScreen() {
               ))}
             </div>
 
-            {/* Label */}
+            {/* Label traduit */}
             <div className="text-center min-h-[24px]">
               {rating > 0 ? (
-                <p className={`font-semibold ${LABELS[rating].color}`}>{LABELS[rating].label}</p>
+                <p className={`font-semibold ${STAR_LABELS[rating].color}`}>
+                  {STAR_LABELS[rating].label}
+                </p>
               ) : (
-                <p className="text-gray-400 text-sm">Appuyez sur une étoile pour noter</p>
+                <p className="text-gray-400 text-sm">{t('tap_star_to_rate')}</p>
               )}
             </div>
           </div>
 
-          {/* ── Commentaires rapides (visible uniquement après notation) ───── */}
+          {/* ── Commentaires rapides (visible après notation) ──────────────── */}
           {rating > 0 && (
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-2 px-1">Commentaire rapide (optionnel)</p>
+              <p className="text-sm font-medium text-gray-600 mb-2 px-1">{t('quick_comment_opt')}</p>
               <div className="grid grid-cols-2 gap-2">
-                {QUICK_COMMENTS.map(q => (
-                  <button
-                    key={q.text}
-                    type="button"
-                    onClick={() => setComment(prev => prev === q.text ? '' : q.text)}
-                    className={`text-left p-2.5 rounded-xl border text-xs font-medium transition-all ${
-                      comment === q.text
-                        ? 'bg-green-50 border-green-400 text-green-800'
-                        : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="mr-1">{q.emoji}</span>{q.text}
-                  </button>
-                ))}
+                {QUICK_COMMENTS.map(q => {
+                  const label = t(q.key);
+                  return (
+                    <button
+                      key={q.key}
+                      type="button"
+                      onClick={() => setComment(prev => prev === label ? '' : label)}
+                      className={`text-left p-2.5 rounded-xl border text-xs font-medium transition-all ${
+                        comment === label
+                          ? 'bg-green-50 border-green-400 text-green-800'
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <span className="mr-1">{q.emoji}</span>{label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -248,12 +267,12 @@ export function RatingScreen() {
           {rating > 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Commentaire libre (optionnel)
+                {t('free_comment_opt')}
               </label>
               <textarea
                 value={comment}
                 onChange={e => setComment(e.target.value)}
-                placeholder="Partagez votre expérience..."
+                placeholder={t('share_experience')}
                 rows={3}
                 maxLength={500}
                 className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-transparent resize-none text-sm outline-none"
@@ -279,10 +298,10 @@ export function RatingScreen() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                Envoi en cours...
+                {t('sending')}
               </span>
             ) : (
-              `Envoyer mon évaluation ${rating > 0 ? `(${rating}★)` : ''}`
+              `${t('submit_rating_btn')}${rating > 0 ? ` (${rating}★)` : ''}`
             )}
           </button>
 
@@ -292,7 +311,7 @@ export function RatingScreen() {
             onClick={() => setCurrentScreen('map')}
             className="w-full py-3 text-gray-500 text-sm hover:text-gray-700 transition-colors"
           >
-            Passer pour l'instant
+            {t('skip_rating')}
           </button>
 
         </div>
