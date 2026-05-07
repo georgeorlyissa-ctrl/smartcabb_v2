@@ -2,98 +2,261 @@
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
+    <!-- ═══════════════════════════════════════════════════════
+         🔍 SEO CRITIQUE — NE PAS MODIFIER SANS VALIDATION
+         ═══════════════════════════════════════════════════════ -->
+
+    <!-- Favicon officiel SmartCabb -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="shortcut icon" href="/favicon.png" />
+
+    <!-- Canonical — indique à Google l'URL officielle -->
+    <link rel="canonical" href="https://www.smartcabb.com/" />
+
+    <!-- Hreflang — versions linguistiques -->
+    <link rel="alternate" hreflang="fr" href="https://www.smartcabb.com/" />
+    <link rel="alternate" hreflang="en" href="https://www.smartcabb.com/en/" />
+    <link rel="alternate" hreflang="x-default" href="https://www.smartcabb.com/" />
+
+    <!-- ── VIEWPORT & MOBILE ─────────────────────────────── -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-visual" />
-    
-    <!-- 🔄 CACHE CONTROL - Force le rafraîchissement dans l'aperçu Figma -->
+
+    <!-- ── CACHE (désactivé pour Figma Make) ─────────────── -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
-    
-    <!-- 🧭 Permissions Policy - Autoriser TOUTES les fonctionnalités de géolocalisation -->
+
+    <!-- ── PERMISSIONS (géolocalisation) ─────────────────── -->
     <meta http-equiv="Permissions-Policy" content="geolocation=(self), camera=(self), microphone=(self), payment=(self)" />
-    
-    <!-- 🚀 Performance & Mobile Optimization -->
+
+    <!-- ── PERFORMANCE & MOBILE ──────────────────────────── -->
     <meta name="format-detection" content="telephone=no" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    
-    <!-- 📱 PWA Configuration -->
+
+    <!-- ── PWA ───────────────────────────────────────────── -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#06b6d4" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SmartCabb" />
-    
-    <!-- Apple Touch Icons (iOS) -->
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Cdefs%3E%3ClinearGradient id='grad' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%2306b6d4;stop-opacity:1' /%3E%3Cstop offset='100%25' style='stop-color:%2310b981;stop-opacity:1' /%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='180' height='180' rx='30' fill='url(%23grad)'/%3E%3Ctext x='90' y='125' font-family='Arial, sans-serif' font-size='75' font-weight='900' fill='white' text-anchor='middle'%3ESC%3C/text%3E%3C/svg%3E" />
-    
-    <!-- Splash Screen iOS -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    
-    <!-- MS Tile Icon (Windows) -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="msapplication-TileColor" content="#06b6d4" />
     <meta name="msapplication-config" content="none" />
-    
-    <!-- 📄 SEO Meta Tags -->
-    <title>SmartCabb - Votre chauffeur à Kinshasa</title>
-    <meta name="description" content="SmartCabb - Service de transport avec chauffeur à Kinshasa. Réservez votre course en quelques clics avec nos véhicules climatisés et nos chauffeurs professionnels." />
-    <meta name="keywords" content="transport, kinshasa, chauffeur, taxi, course, smartcabb, congo, rdc, vtc, réservation, paiement mobile" />
+
+    <!-- ═══════════════════════════════════════════════════════
+         📄 SEO — TITLE & META DESCRIPTION
+         Mots-clés ciblés : smartcabb, taxi kinshasa, vtc kinshasa,
+         chauffeur kinshasa, transport kinshasa, rdc
+         ═══════════════════════════════════════════════════════ -->
+    <title>SmartCabb — Taxi & VTC à Kinshasa | Réservez votre chauffeur</title>
+    <meta name="description" content="SmartCabb est le service de taxi et VTC de référence à Kinshasa (RDC). Réservez un chauffeur professionnel en quelques secondes. Paiement Mobile Money (M-Pesa, Orange Money, Airtel Money). Disponible 24h/24." />
+    <meta name="keywords" content="smartcabb, smart cabb, taxi kinshasa, vtc kinshasa, chauffeur kinshasa, transport kinshasa, réservation taxi rdc, taxi congo, voiture avec chauffeur kinshasa, uber kinshasa, bolt kinshasa, m-pesa, orange money, airtel money" />
     <meta name="author" content="SmartCabb" />
-    
-    <!-- 🌐 Open Graph / Facebook -->
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+
+    <!-- ── GÉOLOCALISATION DU SITE ────────────────────────── -->
+    <meta name="geo.region" content="CD-KN" />
+    <meta name="geo.placename" content="Kinshasa, République Démocratique du Congo" />
+    <meta name="geo.position" content="-4.3276;15.3136" />
+    <meta name="ICBM" content="-4.3276, 15.3136" />
+
+    <!-- ═══════════════════════════════════════════════════════
+         🌐 OPEN GRAPH (Facebook, WhatsApp, LinkedIn, Telegram)
+         ═══════════════════════════════════════════════════════ -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://smartcabb.com/" />
-    <meta property="og:title" content="SmartCabb - Transport à Kinshasa" />
-    <meta property="og:description" content="Réservez votre chauffeur à Kinshasa en quelques clics. Service de qualité, paiement sécurisé." />
-    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:url" content="https://www.smartcabb.com/" />
     <meta property="og:site_name" content="SmartCabb" />
-    
-    <!-- 🐦 Twitter -->
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://smartcabb.com/" />
-    <meta property="twitter:title" content="SmartCabb - Transport à Kinshasa" />
-    <meta property="twitter:description" content="Réservez votre chauffeur à Kinshasa en quelques clics" />
-    
-    <!-- ✅ Scripts d'initialisation client (chargés avant React) -->
+    <meta property="og:title" content="SmartCabb — Taxi & VTC à Kinshasa" />
+    <meta property="og:description" content="Réservez un chauffeur professionnel à Kinshasa en quelques secondes. Paiement Mobile Money, véhicules climatisés, chauffeurs vérifiés. Disponible 24h/24." />
+    <meta property="og:image" content="https://www.smartcabb.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SmartCabb - Service de taxi et VTC à Kinshasa" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:locale:alternate" content="en_US" />
+
+    <!-- ═══════════════════════════════════════════════════════
+         🐦 TWITTER / X CARD
+         ═══════════════════════════════════════════════════════ -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@smartcabb" />
+    <meta name="twitter:creator" content="@smartcabb" />
+    <meta name="twitter:url" content="https://www.smartcabb.com/" />
+    <meta name="twitter:title" content="SmartCabb — Taxi & VTC à Kinshasa" />
+    <meta name="twitter:description" content="Réservez un chauffeur professionnel à Kinshasa. Paiement Mobile Money, véhicules climatisés, disponible 24h/24." />
+    <meta name="twitter:image" content="https://www.smartcabb.com/og-image.png" />
+    <meta name="twitter:image:alt" content="SmartCabb - Service de taxi à Kinshasa" />
+
+    <!-- ═══════════════════════════════════════════════════════
+         🏗️ DONNÉES STRUCTURÉES JSON-LD (Schema.org)
+         Permet à Google d'afficher des résultats enrichis :
+         étoiles, adresse, numéro, horaires, etc.
+         ═══════════════════════════════════════════════════════ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "LocalBusiness",
+          "@id": "https://www.smartcabb.com/#business",
+          "name": "SmartCabb",
+          "alternateName": ["Smart Cabb", "SmartCab"],
+          "description": "Service de taxi et VTC à Kinshasa, République Démocratique du Congo. Chauffeurs professionnels vérifiés, véhicules climatisés, paiement Mobile Money accepté.",
+          "url": "https://www.smartcabb.com/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://www.smartcabb.com/logo.png",
+            "width": 512,
+            "height": 512
+          },
+          "image": "https://www.smartcabb.com/og-image.png",
+          "telephone": "+243000000000",
+          "email": "contact@smartcabb.com",
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "Kinshasa",
+            "addressLocality": "Kinshasa",
+            "addressCountry": "CD",
+            "addressRegion": "Kinshasa"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -4.3276,
+            "longitude": 15.3136
+          },
+          "areaServed": {
+            "@type": "City",
+            "name": "Kinshasa",
+            "containedInPlace": {
+              "@type": "Country",
+              "name": "République Démocratique du Congo"
+            }
+          },
+          "openingHoursSpecification": {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+            "opens": "00:00",
+            "closes": "23:59"
+          },
+          "priceRange": "$$",
+          "currenciesAccepted": "CDF, USD",
+          "paymentAccepted": "Mobile Money, Cash, M-Pesa, Orange Money, Airtel Money",
+          "sameAs": [
+            "https://www.facebook.com/smartcabb",
+            "https://www.instagram.com/smartcabb",
+            "https://twitter.com/smartcabb"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://www.smartcabb.com/#website",
+          "url": "https://www.smartcabb.com/",
+          "name": "SmartCabb",
+          "description": "Taxi et VTC à Kinshasa",
+          "publisher": {
+            "@id": "https://www.smartcabb.com/#business"
+          },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://www.smartcabb.com/?q={search_term_string}"
+            },
+            "query-input": "required name=search_term_string"
+          },
+          "inLanguage": ["fr", "en"]
+        },
+        {
+          "@type": "MobileApplication",
+          "name": "SmartCabb",
+          "operatingSystem": "Android, iOS",
+          "applicationCategory": "TravelApplication",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+          },
+          "description": "Application de réservation de taxi et VTC à Kinshasa",
+          "url": "https://www.smartcabb.com/"
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Comment réserver un taxi SmartCabb à Kinshasa ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Téléchargez l'application SmartCabb ou visitez smartcabb.com, entrez votre adresse de départ et votre destination, choisissez votre type de véhicule et confirmez. Un chauffeur professionnel sera envoyé en quelques minutes."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Quels moyens de paiement sont acceptés par SmartCabb ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "SmartCabb accepte le paiement en espèces (CDF et USD), ainsi que les paiements Mobile Money : M-Pesa (Vodacom), Orange Money, Airtel Money et Afrimoney (Africell)."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "SmartCabb est-il disponible 24h/24 à Kinshasa ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Oui, SmartCabb est disponible 24h/24, 7j/7 à Kinshasa. Des tarifs de nuit s'appliquent entre 21h00 et 06h00."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Quels types de véhicules propose SmartCabb ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "SmartCabb propose 4 catégories : Standard (économique, 4 places), Confort (premium, 4 places, Internet), Familiale (6-7 places) et Business (VIP, avec rafraîchissements)."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
+
+    <!-- ── SCRIPTS D'INITIALISATION ───────────────────────── -->
     <script src="/client-init.js"></script>
-    
     <script type="module" src="/main.tsx?v=517.113"></script>
-    
-    <!-- Script de gestion du preloader -->
     <script src="/preloader.js"></script>
   </head>
+
   <body>
+    <!-- Noscript fallback pour les crawlers sans JS -->
+    <noscript>
+      <div style="padding:20px; text-align:center; font-family:sans-serif;">
+        <h1>SmartCabb — Taxi &amp; VTC à Kinshasa</h1>
+        <p>SmartCabb est le service de transport avec chauffeur à Kinshasa, République Démocratique du Congo.</p>
+        <p>Réservez votre course en ligne ou appelez-nous. Paiement Mobile Money accepté (M-Pesa, Orange Money, Airtel Money).</p>
+        <p>Activez JavaScript pour accéder à l'application complète.</p>
+      </div>
+    </noscript>
+
     <div id="root">
-      <!-- Preloader HTML natif - Affiché avant le chargement de React -->
-      <div id="preloader" style="position: fixed; inset: 0; background: linear-gradient(135deg, #ecfeff 0%, #ffffff 50%, #f0fdf4 100%); display: flex; align-items: center; justify-content: center; z-index: 9999;">
-        <div style="text-align: center;">
-          <!-- Logo SmartCabb -->
-          <div style="width: 80px; height: 80px; margin: 0 auto 24px; background: linear-gradient(135deg, #06b6d4 0%, #10b981 100%); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(6, 182, 212, 0.3); animation: pulse 2s ease-in-out infinite;">
-            <span style="color: white; font-size: 32px; font-weight: 900; font-family: system-ui, -apple-system, sans-serif;">SC</span>
+      <!-- Preloader HTML natif — affiché avant le chargement de React -->
+      <div id="preloader" style="position:fixed;inset:0;background:linear-gradient(135deg,#ecfeff 0%,#ffffff 50%,#f0fdf4 100%);display:flex;align-items:center;justify-content:center;z-index:9999;">
+        <div style="text-align:center;">
+          <div style="width:80px;height:80px;margin:0 auto 24px;background:linear-gradient(135deg,#06b6d4 0%,#10b981 100%);border-radius:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 25px rgba(6,182,212,0.3);animation:pulse 2s ease-in-out infinite;">
+            <span style="color:white;font-size:32px;font-weight:900;font-family:system-ui,-apple-system,sans-serif;">SC</span>
           </div>
-          
-          <!-- Spinner -->
-          <svg style="width: 40px; height: 40px; margin: 0 auto 16px; animation: spin 1s linear infinite;" viewBox="0 0 24 24" fill="none">
+          <svg style="width:40px;height:40px;margin:0 auto 16px;animation:spin 1s linear infinite;" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="10" stroke="#06b6d4" stroke-width="4" stroke-dasharray="31.4" stroke-dashoffset="10" stroke-linecap="round" opacity="0.25"/>
             <circle cx="12" cy="12" r="10" stroke="#06b6d4" stroke-width="4" stroke-dasharray="31.4" stroke-dashoffset="10" stroke-linecap="round"/>
           </svg>
-          
-          <!-- Texte -->
-          <p style="color: #6b7280; font-size: 16px; font-weight: 500; font-family: system-ui, -apple-system, sans-serif;">Chargement de SmartCabb...</p>
+          <p style="color:#6b7280;font-size:16px;font-weight:500;font-family:system-ui,-apple-system,sans-serif;">Chargement de SmartCabb...</p>
         </div>
       </div>
-      
-      <!-- Animations CSS -->
       <style>
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.05); opacity: 0.9; }
-        }
+        @keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        @keyframes pulse { 0%,100% { transform:scale(1);opacity:1; } 50% { transform:scale(1.05);opacity:0.9; } }
       </style>
     </div>
   </body>
