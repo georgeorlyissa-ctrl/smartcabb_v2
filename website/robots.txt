@@ -1,74 +1,82 @@
-# Robots.txt pour SmartCabb
-# Site web officiel - Kinshasa, RDC
-
+# ═══════════════════════════════════════════════════════════
+# robots.txt — SmartCabb
+# Site officiel : https://www.smartcabb.com
+# Kinshasa, République Démocratique du Congo
+# ═══════════════════════════════════════════════════════════
+ 
+# ── Règle générale pour tous les bots ──────────────────────
 User-agent: *
 Allow: /
-
-# Pages autorisées
-Allow: /website/
-Allow: /website/index.html
-Allow: /website/contact.html
-Allow: /website/faq.html
-Allow: /website/cgu.html
-Allow: /website/politique-confidentialite.html
-Allow: /website/mentions-legales.html
-
-# Fichiers et dossiers à ne pas indexer
-Disallow: /supabase/
-Disallow: /components/
-Disallow: /lib/
-Disallow: /types/
-Disallow: /hooks/
-Disallow: /utils/
-Disallow: /*.sql$
-Disallow: /*.tsx$
-Disallow: /*.ts$
-Disallow: /*.md$
-Disallow: /node_modules/
-Disallow: /.git/
-
-# Fichiers spécifiques à ne pas indexer
-Disallow: /package.json
-Disallow: /tsconfig.json
-Disallow: /vite.config.ts
-
-# Sitemap
-Sitemap: https://votredomaine.com/website/sitemap.xml
-
-# Crawl delay (optionnel - en secondes)
-Crawl-delay: 1
-
-# User-agents spécifiques
-
-# Google
+ 
+# Pages applicatives privées (non indexables)
+Disallow: /app/
+Disallow: /driver/
+Disallow: /admin/
+Disallow: /auth/
+ 
+# ── Google ─────────────────────────────────────────────────
 User-agent: Googlebot
 Allow: /
-
-# Bing
+Disallow: /app/
+Disallow: /driver/
+Disallow: /admin/
+Disallow: /auth/
+ 
+# ── Bing ───────────────────────────────────────────────────
 User-agent: Bingbot
 Allow: /
-
-# Yahoo
+Disallow: /app/
+Disallow: /driver/
+Disallow: /admin/
+Disallow: /auth/
+ 
+# ── Yahoo ──────────────────────────────────────────────────
 User-agent: Slurp
 Allow: /
-
-# DuckDuckGo
+Disallow: /app/
+Disallow: /driver/
+Disallow: /admin/
+Disallow: /auth/
+ 
+# ── DuckDuckGo ─────────────────────────────────────────────
 User-agent: DuckDuckBot
 Allow: /
-
-# Yandex
+Disallow: /app/
+Disallow: /driver/
+Disallow: /admin/
+Disallow: /auth/
+ 
+# ── Yandex ─────────────────────────────────────────────────
 User-agent: Yandex
 Allow: /
-
-# Bloquer les mauvais bots
+Disallow: /app/
+Disallow: /driver/
+Disallow: /admin/
+Disallow: /auth/
+ 
+# ── Bots SEO utiles (analyse de référencement) ─────────────
+# NE PAS bloquer — permettent d'analyser et améliorer le SEO
 User-agent: AhrefsBot
-Disallow: /
-
-User-agent: MJ12bot
-Disallow: /
-
+Allow: /
+ 
 User-agent: SemrushBot
-Disallow: /
-
+Allow: /
+ 
+User-agent: MJ12bot
+Allow: /
+ 
+# ── Bots malveillants à bloquer ────────────────────────────
 User-agent: DotBot
 Disallow: /
+ 
+User-agent: SiteExplorer
+Disallow: /
+ 
+User-agent: BLEXBot
+Disallow: /
+ 
+User-agent: PetalBot
+Disallow: /
+ 
+# ── Sitemap ────────────────────────────────────────────────
+Sitemap: https://www.smartcabb.com/sitemap.xml
