@@ -290,7 +290,7 @@ Your safety is our top priority!`
 
 Support Client 24/7:
 Téléphone: +243 990 666 661
-Email: support@smartcabb.cd
+Email: admin@smartcabb.com
 Chat: Directement sur ce chat!
 
 Réseaux sociaux:
@@ -309,7 +309,7 @@ Pour une réponse immédiate, appelez-nous ou utilisez ce chat!`,
 
 24/7 Customer Support:
 Phone: +243 990 666 661
-Email: support@smartcabb.cd
+Email: admin@smartcabb.com
 Chat: Right here in this chat!
 
 Social Media:
@@ -378,26 +378,19 @@ Have a great day!`
 // 🧠 Fonction pour trouver la meilleure réponse
 function findBestResponse(message: string, language: 'fr' | 'en'): string | null {
   const lowerMessage = message.toLowerCase();
-  
-  // Parcourir toutes les catégories de réponses
+
   for (const [category, data] of Object.entries(SMARTCABB_KNOWLEDGE)) {
-    // Vérifier si un mot-clé correspond
     const hasKeyword = data.keywords.some(keyword => lowerMessage.includes(keyword));
-    
     if (hasKeyword) {
       return data[language];
     }
   }
-  
+
   return null;
 }
 
-interface ChatWidgetProps {
-  // Le language sera détecté automatiquement depuis le contexte
-}
-
-export function ChatWidget({}: ChatWidgetProps) {
-  const { language } = useLanguage(); // 🌍 Détection automatique de la langue
+export function ChatWidget() {
+  const { language } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -415,11 +408,9 @@ export function ChatWidget({}: ChatWidgetProps) {
   }, [messages, isTyping]);
 
   useEffect(() => {
-    // Show pulsing badge after 3 seconds
     const timer = setTimeout(() => {
       setShowBadge(true);
     }, 3000);
-
     return () => clearTimeout(timer);
   }, []);
 
@@ -437,61 +428,39 @@ export function ChatWidget({}: ChatWidgetProps) {
     if (!inputValue.trim() || isSending) return;
 
     const userMessage = inputValue.trim();
-    
-    console.log('📤 Message utilisateur:', userMessage);
-    
-    // Ajouter le message utilisateur à l'UI
     addMessage(userMessage, 'user');
     setInputValue('');
     setIsSending(true);
-
-    // 🧠 RÉPONSE INTELLIGENTE LOCALE (rapide et sans backend)
     setIsTyping(true);
-    
-    // Délai de 300ms pour simuler la réflexion du bot
+
     setTimeout(() => {
       const smartResponse = findBestResponse(userMessage, language);
-      
+
       if (smartResponse) {
-        // ✅ Réponse intelligente trouvée!
-        console.log('🤖 Réponse intelligente générée localement');
         addMessage(smartResponse, 'bot');
       } else {
-        // ❓ Aucune réponse trouvée, utiliser le fallback
-        console.log('💭 Aucune correspondance, utilisation du fallback');
-        const fallbackMessage = language === 'fr' 
-          ? `Je suis désolé, je n'ai pas compris votre question. 
+        // ✅ MESSAGE DE FALLBACK OFFICIEL SMARTCABB
+        const fallbackMessage = language === 'fr'
+          ? `Très cher client, merci d'avoir contacté le service SmartCabb.
 
-Voici ce que je peux vous aider:
+Pour plus de détails concernant votre demande, veuillez contacter nos services au :
 
-• Nos services et tarifs
-• Devenir chauffeur
-• L'application
-• Modes de paiement
-• Sécurité
-• Contact
+📞 Numéro : 0990666661
+📧 Email : admin@smartcabb.com
 
-Pour une assistance personnalisée:
-Téléphone: +243 990 666 661
-Email: support@smartcabb.cd`
-          : `I'm sorry, I didn't understand your question.
+Nous restons à votre disposition et nous vous répondrons dans les plus brefs délais.`
+          : `Dear customer, thank you for contacting SmartCabb.
 
-Here's what I can help you with:
+For more details regarding your request, please contact our services at:
 
-• Our services and pricing
-• Becoming a driver
-• The app
-• Payment methods
-• Safety
-• Contact
+📞 Phone: 0990666661
+📧 Email: admin@smartcabb.com
 
-For personalized assistance:
-Phone: +243 990 666 661
-Email: support@smartcabb.cd`;
-        
+We remain at your disposal and will get back to you as soon as possible.`;
+
         addMessage(fallbackMessage, 'bot');
       }
-      
+
       setIsTyping(false);
       setIsSending(false);
     }, 300);
@@ -505,9 +474,7 @@ Email: support@smartcabb.cd`;
 
   const toggleChat = () => {
     setIsOpen(!isOpen);
-    if (!isOpen) {
-      setShowBadge(false);
-    }
+    if (!isOpen) setShowBadge(false);
   };
 
   return (
@@ -550,7 +517,7 @@ Email: support@smartcabb.cd`;
                     } animate-[fadeIn_0.3s_ease]`}
                   >
                     <div
-                      className={`max-w-[75%] p-3 rounded-[18px] text-sm leading-relaxed ${
+                      className={`max-w-[75%] p-3 rounded-[18px] text-sm leading-relaxed whitespace-pre-line ${
                         message.sender === 'user'
                           ? 'bg-gradient-to-r from-[#00BFA5] to-[#00A890] text-white rounded-br-sm'
                           : 'bg-white text-[#1a1a1a] rounded-bl-sm shadow-[0_2px_8px_rgba(0,0,0,0.08)]'
@@ -566,8 +533,8 @@ Email: support@smartcabb.cd`;
                     </div>
                   </div>
                 ))}
-                
-                {/* Indicateur "typing..." */}
+
+                {/* Indicateur typing */}
                 {isTyping && (
                   <div className="mb-4 flex justify-start animate-[fadeIn_0.2s_ease]">
                     <div className="bg-white p-3 rounded-[18px] rounded-bl-sm shadow-[0_2px_8px_rgba(0,0,0,0.08)] flex items-center gap-1">
@@ -577,7 +544,7 @@ Email: support@smartcabb.cd`;
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={messagesEndRef} />
               </>
             )}
@@ -635,31 +602,16 @@ Email: support@smartcabb.cd`;
       <style dangerouslySetInnerHTML={{
         __html: `
           @keyframes slideUp {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-
           @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
           }
-
           .animate-slideUp {
             animation: slideUp 0.3s ease;
           }
-
           @media (max-width: 480px) {
             .chat-window-mobile {
               width: calc(100vw - 20px) !important;
