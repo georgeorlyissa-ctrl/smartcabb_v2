@@ -7,7 +7,6 @@ import { LanguageSelector } from '../components/LanguageSelector';
 
 const ChatWidget = lazy(() => import('../components/ChatWidget').then(module => ({ default: module.ChatWidget })));
 
-// Composant drapeau inline — aucune dependance externe, fonctionne en local et en prod
 function FlagBadge({ code }: { code: string }) {
   return (
     <div style={{
@@ -22,7 +21,6 @@ function FlagBadge({ code }: { code: string }) {
   );
 }
 
-// Hook IntersectionObserver maison
 function useInViewCustom(threshold = 0.15) {
   const ref = useRef<HTMLElement>(null);
   const [inView, setInView] = useState(false);
@@ -59,7 +57,6 @@ export function LandingPage() {
     { src: '/logos/cash.png', label: 'Frais cash' },
   ];
 
-  // Precharger uniquement les images critiques above the fold
   useEffect(() => {
     const preload = ['/hero-smartcabb.png', '/photo2_smartcabb.jpeg'];
     preload.forEach(src => {
@@ -71,7 +68,6 @@ export function LandingPage() {
     });
   }, []);
 
-  // Tous les carousels dans un seul useEffect, après le premier paint
   useEffect(() => {
     const rafId = requestAnimationFrame(() => {
       const t1 = setInterval(() => setCurrentBg(p => (p + 1) % backgrounds.length), 4000);
@@ -253,7 +249,6 @@ export function LandingPage() {
 
       {/* HERO */}
       <section id="home" style={{ paddingTop: '120px', paddingBottom: '80px', position: 'relative', overflow: 'hidden' }}>
-        {/* Background carousel — ne rend que l'image active et la suivante */}
         {backgrounds.map((bg, i) =>
           currentBg === i || currentBg === (i + 1) % backgrounds.length ? (
             <div key={i} style={{ position: 'absolute', inset: 0, backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center', opacity: currentBg === i ? 1 : 0, transition: 'opacity 1.2s ease' }} />
@@ -278,7 +273,8 @@ export function LandingPage() {
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}
                 style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '48px' }}>
                 <Link to="/app/passenger" className="btn-hero-primary cta-glow">{t('hero.bookRide')}</Link>
-                <Link to="/drivers" className="btn-hero-secondary">{t('hero.becomeDriver')}</Link>
+                {/* ✅ MODIFIÉ : Redirige directement vers le formulaire d'inscription chauffeur */}
+                <Link to="/app/driver/signup" className="btn-hero-secondary">{t('hero.becomeDriver')}</Link>
               </motion.div>
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '24px' }}>
@@ -292,22 +288,12 @@ export function LandingPage() {
               </motion.div>
             </div>
 
-            {/* Hero image carousel — mobile (visible uniquement sur mobile) */}
+            {/* Hero image carousel — mobile */}
             <div className="relative lg:hidden" style={{ marginBottom: '32px', borderRadius: '16px', overflow: 'hidden', height: '260px' }}>
               {heroImages.map((img, i) =>
                 heroImg === i || heroImg === (i + 1) % heroImages.length ? (
-                  <img
-                    key={i}
-                    src={img}
-                    alt="SmartCabb"
-                    width={600}
-                    height={260}
-                    style={{
-                      position: 'absolute', inset: 0, width: '100%', height: '100%',
-                      objectFit: 'cover',
-                      opacity: heroImg === i ? 1 : 0,
-                      transition: 'opacity 1s ease',
-                    }}
+                  <img key={i} src={img} alt="SmartCabb" width={600} height={260}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
                     onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }}
                   />
                 ) : null
@@ -327,9 +313,7 @@ export function LandingPage() {
                 transition={{ duration: 0.8, delay: 0.25, ease }}>
                 {heroImages.map((img, i) =>
                   heroImg === i || heroImg === (i + 1) % heroImages.length ? (
-                    <img key={i} src={img} alt="SmartCabb"
-                      width={800}
-                      height={480}
+                    <img key={i} src={img} alt="SmartCabb" width={800} height={480}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
                       onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }} />
                   ) : null
@@ -370,12 +354,7 @@ export function LandingPage() {
             {steps.map((step, i) => (
               <div key={i} className={`card reveal ${howInView ? 'in' : ''}`} style={{ overflow: 'hidden', position: 'relative', transitionDelay: `${0.18 + i * 0.18}s` }}>
                 <div style={{ height: '220px', overflow: 'hidden', position: 'relative' }}>
-                  <img
-                    src={step.image}
-                    alt={step.title}
-                    loading="lazy"
-                    width={600}
-                    height={220}
+                  <img src={step.image} alt={step.title} loading="lazy" width={600} height={220}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s', display: 'block' }}
                     onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.08)')}
                     onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')}
@@ -557,10 +536,7 @@ export function LandingPage() {
           </div>
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div className={`reveal-left ${africaInView ? 'in' : ''}`} style={{ position: 'relative' }}>
-              <img
-                src="/carte-afrique.png"
-                alt="Carte Afrique"
-                loading="lazy"
+              <img src="/carte-afrique.png" alt="Carte Afrique" loading="lazy"
                 style={{ width: '100%', height: 'auto', objectFit: 'contain', display: 'block' }}
                 onError={e => { e.currentTarget.style.display = 'none'; }}
               />
@@ -583,13 +559,9 @@ export function LandingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '10px', marginBottom: '32px' }}>
                 {africanCountries.map((p, i) => (
                   <div key={i} className="country-card" style={{ opacity: africaInView ? 1 : 0, transform: africaInView ? 'scale(1)' : 'scale(0.8)', transition: `all 0.4s cubic-bezier(0.22,1,0.36,1) ${0.2 + i * 0.05}s` }}>
-                    <img
-  src={`/flags/${p.code}.png`}
-  alt={p.nameFR}
-  width={28}
-  height={18}
-  style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px', display: 'block', flexShrink: 0 }}
-/>
+                    <img src={`/flags/${p.code}.png`} alt={p.nameFR} width={28} height={18}
+                      style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px', display: 'block', flexShrink: 0 }}
+                    />
                     <div>
                       <div style={{ fontSize: '12px', fontWeight: '700', color: '#111827', lineHeight: '1.2' }}>{language === 'fr' ? p.nameFR : p.nameEN}</div>
                       <div style={{ fontSize: '11px', color: '#9ca3af', lineHeight: '1.2' }}>{language === 'fr' ? p.cityFR : p.cityEN}</div>
@@ -620,7 +592,8 @@ export function LandingPage() {
           <p className={`reveal d3 ${ctaInView ? 'in' : ''}`} style={{ fontSize: '18px', color: 'rgba(255,255,255,0.8)', marginBottom: '40px', lineHeight: '1.6' }}>{t('cta.subtitle')}</p>
           <div className={`reveal d4 ${ctaInView ? 'in' : ''}`} style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '48px' }}>
             <Link to="/app/passenger" className="btn-primary cta-glow">{t('cta.startNow')}</Link>
-            <Link to="/drivers" className="btn-secondary">{t('cta.becomePartner')}</Link>
+            {/* ✅ MODIFIÉ : Redirige directement vers le formulaire d'inscription chauffeur */}
+            <Link to="/app/driver/signup" className="btn-secondary">{t('cta.becomePartner')}</Link>
           </div>
           <div className={`reveal d5 ${ctaInView ? 'in' : ''}`} style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
             {[{ label: t('cta.availableOn'), val: t('cta.iosAndroid') }, { label: t('cta.payment'), val: t('cta.cashMobile') }].map((b, i) => (
