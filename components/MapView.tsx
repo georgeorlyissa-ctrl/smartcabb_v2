@@ -1,18 +1,15 @@
 /**
  * 🗺️ MAP VIEW - WRAPPER INTELLIGENT
- * 
+ *
  * Essaie Google Maps en premier, puis bascule vers OpenStreetMap si erreur
- * (RefererNotAllowedMapError, ApiNotActivatedMapError, etc.)
- * 
- * @version 1.0.0
- * @date 2026-01-30
+ * (clé API manquante, RefererNotAllowedMapError, ApiNotActivatedMapError, etc.)
+ *
+ * @version 2.0.0
  */
-
 import { useEffect, useState } from 'react';
 import { GoogleMapView } from './GoogleMapView';
 import { OpenStreetMapView } from './OpenStreetMapView';
 
-// Types
 interface Location {
   lat: number;
   lng: number;
@@ -51,76 +48,70 @@ interface MapViewProps {
 }
 
 export function MapView(props: MapViewProps) {
+  // ✅ Par défaut on tente Google Maps
   const [useOpenStreetMap, setUseOpenStreetMap] = useState(false);
-  const [googleMapsError, setGoogleMapsError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Écouter les erreurs Google Maps globales
+    // Écouter les erreurs Google Maps globales (RefererNotAllowedMapError, etc.)
     const errorListener = (event: ErrorEvent | any) => {
       const errorMsg = event?.message || event?.error?.message || String(event);
-      
-      if (errorMsg.includes('RefererNotAllowedMapError') || 
-          errorMsg.includes('ApiNotActivatedMapError') ||
-          errorMsg.includes('InvalidKeyMapError') ||
-          errorMsg.includes('MissingKeyMapError')) {
-        
-        console.warn('⚠️ Erreur Google Maps API détectée:', errorMsg);
+      if (
+        errorMsg.includes('RefererNotAllowedMapError') ||
+        errorMsg.includes('ApiNotActivatedMapError') ||
+        errorMsg.includes('InvalidKeyMapError') ||
+        errorMsg.includes('MissingKeyMapError')
+      ) {
+        console.warn('⚠️ Erreur Google Maps globale détectée:', errorMsg);
         console.log('🔄 Basculement vers OpenStreetMap...');
-        
-        setGoogleMapsError(errorMsg);
         setUseOpenStreetMap(true);
       }
     };
 
-    // Écouter les erreurs globales
     window.addEventListener('error', errorListener);
-
-    // Intercepter console.error pour détecter les erreurs Google Maps
-    const originalConsoleError = console.error;
-    console.error = (...args: any[]) => {
-      const errorStr = args.join(' ');
-      if (errorStr.includes('Google Maps') && 
-          (errorStr.includes('RefererNotAllowedMapError') || 
-           errorStr.includes('ApiNotActivatedMapError') ||
-           errorStr.includes('InvalidKeyMapError'))) {
-        console.warn('⚠️ Erreur Google Maps détectée via console.error');
-        setUseOpenStreetMap(true);
-      }
-      originalConsoleError.apply(console, args);
-    };
-
-    return () => {
-      window.removeEventListener('error', errorListener);
-      console.error = originalConsoleError;
-    };
+    return () => window.removeEventListener('error', errorListener);
   }, []);
 
-  // Si on doit utiliser OpenStreetMap
+  // ✅ Callback appelé par GoogleMapView quand il échoue
+  const handleGoogleMapsError = (reason: string) => {
+    console.warn('⚠️ GoogleMapView a signalé une erreur:', reason);
+    console.log('🔄 Basculement automatique vers OpenStreetMap...');
+    setUseOpenStreetMap(true);
+  };
+
+  // ─── Fallback OpenStreetMap ───────────────────────────────
   if (useOpenStreetMap) {
-    console.log('🗺️ Affichage de OpenStreetMap (fallback)');
-    
+    // Construire la liste de marqueurs pour OSM
+    const osmMarkers: Location[] = [];
+    if (props.center) osmMarkers.push(props.center);
+    if (props.pickup) osmMarkers.push(props.pickup);
+    if (props.destination) osmMarkers.push(props.destination);
+    if (props.routeStart) osmMarkers.push(props.routeStart);
+    if (props.routeEnd) osmMarkers.push(props.routeEnd);
+    if (props.markers) osmMarkers.push(...props.markers);
+
     return (
       <div className="relative w-full h-full">
-        {/* Message d'information */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium z-50">
+        {/* Bandeau informatif */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium z-50 whitespace-nowrap">
           🗺️ Mode carte simplifié (OpenStreetMap)
         </div>
-        
+
         <OpenStreetMapView
-          center={props.center}
-          markers={props.markers}
+          center={props.center || props.pickup}
+          markers={osmMarkers.length > 0 ? osmMarkers : undefined}
           zoom={props.zoom}
           className={props.className}
-          height={props.height}
         />
       </div>
     );
   }
 
-  // Par défaut, utiliser Google Maps
-  console.log('🗺️ Tentative d\'affichage avec Google Maps');
-  
+  // ─── Google Maps (défaut) ─────────────────────────────────
   return (
-    <GoogleMapView {...props} />
+    <GoogleMapView
+      {...props}
+      // ✅ onError : quand GoogleMapView échoue, MapView bascule sur OSM
+      onError={handleGoogleMapsError}
+    />
   );
 }
