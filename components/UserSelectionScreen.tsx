@@ -71,12 +71,8 @@ export function UserSelectionScreen() {
             </div>
             
             {/* Logo principal */}
-            <div className="relative w-28 h-28 mx-auto bg-white rounded-3xl shadow-2xl shadow-black/30 flex items-center justify-center">
-              <div className="text-center">
-                <div className="text-4xl font-black bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 bg-clip-text text-transparent">
-                  SC
-                </div>
-              </div>
+            <div className="relative w-28 h-28 mx-auto">
+              <SmartCabbLogo className="w-28 h-28" />
             </div>
           </div>
 
