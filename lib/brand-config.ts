@@ -28,7 +28,7 @@
  * ⚠️  NOTE : Le fichier logo-smartcabb.jpeg est dans /public/ par défaut.
  *     Remplacez-le par votre propre image ou changez la valeur ci-dessous.
  */
-export const BRAND_LOGO_URL = '/mon-logo.png';
+export const BRAND_LOGO_URL = '/logo-smartcabb.jpeg';
 
 // ─── Nom & slogans ────────────────────────────────────────────────────────────
 export const BRAND_NAME = 'SmartCabb';
