@@ -96,13 +96,9 @@ export function LandingScreen() {
               <div className="w-36 h-36 rounded-full border-2 border-white/30 animate-pulse" style={{ animationDuration: '2s' }}></div>
             </div>
             
-            {/* Logo principal - Carré blanc avec SC */}
-            <div className="relative w-32 h-32 mx-auto bg-white rounded-3xl shadow-2xl shadow-black/30 flex items-center justify-center transform hover:scale-105 transition-all duration-500">
-              <div className="text-center">
-                <div className="text-5xl font-black bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 bg-clip-text text-transparent">
-                  SC
-                </div>
-              </div>
+            {/* Logo principal */}
+            <div className="relative w-32 h-32 mx-auto transform hover:scale-105 transition-all duration-500">
+              <SmartCabbLogo className="w-32 h-32" />
             </div>
           </div>
 
