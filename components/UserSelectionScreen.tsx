@@ -74,8 +74,8 @@ export function UserSelectionScreen() {
             </div>
             
             {/* Logo principal */}
-            <div className="relative w-28 h-28 mx-auto">
-              <SmartCabbLogo className="w-75 h-75" />
+            <div className="relative w-50 h-50 mx-auto">
+              <SmartCabbLogo className="w-50 h-50" />
             </div>
           </div>
 
