@@ -98,7 +98,7 @@ export function LandingScreen() {
             
             {/* Logo principal */}
             <div className="relative w-32 h-32 mx-auto transform hover:scale-105 transition-all duration-500">
-              <SmartCabbLogo className="w-32 h-32" />
+              <SmartCabbLogo className="w-40 h-40" />
             </div>
           </div>
 
