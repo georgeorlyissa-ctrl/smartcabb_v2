@@ -81,7 +81,7 @@ const translations = {
     'add_comment': 'Ajouter un commentaire (optionnel)',
     'submit_rating': "Soumettre l'évaluation",
 
-    // Rating screen — RatingScreen.tsx
+    // Rating screen
     'no_ride_to_rate':    'Aucune course à évaluer',
     'back_home':          "Retour à l'accueil",
     'your_driver':        'Votre chauffeur',
@@ -101,13 +101,11 @@ const translations = {
     'rating_stars_given': 'Vous avez attribué',
     'rating_stars_to':    'étoile(s) à',
     'rating_save_error':  "Impossible d'enregistrer l'évaluation. Réessayez.",
-    // Star labels
     'star_very_bad':   'Très mauvais',
     'star_bad':        'Mauvais',
     'star_average':    'Moyen',
     'star_good':       'Bien',
     'star_excellent':  'Excellent !',
-    // Quick comments
     'qc_great_driver':  'Excellent conducteur',
     'qc_clean_car':     'Véhicule propre',
     'qc_safe_driving':  'Conduite sécuritaire',
@@ -207,7 +205,43 @@ const translations = {
     'minutes': 'minutes',
     'hours': 'heures',
     'km': 'km',
-    'cdf': 'CDF'
+    'cdf': 'CDF',
+
+    // ✅ NOUVEAU — Lieux favoris
+    'favorite_places': 'Lieux favoris',
+    'no_favorite_places': 'Aucun lieu favori',
+    'no_favorite_places_desc': 'Ajoutez vos lieux fréquents',
+    'add_favorite': 'Ajouter',
+    'add_favorite_place': 'Ajouter un lieu favori',
+    'edit_favorite_place': 'Modifier un lieu favori',
+    'delete_favorite_confirm': 'Supprimer ce lieu favori ?',
+    'favorite_saved': 'Favori ajouté avec succès !',
+    'favorite_updated': 'Favori mis à jour',
+    'favorite_deleted': 'Favori supprimé',
+    'favorite_error_save': "Erreur lors de l'enregistrement",
+    'favorite_error_delete': 'Erreur lors de la suppression',
+    'favorite_fill_fields': 'Veuillez remplir tous les champs',
+    'favorite_not_logged': 'Utilisateur non connecté',
+    'favorite_search_place': 'Rechercher le lieu',
+    'favorite_search_placeholder': 'Rechercher une adresse...',
+    'favorite_place_found': 'Lieu trouvé ! Donnez-lui un nom personnalisé',
+    'favorite_custom_name': 'Nom personnalisé',
+    'favorite_name_placeholder': 'Ex: Maison, Bureau, Chez Maman...',
+    'favorite_name_hint': 'Donnez un nom facile à retenir',
+    'favorite_address': 'Adresse',
+    'favorite_address_placeholder': 'Ex: Avenue de la Libération, Gombe',
+    'favorite_use_current': 'Position actuelle',
+    'favorite_current_used': 'Position actuelle utilisée',
+    'favorite_current_unavailable': 'Position actuelle non disponible',
+    'favorite_icon': 'Icône',
+    'favorite_saving': 'Enregistrement...',
+    'favorite_search_dialog_desc': 'Recherchez d\'abord le lieu, puis personnalisez son nom et son icône',
+
+    // ✅ NOUVEAU — Icônes favoris
+    'icon_home': 'Domicile',
+    'icon_work': 'Travail',
+    'icon_heart': 'Favori',
+    'icon_star': 'Important',
   },
   en: {
     // Navigation
@@ -289,7 +323,7 @@ const translations = {
     'add_comment': 'Add a comment (optional)',
     'submit_rating': 'Submit Rating',
 
-    // Rating screen — RatingScreen.tsx
+    // Rating screen
     'no_ride_to_rate':    'No ride to rate',
     'back_home':          'Back to home',
     'your_driver':        'Your driver',
@@ -309,13 +343,11 @@ const translations = {
     'rating_stars_given': 'You gave',
     'rating_stars_to':    'star(s) to',
     'rating_save_error':  'Unable to save rating. Please try again.',
-    // Star labels
     'star_very_bad':   'Very bad',
     'star_bad':        'Bad',
     'star_average':    'Average',
     'star_good':       'Good',
     'star_excellent':  'Excellent!',
-    // Quick comments
     'qc_great_driver':  'Great driver',
     'qc_clean_car':     'Clean car',
     'qc_safe_driving':  'Safe driving',
@@ -415,7 +447,43 @@ const translations = {
     'minutes': 'minutes',
     'hours': 'hours',
     'km': 'km',
-    'cdf': 'CDF'
+    'cdf': 'CDF',
+
+    // ✅ NOUVEAU — Favorite places
+    'favorite_places': 'Favorite places',
+    'no_favorite_places': 'No favorite places',
+    'no_favorite_places_desc': 'Add your frequent locations',
+    'add_favorite': 'Add',
+    'add_favorite_place': 'Add a favorite place',
+    'edit_favorite_place': 'Edit favorite place',
+    'delete_favorite_confirm': 'Delete this favorite place?',
+    'favorite_saved': 'Favorite added successfully!',
+    'favorite_updated': 'Favorite updated',
+    'favorite_deleted': 'Favorite deleted',
+    'favorite_error_save': 'Error saving favorite',
+    'favorite_error_delete': 'Error deleting favorite',
+    'favorite_fill_fields': 'Please fill in all fields',
+    'favorite_not_logged': 'User not logged in',
+    'favorite_search_place': 'Search for a place',
+    'favorite_search_placeholder': 'Search for an address...',
+    'favorite_place_found': 'Place found! Give it a custom name',
+    'favorite_custom_name': 'Custom name',
+    'favorite_name_placeholder': 'Ex: Home, Office, Mom\'s place...',
+    'favorite_name_hint': 'Give it an easy-to-remember name',
+    'favorite_address': 'Address',
+    'favorite_address_placeholder': 'Ex: Liberation Avenue, Gombe',
+    'favorite_use_current': 'Current location',
+    'favorite_current_used': 'Current location used',
+    'favorite_current_unavailable': 'Current location not available',
+    'favorite_icon': 'Icon',
+    'favorite_saving': 'Saving...',
+    'favorite_search_dialog_desc': 'Search for the place first, then customize its name and icon',
+
+    // ✅ NOUVEAU — Favorite icons
+    'icon_home': 'Home',
+    'icon_work': 'Work',
+    'icon_heart': 'Favorite',
+    'icon_star': 'Important',
   }
 };
 
