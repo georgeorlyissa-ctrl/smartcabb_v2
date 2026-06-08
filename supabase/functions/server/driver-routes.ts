@@ -135,8 +135,10 @@ app.post("/toggle-online-status", async (c) => {
       return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
     }
 
-    // Vérifier que le conducteur est approuvé
-    if (driver.status !== "approved" && !driver.isApproved) {
+    // ✅ FIX: accepter aussi status='online'/'offline' comme compte approuvé (ancien format)
+    const isApprovedDriver = driver.status === "approved" || driver.isApproved ||
+                             driver.status === "online" || driver.status === "offline";
+    if (!isApprovedDriver) {
       return c.json({
         success: false,
         error: "Votre compte n'est pas encore approuvé. Veuillez attendre la validation de l'administrateur.",
@@ -160,6 +162,11 @@ app.post("/toggle-online-status", async (c) => {
       isOnline,
       is_online: isOnline,
       is_available: isOnline,
+      available: isOnline,
+      // ✅ FIX: normaliser status vers 'approved' (ne pas laisser 'online'/'offline' dans status)
+      status: "approved",
+      isApproved: true,
+      is_approved: true,
       ...(location ? { location, lastLocation: location } : {}),
       lastOnlineChange: now,
       updated_at: now,
@@ -175,6 +182,9 @@ app.post("/toggle-online-status", async (c) => {
         isOnline,
         is_online: isOnline,
         is_available: isOnline,
+        available: isOnline,
+        status: "approved",
+        isApproved: true,
         updated_at: now,
       });
     }
@@ -285,10 +295,23 @@ app.post("/:driverId/wallet/recharge", async (c) => {
     const driver = await kvGet(`driver:${driverId}`);
     if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
 
-    const currentCredit  = driver.creditBalance   ?? driver.balance ?? 0;
+    // ✅ FIX BUG RECHARGE : Utiliser balance comme source de vérité principale
+    // (creditBalance peut être désynchronisé si la course ne l'a pas mis à jour)
+    // On prend le MINIMUM des deux pour ne jamais gonfler le solde artificiellement
+    const balanceRaw  = driver.balance        ?? null;
+    const creditRaw   = driver.creditBalance  ?? null;
+    let currentCredit: number;
+    if (balanceRaw !== null && creditRaw !== null) {
+      // Les deux existent → prendre le plus petit (le plus à jour après déductions)
+      currentCredit = Math.min(Number(balanceRaw), Number(creditRaw));
+    } else {
+      // L'un des deux est absent → prendre celui qui existe, ou 0
+      currentCredit = Number(balanceRaw ?? creditRaw ?? 0);
+    }
     const currentEarnings = driver.earningsBalance ?? 0;
     const currentBonus   = driver.bonusBalance    ?? 0;
     const newCreditBalance = currentCredit + amount;
+    console.log(`💳 [RECHARGE] Solde avant: balance=${balanceRaw}, creditBalance=${creditRaw} → currentCredit utilisé: ${currentCredit} → nouveau: ${newCreditBalance}`);
 
     const updatedDriver = {
       ...driver,
@@ -398,7 +421,18 @@ app.get("/:driverId", async (c) => {
     const driverId = c.req.param("driverId");
     const driver = await kvGet(`driver:${driverId}`);
     if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
-    return c.json({ success: true, driver });
+
+    // ✅ Normaliser la photo : profile_photo → photo + photo_url (compatibilité frontend)
+    const normalizedDriver = {
+      ...driver,
+      photo:       driver.photo       || driver.photo_url     || driver.profile_photo || null,
+      photo_url:   driver.photo_url   || driver.profile_photo || driver.photo         || null,
+      // ✅ FIX : normaliser total_rides (snake_case KV) → totalRides (camelCase frontend)
+      totalRides:  driver.totalRides  || driver.total_rides   || 0,
+      total_rides: driver.totalRides  || driver.total_rides   || 0,
+    };
+
+    return c.json({ success: true, driver: normalizedDriver });
   } catch (error) {
     console.error("❌ [DRIVERS/GET-ONE] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
@@ -513,7 +547,7 @@ app.post("/signup", async (c) => {
       vehicleModel,
       vehiclePlate,
       vehicleColor,
-      vehicleCategory,
+      vehicleCategory,         // ← champ principal utilisé par le matching
       vehicle: {
         make: vehicleMake,
         model: vehicleModel,
@@ -522,16 +556,27 @@ app.post("/signup", async (c) => {
         category: vehicleCategory,
       },
       profile_photo: profilePhoto || null,
+      // Approbation
       status: "pending",
       isApproved: false,
       is_approved: false,
+      // ✅ FIX: tous les champs online initialisés (booléens ET strings)
+      isOnline: false,
       is_online: false,
       is_available: false,
+      available: false,
+      status_online: "offline",
+      // Financier
       balance: 0,
+      creditBalance: 0,
+      earningsBalance: 0,
+      bonusBalance: 0,
+      // Stats
       total_trips: 0,
       total_rides: 0,
       rating: 0,
       rating_count: 0,
+      // Dates
       created_at: now,
       updated_at: now,
       last_login_at: null,
@@ -614,8 +659,10 @@ app.post("/:driverId/status", async (c) => {
       return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
     }
 
-    // Vérifier que le conducteur est approuvé
-    if (driver.status !== "approved" && !driver.isApproved) {
+    // ✅ FIX: accepter aussi status='online'/'offline' comme compte approuvé (ancien format)
+    const isApprovedDriver = driver.status === "approved" || driver.isApproved ||
+                             driver.status === "online" || driver.status === "offline";
+    if (!isApprovedDriver) {
       return c.json({
         success: false,
         error: "Votre compte n'est pas encore approuvé. Veuillez attendre la validation de l'administrateur.",
@@ -639,6 +686,11 @@ app.post("/:driverId/status", async (c) => {
       isOnline,
       is_online: isOnline,
       is_available: isOnline,
+      available: isOnline,
+      // ✅ FIX: normaliser status vers 'approved'
+      status: "approved",
+      isApproved: true,
+      is_approved: true,
       status_online: status,
       ...(location ? { location, lastLocation: location } : {}),
       lastOnlineChange: now,
@@ -655,6 +707,9 @@ app.post("/:driverId/status", async (c) => {
         isOnline,
         is_online: isOnline,
         is_available: isOnline,
+        available: isOnline,
+        status: "approved",
+        isApproved: true,
         updated_at: now,
       });
     }
@@ -743,7 +798,7 @@ app.get("/location/:driverId", async (c) => {
       isOnline: driver.isOnline ?? driver.is_online ?? false,
     });
   } catch (error) {
-    console.error("�� [DRIVERS/LOCATION-GET] Erreur:", error);
+    console.error(" [DRIVERS/LOCATION-GET] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
   }
 });
@@ -830,6 +885,115 @@ app.post("/update-driver-location", async (c) => {
   } catch (error) {
     console.error("❌ [DRIVERS/UPDATE-LOCATION] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /migrate-status — Migration: corriger status='online'/'offline' → isOnline boolean ─
+// À appeler UNE SEULE FOIS depuis le diagnostic pour normaliser tous les vieux enregistrements
+app.post("/migrate-status", async (c) => {
+  try {
+    console.log("🔧 [DRIVERS/MIGRATE] Début migration des statuts...");
+    const allDrivers = await kvGetByPrefix("driver:");
+    let migrated = 0;
+    let skipped = 0;
+
+    for (const driver of allDrivers) {
+      if (!driver?.id) { skipped++; continue; }
+
+      // Drivers avec status='online' ou 'offline' (ancien format)
+      if (driver.status === "online" || driver.status === "offline") {
+        const isOnline = driver.status === "online";
+        const now = new Date().toISOString();
+        const updatedDriver = {
+          ...driver,
+          isOnline,
+          is_online: isOnline,
+          is_available: isOnline,
+          available: isOnline,
+          status: "approved",   // normaliser le champ status vers son vrai rôle
+          isApproved: true,
+          is_approved: true,
+          updated_at: now,
+          migratedAt: now,
+        };
+        await kvSet(`driver:${driver.id}`, updatedDriver);
+
+        // Sync profil si existe
+        const profile = await kvGet(`profile:${driver.id}`);
+        if (profile) {
+          await kvSet(`profile:${driver.id}`, {
+            ...profile,
+            isOnline,
+            is_online: isOnline,
+            is_available: isOnline,
+            available: isOnline,
+            status: "approved",
+            isApproved: true,
+            updated_at: now,
+          });
+        }
+
+        console.log(`✅ Migré: ${driver.full_name || driver.name} (${driver.status} → isOnline=${isOnline}, status=approved)`);
+        migrated++;
+      } else {
+        skipped++;
+      }
+    }
+
+    console.log(`🎉 [DRIVERS/MIGRATE] Terminé: ${migrated} migrés, ${skipped} ignorés`);
+    return c.json({
+      success: true,
+      migrated,
+      skipped,
+      total: allDrivers.length,
+      message: `Migration terminée: ${migrated} chauffeur(s) corrigé(s)`,
+    });
+  } catch (error) {
+    console.error("❌ [DRIVERS/MIGRATE] Erreur:", error);
+    return c.json({ success: false, error: `Erreur migration: ${error.message}` }, 500);
+  }
+});
+
+// ─── POST /reset-fcm-tokens — Supprimer TOUS les tokens FCM (reset complet) ──
+// À utiliser uniquement lors d'un reset total de la base chauffeurs
+app.post("/reset-fcm-tokens", async (c) => {
+  try {
+    console.log("🗑️ [DRIVERS/RESET-FCM] Début suppression des tokens FCM orphelins...");
+
+    // Supprimer les clés fcm_token:driver:*
+    const supabase = kvClient();
+    const { data: fcmRows, error: fcmErr } = await supabase
+      .from(KV_TABLE)
+      .select("key")
+      .like("key", "fcm_token:driver:%");
+
+    if (fcmErr) throw new Error(fcmErr.message);
+
+    let deleted = 0;
+    for (const row of fcmRows ?? []) {
+      await kvDel(row.key);
+      deleted++;
+    }
+
+    // Aussi nettoyer le champ fcmToken dans chaque driver:*
+    const allDrivers = await kvGetByPrefix("driver:");
+    for (const driver of allDrivers) {
+      if (!driver?.id) continue;
+      if (driver.fcmToken || driver.fcm_token) {
+        const cleaned = { ...driver };
+        delete cleaned.fcmToken;
+        delete cleaned.fcm_token;
+        cleaned.updated_at = new Date().toISOString();
+        await kvSet(`driver:${driver.id}`, cleaned);
+        deleted++;
+      }
+    }
+
+    console.log(`✅ [DRIVERS/RESET-FCM] ${deleted} entrée(s) supprimée(s)`);
+    return c.json({ success: true, deleted, message: `${deleted} token(s) FCM supprimé(s)` });
+  } catch (error) {
+    console.error("❌ [DRIVERS/RESET-FCM] Erreur:", error);
+    return c.json({ success: false, error: `Erreur reset: ${error.message}` }, 500);
   }
 });
 
