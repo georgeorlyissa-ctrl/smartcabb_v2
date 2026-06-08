@@ -81,37 +81,115 @@ app.post("/register-driver-token", async (c) => {
     // Récupérer les données actuelles du driver
     const driverKey = `driver:${driverId}`;
     const driver = await kv.get(driverKey);
-    
+
     if (!driver) {
       console.error(`❌ Conducteur ${driverId} non trouvé dans KV store`);
-      // On sauvegarde quand même le token
     }
 
-    // Mettre à jour les données du driver avec le token FCM
+    // ── Normalisation du vehicleCategory (tous les formats possibles) ──────────
+    const vehicleCategory =
+      driver?.vehicleCategory ||
+      driver?.vehicle_category ||
+      driver?.vehicle_type ||
+      driver?.vehicleType ||
+      driver?.vehicle?.category ||
+      driver?.vehicle?.type ||
+      null;
+
+    // ── Déterminer le vrai statut "en ligne" (gère ancien format status='online') ──
+    const hadOldOnlineStatus = driver?.status === 'online';
+    const hadOldOfflineStatus = driver?.status === 'offline';
+    const isOldFormat = hadOldOnlineStatus || hadOldOfflineStatus;
+
+    // Préserver l'état en ligne actuel ou déduire depuis l'ancien format
+    const currentIsOnline = isOldFormat
+      ? hadOldOnlineStatus
+      : (driver?.isOnline === true || driver?.is_online === true);
+
+    // ── Normaliser le statut d'approbation ─────────────────────────────────────
+    const approvalStatus = (
+      driver?.status === 'approved' ||
+      driver?.isApproved === true ||
+      isOldFormat  // ancien format = approuvé implicitement
+    ) ? 'approved' : (driver?.status || 'pending');
+
+    const isApproved = approvalStatus === 'approved';
+
+    const now = new Date().toISOString();
+
+    // ── Construire le record normalisé ─────────────────────────────────────────
     const updatedDriver = {
       ...(driver || {}),
       id: driverId,
+      // FCM
       fcmToken,
-      fcmTokenUpdatedAt: new Date().toISOString()
+      fcmTokenUpdatedAt: now,
+      // ✅ vehicleCategory normalisé dans tous les formats
+      ...(vehicleCategory ? {
+        vehicleCategory,
+        vehicle_category: vehicleCategory,
+        vehicle_type: vehicleCategory,
+        vehicle: {
+          ...(driver?.vehicle || {}),
+          category: vehicleCategory,
+        },
+      } : {}),
+      // ✅ Statut en ligne — booléens cohérents
+      isOnline: currentIsOnline,
+      is_online: currentIsOnline,
+      is_available: currentIsOnline,
+      available: currentIsOnline,
+      // ✅ Approbation normalisée ('online'/'offline' → 'approved')
+      status: approvalStatus,
+      isApproved,
+      is_approved: isApproved,
+      // Timestamp de connexion
+      lastSeenAt: now,
+      updated_at: now,
     };
 
     await kv.set(driverKey, updatedDriver);
 
-    // Sauvegarder aussi une copie directe du token pour accès rapide
-    await kv.set(`fcm_token_${driverId}`, fcmToken);
-    
-    console.log(`✅ Token FCM enregistré pour conducteur ${driverId}`);
+    // Sync profil si existant
+    const profile = await kv.get(`profile:${driverId}`);
+    if (profile) {
+      await kv.set(`profile:${driverId}`, {
+        ...profile,
+        fcmToken,
+        fcmTokenUpdatedAt: now,
+        ...(vehicleCategory ? { vehicleCategory, vehicle_category: vehicleCategory } : {}),
+        isOnline: currentIsOnline,
+        is_online: currentIsOnline,
+        is_available: currentIsOnline,
+        available: currentIsOnline,
+        status: approvalStatus,
+        isApproved,
+        lastSeenAt: now,
+        updated_at: now,
+      });
+    }
 
-    return c.json({ 
-      success: true, 
+    // Copie directe du token pour accès rapide
+    await kv.set(`fcm_token_${driverId}`, fcmToken);
+
+    console.log(`✅ Token FCM + normalisation pour conducteur ${driverId} | isOnline=${currentIsOnline} | vehicleCategory=${vehicleCategory} | status=${approvalStatus}`);
+
+    return c.json({
+      success: true,
       message: 'Token FCM enregistré avec succès',
-      driverId 
+      driverId,
+      normalized: {
+        vehicleCategory,
+        isOnline: currentIsOnline,
+        status: approvalStatus,
+        isApproved,
+      },
     });
   } catch (error) {
     console.error("❌ Erreur enregistrement token FCM conducteur:", error);
-    return c.json({ 
-      success: false, 
-      error: error instanceof Error ? error.message : "Erreur serveur" 
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur serveur"
     }, 500);
   }
 });
