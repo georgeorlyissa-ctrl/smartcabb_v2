@@ -1,365 +1,472 @@
 /**
- * 🗺️ GOOGLE MAPS API - Service de géocodage et routing
+ * 🗺️ GOOGLE MAPS API - SmartCabb
+ * Stratégie hybride : Autocomplete (frappe) + Text Search (fallback)
  */
 
 import { Hono } from 'npm:hono@4.6.14';
 
 const app = new Hono();
 
+// ─── Helper : clé API ────────────────────────────────────────────────────────
+function getApiKey(): string | null {
+  return Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY') ||
+         Deno.env.get('GOOGLE_MAPS_API_KEY') ||
+         null;
+}
+
+// ─── Helper : calcul distance Haversine ──────────────────────────────────────
+function haversine(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ─── GET /autocomplete — Suggestions temps réel (comme Yango) ────────────────
+app.get('/autocomplete', async (c) => {
+  try {
+    const input = c.req.query('input') || c.req.query('query');
+    if (!input || input.trim().length < 1) {
+      return c.json({ predictions: [], results: [] });
+    }
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      console.error('❌ [AUTOCOMPLETE] Clé API manquante');
+      return c.json({ error: 'API key not configured', predictions: [], results: [] }, 500);
+    }
+
+    const userLat = c.req.query('lat') || '-4.3276';
+    const userLng = c.req.query('lng') || '15.3136';
+
+    console.log(`🔍 [AUTOCOMPLETE] "${input}" depuis (${userLat}, ${userLng})`);
+
+    // ✅ Google Places Autocomplete API
+    const params = new URLSearchParams({
+      input: input.trim(),
+      location:  `${userLat},${userLng}`,
+      radius:    '50000',          // 50 km autour de la position
+      components: 'country:cd',    // Restreindre à la RDC (Congo-Kinshasa)
+      language:  'fr',
+      types:     'geocode|establishment',
+      key:       apiKey,
+    });
+
+    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    console.log(`📡 [AUTOCOMPLETE] Status Google: ${data.status}, ${data.predictions?.length || 0} prédictions`);
+
+    if (data.status === 'REQUEST_DENIED') {
+      console.error('🔴 [AUTOCOMPLETE] REQUEST_DENIED:', data.error_message);
+    }
+
+    if (!data.predictions || data.predictions.length === 0) {
+      // Aucun résultat autocomplete → essayer Text Search comme fallback
+      return c.json({ predictions: [], results: [] });
+    }
+
+    // Transformer les prédictions au format frontend
+    const results = data.predictions.slice(0, 10).map((p: any) => ({
+      id: p.place_id,
+      placeId: p.place_id,
+      name: p.structured_formatting?.main_text || p.description,
+      description: p.description,
+      // Coordonnées non disponibles ici → récupérées à la sélection via /place-details
+      coordinates: { lat: 0, lng: 0 },
+      source: 'google_autocomplete',
+    }));
+
+    console.log(`✅ [AUTOCOMPLETE] ${results.length} suggestions retournées`);
+    return c.json({ predictions: results, results });
+
+  } catch (error) {
+    console.error('❌ [AUTOCOMPLETE] Erreur:', error);
+    return c.json({ predictions: [], results: [], error: 'Erreur serveur' }, 500);
+  }
+});
+
+// ─── GET /search — Recherche principale (Autocomplete + Text Search) ──────────
 app.get('/search', async (c) => {
   try {
     const query = c.req.query('query');
-    if (!query) {
-      return c.json({ error: 'Query required', results: [] }, 400);
+    if (!query || query.trim().length < 1) {
+      return c.json({ results: [] });
     }
 
-    console.log('🗺️ Google Maps search:', query);
-
-    const apiKey = Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY') || Deno.env.get('GOOGLE_MAPS_API_KEY');
+    const apiKey = getApiKey();
     if (!apiKey) {
-      console.warn('⚠️ Google Maps API key missing, falling back');
+      console.error('❌ [SEARCH] Clé API manquante');
       return c.json({ error: 'API key not configured', results: [] }, 500);
     }
 
-    // ✅ POSITION DE L'UTILISATEUR (si fournie)
-    const userLat = c.req.query('lat');
-    const userLng = c.req.query('lng');
-    
-    // 🇨🇩 COORDONNÉES DE KINSHASA (centre-ville)
-    const kinshasaLat = userLat || '-4.3276';
-    const kinshasaLng = userLng || '15.3136';
-    
-    // ⭐ STRATÉGIE DOUBLE : Recherche avec ET sans "Kinshasa"
-    // Pour maximiser les résultats tout en gardant la restriction géographique
-    const queries = [
-      query, // Requête originale
-      `${query} Kinshasa`, // Requête avec "Kinshasa"
-      `${query} RDC` // Requête avec "RDC"
-    ];
-    
-    let allResults: any[] = [];
-    const seenPlaceIds = new Set<string>();
-    
-    // Essayer chaque variante de requête
-    for (const searchQuery of queries) {
-      console.log(`🔍 Essai requête: "${searchQuery}"`);
-      
-      // ✅ PARAMÈTRES GOOGLE MAPS AVEC RESTRICTION GÉOGRAPHIQUE
-      const params = new URLSearchParams({
-        query: searchQuery,
-        location: `${kinshasaLat},${kinshasaLng}`, // ⭐ Centre de recherche
-        radius: '50000', // ⭐ Rayon de 50km autour de Kinshasa
-        key: apiKey
+    const userLat = c.req.query('lat') || '-4.3276';
+    const userLng = c.req.query('lng') || '15.3136';
+    const userLatNum = parseFloat(userLat);
+    const userLngNum = parseFloat(userLng);
+
+    console.log(`🔍 [SEARCH] "${query}" depuis (${userLat}, ${userLng})`);
+
+    // ═══════════════════════════════════════════════════
+    // ÉTAPE 1 : Places Autocomplete (prioritaire — rapide)
+    // ═══════════════════════════════════════════════════
+    let autocompleteResults: any[] = [];
+
+    try {
+      const acParams = new URLSearchParams({
+        input:      query.trim(),
+        location:   `${userLat},${userLng}`,
+        radius:     '50000',
+        components: 'country:cd',
+        language:   'fr',
+        types:      'geocode|establishment',
+        key:        apiKey,
       });
-      
-      // 🇨🇩 RESTRICTION STRICTE À LA RDC
-      params.append('region', 'cd'); // ⭐ Biaiser vers la RDC
-      
-      const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?${params.toString()}`;
-      
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      if (data.status === 'OK' && data.results?.length > 0) {
-        console.log(`✅ "${searchQuery}": ${data.results.length} résultats`);
-        
-        // Ajouter seulement les nouveaux résultats (pas de doublons)
-        for (const result of data.results) {
-          if (!seenPlaceIds.has(result.place_id)) {
-            seenPlaceIds.add(result.place_id);
-            allResults.push(result);
-          }
-        }
-      } else {
-        console.log(`⚠️ "${searchQuery}": ${data.status} - ${data.results?.length || 0} résultats`);
-      }
-      
-      // Si on a déjà assez de résultats, arrêter
-      if (allResults.length >= 15) {
-        console.log(`✅ Assez de résultats (${allResults.length}), arrêt des requêtes`);
-        break;
-      }
-    }
-    
-    console.log(`📊 Total combiné: ${allResults.length} résultats uniques`);
-    
-    // ✅ FILTRAGE SUPPLÉMENTAIRE : Ne garder QUE les résultats à Kinshasa/RDC
-    let filteredResults = allResults;
-    
-    if (filteredResults.length > 0) {
-      filteredResults = filteredResults.filter((place: any) => {
-        const address = place.formatted_address || '';
-        const isInDRC = 
-          address.toLowerCase().includes('kinshasa') ||
-          address.toLowerCase().includes('democratic republic of the congo') ||
-          address.toLowerCase().includes('congo-kinshasa') ||
-          address.toLowerCase().includes('rdc') ||
-          address.toLowerCase().includes('rd congo');
-        
-        if (!isInDRC) {
-          console.log(`🚫 Résultat filtré (hors RDC): ${place.name} - ${address}`);
-        }
-        
-        return isInDRC;
-      });
-      
-      console.log(`🇨🇩 Après filtrage RDC: ${filteredResults.length} résultats`);
-    }
-    
-    // ✅ CALCUL DE LA DISTANCE depuis la position utilisateur
-    if (userLat && userLng && filteredResults.length > 0) {
-      const userLatNum = parseFloat(userLat);
-      const userLngNum = parseFloat(userLng);
-      
-      // ⭐ UTILISER GOOGLE DISTANCE MATRIX API POUR LES VRAIES DISTANCES ROUTIÈRES
-      // (comme Yango) au lieu de la distance à vol d'oiseau (Haversine)
-      try {
-        console.log(`🚗 Calcul des distances routières réelles avec Google Distance Matrix API...`);
-        
-        // Limiter à 25 destinations (limite de l'API)
-        const destinations = filteredResults.slice(0, 25).map((place: any) => 
-          `${place.geometry.location.lat},${place.geometry.location.lng}`
-        ).join('|');
-        
-        const distanceMatrixUrl = new URLSearchParams({
-          origins: `${userLat},${userLng}`,
-          destinations,
-          key: apiKey,
-          mode: 'driving',
-          language: 'fr'
-        });
-        
-        const distanceResponse = await fetch(
-          `https://maps.googleapis.com/maps/api/distancematrix/json?${distanceMatrixUrl.toString()}`
-        );
-        const distanceData = await distanceResponse.json();
-        
-        if (distanceData.status === 'OK' && distanceData.rows?.[0]?.elements) {
-          const elements = distanceData.rows[0].elements;
-          
-          // Assigner les distances routières réelles
-          filteredResults.slice(0, 25).forEach((place: any, index: number) => {
-            const element = elements[index];
-            if (element.status === 'OK') {
-              // ✅ Distance routière en km (comme Yango)
-              place.distance = element.distance.value / 1000;
-              place.duration = element.duration.value / 60; // minutes
-              
-              console.log(`  📍 ${place.name}: ${place.distance.toFixed(1)} km, ${Math.round(place.duration)} min`);
-            } else {
-              // Fallback : Haversine
-              const placeLat = place.geometry.location.lat;
-              const placeLng = place.geometry.location.lng;
-              
-              const R = 6371;
-              const dLat = (placeLat - userLatNum) * Math.PI / 180;
-              const dLng = (placeLng - userLngNum) * Math.PI / 180;
-              const a = 
-                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(userLatNum * Math.PI / 180) * Math.cos(placeLat * Math.PI / 180) *
-                Math.sin(dLng / 2) * Math.sin(dLng / 2);
-              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-              const distance = R * c;
-              
-              place.distance = distance;
-              console.log(`  📍 ${place.name}: ${distance.toFixed(1)} km (fallback Haversine)`);
+
+      const acResponse = await fetch(
+        `https://maps.googleapis.com/maps/api/place/autocomplete/json?${acParams}`
+      );
+      const acData = await acResponse.json();
+
+      console.log(`📡 [AUTOCOMPLETE] Status: ${acData.status}, ${acData.predictions?.length || 0} prédictions`);
+
+      if (acData.status === 'OK' && acData.predictions?.length > 0) {
+        // Pour les prédictions autocomplete, on enrichit avec les détails du lieu
+        // On batch les appels Place Details pour les 5 premiers résultats
+        const topPredictions = acData.predictions.slice(0, 8);
+
+        const detailsPromises = topPredictions.map(async (p: any) => {
+          try {
+            const detailsParams = new URLSearchParams({
+              place_id: p.place_id,
+              fields: 'geometry,name,formatted_address,rating,user_ratings_total',
+              language: 'fr',
+              key: apiKey,
+            });
+            const detailsResp = await fetch(
+              `https://maps.googleapis.com/maps/api/place/details/json?${detailsParams}`
+            );
+            const detailsData = await detailsResp.json();
+
+            if (detailsData.status === 'OK' && detailsData.result) {
+              const r = detailsData.result;
+              const dist = haversine(
+                userLatNum, userLngNum,
+                r.geometry.location.lat, r.geometry.location.lng
+              );
+              return {
+                id: p.place_id,
+                placeId: p.place_id,
+                name: p.structured_formatting?.main_text || r.name || p.description,
+                description: p.description || r.formatted_address,
+                coordinates: {
+                  lat: r.geometry.location.lat,
+                  lng: r.geometry.location.lng,
+                },
+                rating: r.rating,
+                userRatingsTotal: r.user_ratings_total,
+                distance: dist,
+                source: 'google_autocomplete',
+              };
             }
-          });
-          
-          console.log(`✅ Distances routières calculées avec Google Distance Matrix API`);
-        } else {
-          console.warn(`⚠️ Distance Matrix API error: ${distanceData.status}, fallback Haversine`);
-          
-          // Fallback : Haversine pour tous
-          filteredResults.forEach((place: any) => {
-            const placeLat = place.geometry.location.lat;
-            const placeLng = place.geometry.location.lng;
-            
-            const R = 6371;
-            const dLat = (placeLat - userLatNum) * Math.PI / 180;
-            const dLng = (placeLng - userLngNum) * Math.PI / 180;
-            const a = 
-              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(userLatNum * Math.PI / 180) * Math.cos(placeLat * Math.PI / 180) *
-              Math.sin(dLng / 2) * Math.sin(dLng / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const distance = R * c;
-            
-            place.distance = distance;
-          });
-        }
-      } catch (error) {
-        console.error('❌ Distance Matrix API error:', error, '- Fallback Haversine');
-        
-        // Fallback complet : Haversine
-        filteredResults.forEach((place: any) => {
-          const placeLat = place.geometry.location.lat;
-          const placeLng = place.geometry.location.lng;
-          
-          const R = 6371;
-          const dLat = (placeLat - userLatNum) * Math.PI / 180;
-          const dLng = (placeLng - userLngNum) * Math.PI / 180;
-          const a = 
-            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(userLatNum * Math.PI / 180) * Math.cos(placeLat * Math.PI / 180) *
-            Math.sin(dLng / 2) * Math.sin(dLng / 2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          const distance = R * c;
-          
-          place.distance = distance;
+          } catch (_) {}
+          // Fallback sans coordonnées
+          return {
+            id: p.place_id,
+            placeId: p.place_id,
+            name: p.structured_formatting?.main_text || p.description,
+            description: p.description,
+            coordinates: { lat: 0, lng: 0 },
+            distance: undefined,
+            source: 'google_autocomplete',
+          };
         });
+
+        autocompleteResults = (await Promise.all(detailsPromises)).filter(Boolean);
+        console.log(`✅ [AUTOCOMPLETE+DETAILS] ${autocompleteResults.length} résultats enrichis`);
       }
-      
-      // Trier par distance
-      filteredResults.sort((a: any, b: any) => (a.distance || 999) - (b.distance || 999));
-      
-      console.log(`📏 Résultats triés par distance depuis (${userLat}, ${userLng})`);
+    } catch (e) {
+      console.warn('⚠️ [AUTOCOMPLETE] Erreur:', e);
     }
-    
-    // ✅ TRANSFORMER EN FORMAT STANDARDISÉ
-    const transformedResults = filteredResults.slice(0, 20).map((place: any) => ({
-      id: place.place_id,
-      name: place.name,
-      description: place.formatted_address,
-      coordinates: {
-        lat: place.geometry.location.lat,
-        lng: place.geometry.location.lng
-      },
-      placeId: place.place_id,
-      rating: place.rating,
-      userRatingsTotal: place.user_ratings_total,
-      types: place.types,
-      distance: place.distance,
-      source: 'google_maps'
-    }));
-    
-    console.log(`🎯 Retour de ${transformedResults.length} résultats au frontend`);
-    if (transformedResults.length > 0) {
-      console.log('📋 Top 5:', transformedResults.slice(0, 5).map((r: any) => 
-        `${r.name} ${r.distance ? `(${r.distance.toFixed(1)}km)` : ''} ${r.rating ? `⭐${r.rating}` : ''}`
+
+    // ═══════════════════════════════════════════════════
+    // ÉTAPE 2 : Text Search (fallback ou complément)
+    // ═══════════════════════════════════════════════════
+    let textSearchResults: any[] = [];
+    const seenIds = new Set(autocompleteResults.map((r: any) => r.placeId));
+
+    if (autocompleteResults.length < 5) {
+      try {
+        const searchVariants = [
+          query,
+          `${query} Kinshasa`,
+        ];
+
+        for (const searchQuery of searchVariants) {
+          const tsParams = new URLSearchParams({
+            query:    searchQuery,
+            location: `${userLat},${userLng}`,
+            radius:   '50000',
+            language: 'fr',
+            region:   'cd',
+            key:      apiKey,
+          });
+
+          const tsResponse = await fetch(
+            `https://maps.googleapis.com/maps/api/place/textsearch/json?${tsParams}`
+          );
+          const tsData = await tsResponse.json();
+
+          console.log(`📡 [TEXTSEARCH] "${searchQuery}": ${tsData.status}, ${tsData.results?.length || 0} résultats`);
+
+          if (tsData.status === 'OK' && tsData.results?.length > 0) {
+            for (const place of tsData.results) {
+              if (!seenIds.has(place.place_id)) {
+                seenIds.add(place.place_id);
+                textSearchResults.push(place);
+              }
+            }
+          }
+
+          if (autocompleteResults.length + textSearchResults.length >= 10) break;
+        }
+      } catch (e) {
+        console.warn('⚠️ [TEXTSEARCH] Erreur:', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════
+    // ÉTAPE 3 : Transformer Text Search en format unifié
+    // ═══════════════════════════════════════════════════
+    const transformedTextSearch = textSearchResults.slice(0, 10).map((place: any) => {
+      const dist = haversine(
+        userLatNum, userLngNum,
+        place.geometry.location.lat, place.geometry.location.lng
+      );
+      return {
+        id: place.place_id,
+        placeId: place.place_id,
+        name: place.name,
+        description: place.formatted_address,
+        coordinates: {
+          lat: place.geometry.location.lat,
+          lng: place.geometry.location.lng,
+        },
+        rating: place.rating,
+        userRatingsTotal: place.user_ratings_total,
+        distance: dist,
+        source: 'google_textsearch',
+      };
+    });
+
+    // ═══════════════════════════════════════════════════
+    // ÉTAPE 4 : Fusionner et trier par distance
+    // ═══════════════════════════════════════════════════
+    const allResults = [
+      ...autocompleteResults,
+      ...transformedTextSearch,
+    ].sort((a: any, b: any) => (a.distance ?? 999) - (b.distance ?? 999));
+
+    const finalResults = allResults.slice(0, 15);
+
+    console.log(`🎯 [SEARCH] ${finalResults.length} résultats finaux pour "${query}"`);
+    if (finalResults.length > 0) {
+      console.log('📋 Top 5:', finalResults.slice(0, 5).map((r: any) =>
+        `${r.name} | ${r.distance !== undefined ? r.distance.toFixed(1) + ' km' : '?'}`
       ));
     }
 
-    return c.json({ results: transformedResults });
+    return c.json({ results: finalResults, status: 'OK' });
+
   } catch (error) {
-    console.error('❌ Google Maps error:', error);
+    console.error('❌ [SEARCH] Erreur:', error);
     return c.json({ error: 'Search failed', results: [] }, 500);
   }
 });
 
-app.get('/reverse', async (c) => {
+// ─── GET /place-details — Détails d'un lieu (coordonnées après sélection) ────
+app.get('/place-details', async (c) => {
+  try {
+    const placeId = c.req.query('place_id') || c.req.query('placeId');
+    if (!placeId) {
+      return c.json({ error: 'place_id required' }, 400);
+    }
+
+    const apiKey = getApiKey();
+    if (!apiKey) return c.json({ error: 'API key not configured' }, 500);
+
+    const params = new URLSearchParams({
+      place_id: placeId,
+      fields:   'geometry,name,formatted_address,rating,user_ratings_total',
+      language: 'fr',
+      key:      apiKey,
+    });
+
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/place/details/json?${params}`
+    );
+    const data = await response.json();
+
+    if (data.status !== 'OK' || !data.result) {
+      console.error(`❌ [PLACE-DETAILS] ${data.status}`);
+      return c.json({ error: `Place Details: ${data.status}` }, 404);
+    }
+
+    const r = data.result;
+    const result = {
+      id: placeId,
+      placeId,
+      name: r.name,
+      description: r.formatted_address,
+      fullAddress: r.formatted_address,
+      coordinates: {
+        lat: r.geometry.location.lat,
+        lng: r.geometry.location.lng,
+      },
+      rating: r.rating,
+      userRatingsTotal: r.user_ratings_total,
+      source: 'google_maps',
+    };
+
+    console.log(`✅ [PLACE-DETAILS] ${r.name} → (${result.coordinates.lat}, ${result.coordinates.lng})`);
+    return c.json({ result });
+
+  } catch (error) {
+    console.error('❌ [PLACE-DETAILS] Erreur:', error);
+    return c.json({ error: 'Place details failed' }, 500);
+  }
+});
+
+// ─── GET /reverse-geocode — Reverse geocoding (coordonnées → adresse) ─────────
+app.get('/reverse-geocode', async (c) => {
   try {
     const lat = c.req.query('lat');
     const lng = c.req.query('lng');
-    
-    if (!lat || !lng) {
-      return c.json({ error: 'Lat/lng required' }, 400);
-    }
+    if (!lat || !lng) return c.json({ error: 'lat/lng required' }, 400);
 
-    const apiKey = Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY') || Deno.env.get('GOOGLE_MAPS_API_KEY');
-    if (!apiKey) {
-      return c.json({ error: 'API key not configured' }, 500);
-    }
+    const apiKey = getApiKey();
+    if (!apiKey) return c.json({ error: 'API key not configured' }, 500);
 
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=fr&key=${apiKey}`;
     const response = await fetch(url);
     const data = await response.json();
 
-    console.log('✅ Google Maps reverse geocoding');
+    if (data.status !== 'OK' || !data.results?.length) {
+      return c.json({ result: null });
+    }
 
-    return c.json({ result: data.results?.[0] || null });
+    const r = data.results[0];
+    const result = {
+      id: r.place_id,
+      placeId: r.place_id,
+      name: r.address_components?.[0]?.long_name || r.formatted_address,
+      description: r.formatted_address,
+      fullAddress: r.formatted_address,
+      coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      source: 'google_maps',
+    };
+
+    console.log(`✅ [REVERSE] (${lat}, ${lng}) → ${r.formatted_address}`);
+    return c.json({ result });
+
   } catch (error) {
-    console.error('❌ Reverse geocoding error:', error);
+    console.error('❌ [REVERSE] Erreur:', error);
     return c.json({ error: 'Reverse geocoding failed' }, 500);
   }
 });
 
+// ─── GET /reverse — Alias pour compatibilité ─────────────────────────────────
+app.get('/reverse', async (c) => {
+  try {
+    const lat = c.req.query('lat');
+    const lng = c.req.query('lng');
+    if (!lat || !lng) return c.json({ error: 'Lat/lng required' }, 400);
+
+    const apiKey = getApiKey();
+    if (!apiKey) return c.json({ error: 'API key not configured' }, 500);
+
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&language=fr&key=${apiKey}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    console.log('✅ [REVERSE-ALIAS] Reverse geocoding OK');
+    return c.json({ result: data.results?.[0] || null });
+
+  } catch (error) {
+    console.error('❌ [REVERSE-ALIAS] Erreur:', error);
+    return c.json({ error: 'Reverse geocoding failed' }, 500);
+  }
+});
+
+// ─── GET /directions — Itinéraire ─────────────────────────────────────────────
 app.get('/directions', async (c) => {
   try {
-    const origin = c.req.query('origin');
+    const origin      = c.req.query('origin');
     const destination = c.req.query('destination');
-    const waypoints = c.req.query('waypoints');
-    
+    const waypoints   = c.req.query('waypoints');
+
     if (!origin || !destination) {
       return c.json({ error: 'Origin and destination required' }, 400);
     }
 
-    console.log('🚗 Google Directions API:', origin, '→', destination);
+    const apiKey = getApiKey();
+    if (!apiKey) return c.json({ error: 'API key not configured' }, 500);
 
-    const apiKey = Deno.env.get('GOOGLE_MAPS_SERVER_API_KEY') || Deno.env.get('GOOGLE_MAPS_API_KEY');
-    if (!apiKey) {
-      console.warn('⚠️ Google Maps API key missing');
-      return c.json({ error: 'API key not configured' }, 500);
-    }
+    console.log(`🚗 [DIRECTIONS] ${origin} → ${destination}`);
 
-    // Construire l'URL Google Directions API
     const params = new URLSearchParams({
       origin,
       destination,
-      key: apiKey,
-      mode: 'driving',
-      departure_time: 'now', // Trafic en temps réel
-      language: 'fr' // Français
+      key:            apiKey,
+      mode:           'driving',
+      departure_time: 'now',
+      language:       'fr',
     });
-    
-    if (waypoints) {
-      params.append('waypoints', waypoints);
-    }
+    if (waypoints) params.append('waypoints', waypoints);
 
-    const url = `https://maps.googleapis.com/maps/api/directions/json?${params.toString()}`;
-    
-    console.log('🌐 Requête Google Directions (API key cachée)');
-    
-    const response = await fetch(url);
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/directions/json?${params}`
+    );
     const data = await response.json();
 
-    if (data.status !== 'OK') {
-      console.error('❌ Google Directions error:', data.status, data.error_message);
-      return c.json({ error: `Google Directions: ${data.status}` }, 500);
-    }
-
-    if (!data.routes || data.routes.length === 0) {
-      console.error('❌ Aucun itinéraire trouvé');
-      return c.json({ error: 'No routes found' }, 404);
+    if (data.status !== 'OK' || !data.routes?.length) {
+      console.error('❌ [DIRECTIONS] Error:', data.status, data.error_message);
+      return c.json({ error: `Directions: ${data.status}` }, 500);
     }
 
     const route = data.routes[0];
-    const leg = route.legs[0];
+    const leg   = route.legs[0];
 
-    // Extraire les coordonnées pour la polyline
     const coordinates: Array<{ lat: number; lng: number }> = [];
     leg.steps.forEach((step: any) => {
-      coordinates.push({
-        lat: step.start_location.lat,
-        lng: step.start_location.lng
-      });
+      coordinates.push({ lat: step.start_location.lat, lng: step.start_location.lng });
     });
-    // Ajouter le dernier point
-    coordinates.push({
-      lat: leg.end_location.lat,
-      lng: leg.end_location.lng
-    });
+    coordinates.push({ lat: leg.end_location.lat, lng: leg.end_location.lng });
 
-    // Construire la réponse au format attendu
     const routeResult = {
-      distance: leg.distance.value / 1000, // Convertir mètres en km
-      duration: leg.duration.value / 60,   // Convertir secondes en minutes
+      distance:  leg.distance.value / 1000,
+      duration:  leg.duration.value / 60,
       coordinates,
-      polyline: route.overview_polyline.points,
-      steps: leg.steps.map((step: any) => ({
-        instruction: step.html_instructions.replace(/<[^>]*>/g, ''), // Retirer HTML
-        distance: step.distance.value / 1000, // km
-        duration: step.duration.value / 60,   // min
+      polyline:  route.overview_polyline.points,
+      steps:     leg.steps.map((step: any) => ({
+        instruction:   step.html_instructions.replace(/<[^>]*>/g, ''),
+        distance:      step.distance.value / 1000,
+        duration:      step.duration.value / 60,
         startLocation: step.start_location,
-        endLocation: step.end_location
-      }))
+        endLocation:   step.end_location,
+      })),
     };
 
-    console.log(`✅ Itinéraire calculé: ${routeResult.distance.toFixed(1)} km, ${Math.round(routeResult.duration)} min`);
-
+    console.log(`✅ [DIRECTIONS] ${routeResult.distance.toFixed(1)} km, ${Math.round(routeResult.duration)} min`);
     return c.json({ route: routeResult });
+
   } catch (error) {
-    console.error('❌ Directions error:', error);
+    console.error('❌ [DIRECTIONS] Erreur:', error);
     return c.json({ error: 'Directions calculation failed' }, 500);
   }
 });
