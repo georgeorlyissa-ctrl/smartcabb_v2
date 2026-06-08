@@ -95,15 +95,42 @@ app.post("/update", async (c) => {
       ...existing,
       ...config,
       lastUpdated: new Date().toISOString(),
+      configVersion: ((existing.configVersion || 0) as number) + 1,
     };
 
     await kvSet(CONFIG_KEY, merged);
 
-    console.log("✅ [CONFIG/UPDATE] Configuration sauvegardée");
+    // ─── Log the config change as an event so all apps can detect it ─────────
+    const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const today   = new Date().toISOString().slice(0, 10);
+    await kvSet(`event:${today}:${eventId}`, {
+      id:        eventId,
+      type:      "config_updated",
+      data:      { changedKeys: Object.keys(config), configVersion: merged.configVersion },
+      actor:     "admin",
+      timestamp: merged.lastUpdated,
+    });
+
+    console.log(`✅ [CONFIG/UPDATE] Configuration v${merged.configVersion} sauvegardée`);
     return c.json({ success: true, config: merged });
   } catch (error) {
     console.error("❌ [CONFIG/UPDATE] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── GET /version — Version légère pour polling cross-app ────────────────────
+app.get("/version", async (c) => {
+  try {
+    const stored = await kvGet(CONFIG_KEY);
+    return c.json({
+      success:       true,
+      lastUpdated:   stored?.lastUpdated   ?? null,
+      configVersion: stored?.configVersion ?? 0,
+    });
+  } catch (error) {
+    console.error("❌ [CONFIG/VERSION] Erreur:", error);
+    return c.json({ success: false, lastUpdated: null, configVersion: 0 }, 500);
   }
 });
 
