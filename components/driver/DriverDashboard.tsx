@@ -138,28 +138,99 @@ export function DriverDashboard() {
   const [pendingRideRequest, setPendingRideRequest] = useState<RideRequest | null>(null);
   const [showWalletManager, setShowWalletManager] = useState(false);
   const [showFCMDiagnostic, setShowFCMDiagnostic] = useState(false);
+  // 🆕 Animation de mise à jour de la note
+  const [ratingUpdated, setRatingUpdated] = useState(false);
 
-  // 1. Charger profil conducteur
-  useEffect(() => {
-    const loadDriver = async () => {
-      if (!state.currentDriver?.id) return;
+  // 🌙 Dark mode
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try { return localStorage.getItem('smartcabb_dark_mode') === 'true'; } catch { return false; }
+  });
+  const toggleDark = () => {
+    setIsDark(prev => {
+      const next = !prev;
       try {
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${state.currentDriver.id}`,
-          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.driver) {
-            setDriver(data.driver);
-            setIsOnline(data.driver.status === 'online');
-          }
+        localStorage.setItem('smartcabb_dark_mode', String(next));
+        if (next) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+      } catch {}
+      return next;
+    });
+  };
+
+  // ─── Helper : récupérer le profil conducteur ─────────────────────────
+  const loadDriver = async (driverId: string, silent = false) => {
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${driverId}`,
+        { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.driver) {
+          setDriver(prev => {
+            // Détecter si la note a changé → déclencher animation + toast
+            if (prev && data.driver.rating && prev.rating !== data.driver.rating) {
+              console.log(`⭐ Note mise à jour: ${prev.rating} → ${data.driver.rating}`);
+              setRatingUpdated(true);
+              setTimeout(() => setRatingUpdated(false), 3000);
+              toast.success(
+                `⭐ Nouvelle note : ${Number(data.driver.rating).toFixed(1)} / 5`,
+                { description: 'Un passager vient de vous noter', duration: 5000 }
+              );
+              window.dispatchEvent(new CustomEvent('smartcab-driver-rating-updated', {
+                detail: { newRating: data.driver.rating, driverId }
+              }));
+            }
+            return data.driver;
+          });
+          if (!silent) setIsOnline(data.driver.status === 'online');
         }
-      } catch (error) {
-        console.error('Erreur chargement conducteur:', error);
       }
+    } catch (error) {
+      console.error('Erreur chargement conducteur:', error);
+    }
+  };
+
+  // 1. Charger profil conducteur au montage
+  useEffect(() => {
+    if (!state.currentDriver?.id) return;
+    loadDriver(state.currentDriver.id);
+  }, [state.currentDriver?.id]);
+
+  // 🆕 Polling toutes les 30s pour détecter les mises à jour de la note (après notation passager)
+  useEffect(() => {
+    if (!state.currentDriver?.id) return;
+    const driverId = state.currentDriver.id;
+
+    const pollRating = setInterval(() => {
+      loadDriver(driverId, true); // silent=true → pas de maj du statut online
+    }, 30_000);
+
+    // Écoute aussi l'event custom émis par la page de notation passager (même device)
+    const handleRatingEvent = () => {
+      console.log('⭐ Event rating reçu → rafraîchissement immédiat');
+      loadDriver(driverId, true);
     };
-    loadDriver();
+    window.addEventListener('smartcab-rating-submitted', handleRatingEvent);
+
+    // ✅ Écoute auto-offline : forcer le switch et recharger les données
+    const handleForcedOffline = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      console.log('⚠️ Driver forcé hors ligne — rechargement des données', detail);
+      setIsOnline(false);
+      loadDriver(driverId, true);
+      toast.error(
+        `⚠️ Solde insuffisant (${Math.round(detail?.newBalance ?? 0).toLocaleString()} CDF). Rechargez pour vous remettre en ligne.`,
+        { duration: 8000 }
+      );
+    };
+    window.addEventListener('smartcab-driver-forced-offline', handleForcedOffline);
+
+    return () => {
+      clearInterval(pollRating);
+      window.removeEventListener('smartcab-rating-submitted', handleRatingEvent);
+      window.removeEventListener('smartcab-driver-forced-offline', handleForcedOffline);
+    };
   }, [state.currentDriver?.id]);
 
   // 2. Vérifier URL params (app ouverte depuis notification)
@@ -229,10 +300,11 @@ export function DriverDashboard() {
         );
         const data = await res.json();
         if (data.success && data.ride) {
+          console.log('🔔 [POLLING] Nouvelle course détectée:', data.ride.rideId || data.ride.id);
           setPendingRideRequest(buildRideRequest(data.ride));
         }
       } catch (e) {}
-    }, 10000);
+    }, 5000); // ✅ 5s pour être réactif quand FCM est absent
 
     return () => {
       navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
@@ -241,6 +313,38 @@ export function DriverDashboard() {
       clearInterval(poll);
     };
   }, [driver?.id]);
+
+  // ✅ 4. Watcher: quand une notif est visible, vérifier toutes les 3s si la course est encore disponible
+  useEffect(() => {
+    if (!pendingRideRequest?.id) return;
+
+    const rideId = pendingRideRequest.id;
+    console.log(`👁️ Watcher actif pour course ${rideId}`);
+
+    const checkRideTaken = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/${rideId}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        const data = await res.json();
+        if (data.success && data.ride) {
+          const status = data.ride.status;
+          // Si la course n'est plus en recherche → la dismisser
+          if (status && status !== 'searching' && status !== 'pending') {
+            console.log(`🚫 [WATCHER] Course ${rideId} prise/annulée (status: ${status}) → dismissing`);
+            setPendingRideRequest(null);
+            stopAllNotifications();
+            if (status === 'accepted') {
+              toast.info('Cette course a été acceptée par un autre chauffeur.');
+            }
+          }
+        }
+      } catch (e) {}
+    }, 3000);
+
+    return () => clearInterval(checkRideTaken);
+  }, [pendingRideRequest?.id]);
 
   const handleToggleOnline = async () => {
     if (!driver) return;
@@ -310,24 +414,51 @@ export function DriverDashboard() {
               <p className="text-sm opacity-90">{driver.phone}</p>
             </div>
           </div>
-          <button
-            onClick={handleToggleOnline}
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              isOnline ? 'bg-green-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'
-            }`}
-          >
-            <Power className="w-4 h-4 inline mr-1" />
-            {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* 🌙 Dark mode toggle */}
+            <button
+              onClick={toggleDark}
+              title={isDark ? 'Mode clair' : 'Mode sombre'}
+              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+            >
+              <span className="text-lg leading-none">{isDark ? '☀️' : '🌙'}</span>
+            </button>
+            <button
+              onClick={handleToggleOnline}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                isOnline ? 'bg-green-500 text-white' : 'bg-white/20 text-white hover:bg-white/30'
+              }`}
+            >
+              <Power className="w-4 h-4 inline mr-1" />
+              {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white/10 backdrop-blur rounded-lg p-3">
+          {/* ⭐ Note — animation si mise à jour */}
+          <motion.div
+            animate={ratingUpdated ? { scale: [1, 1.15, 1], backgroundColor: ['rgba(255,255,255,0.1)', 'rgba(251,191,36,0.3)', 'rgba(255,255,255,0.1)'] } : {}}
+            transition={{ duration: 0.6, ease: 'easeInOut' }}
+            className="bg-white/10 backdrop-blur rounded-lg p-3"
+          >
             <div className="flex items-center gap-2 mb-1">
-              <Star className="w-4 h-4 text-yellow-300" />
+              <Star className={`w-4 h-4 ${ratingUpdated ? 'text-yellow-400' : 'text-yellow-300'}`} />
               <span className="text-xs opacity-80">Note</span>
+              {ratingUpdated && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-[9px] bg-yellow-400 text-yellow-900 rounded-full px-1 font-bold"
+                >
+                  MÀJ
+                </motion.span>
+              )}
             </div>
-            <p className="text-xl font-bold">{driver.rating?.toFixed(1) || '5.0'}</p>
-          </div>
+            <p className={`text-xl font-bold ${ratingUpdated ? 'text-yellow-300' : ''}`}>
+              {driver.rating?.toFixed(1) || '5.0'}
+            </p>
+          </motion.div>
           <div className="bg-white/10 backdrop-blur rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
               <Navigation className="w-4 h-4" />
@@ -475,7 +606,7 @@ export function DriverDashboard() {
             setPendingRideRequest(null);
             stopAllNotifications();
           }}
-          timeoutSeconds={30}
+          timeoutSeconds={15}
         />
       )}
 
