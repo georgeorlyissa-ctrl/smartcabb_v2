@@ -419,8 +419,58 @@ app.post("/:driverId/wallet/withdraw", async (c) => {
 app.get("/:driverId", async (c) => {
   try {
     const driverId = c.req.param("driverId");
-    const driver = await kvGet(`driver:${driverId}`);
-    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    let driver = await kvGet(`driver:${driverId}`);
+
+    // ✅ FIX: Si pas dans KV store, essayer de créer le profil depuis Auth Supabase
+    if (!driver) {
+      console.log(`⚠️ [DRIVERS/GET-ONE] Driver ${driverId} non trouvé dans KV, tentative depuis Auth...`);
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      );
+      const { data: { user }, error: authError } = await supabase.auth.admin.getUserById(driverId);
+      if (authError || !user) {
+        console.error("❌ [DRIVERS/GET-ONE] Utilisateur Auth introuvable:", authError?.message);
+        return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+      }
+
+      const now = new Date().toISOString();
+      const meta = user.user_metadata || {};
+      const phone = meta.phone || user.phone || "";
+
+      driver = {
+        id: user.id,
+        email: user.email || meta.email || "",
+        full_name: meta.full_name || meta.name || user.email?.split("@")[0] || "Conducteur",
+        name: meta.full_name || meta.name || user.email?.split("@")[0] || "Conducteur",
+        phone,
+        role: "driver",
+        status: "approved",
+        isApproved: true,
+        is_approved: true,
+        isOnline: false,
+        is_online: false,
+        is_available: false,
+        available: false,
+        balance: 0,
+        creditBalance: 0,
+        earningsBalance: 0,
+        bonusBalance: 0,
+        total_trips: 0,
+        total_rides: 0,
+        rating: 0,
+        rating_count: 0,
+        photo: null,
+        vehicle: null,
+        created_at: now,
+        updated_at: now,
+        last_login_at: now,
+      };
+
+      await kvSet(`driver:${driverId}`, driver);
+      await kvSet(`profile:${driverId}`, driver);
+      console.log(`✅ [DRIVERS/GET-ONE] Profil conducteur créé depuis Auth: ${driverId}`);
+    }
 
     // ✅ Normaliser la photo : profile_photo → photo + photo_url (compatibilité frontend)
     const normalizedDriver = {

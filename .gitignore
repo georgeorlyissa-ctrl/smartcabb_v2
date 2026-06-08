@@ -34,3 +34,5 @@ pnpm-debug.log*
 FIXED_BUILD_ERROR.md
 FCM_EXPORTS_FIXED.md
 FCM_FIXED_COMPLETE.md
+
+.vercel
