@@ -11,6 +11,7 @@ import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
 import { toast } from '../../lib/toast';
 import { supabase } from '../../lib/supabase';
+import { GooglePlacesSearch } from './GooglePlacesSearch';
 
 interface ScheduledRide {
   id?: string;
