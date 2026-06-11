@@ -38,6 +38,8 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   const { state, setCurrentScreen } = useAppState();
   const [scheduledRides, setScheduledRides] = useState<ScheduledRide[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [detailsRide, setDetailsRide] = useState<ScheduledRide | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const [newRide, setNewRide] = useState<Partial<ScheduledRide>>({
@@ -309,6 +311,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                     <Button
                       size="sm"
                       className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      onClick={() => { setDetailsRide(ride); setShowDetailsDialog(true); }}
                     >
                       Voir détails
                       <ChevronRight className="w-4 h-4 ml-1" />
@@ -453,6 +456,61 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog détails */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Details de la course</DialogTitle>
+            <DialogDescription>
+              Informations completes de la course planifiee
+            </DialogDescription>
+          </DialogHeader>
+          {detailsRide && (
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Calendar className="w-4 h-4" />
+                {new Date(`${detailsRide.scheduled_date}T${detailsRide.scheduled_time}`).toLocaleDateString('fr-FR', {
+                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                })} a {detailsRide.scheduled_time}
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500 mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Depart</p>
+                    <p className="text-sm">{detailsRide.pickup_address}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500 mt-1 flex-shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Arrivee</p>
+                    <p className="text-sm">{detailsRide.dropoff_address}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm px-2 py-1 bg-blue-50 text-blue-700 rounded">
+                  {getCategoryLabel(detailsRide.category).label}
+                </span>
+                <span className="text-lg font-semibold">
+                  {detailsRide.estimated_price.toLocaleString()} CDF
+                </span>
+              </div>
+              <div className="text-xs text-gray-400">
+                ID reservation: {detailsRide.id}
+              </div>
+              <Button
+                className="w-full"
+                onClick={() => setShowDetailsDialog(false)}
+              >
+                Fermer
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
