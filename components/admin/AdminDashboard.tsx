@@ -49,7 +49,8 @@ import {
   MessageCircle,
   Receipt,
   Search,
-  XCircle
+  XCircle,
+  Calendar
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
 import { createAdminUser } from '../../lib/auth-service';
