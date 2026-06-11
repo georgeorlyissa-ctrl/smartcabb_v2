@@ -497,7 +497,7 @@ app.post("/check-drivers-availability", async (c) => {
     // Si aucun chauffeur disponible pour cette catégorie, proposer des alternatives
     let alternatives = [];
     if (!available && totalOnline > 0) {
-      const categories = ['economic', 'comfort', 'van', 'luxury', 'smart_standard', 'smart_comfort', 'smart_van', 'smart_luxury'];
+      const categories = ['smart_standard', 'smart_confort', 'smart_plus', 'smart_business'];
       alternatives = categories
         .filter(cat => cat !== vehicleCategory)
         .map(cat => {
@@ -579,7 +579,7 @@ app.get("/check-availability/:id", async (c) => {
     // Si toujours pas de chauffeurs, proposer des alternatives
     let alternatives = [];
     if (!available) {
-      const categories = ['economic', 'comfort', 'van', 'luxury', 'smart_standard', 'smart_comfort', 'smart_van', 'smart_luxury'];
+      const categories = ['smart_standard', 'smart_confort', 'smart_plus', 'smart_business'];
       alternatives = categories
         .filter(cat => cat !== ride.vehicleCategory)
         .map(cat => {
@@ -619,10 +619,14 @@ app.get("/check-availability/:id", async (c) => {
 // Helper pour obtenir le nom de la catégorie
 function getCategoryName(category: string): string {
   const names: Record<string, string> = {
-    'economic': 'Économique',
-    'comfort': 'Confort',
-    'van': 'Van',
-    'luxury': 'Luxe'
+    'smart_standard': 'SmartCabb Standard',
+    'smart_confort': 'SmartCabb Confort',
+    'smart_plus': 'SmartCabb Familiale',
+    'smart_business': 'SmartCabb Business',
+    'economic': 'SmartCabb Standard',
+    'comfort': 'SmartCabb Confort',
+    'van': 'SmartCabb Familiale',
+    'luxury': 'SmartCabb Business'
   };
   return names[category] || category;
 }
@@ -1603,6 +1607,140 @@ app.post("/rate", async (c) => {
   } catch (error) {
     console.error("❌ [RIDES/RATE] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ============================================
+// POST /process-scheduled - Convertir les réservations programmées en courses réelles
+// ============================================
+app.post("/process-scheduled", async (c) => {
+  const cronSecret = c.req.header("x-cron-secret");
+  const expectedSecret = Deno.env.get("CRON_SECRET") || "smartcabb-cron-2026";
+  if (cronSecret !== expectedSecret) {
+    console.warn("Tentative d acces non autorise a /process-scheduled");
+    return c.json({ success: false, error: "Unauthorized" }, 401);
+  }
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const bufferMinutes = parseInt(Deno.env.get("SCHEDULED_RIDE_BUFFER_MINUTES") || "5");
+    const futureTime = new Date(now.getTime() + bufferMinutes * 60000);
+    const futureTimeStr = futureTime.toTimeString().slice(0, 5);
+
+    const { data: scheduledRides, error } = await supabase
+      .from("scheduled_rides")
+      .select("*")
+      .eq("status", "scheduled")
+      .lte("scheduled_date", today);
+
+    if (error) {
+      console.error("Erreur requete scheduled_rides:", error);
+      return c.json({ success: false, error: error.message }, 500);
+    }
+
+    if (!scheduledRides || scheduledRides.length === 0) {
+      return c.json({ success: true, processed: 0, message: "Aucune course programmee a traiter" });
+    }
+
+    const dueRides = scheduledRides.filter((r) => {
+      if (r.scheduled_date < today) return true;
+      return r.scheduled_time <= futureTimeStr;
+    });
+
+    console.log(`📋 ${dueRides.length}/${scheduledRides.length} courses programmees a traiter`);
+
+    const results = [];
+
+    for (const sr of dueRides) {
+      try {
+        const passengerProfile = await kvGet(`passenger:${sr.user_id}`);
+        const passengerName = passengerProfile?.full_name || passengerProfile?.name || "Passager";
+        const passengerPhone = passengerProfile?.phone || passengerProfile?.phone_number || "";
+
+        const rideId = crypto.randomUUID();
+        const ride = {
+          id: rideId,
+          passengerId: sr.user_id,
+          passengerName,
+          passengerPhone,
+          pickup: {
+            name: sr.pickup_address,
+            address: sr.pickup_address,
+            coordinates: { lat: sr.pickup_lat, lng: sr.pickup_lng }
+          },
+          destination: {
+            name: sr.dropoff_address,
+            address: sr.dropoff_address,
+            coordinates: { lat: sr.dropoff_lat, lng: sr.dropoff_lng }
+          },
+          vehicleCategory: sr.category,
+          estimatedPrice: sr.estimated_price,
+          distance: 0,
+          duration: 0,
+          pickupAddress: sr.pickup_address,
+          destinationAddress: sr.dropoff_address,
+          status: "searching",
+          createdAt: new Date().toISOString(),
+          isScheduled: true,
+          scheduledDate: sr.scheduled_date,
+          scheduledTime: sr.scheduled_time,
+          passengerCount: 1
+        };
+
+        await kv.set(`ride:${rideId}`, ride);
+        console.log(`Course programmee creee: ${rideId}`);
+
+        const matchingResult = await findAndNotifyNearbyDrivers(ride);
+
+        const { error: updateError } = await supabase
+          .from("scheduled_rides")
+          .update({ status: "completed" })
+          .eq("id", sr.id);
+
+        if (updateError) {
+          console.error(`Erreur mise a jour scheduled_ride ${sr.id}:`, updateError);
+        }
+
+        // Tentative notification FCM passager
+        try {
+          const fcmTokenData = await kvGet(`fcm_token_${sr.user_id}`);
+          if (fcmTokenData) {
+            const token = typeof fcmTokenData === "string" ? fcmTokenData : fcmTokenData.token;
+            if (token) {
+              await sendFCMNotification(token, {
+                title: "SmartCabb - Course programmee",
+                body: `Votre course ${sr.pickup_address} vers ${sr.dropoff_address} est en cours de traitement. Un chauffeur arrive bientot.`,
+                data: { rideId, type: "scheduled_ride_processing" }
+              });
+            }
+          }
+        } catch (fcmErr) {
+          console.warn(`Notification FCM passager echouee pour ${sr.user_id}:`, fcmErr);
+        }
+
+        results.push({
+          scheduledRideId: sr.id,
+          rideId,
+          matching: matchingResult.success ? "success" : "no_driver"
+        });
+
+      } catch (innerError) {
+        console.error(`Erreur traitement course programmee ${sr.id}:`, innerError);
+        results.push({ scheduledRideId: sr.id, error: innerError.message });
+      }
+    }
+
+    return c.json({ success: true, processed: results.length, results });
+
+  } catch (error) {
+    console.error("Erreur process-scheduled:", error);
+    return c.json({ success: false, error: error.message }, 500);
   }
 });
 

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Plus, Calendar, Trash2 } from '../../lib/icons';
@@ -6,6 +7,10 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { motion, AnimatePresence } from '../../lib/motion';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { useAppState } from '../../hooks/useAppState';
+import { useTranslation } from '../../hooks/useTranslation';
+import { toast } from '../../lib/toast';
+import { supabase } from '../../lib/supabase';
 
 interface ScheduledRide {
   id?: string;
@@ -18,7 +23,7 @@ interface ScheduledRide {
   dropoff_lng: number;
   scheduled_date: string;
   scheduled_time: string;
-  category: 'smart_standard' | 'smart_confort' | 'smart_plus';
+  category: 'smart_standard' | 'smart_confort' | 'smart_plus' | 'smart_business';
   estimated_price: number;
   status: 'scheduled' | 'cancelled' | 'completed';
   created_at?: string;
@@ -185,12 +190,13 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   };
 
   const getCategoryLabel = (category: string) => {
-    const categories = {
+    const categories: Record<string, { label: string; price: string }> = {
       'smart_standard': { label: 'Standard', price: '20,000 CDF' },
       'smart_confort': { label: 'Confort', price: '25,000 CDF' },
-      'smart_plus': { label: 'Plus', price: '30,000 CDF' }
+      'smart_plus': { label: 'Plus', price: '30,000 CDF' },
+      'smart_business': { label: 'Business', price: '450,000 CDF' }
     };
-    return categories[category as keyof typeof categories] || categories.smart_standard;
+    return categories[category] || categories.smart_standard;
   };
 
   return (
@@ -375,11 +381,12 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
             {/* Catégorie */}
             <div>
               <Label>Catégorie de véhicule</Label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
+              <div className="grid grid-cols-2 gap-2 mt-2">
                 {[
                   { value: 'smart_standard', label: 'Standard', price: '20K' },
                   { value: 'smart_confort', label: 'Confort', price: '25K' },
-                  { value: 'smart_plus', label: 'Plus', price: '30K' }
+                  { value: 'smart_plus', label: 'Plus', price: '30K' },
+                  { value: 'smart_business', label: 'Business', price: '450K' }
                 ].map((cat) => (
                   <button
                     key={cat.value}
