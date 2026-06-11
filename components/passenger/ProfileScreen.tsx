@@ -611,6 +611,15 @@ export function ProfileScreen() {
               <Button 
                 variant="outline" 
                 className="w-full justify-start"
+                onClick={() => setCurrentScreen('scheduled-rides')}
+              >
+                <Calendar className="w-5 h-5 mr-3" />
+                Mes reservations
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
                 onClick={() => setCurrentScreen('ride-history')}
               >
                 <History className="w-5 h-5 mr-3" />

@@ -847,8 +847,18 @@ export function AdminDashboard() {
       color: 'from-blue-500 to-cyan-500'
     },
     {
+      id: 'action-scheduled-rides',
+      title: 'Reservations programmees',
+      description: 'Voir et gerer les reservations a l avance',
+      icon: Calendar,
+      action: () => setCurrentScreen('admin-scheduled-rides'),
+      count: null,
+      highlight: true,
+      color: 'from-blue-500 to-indigo-500'
+    },
+    {
       id: 'action-cancellations',
-      title: '🚫 Historique des annulations',
+      title: 'Historique des annulations',
       description: 'Voir toutes les annulations avec raisons',
       icon: XCircle,
       action: () => setCurrentScreen('cancellations'),

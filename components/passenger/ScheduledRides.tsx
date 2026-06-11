@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { Plus, Calendar, Trash2 } from '../../lib/icons';
+import { Plus, Calendar, Trash2, ArrowLeft } from '../../lib/icons';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -131,7 +131,16 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     }
   };
 
-  const handleCancelRide = async (id: string) => {
+  const handleCancelRide = async (id: string, scheduledDate: string, scheduledTime: string) => {
+    const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+    const now = new Date();
+    const hoursUntilRide = (scheduledDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursUntilRide < 12) {
+      toast.error('Annulation impossible moins de 12h avant la course. Contactez le support.');
+      return;
+    }
+
     if (!confirm('Annuler cette course planifiée ?')) return;
 
     try {
@@ -200,14 +209,19 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   };
 
   return (
-    <div className={className}>
+    <div className="min-h-screen bg-gray-50 p-4">
       {/* En-tête */}
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-sm text-gray-900">Courses planifiées</h3>
-          <p className="text-xs text-gray-500">
-            {scheduledRides.length} course{scheduledRides.length > 1 ? 's' : ''} à venir
-          </p>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => setCurrentScreen('profile')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h3 className="text-sm text-gray-900">Courses planifiées</h3>
+            <p className="text-xs text-gray-500">
+              {scheduledRides.length} course{scheduledRides.length > 1 ? 's' : ''} à venir
+            </p>
+          </div>
         </div>
         <Button
           size="sm"
@@ -284,7 +298,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        if (ride.id) handleCancelRide(ride.id);
+                        if (ride.id) handleCancelRide(ride.id, ride.scheduled_date, ride.scheduled_time);
                       }}
                       className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                     >

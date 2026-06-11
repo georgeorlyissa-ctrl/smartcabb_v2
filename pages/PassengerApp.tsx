@@ -37,6 +37,7 @@ import { LiveTrackingMap } from '../components/passenger/LiveTrackingMap';
 import { RideTrackingScreen } from '../components/passenger/RideTrackingScreen';
 import { LiveTrackingScreen } from '../components/passenger/LiveTrackingScreen';
 import { SearchingDriversScreen } from '../components/passenger/SearchingDriversScreen';
+import { ScheduledRides } from '../components/passenger/ScheduledRides';
 
 function PassengerAppContent() {
   const { state, setCurrentScreen, setCurrentView } = useAppState();
@@ -222,6 +223,12 @@ function PassengerAppContent() {
         return (
           <ErrorBoundary>
             <RideHistoryScreen />
+          </ErrorBoundary>
+        );
+      case 'scheduled-rides':
+        return (
+          <ErrorBoundary>
+            <ScheduledRides />
           </ErrorBoundary>
         );
       case 'promo-code':
