@@ -5,6 +5,7 @@ import { ProfessionalFooter } from '../components/ProfessionalFooter';
 import { SiteNavigation } from '../components/SiteNavigation';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Link } from '../lib/simple-router';
+import { PRICING_CONFIG } from '../lib/pricing-data';
 
 function useInViewCustom(threshold = 0.15) {
   const ref = useRef<HTMLElement>(null);
@@ -22,10 +23,51 @@ function useInViewCustom(threshold = 0.15) {
   return { ref, inView };
 }
 
+// ─── Calcul des gains chauffeurs à partir de PRICING_CONFIG ──────
+const DRIVER_SHARE = 0.85; // Le chauffeur garde 85%, SmartCabb prélève 15%
+const HOURS_PER_DAY = 8;
+const WORK_DAYS_PER_MONTH = 26;
+const BUSINESS_DAYS_PER_MONTH = 20;
+
+const earningsData = [
+  {
+    key: 'smart_standard',
+    titleFR: 'Standard',
+    titleEN: 'Standard',
+    daily: Math.round(PRICING_CONFIG.smart_standard.pricing.course_heure.jour.cdf * HOURS_PER_DAY * DRIVER_SHARE),
+    monthly: Math.round(PRICING_CONFIG.smart_standard.pricing.course_heure.jour.cdf * HOURS_PER_DAY * DRIVER_SHARE * WORK_DAYS_PER_MONTH),
+  },
+  {
+    key: 'smart_confort',
+    titleFR: 'Confort',
+    titleEN: 'Confort',
+    daily: Math.round(PRICING_CONFIG.smart_confort.pricing.course_heure.jour.cdf * HOURS_PER_DAY * DRIVER_SHARE),
+    monthly: Math.round(PRICING_CONFIG.smart_confort.pricing.course_heure.jour.cdf * HOURS_PER_DAY * DRIVER_SHARE * WORK_DAYS_PER_MONTH),
+  },
+  {
+    key: 'smart_plus',
+    titleFR: 'Familiale',
+    titleEN: 'Family',
+    daily: Math.round(PRICING_CONFIG.smart_plus.pricing.course_heure.jour.cdf * HOURS_PER_DAY * DRIVER_SHARE),
+    monthly: Math.round(PRICING_CONFIG.smart_plus.pricing.course_heure.jour.cdf * HOURS_PER_DAY * DRIVER_SHARE * WORK_DAYS_PER_MONTH),
+  },
+  {
+    key: 'smart_business',
+    titleFR: 'Business',
+    titleEN: 'Business',
+    daily: Math.round(PRICING_CONFIG.smart_business.pricing.location_jour.cdf * DRIVER_SHARE),
+    monthly: Math.round(PRICING_CONFIG.smart_business.pricing.location_jour.cdf * DRIVER_SHARE * BUSINESS_DAYS_PER_MONTH),
+  },
+];
+
+const minMonthly = Math.min(...earningsData.map(e => e.monthly));
+const maxMonthly = Math.max(...earningsData.map(e => e.monthly));
+
 export function DriversLandingPage() {
   const { t, language } = useLanguage();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
+  const { ref: earnRef, inView: earnInView } = useInViewCustom(0.12);
   const { ref: reqRef, inView: reqInView } = useInViewCustom(0.12);
   const { ref: benefitsRef, inView: benefitsInView } = useInViewCustom(0.12);
   const { ref: stepsRef, inView: stepsInView } = useInViewCustom(0.12);
@@ -50,7 +92,7 @@ export function DriversLandingPage() {
   const requirements = [
     {
       icon: (
-        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '56px', height: '56px' }}>
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px' }}>
           <rect width="64" height="64" rx="16" fill="#f0f9ff"/>
           <rect x="12" y="20" width="40" height="28" rx="4" fill="#0891b2" opacity="0.15"/>
           <rect x="12" y="20" width="40" height="28" rx="4" stroke="#0891b2" strokeWidth="2.5"/>
@@ -65,7 +107,7 @@ export function DriversLandingPage() {
     },
     {
       icon: (
-        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '56px', height: '56px' }}>
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px' }}>
           <rect width="64" height="64" rx="16" fill="#f0f9ff"/>
           <rect x="8" y="28" width="48" height="20" rx="5" fill="#0891b2" opacity="0.15"/>
           <rect x="8" y="28" width="48" height="20" rx="5" stroke="#0891b2" strokeWidth="2.5"/>
@@ -80,7 +122,7 @@ export function DriversLandingPage() {
     },
     {
       icon: (
-        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '56px', height: '56px' }}>
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px' }}>
           <rect width="64" height="64" rx="16" fill="#f0f9ff"/>
           <path d="M32 10 L48 17 L48 32 C48 42 40 50 32 54 C24 50 16 42 16 32 L16 17 Z" fill="#0891b2" opacity="0.15" stroke="#0891b2" strokeWidth="2.5" strokeLinejoin="round"/>
           <path d="M24 32 L29 37 L40 26" stroke="#0891b2" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -91,7 +133,7 @@ export function DriversLandingPage() {
     },
     {
       icon: (
-        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '56px', height: '56px' }}>
+        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px' }}>
           <rect width="64" height="64" rx="16" fill="#f0f9ff"/>
           <circle cx="32" cy="26" r="10" fill="#0891b2" opacity="0.15" stroke="#0891b2" strokeWidth="2.5"/>
           <path d="M16 50 C16 42 23 36 32 36 C41 36 48 42 48 50" stroke="#0891b2" strokeWidth="2.5" strokeLinecap="round"/>
@@ -143,7 +185,7 @@ export function DriversLandingPage() {
 
         .req-card {
           background: white; border: 1px solid #e5e7eb;
-          border-radius: 14px; padding: 28px 24px;
+          border-radius: 14px; padding: 16px 12px;
           text-align: center; transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
         }
         .req-card:hover { border-color: #0891b2; box-shadow: 0 12px 40px rgba(8,145,178,0.12); transform: translateY(-5px); }
@@ -155,6 +197,9 @@ export function DriversLandingPage() {
           transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
         }
         .step-card:hover { border-color: #0891b2; box-shadow: 0 12px 40px rgba(8,145,178,0.12); }
+
+        .benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        @media (min-width: 768px) { .benefits-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
         .accent-line { height: 4px; background: linear-gradient(90deg,#0891b2,#06b6d4); border-radius: 2px; margin-bottom: 20px; max-width: 64px; }
 
@@ -239,30 +284,81 @@ export function DriversLandingPage() {
         </div>
       </section>
 
-      {/* CONDITIONS REQUISES */}
-      <section ref={reqRef as any} style={{ padding: '80px 0', background: 'white', borderBottom: '1px solid #f3f4f6' }}>
+      {/* ✅ NOUVEAU : COMBIEN POUVEZ-VOUS GAGNER (style Yango) */}
+      <section ref={earnRef as any} style={{ padding: '80px 0', background: 'white', borderBottom: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div style={{ marginBottom: '56px' }}>
+          <div style={{ marginBottom: '40px', textAlign: 'center' }}>
+            <div className={`accent-line reveal d0 ${earnInView ? 'in' : ''}`} style={{ margin: '0 auto 20px' }} />
+            <h2 className={`reveal d1 ${earnInView ? 'in' : ''}`} style={{ fontSize: '40px', fontWeight: '900', color: '#111827', marginBottom: '12px' }}>
+              {language === 'fr' ? 'Combien pouvez-vous ' : 'How much can you '}<span style={{ color: '#0891b2' }}>{language === 'fr' ? 'gagner ?' : 'earn?'}</span>
+            </h2>
+            <p className={`reveal d2 ${earnInView ? 'in' : ''}`} style={{ fontSize: '17px', color: '#6b7280', maxWidth: '560px', margin: '0 auto' }}>
+              {language === 'fr'
+                ? `Entre ${minMonthly.toLocaleString()} et ${maxMonthly.toLocaleString()} CDF par mois selon votre catégorie de véhicule et votre disponibilité.`
+                : `Between ${minMonthly.toLocaleString()} and ${maxMonthly.toLocaleString()} CDF per month depending on your vehicle category and availability.`}
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '28px' }}>
+            {earningsData.map((e, i) => (
+              <div key={e.key} className={`req-card reveal ${earnInView ? 'in' : ''}`} style={{ transitionDelay: `${0.1 + i * 0.1}s`, padding: '18px 14px' }}>
+                <p style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#0891b2', marginBottom: '8px' }}>
+                  {language === 'fr' ? e.titleFR : e.titleEN}
+                </p>
+                <p style={{ fontSize: '22px', fontWeight: '900', color: '#111827', marginBottom: '2px' }}>
+                  {e.monthly.toLocaleString()} <span style={{ fontSize: '13px', fontWeight: '700', color: '#9ca3af' }}>CDF/{language === 'fr' ? 'mois' : 'mo'}</span>
+                </p>
+                <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+                  ≈ {e.daily.toLocaleString()} CDF/{language === 'fr' ? 'jour' : 'day'}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className={`reveal d4 ${earnInView ? 'in' : ''}`} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px' }}>
+            {[
+              { fr: 'Vous gardez 85% de chaque course', en: 'You keep 85% of every ride' },
+              { fr: 'Aucun frais caché', en: 'No hidden fees' },
+              { fr: 'Travaillez jour ou nuit selon vos disponibilités', en: 'Work day or night, your choice' },
+            ].map((tag, i) => (
+              <span key={i} style={{ fontSize: '13px', fontWeight: '700', color: '#0891b2', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '20px', padding: '8px 16px' }}>
+                {language === 'fr' ? tag.fr : tag.en}
+              </span>
+            ))}
+          </div>
+
+          <p style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', marginTop: '16px' }}>
+            {language === 'fr'
+              ? 'Estimation basée sur 8h de courses par jour, hors pourboires. Les gains réels varient selon la demande et votre disponibilité.'
+              : 'Estimate based on 8h of rides per day, excluding tips. Actual earnings vary based on demand and availability.'}
+          </p>
+        </div>
+      </section>
+
+      {/* CONDITIONS REQUISES */}
+      <section ref={reqRef as any} style={{ padding: '64px 0', background: '#fafafa', borderBottom: '1px solid #f3f4f6' }}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div style={{ marginBottom: '40px' }}>
             <div className={`accent-line reveal d0 ${reqInView ? 'in' : ''}`} />
-            <h2 className={`reveal d1 ${reqInView ? 'in' : ''}`} style={{ fontSize: '40px', fontWeight: '900', color: '#111827', marginBottom: '12px' }}>
+            <h2 className={`reveal d1 ${reqInView ? 'in' : ''}`} style={{ fontSize: '34px', fontWeight: '900', color: '#111827', marginBottom: '8px' }}>
               {t('drivers.requirements')}
             </h2>
-            <p className={`reveal d2 ${reqInView ? 'in' : ''}`} style={{ fontSize: '17px', color: '#6b7280' }}>
+            <p className={`reveal d2 ${reqInView ? 'in' : ''}`} style={{ fontSize: '15px', color: '#6b7280' }}>
               {language === 'fr' ? 'Les conditions pour rejoindre notre equipe' : 'The requirements to join our team'}
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
             {requirements.map((req, i) => (
               <div
                 key={i}
                 className={`req-card reveal ${reqInView ? 'in' : ''}`}
                 style={{ transitionDelay: `${0.1 + i * 0.12}s` }}
               >
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
                   {req.icon}
                 </div>
-                <p style={{ fontSize: '14px', fontWeight: '700', color: '#111827', lineHeight: '1.4' }}>
+                <p style={{ fontSize: '13px', fontWeight: '700', color: '#111827', lineHeight: '1.3' }}>
                   {language === 'fr' ? req.textFR : req.textEN}
                 </p>
               </div>
@@ -272,16 +368,16 @@ export function DriversLandingPage() {
       </section>
 
       {/* AVANTAGES */}
-      <section ref={benefitsRef as any} style={{ padding: '80px 0', background: '#fafafa', borderBottom: '1px solid #f3f4f6' }}>
+      <section ref={benefitsRef as any} style={{ padding: '64px 0', background: 'white', borderBottom: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
 
             <div>
               <div className={`accent-line reveal-left d0 ${benefitsInView ? 'in' : ''}`} />
-              <h2 className={`reveal-left d1 ${benefitsInView ? 'in' : ''}`} style={{ fontSize: '40px', fontWeight: '900', color: '#111827', marginBottom: '16px', lineHeight: '1.15' }}>
+              <h2 className={`reveal-left d1 ${benefitsInView ? 'in' : ''}`} style={{ fontSize: '34px', fontWeight: '900', color: '#111827', marginBottom: '12px', lineHeight: '1.15' }}>
                 {t('drivers.benefits')}
               </h2>
-              <p className={`reveal-left d2 ${benefitsInView ? 'in' : ''}`} style={{ fontSize: '17px', color: '#6b7280', lineHeight: '1.7', marginBottom: '32px' }}>
+              <p className={`reveal-left d2 ${benefitsInView ? 'in' : ''}`} style={{ fontSize: '15px', color: '#6b7280', lineHeight: '1.6', marginBottom: '24px' }}>
                 {language === 'fr' ? 'Pourquoi conduire avec SmartCabb' : 'Why drive with SmartCabb'}
               </p>
               <div className={`reveal-left d3 ${benefitsInView ? 'in' : ''}`}>
@@ -289,18 +385,18 @@ export function DriversLandingPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="benefits-grid">
               {benefits.map((b, i) => (
                 <div
                   key={i}
                   className={`drv-card reveal ${benefitsInView ? 'in' : ''}`}
-                  style={{ padding: '20px', transitionDelay: `${0.05 + i * 0.08}s` }}
+                  style={{ padding: '14px', transitionDelay: `${0.05 + i * 0.08}s` }}
                 >
-                  <div style={{ width: '32px', height: '3px', background: '#0891b2', borderRadius: '2px', marginBottom: '12px' }} />
-                  <div style={{ fontSize: '15px', fontWeight: '700', color: '#111827', marginBottom: '6px' }}>
+                  <div style={{ width: '28px', height: '3px', background: '#0891b2', borderRadius: '2px', marginBottom: '8px' }} />
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
                     {language === 'fr' ? b.titleFR : b.titleEN}
                   </div>
-                  <div style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '1.5' }}>
+                  <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: '1.4' }}>
                     {language === 'fr' ? b.descFR : b.descEN}
                   </div>
                 </div>
@@ -312,7 +408,7 @@ export function DriversLandingPage() {
       </section>
 
       {/* COMMENT CA MARCHE */}
-      <section ref={stepsRef as any} style={{ padding: '80px 0', background: 'white', borderBottom: '1px solid #f3f4f6' }}>
+      <section ref={stepsRef as any} style={{ padding: '80px 0', background: '#fafafa', borderBottom: '1px solid #f3f4f6' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '56px' }}>
             <div className={`accent-line reveal d0 ${stepsInView ? 'in' : ''}`} />
@@ -386,4 +482,3 @@ export function DriversLandingPage() {
     </div>
   );
 }
-

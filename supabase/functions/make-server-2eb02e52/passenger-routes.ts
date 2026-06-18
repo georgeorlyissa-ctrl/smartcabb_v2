@@ -167,8 +167,9 @@ app.post("/:id/favorites", async (c) => {
       id: body.id || `fav_${Date.now()}`,
       name: body.name || "Lieu favori",
       address: body.address || "",
-      coordinates: body.coordinates || null,
-      type: body.type || "custom",
+      lat: body.lat ?? body.coordinates?.lat ?? null,
+      lng: body.lng ?? body.coordinates?.lng ?? null,
+      icon: body.icon || body.type || "custom",
       createdAt: new Date().toISOString(),
     };
 

@@ -67,7 +67,7 @@ export function FavoriteLocations({ onSelectLocation, currentLocation, className
     }
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-fe68ee11/passengers/${userId}/favorites`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${userId}/favorites`,
         {
           headers: {
             'Authorization': `Bearer ${publicAnonKey}`,
@@ -103,7 +103,7 @@ export function FavoriteLocations({ onSelectLocation, currentLocation, className
     try {
       if (editingFavorite?.id) {
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-fe68ee11/passengers/${userId}/favorites/${editingFavorite.id}`,
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${userId}/favorites/${editingFavorite.id}`,
           {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
@@ -116,7 +116,7 @@ export function FavoriteLocations({ onSelectLocation, currentLocation, className
         toast.success(t('favorite_updated'));
       } else {
         const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-fe68ee11/passengers/${userId}/favorites`,
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${userId}/favorites`,
           {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
@@ -146,7 +146,7 @@ export function FavoriteLocations({ onSelectLocation, currentLocation, className
 
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-fe68ee11/passengers/${userId}/favorites/${id}`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${userId}/favorites/${id}`,
         { method: 'DELETE', headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' } }
       );
       const data = await response.json();

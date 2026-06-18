@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Plus, Calendar, Trash2, ArrowLeft, ChevronRight } from '../../lib/icons';
@@ -51,8 +51,8 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     dropoff_lng: 15.3136,
     scheduled_date: '',
     scheduled_time: '',
-    category: 'smart_standard',
-    estimated_price: 20000,
+    category: 'smart_plus',
+    estimated_price: 30000,
     status: 'scheduled'
   });
 
@@ -173,8 +173,8 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       dropoff_lng: 15.3136,
       scheduled_date: '',
       scheduled_time: '',
-      category: 'smart_standard',
-      estimated_price: 20000,
+      category: 'smart_plus',
+      estimated_price: 30000,
       status: 'scheduled'
     });
   };
@@ -398,13 +398,11 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
             {/* Catégorie */}
             <div>
-              <Label>Catégorie de véhicule</Label>
-              <div className="grid grid-cols-2 gap-2 mt-2">
+              <Label className="text-sm font-medium mb-2 block">Categorie de vehicule</Label>
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: 'smart_standard', label: 'Standard', price: '20K' },
-                  { value: 'smart_confort', label: 'Confort', price: '25K' },
-                  { value: 'smart_plus', label: 'Plus', price: '30K' },
-                  { value: 'smart_business', label: 'Business', price: '450K' }
+                  { value: 'smart_plus', label: 'Plus (Familiale)', price: 30000, features: '6 places · Grand espace' },
+                  { value: 'smart_business', label: 'Business', price: 450000, features: 'VIP · Data · Rafraichissements' }
                 ].map((cat) => (
                   <button
                     key={cat.value}
@@ -412,16 +410,24 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                     onClick={() => setNewRide({ 
                       ...newRide, 
                       category: cat.value as any,
-                      estimated_price: parseInt(cat.price.replace('K', '000'))
+                      estimated_price: cat.price
                     })}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                    className={`w-full rounded-xl border-2 transition-all duration-300 p-3 text-left ${
                       newRide.category === cat.value
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
+                        : 'border-border hover:border-secondary/50 hover:shadow-md'
                     }`}
                   >
-                    <span className="text-sm">{cat.label}</span>
-                    <span className="text-xs text-gray-500">{cat.price} CDF</span>
+                    <div className="flex flex-col gap-1.5">
+                      <span className={`text-sm font-bold ${newRide.category === cat.value ? 'text-secondary' : 'text-foreground'}`}>
+                        {cat.label}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{cat.features}</span>
+                      <span className={`text-base font-bold ${newRide.category === cat.value ? 'text-secondary' : 'text-primary'}`}>
+                        {cat.price.toLocaleString()}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground -mt-1">CDF</span>
+                    </div>
                   </button>
                 ))}
               </div>

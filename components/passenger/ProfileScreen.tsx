@@ -29,6 +29,7 @@ import {
 } from '../../lib/icons';
 import { toast } from '../../lib/toast';
 import { supabase } from '../../lib/supabase';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { formatCDF, getExchangeRate } from '../../lib/pricing';
 import { syncUserProfile } from '../../lib/sync-service';
 import { sendSMS } from '../../lib/sms-service';
@@ -50,6 +51,8 @@ export function ProfileScreen() {
     address: ''
   });
   
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+
   // 🆕 États pour les statistiques
   const [rideStats, setRideStats] = useState({
     totalRides: 0,
@@ -591,12 +594,53 @@ export function ProfileScreen() {
                   {passengerData?.favoritePaymentMethod === 'cash' && 'Paiement en espèces au chauffeur'}
                 </p>
               </div>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => setShowPaymentDialog(true)}>
                 Modifier
               </Button>
             </div>
           </Card>
         </motion.div>
+
+        <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Methode de paiement preferee</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-2 py-2">
+              {[
+                { id: 'mobile_money', icon: Smartphone, label: 'Mobile Money (Airtel Money, M-Pesa)', desc: 'Paiement rapide et securise' },
+                { id: 'card', icon: CreditCard, label: 'Carte bancaire', desc: 'Paiement par carte bancaire' },
+                { id: 'cash', icon: Banknote, label: 'Paiement en especes', desc: 'Paiement en especes au chauffeur' }
+              ].map((method) => (
+                <button
+                  key={method.id}
+                  onClick={() => {
+                    setCurrentUser({ ...state.currentUser, favoritePaymentMethod: method.id });
+                    localStorage.setItem('smartcabb_preferred_payment', method.id);
+                    setShowPaymentDialog(false);
+                    toast.success(`Mode de paiement mis a jour`);
+                  }}
+                  className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                    passengerData?.favoritePaymentMethod === method.id
+                      ? 'border-secondary bg-secondary/5'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                    <method.icon className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-medium text-sm">{method.label}</p>
+                    <p className="text-xs text-gray-500">{method.desc}</p>
+                  </div>
+                  {passengerData?.favoritePaymentMethod === method.id && (
+                    <span className="text-xs text-secondary font-medium">Actif</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Actions rapides */}
         <motion.div
