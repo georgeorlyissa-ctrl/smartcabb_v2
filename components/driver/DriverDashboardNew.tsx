@@ -591,24 +591,41 @@ export function DriverDashboardNew() {
               </Card>
             )}
 
-            <Card className="p-4">
-              <h3 className="font-semibold text-gray-900 mb-4">Mes Soldes</h3>
-              <div className="grid grid-cols-1 gap-3">
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200">
-                  <p className="text-xs text-blue-600 mb-1">Credit (Ligne)</p>
-                  <p className="text-2xl font-bold text-blue-900">{(driver.balance || 0).toLocaleString('fr-FR')} CDF</p>
-                  <p className="text-xs text-blue-600 mt-2">-15% par course</p>
+            {/* ✅ NOUVEAU : Bandeau marketing gains & avantages */}
+            <Card className="p-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-none">
+              <div className="flex items-center gap-2 mb-1.5">
+                <TrendingUp className="w-4 h-4" />
+                <h3 className="font-semibold text-sm">Vous gardez 85% de chaque course</h3>
+              </div>
+              <p className="text-xs text-white/85 mb-3">Plus vous roulez, plus vous gagnez. Aucun frais caché, paiement instantané après chaque course.</p>
+              <div className="flex flex-wrap gap-1.5">
+                {['85% pour vous', '0 frais cachés', 'Support 24/7', 'Bonus fidélité'].map((tag, i) => (
+                  <span key={i} className="text-[11px] font-medium bg-white/15 px-2.5 py-1 rounded-full">{tag}</span>
+                ))}
+              </div>
+            </Card>
+
+            {/* ✅ Mes Soldes — version compacte (3 colonnes au lieu de 3 cases empilées) */}
+            <Card className="p-3">
+              <h3 className="font-semibold text-gray-900 mb-2 text-sm">
+                Mes Soldes <span className="text-xs text-gray-400 font-normal">(CDF)</span>
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-2.5 rounded-lg border border-blue-200 min-w-0">
+                  <p className="text-[10px] text-blue-600 mb-0.5 truncate">Crédit</p>
+                  <p className="text-sm font-bold text-blue-900 truncate">{(driver.balance || 0).toLocaleString('fr-FR')}</p>
+                  <p className="text-[9px] text-blue-500 mt-1">-15%/course</p>
                 </div>
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-lg border border-purple-200">
-                  <p className="text-xs text-purple-600 mb-1">Gains (Informatif)</p>
+                <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-2.5 rounded-lg border border-purple-200 min-w-0">
+                  <p className="text-[10px] text-purple-600 mb-0.5 truncate">Gains</p>
                   {/* ✅ FIX Bug 1 : gains calculés depuis l'historique réel */}
-                  <p className="text-2xl font-bold text-purple-900">{(rideStats.total.earnings || 0).toLocaleString('fr-FR')} CDF</p>
-                  <p className="text-xs text-purple-600 mt-2">+85% par course complétée</p>
+                  <p className="text-sm font-bold text-purple-900 truncate">{(rideStats.total.earnings || 0).toLocaleString('fr-FR')}</p>
+                  <p className="text-[9px] text-purple-500 mt-1">+85%/course</p>
                 </div>
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
-                  <p className="text-xs text-green-600 mb-1">Bonus (Retirable)</p>
-                  <p className="text-2xl font-bold text-green-900">{(driver.bonusBalance || 0).toLocaleString('fr-FR')} CDF</p>
-                  <p className="text-xs text-green-600 mt-2">Retirable uniquement</p>
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-2.5 rounded-lg border border-green-200 min-w-0">
+                  <p className="text-[10px] text-green-600 mb-0.5 truncate">Bonus</p>
+                  <p className="text-sm font-bold text-green-900 truncate">{(driver.bonusBalance || 0).toLocaleString('fr-FR')}</p>
+                  <p className="text-[9px] text-green-500 mt-1">Retirable</p>
                 </div>
               </div>
             </Card>
