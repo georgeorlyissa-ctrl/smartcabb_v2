@@ -126,6 +126,9 @@ function buildRideRequest(d: any): RideRequest {
   };
 }
 
+// ✅ Photos chauffeurs pour le carrousel du bandeau gains (mêmes assets que DriversLandingPage)
+const EARNINGS_IMAGES = ['/drivers/driver1.png', '/drivers/driver2.png'];
+
 export function DriverDashboardNew() {
   const { state, setCurrentDriver, setCurrentScreen, setCurrentRide } = useAppState();
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -140,6 +143,15 @@ export function DriverDashboardNew() {
   const [rideHistory, setRideHistory]       = useState<any[]>([]);
   const [rideStats, setRideStats]           = useState<any>({ today: { count: 0, earnings: 0 }, week: { count: 0, earnings: 0 }, month: { count: 0, earnings: 0 }, total: { count: 0, earnings: 0 } });
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // ✅ Carrousel photos chauffeurs (bandeau gains)
+  const [earningsImgIndex, setEarningsImgIndex] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setEarningsImgIndex(prev => (prev + 1) % EARNINGS_IMAGES.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
 
   // 🌙 Dark mode
   const [isDark, setIsDark] = useState<boolean>(() => {
@@ -591,13 +603,34 @@ export function DriverDashboardNew() {
               </Card>
             )}
 
-            {/* ✅ NOUVEAU : Bandeau marketing gains & avantages */}
-            <Card className="p-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-none">
+            {/* ✅ NOUVEAU : Bandeau marketing gains & avantages, avec carrousel photos */}
+            <Card className="p-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-none overflow-hidden">
               <div className="flex items-center gap-2 mb-1.5">
                 <TrendingUp className="w-4 h-4" />
                 <h3 className="font-semibold text-sm">Vous gardez 85% de chaque course</h3>
               </div>
               <p className="text-xs text-white/85 mb-3">Plus vous roulez, plus vous gagnez. Aucun frais caché, paiement instantané après chaque course.</p>
+
+              {/* ✅ Carrousel photos chauffeurs */}
+              <div className="relative w-full h-24 rounded-xl overflow-hidden mb-3">
+                {EARNINGS_IMAGES.map((img, i) => (
+                  <img
+                    key={img}
+                    src={img}
+                    alt="Chauffeur SmartCabb satisfait"
+                    className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000"
+                    style={{ opacity: earningsImgIndex === i ? 1 : 0 }}
+                  />
+                ))}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
+                <p className="absolute bottom-1.5 left-2.5 text-[11px] font-semibold drop-shadow">Rejoignez nos chauffeurs partenaires</p>
+                <div className="absolute bottom-1.5 right-2.5 flex gap-1">
+                  {EARNINGS_IMAGES.map((_, i) => (
+                    <span key={i} className={`h-1 rounded-full transition-all ${earningsImgIndex === i ? 'w-5 bg-white' : 'w-1.5 bg-white/50'}`} />
+                  ))}
+                </div>
+              </div>
+
               <div className="flex flex-wrap gap-1.5">
                 {['85% pour vous', '0 frais cachés', 'Support 24/7', 'Bonus fidélité'].map((tag, i) => (
                   <span key={i} className="text-[11px] font-medium bg-white/15 px-2.5 py-1 rounded-full">{tag}</span>
