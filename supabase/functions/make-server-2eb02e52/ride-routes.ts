@@ -27,6 +27,13 @@ async function kvSet(key: string, value: any): Promise<void> {
 async function kvDel(key: string): Promise<void> {
   try { await kvClient().from(KV_TABLE).delete().eq("key", key); } catch (e) { console.error("KV del error:", e); }
 }
+async function getCommissionRate(): Promise<number> {
+  try {
+    const config = await kvGet('smartcabb_global_config');
+    if (config && typeof config.commissionRate === 'number') return config.commissionRate;
+  } catch (e) { console.error('Error reading commission rate:', e); }
+  return 15;
+}
 async function kvGetByPrefix(prefix: string): Promise<any[]> {
   try { const { data } = await kvClient().from(KV_TABLE).select("key, value").like("key", prefix + "%"); return data?.map((d: any) => d.value) ?? []; } catch { return []; }
 }
@@ -1230,8 +1237,9 @@ app.post("/complete", async (c) => {
     if (effectiveDriverId && actualCost && !alreadyCompleted) {
       const driver = await kv.get<any>(`driver:${effectiveDriverId}`);
       if (driver) {
-        const commission     = actualCost * 0.15;
-        const driverEarnings = actualCost * 0.85;
+        const commissionRate  = await getCommissionRate();
+        const commission      = Math.round(actualCost * commissionRate / 100);
+        const driverEarnings  = actualCost - commission;
 
         const newBalance = (driver.balance || 0) - commission;
 
@@ -1283,8 +1291,8 @@ app.post("/complete", async (c) => {
         ride._driverNewBalance    = newBalance;
 
         console.log(`💰 [RIDE-COMPLETE] Driver ${effectiveDriverId}:`);
-        console.log(`   - Commission (15%): ${commission.toLocaleString('fr-FR')} CDF`);
-        console.log(`   - Gains (85%): ${driverEarnings.toLocaleString('fr-FR')} CDF`);
+        console.log(`   - Commission (${commissionRate}%): ${commission.toLocaleString('fr-FR')} CDF`);
+        console.log(`   - Gains (${100 - commissionRate}%): ${driverEarnings.toLocaleString('fr-FR')} CDF`);
         console.log(`   - Nouveau solde: ${newBalance.toLocaleString('fr-FR')} CDF`);
         console.log(`   - Forcé hors ligne: ${forcedOffline}`);
         console.log(`   - Total courses: ${driver.totalRides}`);
@@ -1348,8 +1356,9 @@ app.post("/:id/complete", async (c) => {
     if (effectiveDriverId && actualCost && !alreadyCompleted) {
       const driver = await kv.get<any>(`driver:${effectiveDriverId}`);
       if (driver) {
-        const commission     = actualCost * 0.15;
-        const driverEarnings = actualCost * 0.85;
+        const commissionRate  = await getCommissionRate();
+        const commission      = Math.round(actualCost * commissionRate / 100);
+        const driverEarnings  = actualCost - commission;
 
         const newBalance = (driver.balance || 0) - commission;
 
@@ -1440,10 +1449,11 @@ app.get("/driver/:driverId/earnings", async (c) => {
       );
     }
     
+    const commissionRate = await getCommissionRate();
     const totalEarnings = filteredRides.reduce((sum: number, r: any) => 
       sum + (r.totalPrice || r.estimatedPrice || 0), 0
     );
-    const commission = totalEarnings * 0.15;
+    const commission = Math.round(totalEarnings * commissionRate / 100);
     const netEarnings = totalEarnings - commission;
     
     return c.json({
@@ -1542,11 +1552,12 @@ app.get("/driver/:driverId/rides", async (c) => {
     const weekRides  = completedRides.filter((r: any) => new Date(r.completedAt || r.createdAt) >= weekStart);
     const monthRides = completedRides.filter((r: any) => new Date(r.completedAt || r.createdAt) >= monthStart);
 
+    const cr = await getCommissionRate();
     const stats = {
-      today:  { count: todayRides.length,  earnings: Math.round(sumPrice(todayRides)  * 0.85) },
-      week:   { count: weekRides.length,   earnings: Math.round(sumPrice(weekRides)   * 0.85) },
-      month:  { count: monthRides.length,  earnings: Math.round(sumPrice(monthRides)  * 0.85) },
-      total:  { count: completedRides.length, earnings: Math.round(sumPrice(completedRides) * 0.85) },
+      today:  { count: todayRides.length,  earnings: Math.round(sumPrice(todayRides)  * (1 - cr / 100)) },
+      week:   { count: weekRides.length,   earnings: Math.round(sumPrice(weekRides)   * (1 - cr / 100)) },
+      month:  { count: monthRides.length,  earnings: Math.round(sumPrice(monthRides)  * (1 - cr / 100)) },
+      total:  { count: completedRides.length, earnings: Math.round(sumPrice(completedRides) * (1 - cr / 100)) },
     };
 
     console.log(`✅ [RIDES/HISTORY-DRIVER] ${driverRides.length} course(s), stats:`, stats);

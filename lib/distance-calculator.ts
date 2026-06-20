@@ -99,12 +99,7 @@ export async function calculateRoute(
       { lat: toLat, lng: toLng }
     );
     
-    // 🎯 CORRECTION : Ne PAS multiplier par un facteur
-    // Google Directions API retourne déjà la durée optimiste, on utilise calculateDuration() calibré sur Google Maps
-    const adjustedDuration = calculateDuration(googleRoute.distance);
-    
-    console.log(`✅ Google Directions: ${googleRoute.distance.toFixed(1)}km en ${Math.round(googleRoute.duration)}min (brut)`);
-    console.log(`🎯 Ajusté pour trafic réel Kinshasa (comme Google Maps): ${adjustedDuration}min`);
+    console.log(`✅ Google Directions: ${googleRoute.distance.toFixed(1)}km en ${Math.round(googleRoute.duration)}min (avec trafic réel)`);
     
     // Formater la distance
     let distanceText: string;
@@ -116,13 +111,13 @@ export async function calculateRoute(
       distanceText = `${Math.round(googleRoute.distance)} km`;
     }
     
-    // Formater la durée AJUSTÉE
+    // Formater la durée GOOGLE (trafic réel)
     let durationText: string;
-    if (adjustedDuration < 60) {
-      durationText = `${adjustedDuration} min`;
+    if (googleRoute.duration < 60) {
+      durationText = `${Math.round(googleRoute.duration)} min`;
     } else {
-      const hours = Math.floor(adjustedDuration / 60);
-      const mins = adjustedDuration % 60;
+      const hours = Math.floor(googleRoute.duration / 60);
+      const mins = Math.round(googleRoute.duration % 60);
       if (mins === 0) {
         durationText = `${hours}h`;
       } else {
@@ -132,7 +127,7 @@ export async function calculateRoute(
     
     return {
       distance: googleRoute.distance,
-      duration: adjustedDuration,  // 🎯 CORRECTION : Utiliser calculateDuration() calibré Google Maps
+      duration: Math.round(googleRoute.duration),
       distanceText,
       durationText
     };

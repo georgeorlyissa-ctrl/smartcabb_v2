@@ -27,20 +27,27 @@ export type { VehicleCategory, ServiceType, TimeOfDay };
  */
 function getExchangeRate(): number {
   try {
-    // ✅ FIX : Lire depuis les deux clés localStorage (config-sync écrit dans les deux)
-    for (const key of ['smartcabb_config_cache', 'smartcab_system_settings']) {
+    for (const key of ['smartcabb_config_cache', 'smartcab_system_settings', 'smartcabb_exchange_rate']) {
       const raw = localStorage.getItem(key);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.exchangeRate && typeof parsed.exchangeRate === 'number' && parsed.exchangeRate > 0) {
-          return parsed.exchangeRate;
-        }
+      if (!raw) continue;
+      if (key === 'smartcabb_exchange_rate') {
+        const n = Number(raw);
+        if (!isNaN(n) && n > 0) return n;
+        continue;
       }
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.exchangeRate === 'number' && parsed.exchangeRate > 0) return parsed.exchangeRate;
+        if (typeof parsed.exchangeRate === 'string') {
+          const n = parseFloat(parsed.exchangeRate);
+          if (!isNaN(n) && n > 0) return n;
+        }
+      } catch {}
     }
   } catch (error) {
     console.warn('⚠️ Erreur lecture taux de conversion, utilisation valeur par défaut:', error);
   }
-  return 2800; // Valeur par défaut alignée avec le backend
+  return 2800;
 }
 
 /**

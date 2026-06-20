@@ -159,7 +159,10 @@ export async function saveGlobalConfig(config: Partial<GlobalConfig>): Promise<b
  */
 function cacheConfig(config: GlobalConfig): void {
   try {
-    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(config));
+    const payload = JSON.stringify(config);
+    localStorage.setItem(LOCAL_CACHE_KEY, payload);
+    localStorage.setItem('smartcab_system_settings', payload);
+    localStorage.setItem('smartcabb_exchange_rate', String(config.exchangeRate));
   } catch (error) {
     console.warn('⚠️ Erreur mise en cache:', error);
   }

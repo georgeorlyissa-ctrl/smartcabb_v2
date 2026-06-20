@@ -3,7 +3,7 @@ import { useAppState } from '../../hooks/useAppState';
 import { Button } from '../ui/button';
 import { GoogleMapView } from '../GoogleMapView';
 import { RideCompletionSummaryDialog } from '../RideCompletionSummaryDialog';
-import { VEHICLE_PRICING, type VehicleCategory } from '../../lib/pricing';
+import { VEHICLE_PRICING, type VehicleCategory, getCommissionRate, calculateCommission, calculateDriverEarnings } from '../../lib/pricing';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { motion } from '../../lib/motion';
@@ -245,10 +245,11 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
         });
       }
 
-      const commission  = Math.round(finalCost * 0.15);
-      const netEarning  = finalCost - commission;
+      const commission  = calculateCommission(finalCost);
+      const netEarning  = calculateDriverEarnings(finalCost);
+      const rate        = getCommissionRate();
       toast.success('🎉 Course clôturée !', {
-        description: `Gain net : ${netEarning.toLocaleString()} CDF (+85%) | Commission : ${commission.toLocaleString()} CDF (15%)`
+        description: `Gain net : ${netEarning.toLocaleString()} CDF (+${100 - rate}%) | Commission : ${commission.toLocaleString()} CDF (${rate}%)`
       });
 
       setShowCompletionDialog(true);
@@ -515,8 +516,8 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
 
               {/* Gains estimés */}
               <div className="mt-3 flex justify-between text-xs text-gray-500 bg-white rounded-lg p-2">
-                <span>Gain net (85 %) : <span className="font-semibold text-green-700">{Math.round(currentCost * 0.85).toLocaleString()} CDF</span></span>
-                <span>Commission (15 %) : <span className="font-semibold text-orange-600">{Math.round(currentCost * 0.15).toLocaleString()} CDF</span></span>
+                <span>Gain net ({100 - getCommissionRate()} %) : <span className="font-semibold text-green-700">{calculateDriverEarnings(currentCost).toLocaleString()} CDF</span></span>
+                <span>Commission ({getCommissionRate()} %) : <span className="font-semibold text-orange-600">{calculateCommission(currentCost).toLocaleString()} CDF</span></span>
               </div>
             </div>
 

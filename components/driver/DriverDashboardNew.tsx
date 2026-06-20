@@ -5,7 +5,7 @@ import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useAppState } from '../../hooks/useAppState';
 import { DriverWalletManager } from './DriverWalletManager';
-import { VehicleCategory } from '../../lib/pricing';
+import { VehicleCategory, calculateDriverEarnings } from '../../lib/pricing';
 import { getMinimumCreditForCategory } from '../../lib/pricing-config';
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 import { toast } from '../../lib/toast';
@@ -744,7 +744,7 @@ export function DriverDashboardNew() {
               <div className="space-y-3">
                 {rideHistory.map((ride: any, i: number) => {
                   const price = ride.totalPrice || ride.actualPrice || ride.estimatedPrice || 0;
-                  const earning = Math.round(price * 0.85);
+                  const earning = calculateDriverEarnings(price);
                   // ✅ FIX Bug 3 : si la course a un startedAt, elle est "Terminée" même si status = cancelled
                   const isCompleted = ride.status === 'completed' || ride.status === 'rated' ||
                                       (ride.status === 'cancelled' && !!ride.startedAt);

@@ -9,7 +9,7 @@ import { toast } from '../../lib/toast';
 import { ArrowLeft, Car, Users, Clock, MapPin, Info, Sun, Moon, Calendar } from '../../lib/icons';
 import { VehicleCategory, PromoCode } from '../../types';
 import { VEHICLE_PRICING, convertUSDtoCDF, formatCDF, isDayTime } from '../../lib/pricing';
-import { calculateRoute } from '../../lib/distance-calculator';
+import { calculateRoute, calculateDistanceHaversine } from '../../lib/distance-calculator';
 import { getCurrentTrafficConditions, calculateDuration } from '../../lib/duration-calculator';
 import { RouteMapPreview } from '../RouteMapPreview';
 import { VehicleImageCarousel } from '../VehicleImageCarousel';
@@ -18,7 +18,7 @@ import { PromoCodeInput } from '../PromoCodeInput';
 import { BookForSomeoneElse } from './BookForSomeoneElse';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { supabase } from '../../lib/supabase';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 
@@ -58,15 +58,16 @@ export function EstimateScreen() {
   // 🔒 Désactive le bouton après 1 clic (anti double-soumission)
   const [isBooking, setIsBooking] = useState(false);
 
-  // 🆕 Commander pour quelqu'un d'autre
-  const [showBookForOther, setShowBookForOther] = useState(false);
-  const [beneficiary, setBeneficiary] = useState<{ name: string; phone: string } | null>(null);
-
-  // 🆕 Dialogue de réservation programmée (Familiale & Business)
+  // 📅 Réservation pour catégories Familiale & Business
+  const RESERVATION_CATEGORIES = ['smart_plus', 'smart_business'];
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
   const [isScheduling, setIsScheduling] = useState(false);
+
+  // 🆕 Commander pour quelqu'un d'autre
+  const [showBookForOther, setShowBookForOther] = useState(false);
+  const [beneficiary, setBeneficiary] = useState<{ name: string; phone: string } | null>(null);
 
   // 🆕 État pour le calcul OSRM (async)
   const [routeInfo, setRouteInfo] = useState<{
@@ -90,7 +91,7 @@ export function EstimateScreen() {
 
   if (!pickup || !destination) return null;
 
-  const distanceKm = routeInfo?.distance || (calculateDistance ? calculateDistance(pickup, destination) : 10.0);
+  const distanceKm = routeInfo?.distance || calculateDistanceHaversine(pickup.lat, pickup.lng, destination.lat, destination.lng);
   const trafficCondition = getCurrentTrafficConditions();
   const pickupInstructions = state.pickupInstructions || '';
 
@@ -113,7 +114,7 @@ export function EstimateScreen() {
         console.log(`✅ Itinéraire calculé: ${result.distanceText} en ${result.durationText}`);
       } catch (error) {
         console.error('❌ Erreur calcul itinéraire:', error);
-        const fallbackDist = calculateDistance ? calculateDistance(pickup, destination) : 10.0;
+        const fallbackDist = calculateDistanceHaversine(pickup.lat, pickup.lng, destination.lat, destination.lng);
         const estimatedRealDistance = fallbackDist * 1.9;
         const fallbackDuration = calculateDuration(estimatedRealDistance);
 
@@ -281,8 +282,8 @@ export function EstimateScreen() {
       return;
     }
 
-    // 🔁 Rediriger les catégories Familiale et Business vers la réservation programmée
-    if (selectedVehicle === 'smart_plus' || selectedVehicle === 'smart_business') {
+    // 📅 VÉHICULES SUR RÉSERVATION UNIQUEMENT
+    if (RESERVATION_CATEGORIES.includes(selectedVehicle)) {
       setIsBooking(false);
       setShowScheduleDialog(true);
       return;
@@ -330,23 +331,22 @@ export function EstimateScreen() {
     }
   };
 
-  // 🆕 Réservation programmée pour Familiale et Business
   const handleScheduleRide = async () => {
-    if (!scheduleDate || !scheduleTime) {
-      toast.error(language === 'en' ? 'Please select date and time' : 'Veuillez choisir une date et une heure');
+    if (!state.currentUser?.id) {
+      toast.error('Vous devez être connecté');
       return;
     }
-    if (!state.currentUser?.id) {
-      toast.error(language === 'en' ? 'You must be logged in' : 'Vous devez etre connecte');
+    if (!scheduleDate || !scheduleTime) {
+      toast.error('Veuillez choisir une date et une heure');
+      return;
+    }
+    const scheduledDateTime = new Date(`${scheduleDate}T${scheduleTime}`);
+    if (scheduledDateTime < new Date()) {
+      toast.error('La date doit être dans le futur');
       return;
     }
     setIsScheduling(true);
     try {
-      const vehicleCat = selectedVehicle;
-      const prices: Record<string, number> = {
-        smart_plus: 30000,
-        smart_business: 450000,
-      };
       const { error } = await supabase.from('scheduled_rides').insert({
         user_id: state.currentUser.id,
         pickup_address: pickup?.address || '',
@@ -357,16 +357,20 @@ export function EstimateScreen() {
         dropoff_lng: destination?.lng || 0,
         scheduled_date: scheduleDate,
         scheduled_time: scheduleTime,
-        category: vehicleCat,
-        estimated_price: prices[vehicleCat] || 30000,
+        category: selectedVehicle,
+        estimated_price: finalPrice,
         status: 'scheduled',
       });
+
       if (error) throw error;
+
+      toast.success('Réservation confirmée ! Vous recevrez un rappel');
       setShowScheduleDialog(false);
-      toast.success(language === 'en' ? 'Ride scheduled successfully!' : 'Course programmee avec succes !');
-    } catch (err) {
-      console.error('Erreur reservation:', err);
-      toast.error(language === 'en' ? 'Failed to schedule ride' : 'Erreur lors de la reservation');
+      setScheduleDate('');
+      setScheduleTime('');
+    } catch (error) {
+      console.error('❌ Erreur réservation:', error);
+      toast.error('Erreur lors de la réservation');
     } finally {
       setIsScheduling(false);
     }
@@ -747,51 +751,63 @@ export function EstimateScreen() {
               {t('searching_driver')}
             </span>
           ) : (
-            selectedVehicle === 'smart_plus' || selectedVehicle === 'smart_business'
+            RESERVATION_CATEGORIES.includes(selectedVehicle)
               ? (language === 'en' ? 'Book (Scheduled)' : 'Reserver (Programme)')
               : t('confirm_booking')
           )}
         </Button>
 
-        {/* Dialogue de réservation programmée */}
-        <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {language === 'en' ? 'Schedule a Ride' : 'Reserver une course'}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium mb-1">
-                  {language === 'en' ? 'Category' : 'Categorie'}
-                </p>
-                <p className="text-sm text-gray-600">
-                  {selectedVehicle === 'smart_plus' ? 'SmartCabb Plus (Familiale)' : 'SmartCabb Business'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium mb-1">{t('map') === 'Carte' ? 'Trajet' : 'Route'}</p>
-                <p className="text-xs text-gray-500">{pickup?.address} → {destination?.address}</p>
-              </div>
-              <div>
-                <Label>{language === 'en' ? 'Date' : 'Date'}</Label>
-                <Input type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <Label>{language === 'en' ? 'Time' : 'Heure'}</Label>
-                <Input type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} className="mt-1" />
-              </div>
-              <Button onClick={handleScheduleRide} disabled={isScheduling} className="w-full bg-gradient-to-r from-secondary to-primary text-white">
-                {isScheduling
-                  ? (language === 'en' ? 'Scheduling...' : 'Reservation en cours...')
-                  : (language === 'en' ? 'Confirm Scheduling' : 'Confirmer la reservation')
-                }
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </motion.div>
+
+      {/* 📅 DIALOG RÉSERVATION POUR FAMILIALE & BUSINESS */}
+      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="w-5 h-5" />
+              Réservation {selectedVehicle === 'smart_plus' ? 'Familiale' : 'Business'}
+            </DialogTitle>
+            <DialogDescription>
+              Ce véhicule est disponible uniquement sur réservation. Choisissez votre date et heure.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={scheduleDate}
+                onChange={(e) => setScheduleDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <div>
+              <Label>Heure</Label>
+              <Input
+                type="time"
+                value={scheduleTime}
+                onChange={(e) => setScheduleTime(e.target.value)}
+              />
+            </div>
+            <div className="bg-muted/40 rounded-lg p-3 text-sm">
+              <p className="font-medium">Récapitulatif</p>
+              <p className="text-muted-foreground mt-1">
+                {pickup?.address || '—'} → {destination?.address || '—'}
+              </p>
+              <p className="text-muted-foreground">
+                Prix estimé : {formatCDF(finalPrice)}
+              </p>
+            </div>
+            <Button
+              onClick={handleScheduleRide}
+              disabled={isScheduling}
+              className="w-full h-12 rounded-xl bg-gradient-to-r from-secondary to-primary text-white font-semibold"
+            >
+              {isScheduling ? 'Réservation en cours...' : 'Confirmer la réservation'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }

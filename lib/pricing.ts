@@ -42,22 +42,29 @@ export {
  */
 export function getExchangeRate(): number {
   try {
-    // Vérifier que localStorage est disponible (évite erreurs SSR)
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return 2000; // Fallback pour SSR
+      return 2000;
     }
-    
-    const settingsStr = localStorage.getItem('smartcab_system_settings');
-    if (settingsStr) {
-      const settings = JSON.parse(settingsStr);
-      if (settings.exchangeRate && typeof settings.exchangeRate === 'number') {
-        return settings.exchangeRate;
+    for (const key of ['smartcabb_config_cache', 'smartcab_system_settings', 'smartcabb_exchange_rate']) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      if (key === 'smartcabb_exchange_rate') {
+        const n = Number(raw);
+        if (!isNaN(n) && n > 0) return n;
+        continue;
       }
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed.exchangeRate === 'number' && parsed.exchangeRate > 0) return parsed.exchangeRate;
+        if (typeof parsed.exchangeRate === 'string') {
+          const n = parseFloat(parsed.exchangeRate);
+          if (!isNaN(n) && n > 0) return n;
+        }
+      } catch {}
     }
   } catch (error) {
     console.warn('⚠️ Erreur lecture taux de conversion:', error);
   }
-  // ⚠️ FALLBACK : Utiliser 2000 CDF comme valeur par défaut (à synchroniser avec le backend)
   return 2000;
 }
 
@@ -88,6 +95,14 @@ export function getPostpaidInterestRate(): number {
  * Alias pour getPostpaidInterestRate
  */
 export function getCommissionRate(): number {
+  try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return 10;
+    const configStr = localStorage.getItem('smartcabb_config_cache');
+    if (configStr) {
+      const config = JSON.parse(configStr);
+      if (typeof config.commissionRate === 'number') return config.commissionRate;
+    }
+  } catch (e) { console.warn('⚠️ Erreur lecture commissionRate:', e); }
   return getPostpaidInterestRate();
 }
 
