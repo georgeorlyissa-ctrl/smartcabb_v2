@@ -15,6 +15,7 @@ import { toast } from '../../lib/toast';
 import { paymentService } from '../../lib/payment-service';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
 import { VodacomMpesaLogo, OrangeMoneyLogo, AirtelMoneyLogo, AfrimoneyLogo } from '../mobile-money-logos';
+import { calculateDriverEarnings } from '../../lib/pricing';
 
 // ─── Réseaux Mobile Money ─────────────────────────────────────
 const MOBILE_MONEY_NETWORKS = [
@@ -200,7 +201,7 @@ export function PaymentScreen() {
             paymentTransactionId: transactionId,
             cashAmount: cashPart,
             mobileMoneyAmount: mobilePart,
-            driverEarnings: Math.round(ridePrice * 0.85),
+            driverEarnings: calculateDriverEarnings(ridePrice),
             duration: durationInSeconds || 0,
             distance: distance || 0
           })
