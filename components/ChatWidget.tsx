@@ -18,36 +18,36 @@ interface QuickReply {
 const QUICK_REPLIES: Record<string, { fr: QuickReply[]; en: QuickReply[] }> = {
   welcome: {
     fr: [
-      { label: '💰 Tarifs', value: 'Quels sont vos tarifs ?' },
-      { label: '🚗 Devenir chauffeur', value: 'Comment devenir chauffeur ?' },
-      { label: '📍 Zones', value: 'Où êtes-vous disponible ?' },
-      { label: '📱 Application', value: 'Comment télécharger l\'app ?' },
-      { label: '💳 Paiement', value: 'Comment payer ?' },
-      { label: '📞 Contact', value: 'Contact support' },
+      { label: 'Tarifs', value: 'Quels sont vos tarifs ?' },
+      { label: 'Devenir chauffeur', value: 'Comment devenir chauffeur ?' },
+      { label: 'Zones', value: 'Où êtes-vous disponible ?' },
+      { label: 'Application', value: 'Comment télécharger l\'app ?' },
+      { label: 'Paiement', value: 'Comment payer ?' },
+      { label: 'Contact', value: 'Contact support' },
     ],
     en: [
-      { label: '💰 Pricing', value: 'What are your prices?' },
-      { label: '🚗 Become driver', value: 'How to become a driver?' },
-      { label: '📍 Areas', value: 'Where are you available?' },
-      { label: '📱 App', value: 'How to download the app?' },
-      { label: '💳 Payment', value: 'How to pay?' },
-      { label: '📞 Contact', value: 'Contact support' },
+      { label: 'Pricing', value: 'What are your prices?' },
+      { label: 'Become driver', value: 'How to become a driver?' },
+      { label: 'Areas', value: 'Where are you available?' },
+      { label: 'App', value: 'How to download the app?' },
+      { label: 'Payment', value: 'How to pay?' },
+      { label: 'Contact', value: 'Contact support' },
     ],
   },
   prix: {
     fr: [
-      { label: '🚗 Standard', value: 'Prix course standard' },
-      { label: '⭐ Confort', value: 'Prix confort' },
-      { label: '👨‍👩‍👧‍👧 Plus (7 places)', value: 'Prix SmartCabb Plus' },
-      { label: '💼 Business', value: 'Prix business' },
-      { label: '🌙 Nuit', value: 'Tarifs de nuit' },
+      { label: 'Standard', value: 'Prix course standard' },
+      { label: 'Confort', value: 'Prix confort' },
+      { label: 'Plus (7 places)', value: 'Prix SmartCabb Plus' },
+      { label: 'Business', value: 'Prix business' },
+      { label: 'Tarifs de nuit', value: 'Tarifs de nuit' },
     ],
     en: [
-      { label: '🚗 Standard', value: 'Standard price' },
-      { label: '⭐ Confort', value: 'Confort price' },
-      { label: '👨‍👩‍👧‍👧 Plus', value: 'SmartCabb Plus price' },
-      { label: '💼 Business', value: 'Business price' },
-      { label: '🌙 Night', value: 'Night rates' },
+      { label: 'Standard', value: 'Standard price' },
+      { label: 'Confort', value: 'Confort price' },
+      { label: 'Plus', value: 'SmartCabb Plus price' },
+      { label: 'Business', value: 'Business price' },
+      { label: 'Night rates', value: 'Night rates' },
     ],
   },
 };
@@ -55,480 +55,204 @@ const QUICK_REPLIES: Record<string, { fr: QuickReply[]; en: QuickReply[] }> = {
 const SMARTCABB_KNOWLEDGE = {
   prix: {
     keywords: ['prix', 'tarif', 'coût', 'combien', 'coute', 'payer', 'montant', 'price', 'cost', 'fare', 'facturation', 'minimum', 'smartcabb standard', 'smartcabb confort', 'smartcabb plus', 'smartcabb business', 'course standard', 'course confort', 'course plus', 'course business'],
-    fr: `Voici nos tarifs SmartCabb en Francs Congolais :
+    fr: `Nos tarifs sont calculés en francs congolais selon la catégorie de véhicule.
 
-- SmartCabb Standard (economique) : 2 500 CDF/km, ou 50 000 CDF/heure
-- SmartCabb Confort (confortable) : 5 000 CDF/km, ou 100 000 CDF/heure
-- SmartCabb Plus (familial, 7 places) : 7 500 CDF/km, ou 150 000 CDF/heure
-- SmartCabb Business (luxe) : 500 000 CDF/jour
+Le SmartCabb Standard, économique, revient à 2 500 CDF par kilomètre ou 50 000 CDF de l'heure. Le Confort coûte 5 000 CDF/km ou 100 000 CDF/heure. Pour les familles ou les groupes, le SmartCabb Plus (7 places) est à 7 500 CDF/km ou 150 000 CDF/heure. Et si vous souhaitez plus de confort, le SmartCabb Business est disponible en location à la journée pour 500 000 CDF.
 
-Les tarifs de nuit, de 22h a 5h, sont majores de 50%. La facturation minimale est de 2 km ou 10 minutes.`,
-    en: `Here are our SmartCabb prices in CDF :
+À noter qu'un supplément de 50% s'applique la nuit, entre 22h et 5h, et que la facturation minimum est de 2 km ou 10 minutes.`,
+    en: `Our prices are calculated in Congolese francs based on the vehicle category.
 
-- SmartCabb Standard (economy) : 2,500 CDF/km, or 50,000 CDF/hour
-- SmartCabb Confort (comfort) : 5,000 CDF/km, or 100,000 CDF/hour
-- SmartCabb Plus (family, 7 seats) : 7,500 CDF/km, or 150,000 CDF/hour
-- SmartCabb Business (luxury) : 500,000 CDF/day
+SmartCabb Standard, our economy option, is 2,500 CDF per kilometer or 50,000 CDF per hour. Confort is 5,000 CDF/km or 100,000 CDF/hour. For families or groups, SmartCabb Plus (7 seats) is 7,500 CDF/km or 150,000 CDF/hour. And if you'd like something more upscale, SmartCabb Business is available as a daily rental for 500,000 CDF.
 
-Night rates from 10pm to 5am have a 50% surcharge. Minimum billing is 2km or 10 minutes.`
+Keep in mind that a 50% surcharge applies at night, between 10pm and 5am, and the minimum charge is 2km or 10 minutes.`
   },
 
   chauffeur: {
     keywords: ['chauffeur', 'conducteur', 'devenir', 'inscription', 'driver', 'become', 'requirements', 'requis', 'postuler', 'candidature', 'recrutement', 'embauche', 'combien de chauffeur', 'combien de chauffeurs', 'combien des chauffeur', 'nombre de chauffeur'],
-    fr: `Pour devenir chauffeur SmartCabb, voici les conditions requises :
+    fr: `Pour devenir chauffeur chez SmartCabb, il vous faut un permis de conduire valide, un véhicule en bon état, un casier judiciaire vierge et au moins 21 ans.
 
-- Permis de conduire valide
-- Vehicule en bon etat
-- Casier judiciaire vierge
-- Age minimum 21 ans
+En échange, on vous propose des revenus flexibles, des horaires que vous choisissez vous-même, une assurance incluse, une formation gratuite et un support disponible à tout moment.
 
-Avantages pour nos chauffeurs :
-- Revenus attractifs et flexibles
-- Horaires que vous choisissez
-- Assurance incluse
-- Formation gratuite
-- Support disponible 24h/24 et 7j/7
+L'inscription se fait en quatre étapes : vous remplissez le formulaire en ligne sur smartcabb.com/chauffeurs, on vérifie vos documents, vous suivez une courte formation à l'application, puis vous pouvez commencer à rouler.
 
-Inscription en 4 etapes :
-1. Remplir le formulaire en ligne sur smartcabb.com/chauffeurs
-2. Verification des documents
-3. Formation gratuite a l'application
-4. Commencer a gagner !
+Pour toute question, vous pouvez nous appeler au +243 990 666 661.`,
+    en: `To become a SmartCabb driver, you'll need a valid driver's license, a vehicle in good condition, a clean criminal record, and to be at least 21 years old.
 
-Pour plus de renseignements, appelez le +243 990 666 661.`,
-    en: `To become a SmartCabb driver, here are the requirements :
+In return, we offer flexible income, hours you choose yourself, insurance included, free training, and support available at all times.
 
-- Valid driver's license
-- Vehicle in good condition
-- Clean criminal record
-- Minimum age 21 years
+Signing up takes four steps: you fill out the online form at smartcabb.com/drivers, we verify your documents, you go through a short app training, and then you can start earning.
 
-Benefits for our drivers :
-- Attractive flexible income
-- Choose your own hours
-- Insurance included
-- Free training
-- 24/7 support
-
-Sign up in 4 steps :
-1. Fill out the online form at smartcabb.com/drivers
-2. Document verification
-3. Free app training
-4. Start earning !
-
-For more information, call +243 990 666 661.`
+For any questions, feel free to call us at +243 990 666 661.`
   },
 
   zones: {
     keywords: ['zone', 'ville', 'secteur', 'où', 'disponible', 'areas', 'where', 'coverage', 'kinshasa', 'commune', 'quartier', 'localisation', 'endroit'],
-    fr: `SmartCabb est disponible a Kinshasa, en Republique Democratique du Congo.
+    fr: `SmartCabb est actuellement disponible à Kinshasa, en République Démocratique du Congo, et couvre la plupart des communes : Gombe, Ngaliema, Limete, Kalamu, Kintambo, et bien d'autres.
 
-Communes couvertes :
-- Gombe (centre d'affaires)
-- Ngaliema
-- Limete
-- Kalamu
-- Kintambo
-- Et toutes les autres communes de Kinshasa
+Nous prévoyons d'étendre le service à Lubumbashi, Matadi et Kisangani dans les prochains mois. En attendant, la meilleure façon de vérifier la disponibilité dans votre quartier reste d'utiliser directement l'application.`,
+    en: `SmartCabb is currently available in Kinshasa, Democratic Republic of Congo, and covers most communes: Gombe, Ngaliema, Limete, Kalamu, Kintambo, and many others.
 
-Expansion prevue prochainement a Lubumbashi, Matadi et Kisangani.
-
-Utilisez l'application pour verifier la disponibilite dans votre quartier.`,
-    en: `SmartCabb is available in Kinshasa, Democratic Republic of Congo.
-
-Covered communes :
-- Gombe (business district)
-- Ngaliema
-- Limete
-- Kalamu
-- Kintambo
-- And all other Kinshasa communes
-
-Expansion planned soon in Lubumbashi, Matadi and Kisangani.
-
-Use the app to check availability in your area.`
+We're planning to expand to Lubumbashi, Matadi and Kisangani in the coming months. In the meantime, the best way to check availability in your area is to use the app directly.`
   },
 
   app: {
     keywords: ['application', 'app', 'télécharger', 'installer', 'download', 'mobile', 'smartphone', 'site', 'web', 'site web'],
-    fr: `Vous pouvez utiliser SmartCabb directement depuis votre navigateur sur smartcabb.com, sans telechargement necessaire. Le site fonctionne parfaitement sur mobile.
+    fr: `Vous pouvez utiliser SmartCabb directement depuis votre navigateur, sur smartcabb.com, sans rien installer. Le site fonctionne très bien sur mobile.
 
-L'application mobile sera bientot disponible sur le Play Store et l'App Store.
+Une application native sera bientôt disponible sur le Play Store et l'App Store. En attendant, vous avez déjà accès à la réservation en quelques clics, à l'estimation du prix en temps réel, au suivi GPS du chauffeur, au paiement par mobile money, à votre historique de courses et à notre support intégré.`,
+    en: `You can use SmartCabb directly from your browser at smartcabb.com, no installation needed. The site works great on mobile.
 
-Fonctionnalites disponibles :
-- Reservation en quelques clics
-- Estimation de prix en temps reel
-- Suivi GPS du chauffeur
-- Paiement mobile money
-- Historique des courses
-- Support client integre`,
-    en: `You can use SmartCabb directly from your browser at smartcabb.com, no download needed. The website works perfectly on mobile.
-
-The mobile app will be available soon on Play Store and App Store.
-
-Available features :
-- Book in a few clicks
-- Real-time price estimates
-- GPS driver tracking
-- Mobile money payment
-- Trip history
-- Integrated support`
+A native app will be available soon on the Play Store and App Store. In the meantime, you already have access to booking in a few clicks, real-time price estimates, GPS driver tracking, mobile money payment, your trip history, and our built-in support.`
   },
 
   paiement: {
     keywords: ['paiement', 'payer', 'payment', 'mobile money', 'airtel money', 'orange money', 'mpesa', 'afrimoney', 'carte', 'card', 'espèces', 'cash', 'monnaie', 'facture', 'reçu', 'recu', 'receipt'],
-    fr: `Nous acceptons plusieurs moyens de paiement chez SmartCabb :
+    fr: `Chez SmartCabb, vous pouvez régler votre course principalement via mobile money : Airtel Money, Orange Money, M-Pesa ou Afrimoney. Le paiement en espèces est aussi accepté, et la carte bancaire arrivera bientôt.
 
-Mobile money (principal) :
-- Airtel Money
-- Orange Money
-- M-Pesa
-- Afrimoney
+Tous les paiements sont sécurisés et nos prix sont transparents, sans frais cachés. Une fois votre course terminée, le montant exact vous est communiqué, vous payez via votre mobile money, et vous recevez votre reçu par SMS.`,
+    en: `At SmartCabb, you can pay for your ride mainly through mobile money: Airtel Money, Orange Money, M-Pesa or Afrimoney. Cash is also accepted, and card payments are coming soon.
 
-Autres moyens : especes (cash) et carte bancaire (bientot disponible).
-
-Tous les paiements sont 100% sécurises et cryptes. Pas de frais caches, nos prix sont transparents.
-
-Comment ca marche :
-1. Terminez votre course
-2. Recevez le montant exact
-3. Payez via mobile money
-4. Recevez votre recu par SMS`,
-    en: `We accept several payment methods at SmartCabb :
-
-Mobile money (primary) :
-- Airtel Money
-- Orange Money
-- M-Pesa
-- Afrimoney
-
-Other methods : cash, and bank card (coming soon).
-
-All payments are 100% secure and encrypted. No hidden fees, our prices are transparent.
-
-How it works :
-1. Complete your ride
-2. Receive exact amount
-3. Pay via mobile money
-4. Receive receipt by SMS`
+All payments are secure and our prices are transparent, with no hidden fees. Once your ride is complete, you'll see the exact amount, pay via mobile money, and receive your receipt by SMS.`
   },
 
   reservation: {
     keywords: ['réservation', 'reservation', 'commander', 'réserver', 'reserver', 'commande', 'book', 'booking', 'course', 'trajet', 'voyage', 'commander une course'],
-    fr: `Pour reserver une course SmartCabb, c'est simple :
+    fr: `Réserver une course chez SmartCabb est simple. Rendez-vous sur smartcabb.com, cliquez sur Commander, indiquez votre adresse de départ puis votre destination, choisissez le véhicule qui vous convient et confirmez.
 
-Via le site web smartcabb.com :
-1. Allez sur smartcabb.com
-2. Cliquez sur "Commander"
-3. Entrez votre adresse de depart
-4. Entrez votre destination
-5. Choisissez votre vehicule
-6. Confirmez la reservation
+Vous pouvez aussi nous appeler directement au +243 990 666 661. Petit conseil : passez par le site pour avoir une estimation du prix avant même de réserver.`,
+    en: `Booking a SmartCabb ride is simple. Go to smartcabb.com, click Book Now, enter your pickup address and your destination, choose the vehicle that suits you, and confirm.
 
-Par telephone : appelez le +243 990 666 661
-
-Conseil : Utilisez le site web pour une estimation du prix avant de reserver.`,
-    en: `To book a SmartCabb ride, it's simple :
-
-Via the website smartcabb.com :
-1. Go to smartcabb.com
-2. Click "Book Now"
-3. Enter your pickup address
-4. Enter your destination
-5. Choose your vehicle
-6. Confirm booking
-
-By phone : call +243 990 666 661
-
-Tip : Use the website to get a price estimate before booking.`
+You can also call us directly at +243 990 666 661. A tip: use the website to get a price estimate before you even book.`
   },
 
   annulation: {
     keywords: ['annulation', 'annuler', 'cancel', 'cancellation', 'remboursement', 'refund', 'rembourser', 'annulé'],
-    fr: `Politique d'annulation SmartCabb :
+    fr: `Si vous devez annuler une course, sachez que c'est gratuit tant que le chauffeur n'est pas encore arrivé. Une fois sur place, l'annulation entraîne des frais de 2 000 CDF, et si la course a déjà commencé, elle reste due.
 
-- Annulation avant l'arrivee du chauffeur : gratuite
-- Annulation apres l'arrivee du chauffeur : frais de 2 000 CDF
-- Annulation en cours de course : la course est due
+En cas de remboursement, le traitement prend généralement entre 24 et 48 heures et l'argent est recrédité sur votre compte mobile money. Pour toute question, contactez-nous au +243 990 666 661.`,
+    en: `If you need to cancel a ride, it's free as long as the driver hasn't arrived yet. Once they're on site, cancelling costs a 2,000 CDF fee, and if the ride has already started, it remains payable.
 
-Remboursement :
-- Les remboursements sont traites sous 24 a 48 heures
-- Le montant est recredite sur votre compte mobile money
-
-Pour toute reclamation, appelez le +243 990 666 661.`,
-    en: `SmartCabb cancellation policy :
-
-- Cancel before driver arrives : free
-- Cancel after driver arrives : 2,000 CDF fee
-- Cancel during ride : ride is charged
-
-Refund :
-- Refunds processed within 24 to 48 hours
-- Amount credited back to your mobile money account
-
-For complaints, call +243 990 666 661.`
+If a refund is involved, it's usually processed within 24 to 48 hours and credited back to your mobile money account. For any questions, reach out to us at +243 990 666 661.`
   },
 
   securite: {
     keywords: ['sécurité', 'sûr', 'sécurisé', 'security', 'safe', 'protection', 'danger', 'urgence', 'emergency', 'agression', 'accident', 'crime'],
-    fr: `Votre securite est notre priorite absolue chez SmartCabb.
+    fr: `Votre sécurité est une priorité chez SmartCabb. Chaque chauffeur passe par une vérification de son casier judiciaire et de son permis, suit une formation obligatoire et est noté par les passagers après chaque course.
 
-Verification des chauffeurs :
-- Casier judiciaire verifie
-- Permis de conduire valide
-- Formation obligatoire
-- Evaluations par les passagers
+Les véhicules sont régulièrement inspectés et assurés, et chaque trajet est suivi par GPS. Vous pouvez aussi partager votre trajet en temps réel avec un proche, et un bouton d'urgence est disponible dans l'application. Notre support reste joignable à tout moment au +243 990 666 661.`,
+    en: `Your safety is a priority at SmartCabb. Every driver goes through a criminal record check and license verification, completes mandatory training, and is rated by passengers after each ride.
 
-Vehicules controles :
-- Inspection technique reguliere
-- Assurance valide
-- GPS tracking en temps reel
-
-Fonctionnalites de securite :
-- Partage de trajet en temps reel
-- Bouton d'urgence dans l'application
-- Support 24h/24 et 7j/7
-- Enregistrement de tous les trajets
-
-Urgence : +243 990 666 661`,
-    en: `Your safety is our top priority at SmartCabb.
-
-Driver verification :
-- Criminal record checked
-- Driver's license validated
-- Mandatory training
-- Passenger ratings
-
-Vehicle checks :
-- Regular technical inspection
-- Valid insurance
-- Real-time GPS tracking
-
-Safety features :
-- Live trip sharing
-- Emergency button in the app
-- 24/7 support
-- All trips recorded
-
-Emergency : +243 990 666 661`
+Vehicles are regularly inspected and insured, and every trip is tracked by GPS. You can also share your trip in real time with someone you trust, and an emergency button is available in the app. Our support team can be reached at any time at +243 990 666 661.`
   },
 
   contact: {
     keywords: ['contact', 'téléphone', 'email', 'joindre', 'appeler', 'call', 'reach', 'support', 'aide', 'help', 'service client', 'hotline', 'whatsapp'],
-    fr: `Voici comment nous contacter :
+    fr: `Vous pouvez nous joindre par téléphone au +243 990 666 661, par email à admin@smartcabb.com, ou directement ici dans ce chat.
 
-Support client 24h/24 et 7j/7 :
-- Telephone : +243 990 666 661
-- Email : admin@smartcabb.com
-- Chat : directement sur ce chat
+Vous nous retrouverez aussi sur Facebook (SmartCabbRDC) et Instagram (smartcabb_cd). Notre siège se trouve à Kinshasa. Pour une réponse rapide, le téléphone ou ce chat restent les options les plus efficaces.`,
+    en: `You can reach us by phone at +243 990 666 661, by email at admin@smartcabb.com, or right here in this chat.
 
-Reseaux sociaux :
-- Facebook : /SmartCabbRDC
-- Instagram : @smartcabb_cd
-
-Siege social : Kinshasa, Republique Democratique du Congo
-
-Pour une reponse immediate, appelez-nous ou utilisez ce chat.`,
-    en: `Here is how to reach us :
-
-24/7 Customer Support :
-- Phone : +243 990 666 661
-- Email : admin@smartcabb.com
-- Chat : right here in this chat
-
-Social media :
-- Facebook : /SmartCabbRDC
-- Instagram : @smartcabb_cd
-
-Headquarters : Kinshasa, Democratic Republic of Congo
-
-For an immediate response, call us or use this chat.`
+You'll also find us on Facebook (SmartCabbRDC) and Instagram (smartcabb_cd). Our headquarters are in Kinshasa. For a fast response, calling or using this chat are your best options.`
   },
 
   bagages: {
     keywords: ['bagage', 'bagages', 'valise', 'sac', 'luggage', 'baggage', 'colis', 'chargement'],
-    fr: `Politique bagages SmartCabb :
+    fr: `Vos bagages personnels sont transportés gratuitement, quelle que soit la catégorie de véhicule, et le chauffeur vous aide au chargement comme au déchargement.
 
-Bagages personnels : inclus gratuitement pour toutes les categories. Le chauffeur vous aide au chargement et dechargement.
+Pour des bagages plus volumineux, mieux vaut choisir le SmartCabb Plus et prévenir le chauffeur au moment de la réservation. Sachez aussi que vous restez responsable de vos objets de valeur : nous ne pouvons pas être tenus responsables des effets oubliés dans le véhicule.`,
+    en: `Your personal luggage travels free of charge regardless of vehicle category, and the driver helps with loading and unloading.
 
-Bagages volumineux : le SmartCabb Plus (7 places) est recommande. Prevenez le chauffeur lors de la reservation.
-
-Objets fragiles : vous etes responsable de vos objets de valeur. SmartCabb decline toute responsabilite pour les objets laisses dans le vehicule.`,
-    en: `SmartCabb luggage policy :
-
-Personal luggage : included free for all categories. The driver helps with loading and unloading.
-
-Large luggage : SmartCabb Plus (7 seats) is recommended. Notify the driver when booking.
-
-Fragile items : you are responsible for your valuables. SmartCabb is not responsible for items left in the vehicle.`
+For larger luggage, it's best to choose SmartCabb Plus and let the driver know when booking. Keep in mind you remain responsible for your valuables: we can't be held liable for items left in the vehicle.`
   },
 
   animaux: {
     keywords: ['animal', 'animaux', 'chien', 'chat', 'pet', 'petit', 'animal domestique'],
-    fr: `Transport d'animaux avec SmartCabb :
+    fr: `Les petits animaux voyagent gratuitement avec vous, à condition d'être dans un sac de transport adapté. Les chiens guides pour personnes handicapées sont bien sûr toujours acceptés, sans restriction.
 
-Petits animaux en sac de transport : autorises gratuitement, ils doivent etre dans un sac de transport adapte.
+Pour un animal plus grand, le mieux est de nous appeler au +243 990 666 661 afin qu'on organise un véhicule adapté. Pensez simplement à prévenir le chauffeur lors de la réservation.`,
+    en: `Small pets can travel with you free of charge, as long as they're in a suitable carrier. Guide dogs for people with disabilities are always welcome, no restrictions.
 
-Chiens guides pour personnes handicapees : autorises gratuitement, sans restriction.
-
-Grands animaux : veuillez contacter le support au +243 990 666 661, un vehicule adapte peut etre organise.
-
-Merci d'informer le chauffeur au moment de la reservation.`,
-    en: `Pets with SmartCabb :
-
-Small pets in a carrier : allowed free of charge, must be in a suitable carrier.
-
-Guide dogs for disabled persons : allowed free of charge, no restrictions.
-
-Large animals : please contact support at +243 990 666 661, a suitable vehicle can be arranged.
-
-Please inform the driver when booking.`
+For larger animals, it's best to call us at +243 990 666 661 so we can arrange a suitable vehicle. Just remember to let the driver know when booking.`
   },
 
   horaires: {
     keywords: ['horaire', 'heure', 'temps', 'ouvert', 'fermé', '24h', '24/7', 'hours', 'schedule', 'disponibilité', 'disponibilite', 'attente', 'wait', 'temps d\'attente'],
-    fr: `SmartCabb est disponible 24h/24, 7j/7 et 365 jours par an. Notre support client aussi.
+    fr: `SmartCabb fonctionne 24 heures sur 24, 7 jours sur 7, toute l'année, et notre support aussi. Un supplément de 50% s'applique entre 22h et 5h.
 
-Tarifs de nuit (22h a 5h) : majoration de 50% applicable.
+Le temps d'attente moyen à Kinshasa tourne autour de 5 à 15 minutes, et peut monter jusqu'à 20 minutes aux heures de pointe. En période de forte demande, l'attente peut être un peu plus longue, merci pour votre compréhension.`,
+    en: `SmartCabb operates 24/7, all year round, and so does our support team. A 50% surcharge applies between 10pm and 5am.
 
-Temps d'attente moyen a Kinshasa : 5 a 15 minutes. Aux heures de pointe, comptez 10 a 20 minutes. En periode de forte affluence, l'attente peut etre plus longue. Merci de votre comprehension.`,
-    en: `SmartCabb is available 24/7, 365 days a year. Our customer support too.
-
-Night rates (10pm to 5am) : 50% surcharge applies.
-
-Average wait time in Kinshasa : 5 to 15 minutes. During peak hours, 10 to 20 minutes. During high demand, wait times may be longer. Thank you for your understanding.`
+The average wait time in Kinshasa is around 5 to 15 minutes, and can go up to 20 minutes during peak hours. During periods of high demand, waiting may take a bit longer, thank you for your understanding.`
   },
 
   reclamation: {
     keywords: ['réclamation', 'reclamation', 'plainte', 'complain', 'probleme', 'problem', 'problème', 'insatisfait', 'objet perdu', 'perdu', 'lost', 'found'],
-    fr: `Pour toute reclamation, contactez-nous :
-- Telephone : +243 990 666 661
-- Email : admin@smartcabb.com
+    fr: `Pour toute réclamation, écrivez-nous à admin@smartcabb.com ou appelez le +243 990 666 661.
 
-Objets perdus : contactez rapidement le support en donnant les details de votre course (date et heure). Nous contacterons le chauffeur.
+Si vous avez perdu un objet, contactez-nous rapidement en précisant la date et l'heure de votre course, nous nous chargeons de joindre le chauffeur. En général, votre demande sera traitée en 24 à 48 heures et vous recevrez une réponse par SMS ou par email.`,
+    en: `For any complaint, write to us at admin@smartcabb.com or call +243 990 666 661.
 
-Procedure :
-1. Contactez-nous dans les 24 heures
-2. Donnez les details de votre course
-3. Notre equipe traite votre demande sous 24 a 48 heures
-4. Vous recevez une reponse par SMS ou email`,
-    en: `For any complaint, contact us :
-- Phone : +243 990 666 661
-- Email : admin@smartcabb.com
-
-Lost items : contact support quickly with your trip details (date and time). We will contact the driver.
-
-Procedure :
-1. Contact us within 24 hours
-2. Provide your trip details
-3. Our team processes within 24 to 48 hours
-4. You receive a response by SMS or email`
+If you've lost an item, contact us quickly with the date and time of your ride, and we'll reach out to the driver. Your request is usually handled within 24 to 48 hours, and you'll get a response by SMS or email.`
   },
 
   services: {
-    keywords: ['service', 'service', 'offre', 'offer', 'proposez', 'options', 'véhicule', 'vehicule', 'voiture', 'categorie', 'catégorie', 'gamme', 'type'],
-    fr: `Voici les services que nous proposons chez SmartCabb :
+    keywords: ['service', 'offre', 'offer', 'proposez', 'options', 'véhicule', 'vehicule', 'voiture', 'categorie', 'catégorie', 'gamme', 'type'],
+    fr: `Chez SmartCabb, on propose quatre catégories de véhicules. Le Standard, économique, convient bien aux trajets du quotidien. Le Confort offre plus de climatisation et de confort pour le travail ou les sorties. Le Plus, avec ses 7 places, est pensé pour les familles ou les groupes. Et le Business, en location à la journée, s'adresse à ceux qui veulent un chauffeur privé et un véhicule haut de gamme.
 
-- SmartCabb Standard : vehicules economiques, parfait pour les trajets quotidiens
-- SmartCabb Confort : voitures confortables climatisees, ideal pour le travail ou les sorties
-- SmartCabb Plus : vehicules 7 places, parfait pour les familles et groupes
-- SmartCabb Business : vehicules de luxe avec chauffeur prive, location a la journee
+Tous nos services incluent l'assurance, le suivi GPS, la sécurité et le paiement mobile money.`,
+    en: `At SmartCabb, we offer four vehicle categories. Standard, our economy option, is great for everyday trips. Confort offers more air conditioning and comfort for work or outings. Plus, with its 7 seats, is designed for families or groups. And Business, available as a daily rental, is for those who want a private driver and an upscale vehicle.
 
-Tous nos services incluent : assurance, GPS, securite, chauffeur professionnel et paiement mobile money.`,
-    en: `Here are the services we offer at SmartCabb :
-
-- SmartCabb Standard : economy vehicles, perfect for daily trips
-- SmartCabb Confort : comfortable air-conditioned cars, ideal for work or outings
-- SmartCabb Plus : 7-seat vehicles, perfect for families and groups
-- SmartCabb Business : luxury vehicles with private driver, daily rental
-
-All our services include : insurance, GPS, safety, professional driver and mobile money payment.`
+All our services include insurance, GPS tracking, safety features, and mobile money payment.`
   },
 
   parc: {
     keywords: ['combien', 'vehicule', 'véhicule', 'voiture', 'combien de vehicule', 'combien des vehicule', 'combien de voiture', 'combien des voiture', 'parc', 'flotte', 'fleet', 'nombre de vehicule', 'nombre de voiture', 'nombre de véhicule', 'effectif', 'taille de la flotte'],
-    fr: `Notre parc automobile SmartCabb se compose de plusieurs categories :
+    fr: `Notre flotte se compose de berlines économiques pour le Standard, de berlines climatisées pour le Confort, de minibus 7 places pour le Plus, et de véhicules haut de gamme pour le Business.
 
-- SmartCabb Standard : berlines economiques (4 places)
-- SmartCabb Confort : berlines climatisees (4 places)
-- SmartCabb Plus : minibus 7 places
-- SmartCabb Business : vehicules de luxe
+Elle est entretenue et renouvelée régulièrement, et nous comptons des centaines de chauffeurs partenaires à Kinshasa, avec une capacité qui s'adapte à la demande. Pour plus de détails, vous pouvez nous appeler au +243 990 666 661.`,
+    en: `Our fleet includes economy sedans for Standard, air-conditioned sedans for Confort, 7-seat minibuses for Plus, and upscale vehicles for Business.
 
-Notre flotte est regulierement renouvelee et entretenue. Nous comptons des centaines de chauffeurs partenaires a Kinshasa, avec une capacite extensible selon la demande.
-
-Pour plus d'informations, appelez le +243 990 666 661.`,
-    en: `Our SmartCabb fleet consists of several categories :
-
-- SmartCabb Standard : economy sedans (4 seats)
-- SmartCabb Confort : air-conditioned sedans (4 seats)
-- SmartCabb Plus : 7-seat minibuses
-- SmartCabb Business : luxury vehicles
-
-Our fleet is regularly renewed and maintained. We have hundreds of partner drivers in Kinshasa, with scalable capacity based on demand.
-
-For more information, call +243 990 666 661.`
+It's regularly maintained and renewed, and we have hundreds of partner drivers in Kinshasa, with capacity that scales with demand. For more details, feel free to call us at +243 990 666 661.`
   },
 
   salutation: {
     keywords: ['bonjour', 'salut', 'hello', 'hi', 'hey', 'bonsoir', 'bonne nuit', 'bon matin', 'good morning', 'good evening', 'comment tu vas', 'comment allez vous', 'comment ça va', 'ça va', 'how are you', 'comment vas tu', 'quoi de neuf', 'what\'s up', 'wesh', 'cc', 'salutations'],
-    fr: `Bonjour ! Je vais tres bien, merci ! Et vous ?
+    fr: `Bonjour, je vais très bien, merci ! Et vous ?
 
-Je suis votre assistant SmartCabb. Je suis la pour vous aider avec :
-- Nos tarifs et estimations
-- Devenir chauffeur partenaire
-- Zones de service
-- L'application SmartCabb
-- Modes de paiement
-- Contact et support
+Je suis l'assistant SmartCabb et je peux vous renseigner sur nos tarifs, sur la manière de devenir chauffeur partenaire, sur nos zones de service, sur l'application ou sur les moyens de paiement. Comment puis-je vous aider ?`,
+    en: `Hello, I'm doing great, thank you! And you?
 
-Comment puis-je vous aider ?`,
-    en: `Hello ! I'm doing great, thank you ! And you ?
-
-I'm your SmartCabb assistant. I'm here to help you with :
-- Pricing and estimates
-- Becoming a partner driver
-- Service areas
-- SmartCabb app
-- Payment methods
-- Contact and support
-
-How can I help you ?`
+I'm the SmartCabb assistant, and I can help you with pricing, becoming a partner driver, our service areas, the app, or payment methods. How can I help you?`
   },
 
   merci: {
     keywords: ['merci', 'thank', 'thanks', 'thank you', 'merci beaucoup', 'thanks a lot'],
-    fr: `Avec plaisir ! N'hesitez pas si vous avez d'autres questions.
+    fr: `Avec plaisir. N'hésitez pas si vous avez d'autres questions.
 
-Pret a commander ? Rendez-vous sur smartcabb.com.
-Besoin d'aide ? Appelez le +243 990 666 661.
+Pour réserver, rendez-vous sur smartcabb.com, et pour toute aide, appelez le +243 990 666 661. Bonne journée !`,
+    en: `You're welcome. Don't hesitate if you have other questions.
 
-Bonne journee !`,
-    en: `You're welcome ! Don't hesitate if you have other questions.
-
-Ready to book ? Go to smartcabb.com.
-Need help ? Call +243 990 666 661.
-
-Have a great day !`
+To book, go to smartcabb.com, and for any help, call +243 990 666 661. Have a great day!`
   },
 
   au_revoir: {
     keywords: ['au revoir', 'bye', 'goodbye', 'à bientôt', 'a bientot', 'ciao', 'adieu', 'bonne journée'],
-    fr: `Merci d'avoir contacte SmartCabb ! Nous restons a votre disposition 24h/24.
+    fr: `Merci d'avoir contacté SmartCabb, nous restons disponibles 24h/24 si besoin.
 
-Telephone : +243 990 666 661
+Téléphone : +243 990 666 661
 Email : admin@smartcabb.com
 
-A bientot sur smartcabb.com !`,
-    en: `Thank you for contacting SmartCabb ! We remain at your service 24/7.
+À bientôt sur smartcabb.com !`,
+    en: `Thank you for contacting SmartCabb, we remain available 24/7 if you need us.
 
-Phone : +243 990 666 661
-Email : admin@smartcabb.com
+Phone: +243 990 666 661
+Email: admin@smartcabb.com
 
-See you soon on smartcabb.com !`
+See you soon on smartcabb.com!`
   }
 };
 
-// 🧠 Score de pertinence pour chaque catégorie
+// Score de pertinence pour chaque catégorie
 function scoreMessage(message: string): { category: string; score: number }[] {
   if (typeof message !== 'string' || !message) return [];
   const lower = message.toLowerCase();
@@ -563,7 +287,7 @@ function scoreMessage(message: string): { category: string; score: number }[] {
   return scores.sort((a, b) => b.score - a.score);
 }
 
-// 🧠 Fonction pour trouver la meilleure réponse avec priorisation
+// Trouve la meilleure réponse avec priorisation
 function findBestResponse(message: string, language: 'fr' | 'en', lastCategory?: string): { text: string; category?: string } | null {
   const scores = scoreMessage(message);
 
@@ -609,28 +333,16 @@ export function ChatWidget() {
     if (isOpen && !welcomeSent && messages.length === 0) {
       setWelcomeSent(true);
       const welcome = language === 'fr'
-        ? `Bonjour ! Bienvenue sur SmartCabb !
+        ? `Bonjour, bienvenue chez SmartCabb !
 
-Je suis votre assistant virtuel. Je peux vous aider avec :
-- Nos tarifs et estimations
-- Devenir chauffeur partenaire
-- Zones de service
-- L'application SmartCabb
-- Modes de paiement
-- Contact et support
+Je suis l'assistant virtuel et je peux vous renseigner sur nos tarifs, sur la manière de devenir chauffeur partenaire, sur nos zones de service, sur l'application, sur les moyens de paiement ou sur toute autre question.
 
 Comment puis-je vous aider aujourd'hui ?`
-        : `Hello ! Welcome to SmartCabb !
+        : `Hello, welcome to SmartCabb!
 
-I'm your virtual assistant. I can help you with :
-- Pricing and estimates
-- Becoming a partner driver
-- Service areas
-- SmartCabb app
-- Payment methods
-- Contact and support
+I'm the virtual assistant and I can help you with pricing, becoming a partner driver, our service areas, the app, payment methods, or any other question.
 
-How can I help you today ?`;
+How can I help you today?`;
 
       const msg: Message = {
         id: 'welcome',
@@ -682,15 +394,15 @@ How can I help you today ?`;
           const isReclamation = lower.includes('perdu') || lower.includes('plainte');
           addMessage(
             isReclamation
-              ? (lang === 'fr' ? `Contactez notre support :\nTelephone : +243 990 666 661\nEmail : admin@smartcabb.com` : `Contact support :\nPhone : +243 990 666 661\nEmail : admin@smartcabb.com`)
-              : (lang === 'fr' ? `Je n'ai pas compris votre demande. Voici ce que je peux vous expliquer :\n- Tarifs\n- Devenir chauffeur\n- Zones de service\n- Application\n- Paiement\n- Contact` : `I didn't understand your request. Here is what I can help with :\n- Pricing\n- Becoming a driver\n- Service areas\n- App\n- Payment\n- Contact`),
+              ? (lang === 'fr' ? `Pour cela, contactez directement notre support au +243 990 666 661 ou par email à admin@smartcabb.com.` : `For that, please contact our support directly at +243 990 666 661 or by email at admin@smartcabb.com.`)
+              : (lang === 'fr' ? `Je n'ai pas trouvé de réponse précise à votre question. Je peux vous renseigner sur nos tarifs, sur la manière de devenir chauffeur, sur nos zones de service, sur l'application, sur les paiements, ou vous mettre en contact avec notre équipe.` : `I couldn't find a precise answer to your question. I can help with pricing, becoming a driver, our service areas, the app, payments, or put you in touch with our team.`),
             'bot',
             QUICK_REPLIES.welcome[lang]
           );
         }
       } catch (err) {
         console.error('ChatWidget error:', err);
-        addMessage('Contactez le +243 990 666 661 pour obtenir de l\'aide.', 'bot');
+        addMessage('Vous pouvez contacter le +243 990 666 661 pour obtenir de l\'aide.', 'bot');
       }
 
       setIsTyping(false);
@@ -718,7 +430,9 @@ How can I help you today ?`;
           {/* Header */}
           <div className="bg-gradient-to-r from-[#00BFA5] to-[#00A890] text-white p-4 flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="text-2xl">💬</div>
+              <div className="w-9 h-9 bg-white/15 rounded-full flex items-center justify-center flex-shrink-0">
+                <MessageCircle size={18} />
+              </div>
               <div>
                 <h3 className="m-0 text-lg font-semibold">SmartCabb Support</h3>
                 <p className="m-0 text-sm opacity-90">Nous sommes là pour vous</p>
@@ -737,7 +451,7 @@ How can I help you today ?`;
           <div className="flex-1 overflow-y-auto p-4 bg-[#F8F9FA]">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-[#6B7280] text-center">
-                <div className="text-5xl mb-4 opacity-50">💬</div>
+                <MessageCircle size={44} className="mb-4 opacity-30" />
                 <p>Écrivez-nous un message</p>
               </div>
             ) : (
@@ -838,9 +552,7 @@ How can I help you today ?`;
           <>
             <MessageCircle size={24} />
             {showBadge && !isOpen && (
-              <span className="absolute -top-1 -right-1 bg-[#FF4757] text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white animate-pulse">
-                💬
-              </span>
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#FF4757] rounded-full border-2 border-white animate-pulse" />
             )}
           </>
         )}
