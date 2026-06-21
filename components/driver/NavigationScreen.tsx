@@ -3,11 +3,11 @@ import { useAppState } from '../../hooks/useAppState';
 import { Button } from '../ui/button';
 import { GoogleMapView } from '../GoogleMapView';
 import { RideCompletionSummaryDialog } from '../RideCompletionSummaryDialog';
-<<<<<<< HEAD
+
 import { VEHICLE_PRICING, getExchangeRate, type VehicleCategory } from '../../lib/pricing';
-=======
+
 import { VEHICLE_PRICING, type VehicleCategory, getCommissionRate, calculateCommission, calculateDriverEarnings } from '../../lib/pricing';
->>>>>>> 4be344c46bb15946a5ca3fe51343931165b15cb8
+
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { motion } from '../../lib/motion';
