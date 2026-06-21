@@ -202,7 +202,7 @@ export function PaymentConfirmationScreen() {
               <div className="pt-3 border-t flex justify-between items-center">
                 <span className="text-lg font-semibold">Montant à recevoir</span>
                 <span className="text-3xl font-bold text-green-600">
-                  {currentRide.estimatedPrice?.toLocaleString() || 'N/A'} CDF
+                  {currentRide.finalPrice?.toLocaleString() || currentRide.totalPrice?.toLocaleString() || currentRide.estimatedPrice?.toLocaleString() || 'N/A'} CDF
                 </span>
               </div>
             </div>

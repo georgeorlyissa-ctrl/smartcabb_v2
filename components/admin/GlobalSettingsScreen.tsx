@@ -35,6 +35,13 @@ export function GlobalSettingsScreen() {
     setLocalConfig(config);
   }, [config]);
 
+  // Écouter les mises à jour de config provenant d'autres écrans (SettingsScreen, etc.)
+  useEffect(() => {
+    const handler = () => refresh();
+    window.addEventListener('smartcabb:config-updated', handler);
+    return () => window.removeEventListener('smartcabb:config-updated', handler);
+  }, [refresh]);
+
   // Mise à jour d'un paramètre local
   const handleChange = <K extends keyof typeof config>(
     key: K,

@@ -76,13 +76,33 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     }
   }, [state.systemSettings]);
 
+  // Écouter les mises à jour de config provenant d'autres écrans (GlobalSettingsScreen, etc.)
+  useEffect(() => {
+    const handler = () => {
+      try {
+        const cached = localStorage.getItem('smartcabb_config_cache');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed.exchangeRate) {
+            setCurrencySettings(prev => ({ ...prev, exchangeRateUSDToCDF: parsed.exchangeRate }));
+          }
+          if (parsed.commissionRate) {
+            setPricing(prev => ({ ...prev, commission: parsed.commissionRate ?? prev.commission }));
+          }
+        }
+      } catch {}
+    };
+    window.addEventListener('smartcabb:config-updated', handler);
+    return () => window.removeEventListener('smartcabb:config-updated', handler);
+  }, []);
+
   const handleSaveSettings = async () => {
     // Sauvegarder les nouveaux paramètres dans l'état global (localStorage)
     if (updateSystemSettings) {
       updateSystemSettings({
         exchangeRate: currencySettings.exchangeRateUSDToCDF,
         postpaidInterestRate: currencySettings.postpaidInterestRate,
-        // Sauvegarder les paramètres de notifications
+        commissionRate: pricing.commission,
         emailNotifications: notifications.emailNotifications,
         smsNotifications: notifications.smsNotifications,
         pushNotifications: notifications.pushNotifications
@@ -94,6 +114,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
       const systemSettings = {
         exchangeRate: currencySettings.exchangeRateUSDToCDF,
         postpaidInterestRate: currencySettings.postpaidInterestRate,
+        commissionRate: pricing.commission,
         emailNotifications: notifications.emailNotifications,
         smsNotifications: notifications.smsNotifications,
         pushNotifications: notifications.pushNotifications,

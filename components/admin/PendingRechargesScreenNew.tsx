@@ -109,10 +109,10 @@ export function PendingRechargesScreenNew() {
   useEffect(() => {
     loadRecharges();
     
-    // Rafraîchir toutes les 30 secondes
+    // Rafraîchir toutes les 60 secondes
     const interval = setInterval(() => {
       loadRecharges(false);
-    }, 30000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, []);

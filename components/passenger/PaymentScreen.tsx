@@ -152,7 +152,7 @@ export function PaymentScreen() {
     };
   }, [currentRide?.id, durationInSeconds, state.updateRide]);
 
-  const ridePrice = currentRide?.estimatedPrice || 0;
+  const ridePrice = currentRide?.finalPrice || currentRide?.totalPrice || currentRide?.estimatedPrice || 0;
   const userBalance = currentUser?.walletBalance || currentUser?.balance || 0;
   const cashAmountNum = parseFloat(cashAmount) || 0;
   const mobileMoneyAmount = ridePrice - cashAmountNum;

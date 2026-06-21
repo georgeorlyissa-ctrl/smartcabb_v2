@@ -71,11 +71,11 @@ export function ChatMessagesScreen() {
     loadMessages();
     loadStats();
 
-    // Actualiser toutes les 10 secondes
+    // Actualiser toutes les 60 secondes
     const interval = setInterval(() => {
       loadMessages();
       loadStats();
-    }, 10000);
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);

@@ -65,6 +65,17 @@ app.get("/get", async (c) => {
     const stored = await kvGet(CONFIG_KEY);
 
     if (stored) {
+      // Nettoyer les clés numériques qui auraient pu s'accumuler (bug data)
+      if (typeof stored === "object" && !Array.isArray(stored)) {
+        const cleaned: Record<string, any> = {};
+        for (const k of Object.keys(stored)) {
+          if (!/^\d+$/.test(k)) cleaned[k] = stored[k];
+        }
+        if (Object.keys(cleaned).length !== Object.keys(stored).length) {
+          await kvSet(CONFIG_KEY, cleaned);
+          console.log("🧹 [CONFIG/GET] Nettoyage des clés numériques dans la config stockée");
+        }
+      }
       console.log("✅ [CONFIG/GET] Config chargée depuis le KV");
       return c.json({ success: true, config: stored });
     }
@@ -103,10 +114,12 @@ app.post("/update", async (c) => {
     // ─── Log the config change as an event so all apps can detect it ─────────
     const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const today   = new Date().toISOString().slice(0, 10);
+    // Nettoyer changedKeys : garder uniquement les clés nommées (ignorer les indices numériques)
+    const changedKeys = Object.keys(config).filter(k => !/^\d+$/.test(k));
     await kvSet(`event:${today}:${eventId}`, {
       id:        eventId,
       type:      "config_updated",
-      data:      { changedKeys: Object.keys(config), configVersion: merged.configVersion },
+      data:      { changedKeys, configVersion: merged.configVersion },
       actor:     "admin",
       timestamp: merged.lastUpdated,
     });

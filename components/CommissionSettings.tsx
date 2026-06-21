@@ -54,6 +54,13 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
     }
   }, [userType, driverId]);
 
+  // Écouter les mises à jour de config venant d'autres écrans
+  useEffect(() => {
+    const handler = () => loadSettings();
+    window.addEventListener('smartcabb:config-updated', handler);
+    return () => window.removeEventListener('smartcabb:config-updated', handler);
+  }, []);
+
   const loadSettings = async () => {
     try {
       const response = await fetch(

@@ -94,7 +94,7 @@ export function AdminDashboard() {
 
   useEffect(() => {
     fetchLiveStats();
-    const interval = setInterval(fetchLiveStats, 15000);
+    const interval = setInterval(fetchLiveStats, 60000);
     return () => clearInterval(interval);
   }, [fetchLiveStats]);
 
@@ -161,7 +161,7 @@ export function AdminDashboard() {
     loadNotifications();
     
     // Rafraîchir toutes les 30 secondes
-    const interval = setInterval(loadNotifications, 30000);
+    const interval = setInterval(loadNotifications, 60000);
     return () => clearInterval(interval);
   }, []);
   
@@ -246,7 +246,6 @@ export function AdminDashboard() {
   const passengers = getPassengers();
 
   // KPI calculations — priorité aux stats live du backend
-  // ✅ FIX: Courses actives = 'in_progress' ET 'started' (pour compatibilité)
   const activeRides    = liveStats?.activeRides   ?? rides.filter(r => r.status === 'in_progress' || r.status === 'started').length;
   const completedRides = rides.filter(r => r.status === 'completed');
   const onlineDrivers  = liveStats?.onlineDrivers ?? drivers.filter(d => d.is_available).length;
@@ -1408,7 +1407,7 @@ export function AdminDashboard() {
                   </span>
                 </div>
                 <div className="space-y-4">
-                  {rides.filter(r => r.status === 'started').slice(0, 3).map((ride) => (
+                  {rides.filter(r => r.status === 'started' || r.status === 'in_progress').slice(0, 3).map((ride) => (
                     <div key={ride.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />

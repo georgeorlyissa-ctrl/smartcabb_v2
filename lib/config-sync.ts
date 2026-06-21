@@ -137,8 +137,12 @@ export async function saveGlobalConfig(config: Partial<GlobalConfig>): Promise<b
     const data = await response.json();
     
     if (data.success) {
-      // Mettre à jour le cache local
+      // Mettre à jour le cache local (toutes les clés pour compatibilité)
       cacheConfig(fullConfig);
+      try {
+        localStorage.setItem('smartcab_system_settings', JSON.stringify(fullConfig));
+        localStorage.setItem('smartcabb_exchange_rate', String(fullConfig.exchangeRate));
+      } catch (_) {}
       console.log('✅ Configuration sauvegardée');
       
       // Notifier tous les onglets ouverts

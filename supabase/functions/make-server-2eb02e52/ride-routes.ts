@@ -1291,9 +1291,12 @@ app.post("/complete", async (c) => {
       }
     }
 
-    ride.status      = 'completed';
-    ride.completedAt = new Date().toISOString();
-    ride.totalPrice  = actualCost || ride.totalPrice || ride.estimatedPrice;
+    if (!alreadyCompleted) {
+      ride.status      = 'completed';
+      ride.completedAt = new Date().toISOString();
+      ride.totalPrice  = actualCost || ride.totalPrice || ride.estimatedPrice;
+      ride.finalPrice  = ride.totalPrice; // Alias pour compatibilité frontend
+    }
     if (endLocation)            ride.endLocation = endLocation;
     if (effectiveDriverId && !ride.driverId) ride.driverId = effectiveDriverId;
 
@@ -1400,9 +1403,12 @@ app.post("/:id/complete", async (c) => {
       }
     }
 
-    ride.status      = 'completed';
-    ride.completedAt = new Date().toISOString();
-    ride.totalPrice  = actualCost || ride.totalPrice || ride.estimatedPrice;
+    if (!alreadyCompleted) {
+      ride.status      = 'completed';
+      ride.completedAt = new Date().toISOString();
+      ride.totalPrice  = actualCost || ride.totalPrice || ride.estimatedPrice;
+      ride.finalPrice  = ride.totalPrice; // Alias pour compatibilité frontend
+    }
     await kv.set(`ride:${rideId}`, ride);
     
     return c.json({ success: true, ride });

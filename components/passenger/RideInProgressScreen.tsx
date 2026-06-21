@@ -152,7 +152,7 @@ export function RideInProgressScreen() {
           if (updatedRide.billingElapsedTime !== undefined) {
             setBillingElapsedTime(updatedRide.billingElapsedTime);
           }
-          const finalAmount = updatedRide.finalPrice || updatedRide.actualPrice || updatedRide.estimatedPrice || 0;
+          const finalAmount = updatedRide.finalPrice || updatedRide.totalPrice || updatedRide.actualPrice || updatedRide.estimatedPrice || 0;
           // ✅ TRADUIT
           toast.success(`🏁 ${t('ride_in_progress')} !`, {
             description: `${t('price')}: ${finalAmount.toLocaleString()} ${t('cdf')}`,
@@ -227,7 +227,7 @@ export function RideInProgressScreen() {
       const minutes = Math.floor(finalBillingTime / 60);
       const seconds = finalBillingTime % 60;
       const timeStr = minutes > 0 ? `${minutes}min ${seconds}s` : `${seconds}s`;
-      const finalAmount = currentRide.finalPrice || currentRide.estimatedPrice || 0;
+      const finalAmount = currentRide.finalPrice || currentRide.totalPrice || currentRide.estimatedPrice || 0;
 
       // ✅ TRADUIT
       toast.success(`🏁 ${t('ride_in_progress')} !`, {
@@ -310,33 +310,29 @@ export function RideInProgressScreen() {
     return () => clearInterval(interval);
   }, [currentRide?.destination?.lat, currentRide?.destination?.lng]);
 
-  // ─── CALCUL FACTURATION PAR PALIER D'HEURE ───────────────────
-  const calculateBillingCostByHourlySlot = (billingSeconds: number): { costCDF: number; costUSD: number } => {
-    if (billingSeconds <= 0) return { costCDF: 0, costUSD: 0 };
+  // ─── CALCUL FACTURATION PROPORTIONNELLE ────────────────────────
+  const calculateBillingCost = (totalSeconds: number): { costCDF: number; costUSD: number } => {
+    if (totalSeconds <= 0) return { costCDF: 0, costUSD: 0 };
 
     const category = currentRide?.vehicleCategory || 'smart_standard';
     const categoryConfig = PRICING_CONFIG[category as keyof typeof PRICING_CONFIG];
     const baseHourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 7;
-    const baseHourlyRateCDF = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.cdf || 20000;
 
-    const totalMinutes = Math.floor(billingSeconds / 60);
-    const currentHourSlot = Math.floor(totalMinutes / 60);
-    const additionalHours = Math.max(0, currentHourSlot);
-    const costUSD = (baseHourlyRateUSD || 7) * additionalHours;
-    const costCDF = (baseHourlyRateCDF || 20000) * additionalHours;
+    // Prix proportionnel au temps réel (minimum 15 min = 0.25h)
+    const hours = Math.max(0.25, totalSeconds / 3600);
+    const costUSD = baseHourlyRateUSD * hours;
+    const costCDF = Math.round(costUSD * getExchangeRate());
 
     return {
-      costCDF: Math.round(costCDF) || 0,
+      costCDF: costCDF || 0,
       costUSD: parseFloat((costUSD || 0).toFixed(2))
     };
   };
 
   const calculateRealTimeCost = (totalSeconds: number): { costCDF: number; costUSD: number } => {
-    if (!currentRide) return { costCDF: 0, costUSD: 0 };
-    if (currentRide.billingStartTime && billingActive) {
-      return calculateBillingCostByHourlySlot(billingElapsedTime);
-    }
-    return { costCDF: 0, costUSD: 0 };
+    if (!currentRide || totalSeconds <= 0) return { costCDF: 0, costUSD: 0 };
+    // Prix proportionnel au temps réel écoulé depuis le démarrage (minimum 15 min)
+    return calculateBillingCost(totalSeconds);
   };
 
   // ─── ÉCRANS D'ERREUR ─────────────────────────────────────────
@@ -613,7 +609,7 @@ export function RideInProgressScreen() {
                       {/* ✅ TRADUIT */}
                       <p className="text-xs text-white/80">{t('price')}</p>
                       <p className="text-xl font-bold">
-                        {((currentRide.estimatedPrice || 0) + calculateBillingCostByHourlySlot(billingElapsedTime).costCDF).toLocaleString()} {t('cdf')}
+                        {calculateBillingCost(billingElapsedTime).costCDF.toLocaleString()} {t('cdf')}
                       </p>
                     </div>
                   </div>
@@ -641,10 +637,10 @@ export function RideInProgressScreen() {
                       {/* ✅ TRADUIT */}
                       <p className="text-xs text-white/80">{t('price')}</p>
                       <p className="text-3xl font-bold">
-                        {(currentRide.estimatedPrice + currentCost).toLocaleString()} {t('cdf')}
+                      {(currentCost > 0 ? currentCost : calculateBillingCost(elapsedTime).costCDF).toLocaleString()} {t('cdf')}
                       </p>
                       <p className="text-xs text-white/70">
-                        ≈ {(((currentRide.estimatedPrice || 0) + (currentCost || 0)) / (getExchangeRate() || 2850)).toFixed(2)} USD
+                        ≈ {((currentCost > 0 ? currentCost : calculateBillingCost(elapsedTime).costCDF) / (getExchangeRate() || 2800)).toFixed(2)} USD
                       </p>
                     </div>
                   </div>

@@ -17,7 +17,7 @@ export function useExchangeRate() {
       setError(null);
 
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/settings`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/config/get`,
         {
           headers: {
             'Authorization': `Bearer ${publicAnonKey}`,
@@ -28,7 +28,7 @@ export function useExchangeRate() {
 
       if (response.ok) {
         const data = await response.json();
-        const rate = data.exchangeRate || 2000;
+        const rate = data.config?.exchangeRate || 2000;
         
         setExchangeRate(rate);
         
@@ -37,6 +37,16 @@ export function useExchangeRate() {
         const settings = settingsStr ? JSON.parse(settingsStr) : {};
         settings.exchangeRate = rate;
         localStorage.setItem('smartcab_system_settings', JSON.stringify(settings));
+        // Synchroniser aussi les autres clés pour compatibilité
+        localStorage.setItem('smartcabb_exchange_rate', String(rate));
+        try {
+          const cacheStr = localStorage.getItem('smartcabb_config_cache');
+          if (cacheStr) {
+            const cache = JSON.parse(cacheStr);
+            cache.exchangeRate = rate;
+            localStorage.setItem('smartcabb_config_cache', JSON.stringify(cache));
+          }
+        } catch (_) {}
         
         console.log('✅ Taux de change synchronisé depuis le backend:', rate);
       } else {
@@ -46,7 +56,25 @@ export function useExchangeRate() {
           const settings = JSON.parse(settingsStr);
           if (settings.exchangeRate) {
             setExchangeRate(settings.exchangeRate);
-            console.log('⚠️ Backend inaccessible, utilisation localStorage:', settings.exchangeRate);
+            console.log('⚠️ Backend inaccessible, utilisation smartcab_system_settings:', settings.exchangeRate);
+            return;
+          }
+        }
+        const cacheStr = localStorage.getItem('smartcabb_config_cache');
+        if (cacheStr) {
+          const cache = JSON.parse(cacheStr);
+          if (cache.exchangeRate) {
+            setExchangeRate(cache.exchangeRate);
+            console.log('⚠️ Backend inaccessible, utilisation smartcabb_config_cache:', cache.exchangeRate);
+            return;
+          }
+        }
+        const rateStr = localStorage.getItem('smartcabb_exchange_rate');
+        if (rateStr) {
+          const rate = parseFloat(rateStr);
+          if (!isNaN(rate) && rate > 0) {
+            setExchangeRate(rate);
+            console.log('⚠️ Backend inaccessible, utilisation smartcabb_exchange_rate:', rate);
           }
         }
       }
@@ -61,6 +89,24 @@ export function useExchangeRate() {
           const settings = JSON.parse(settingsStr);
           if (settings.exchangeRate) {
             setExchangeRate(settings.exchangeRate);
+            return;
+          }
+        }
+        // Fallback smartcabb_config_cache
+        const cacheStr = localStorage.getItem('smartcabb_config_cache');
+        if (cacheStr) {
+          const cache = JSON.parse(cacheStr);
+          if (cache.exchangeRate) {
+            setExchangeRate(cache.exchangeRate);
+            return;
+          }
+        }
+        // Fallback smartcabb_exchange_rate
+        const rateStr = localStorage.getItem('smartcabb_exchange_rate');
+        if (rateStr) {
+          const rate = parseFloat(rateStr);
+          if (!isNaN(rate) && rate > 0) {
+            setExchangeRate(rate);
           }
         }
       } catch (localErr) {
@@ -82,10 +128,19 @@ export function useExchangeRate() {
       const settings = settingsStr ? JSON.parse(settingsStr) : {};
       settings.exchangeRate = newRate;
       localStorage.setItem('smartcab_system_settings', JSON.stringify(settings));
+      localStorage.setItem('smartcabb_exchange_rate', String(newRate));
+      try {
+        const cacheStr = localStorage.getItem('smartcabb_config_cache');
+        if (cacheStr) {
+          const cache = JSON.parse(cacheStr);
+          cache.exchangeRate = newRate;
+          localStorage.setItem('smartcabb_config_cache', JSON.stringify(cache));
+        }
+      } catch (_) {}
 
-      // Envoyer au backend
+      // Envoyer au backend via /config/update
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/settings/update`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/config/update`,
         {
           method: 'POST',
           headers: {
@@ -93,7 +148,7 @@ export function useExchangeRate() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            exchangeRate: newRate
+            config: { exchangeRate: newRate }
           })
         }
       );

@@ -214,7 +214,7 @@ export function EstimateScreen() {
       return priceCDF;
     }
 
-    const hours = Math.max(1, Math.ceil(durationMinutes / 60));
+    const hours = Math.max(0.25, durationMinutes / 60); // Minimum 15 min facturé
     const hourlyRateUSD = isDay
       ? pricing.pricing.course_heure.jour.usd
       : pricing.pricing.course_heure.nuit.usd;
@@ -570,7 +570,7 @@ export function EstimateScreen() {
                     nightPriceUSD = null;
                     nightPriceCDF = null;
                   } else {
-                    const hours = Math.max(1, Math.ceil(estimatedDuration / 60));
+                    const hours = Math.max(0.25, estimatedDuration / 60);
                     dayPriceUSD = (pricing.pricing.course_heure.jour.usd || 0) * hours;
                     dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
                     nightPriceUSD = (pricing.pricing.course_heure.nuit.usd || 0) * hours;

@@ -3,7 +3,7 @@ import { useAppState } from '../../hooks/useAppState';
 import { Button } from '../ui/button';
 import { GoogleMapView } from '../GoogleMapView';
 import { RideCompletionSummaryDialog } from '../RideCompletionSummaryDialog';
-import { VEHICLE_PRICING, type VehicleCategory } from '../../lib/pricing';
+import { VEHICLE_PRICING, getExchangeRate, type VehicleCategory } from '../../lib/pricing';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { motion } from '../../lib/motion';
@@ -89,9 +89,9 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
         const rateUSD    = isDay
           ? pricing.pricing.course_heure.jour.usd
           : pricing.pricing.course_heure.nuit.usd;
-        const billedHrs  = Math.max(1, Math.ceil(elapsed / 3600));
-        const xRate      = state.systemSettings?.exchangeRate || 2850;
-        setCurrentCost(Math.round(rateUSD * billedHrs * xRate));
+        // Prix proportionnel au temps réel écoulé (minimum 15 min)
+        const hours = Math.max(0.25, elapsed / 3600);
+        setCurrentCost(Math.round(rateUSD * hours * getExchangeRate()));
       } catch { /* fallback: keep old cost */ }
 
       // Sync elapsed time with backend (non-blocking)

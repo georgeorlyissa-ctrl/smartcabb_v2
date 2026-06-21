@@ -99,11 +99,11 @@ export function PostpaidRequestsScreen({ onBack }: PostpaidRequestsScreenProps) 
     loadRequests();
     loadStats();
     
-    // Rafraîchir toutes les 30 secondes
+        // Rafraîchir toutes les 60 secondes
     const interval = setInterval(() => {
       loadRequests();
       loadStats();
-    }, 30000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, [filter]);

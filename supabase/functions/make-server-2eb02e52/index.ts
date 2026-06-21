@@ -23,7 +23,7 @@ import googleMapsApi from "./google-maps-api.ts";
 import driverRoutes from "./driver-routes.ts";
 import configRoutes from "./config-routes.ts";
 import passengerRoutes from "./passenger-routes.ts";
-//import contactRoutes from "./contact-routes.ts";
+import contactRoutes from "./contact-routes.ts";
 
 const app = new Hono();
 
@@ -101,7 +101,7 @@ app.route("/make-server-2eb02e52/config", configRoutes);
 // ✅ Routes passagers
 app.route("/make-server-2eb02e52/passengers", passengerRoutes);
 // ✅ Route formulaire de contact site vitrine
-//app.route("/make-server-2eb02e52/contact", contactRoutes);
+app.route("/make-server-2eb02e52/contact", contactRoutes);
 
 // Route 404
 app.notFound((c) => {

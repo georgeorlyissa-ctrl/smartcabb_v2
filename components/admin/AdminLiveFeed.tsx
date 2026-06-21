@@ -106,10 +106,13 @@ function EventBody({ event }: { event: FeedEvent }) {
   }
 
   if (event.type === 'config_updated') {
+    const cleanKeys = Array.isArray(d.changedKeys)
+      ? d.changedKeys.filter((k: any) => typeof k === 'string' && !/^\d+$/.test(k))
+      : [];
     return (
       <div className="mt-1 text-xs text-gray-600">
-        {d.changedKeys?.length > 0
-          ? <span>Paramètres : <span className="font-mono text-orange-700">{d.changedKeys.join(', ')}</span></span>
+        {cleanKeys.length > 0
+          ? <span>Paramètres : <span className="font-mono text-orange-700">{cleanKeys.join(', ')}</span></span>
           : 'Configuration globale mise à jour'
         }
         {d.configVersion && <span className="ml-1 text-orange-500 font-medium">v{d.configVersion}</span>}
@@ -134,7 +137,7 @@ interface Props {
   showHeader?: boolean;
 }
 
-export function AdminLiveFeed({ limit = 40, pollInterval = 10000, className = '', showHeader = true }: Props) {
+export function AdminLiveFeed({ limit = 40, pollInterval = 60000, className = '', showHeader = true }: Props) {
   const [events, setEvents]       = useState<FeedEvent[]>([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);

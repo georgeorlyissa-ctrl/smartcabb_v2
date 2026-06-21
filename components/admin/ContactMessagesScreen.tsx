@@ -42,6 +42,8 @@ export function ContactMessagesScreen({ onBack }: { onBack: () => void }) {
 
   useEffect(() => {
     loadMessages();
+    const interval = setInterval(loadMessages, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadMessages = async () => {

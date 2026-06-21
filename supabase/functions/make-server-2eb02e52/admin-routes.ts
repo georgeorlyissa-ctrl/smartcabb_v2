@@ -145,9 +145,26 @@ app.get("/stats", async (c) => {
 
     // ─── Métriques courses ────────────────────────────────────────────────────
     const completedRides = rides.filter((r: any) => r.status === "completed" || r.status === "rated");
-    // ✅ FIX: Ajouter "in_progress" pour les courses réellement en cours
-    const activeRides    = rides.filter((r: any) => r.status === "in_progress" || r.status === "started" || r.status === "accepted" || r.status === "searching");
+    // Courses vraiment actives : uniquement in_progress ou started
+    const activeRides    = rides.filter((r: any) => r.status === "in_progress" || r.status === "started");
     const cancelledRides = rides.filter((r: any) => r.status === "cancelled");
+
+    // ─── Nettoyage automatique des courses bloquées ──────────────────────────
+    // Annuler les courses "searching" ou "accepted" de plus de 30 minutes
+    const staleThreshold = Date.now() - 30 * 60 * 1000;
+    const staleRides = rides.filter((r: any) =>
+      (r.status === "searching" || r.status === "accepted") &&
+      new Date(r.createdAt || r.created_at || 0).getTime() < staleThreshold
+    );
+    for (const stale of staleRides) {
+      try {
+        const key = `ride:${stale.id}`;
+        await kvSet(key, { ...stale, status: "cancelled", cancelledAt: new Date().toISOString(), cancelReason: "auto_expired" });
+        console.log("🧹 Course bloquée nettoyée:", stale.id, stale.status, "→ cancelled");
+      } catch (e) {
+        console.error("❌ Erreur nettoyage course bloquée:", stale.id, e);
+      }
+    }
 
     function ridePrice(r: any): number {
       const raw = r.totalPrice ?? r.finalPrice ?? r.finalAmount ?? r.estimatedPrice ?? r.price ?? 0;
@@ -847,9 +864,29 @@ app.get("/users/all", async (c) => {
       allDriversKV.map((d: any) => [d.id || d.userId, d])
     );
 
+    // Charger toutes les courses pour calculer les gains réels des conducteurs
+    const allRides = await kvGetByPrefix("ride:");
+    const completedRides = allRides.filter((r: any) => r.status === "completed" || r.status === "rated");
+    // Indexer les gains par conducteur
+    const earningsByDriver = new Map<string, number>();
+    const tripsByDriver = new Map<string, number>();
+    for (const ride of completedRides) {
+      const driverId = ride.driverId || ride.driver_id;
+      if (driverId) {
+        const amount = ride.totalPrice ?? ride.finalPrice ?? ride.finalAmount ?? ride.estimatedPrice ?? ride.price ?? 0;
+        const num = typeof amount === "string" ? parseFloat(amount) || 0 : Number(amount) || 0;
+        earningsByDriver.set(driverId, (earningsByDriver.get(driverId) || 0) + num);
+        tripsByDriver.set(driverId, (tripsByDriver.get(driverId) || 0) + 1);
+      }
+    }
+
     const formattedUsers = allProfiles.map((profile: any) => {
       // Pour les conducteurs, on fusionne avec le driver KV (vrai source des stats)
       const driverKV = profile.role === "driver" ? driverMap.get(profile.id) : null;
+
+      // Calculer les gains réels à partir des courses complétées
+      const computedEarnings = profile.role === "driver" ? (earningsByDriver.get(profile.id) || 0) : 0;
+      const storedEarnings = driverKV?.total_earnings || driverKV?.totalEarnings || profile.total_earnings || 0;
 
       return {
         id: profile.id,
@@ -870,11 +907,9 @@ app.get("/users/all", async (c) => {
         vehicleModel: profile.vehicle_model || profile.vehicleModel
           || (driverKV?.vehicle ? `${driverKV.vehicle.make || ""} ${driverKV.vehicle.model || ""}`.trim() : "-"),
         status: profile.status || driverKV?.status || (profile.role === "driver" ? "pending" : "Actif"),
-        // ✅ Priorité driver KV (source de vérité des stats conducteurs)
         rating: driverKV?.rating || profile.rating || 0,
-        totalTrips: driverKV?.total_rides || driverKV?.totalRides || profile.total_trips || profile.total_rides || 0,
-        // ✅ NOUVEAU : Gains totaux depuis driver KV
-        totalEarnings: driverKV?.total_earnings || driverKV?.totalEarnings || profile.total_earnings || 0,
+        totalTrips: tripsByDriver.get(profile.id) || driverKV?.total_rides || driverKV?.totalRides || profile.total_trips || profile.total_rides || 0,
+        totalEarnings: computedEarnings > 0 ? computedEarnings : storedEarnings,
         createdAt: profile.created_at || new Date().toISOString(),
         lastLoginAt: profile.last_login_at || null,
       };

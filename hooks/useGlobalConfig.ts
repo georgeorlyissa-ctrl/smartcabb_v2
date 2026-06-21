@@ -71,8 +71,10 @@ export function useGlobalConfig() {
 
     // CustomEvent pour les mises à jour locales
     const handleConfigUpdate = (event: CustomEvent) => {
+      const detail = event.detail;
+      if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return;
       console.log('🔄 Configuration mise à jour (local)');
-      setConfig(event.detail);
+      setConfig(detail);
     };
 
     window.addEventListener('smartcabb:config-updated', handleConfigUpdate as EventListener);
