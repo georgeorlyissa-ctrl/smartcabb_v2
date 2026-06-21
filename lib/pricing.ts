@@ -46,14 +46,6 @@ export function getExchangeRate(): number {
       return 2000;
     }
 
-
-    // 1. Essayer smartcab_system_settings (source historique)
-    const settingsStr = localStorage.getItem('smartcab_system_settings');
-    if (settingsStr) {
-      const settings = JSON.parse(settingsStr);
-      if (settings.exchangeRate && typeof settings.exchangeRate === 'number') {
-        return settings.exchangeRate;
-
     for (const key of ['smartcabb_config_cache', 'smartcab_system_settings', 'smartcabb_exchange_rate']) {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
@@ -61,7 +53,6 @@ export function getExchangeRate(): number {
         const n = Number(raw);
         if (!isNaN(n) && n > 0) return n;
         continue;
-
       }
       try {
         const parsed = JSON.parse(raw);
@@ -71,22 +62,6 @@ export function getExchangeRate(): number {
           if (!isNaN(n) && n > 0) return n;
         }
       } catch {}
-    }
-
-    // 2. Essayer smartcabb_config_cache (source principale GlobalSettingsScreen)
-    const cacheStr = localStorage.getItem('smartcabb_config_cache');
-    if (cacheStr) {
-      const cache = JSON.parse(cacheStr);
-      if (cache.exchangeRate && typeof cache.exchangeRate === 'number') {
-        return cache.exchangeRate;
-      }
-    }
-
-    // 3. Essayer smartcabb_exchange_rate (fallback dédié)
-    const rateStr = localStorage.getItem('smartcabb_exchange_rate');
-    if (rateStr) {
-      const rate = parseFloat(rateStr);
-      if (!isNaN(rate) && rate > 0) return rate;
     }
   } catch (error) {
     console.warn('⚠️ Erreur lecture taux de conversion:', error);
