@@ -45,7 +45,7 @@ export function getExchangeRate(): number {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
       return 2000;
     }
-<<<<<<< HEAD
+
 
     // 1. Essayer smartcab_system_settings (source historique)
     const settingsStr = localStorage.getItem('smartcab_system_settings');
@@ -53,7 +53,7 @@ export function getExchangeRate(): number {
       const settings = JSON.parse(settingsStr);
       if (settings.exchangeRate && typeof settings.exchangeRate === 'number') {
         return settings.exchangeRate;
-=======
+
     for (const key of ['smartcabb_config_cache', 'smartcab_system_settings', 'smartcabb_exchange_rate']) {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
@@ -61,7 +61,7 @@ export function getExchangeRate(): number {
         const n = Number(raw);
         if (!isNaN(n) && n > 0) return n;
         continue;
->>>>>>> 4be344c46bb15946a5ca3fe51343931165b15cb8
+
       }
       try {
         const parsed = JSON.parse(raw);
