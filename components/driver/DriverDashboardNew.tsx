@@ -144,6 +144,9 @@ export function DriverDashboardNew() {
   const [rideStats, setRideStats]           = useState<any>({ today: { count: 0, earnings: 0 }, week: { count: 0, earnings: 0 }, month: { count: 0, earnings: 0 }, total: { count: 0, earnings: 0 } });
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  // 👁️ Masquer/Afficher les soldes
+  const [showBalance, setShowBalance] = useState(true);
+
   // ✅ Carrousel photos chauffeurs (bandeau gains)
   const [earningsImgIndex, setEarningsImgIndex] = useState(0);
   useEffect(() => {
@@ -573,8 +576,7 @@ export function DriverDashboardNew() {
               <DollarSign className="w-4 h-4" />
               <span className="text-xs opacity-80">Gains</span>
             </div>
-            {/* ✅ FIX Bug 1 : utiliser rideStats (calculé depuis l'historique réel) pas earningsBalance KV */}
-            <p className="text-lg font-bold">{(rideStats.total.earnings || 0).toLocaleString('fr-FR')}</p>
+            <p className="text-lg font-bold">{showBalance ? (rideStats.total.earnings || 0).toLocaleString('fr-FR') : '••••'}</p>
           </div>
         </div>
       </div>
@@ -640,24 +642,36 @@ export function DriverDashboardNew() {
 
             {/* ✅ Mes Soldes — version compacte (3 colonnes au lieu de 3 cases empilées) */}
             <Card className="p-3">
-              <h3 className="font-semibold text-gray-900 mb-2 text-sm">
-                Mes Soldes <span className="text-xs text-gray-400 font-normal">(CDF)</span>
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold text-gray-900 text-sm">
+                  Mes Soldes <span className="text-xs text-gray-400 font-normal">(CDF)</span>
+                </h3>
+                <button
+                  onClick={() => setShowBalance(!showBalance)}
+                  className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  title={showBalance ? 'Masquer les soldes' : 'Afficher les soldes'}
+                >
+                  {showBalance ? (
+                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  ) : (
+                    <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  )}
+                </button>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-2.5 rounded-lg border border-blue-200 min-w-0">
                   <p className="text-[10px] text-blue-600 mb-0.5 truncate">Crédit</p>
-                  <p className="text-sm font-bold text-blue-900 truncate">{(driver.balance || 0).toLocaleString('fr-FR')}</p>
+                  <p className="text-sm font-bold text-blue-900 truncate">{showBalance ? (driver.balance || 0).toLocaleString('fr-FR') : '••••'}</p>
                   <p className="text-[9px] text-blue-500 mt-1">-15%/course</p>
                 </div>
                 <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-2.5 rounded-lg border border-purple-200 min-w-0">
                   <p className="text-[10px] text-purple-600 mb-0.5 truncate">Gains</p>
-                  {/* ✅ FIX Bug 1 : gains calculés depuis l'historique réel */}
-                  <p className="text-sm font-bold text-purple-900 truncate">{(rideStats.total.earnings || 0).toLocaleString('fr-FR')}</p>
+                  <p className="text-sm font-bold text-purple-900 truncate">{showBalance ? (rideStats.total.earnings || 0).toLocaleString('fr-FR') : '••••'}</p>
                   <p className="text-[9px] text-purple-500 mt-1">+85%/course</p>
                 </div>
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-2.5 rounded-lg border border-green-200 min-w-0">
                   <p className="text-[10px] text-green-600 mb-0.5 truncate">Bonus</p>
-                  <p className="text-sm font-bold text-green-900 truncate">{(driver.bonusBalance || 0).toLocaleString('fr-FR')}</p>
+                  <p className="text-sm font-bold text-green-900 truncate">{showBalance ? (driver.bonusBalance || 0).toLocaleString('fr-FR') : '••••'}</p>
                   <p className="text-[9px] text-green-500 mt-1">Retirable</p>
                 </div>
               </div>
