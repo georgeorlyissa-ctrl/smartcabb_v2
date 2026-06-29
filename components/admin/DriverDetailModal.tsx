@@ -98,7 +98,7 @@ export function DriverDetailModal({
   // Calculer les statistiques du conducteur
   const driverRides = rides.filter(r => r.driver_id === driver.id);
   const completedRides = driverRides.filter(r => r.status === 'completed');
-  const totalEarnings = completedRides.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+  const totalEarnings = completedRides.reduce((sum, r) => sum + (r.totalPrice || r.total_amount || r.finalPrice || r.price || r.estimatedPrice || r.fare || r.amount || 0), 0);
   const avgRating = driver.rating || 0;
   const cancelledRides = driverRides.filter(r => r.status === 'cancelled' && r.cancelled_by === 'driver').length;
 

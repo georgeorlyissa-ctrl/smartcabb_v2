@@ -593,6 +593,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
         <DriverDetailModal
           driver={selectedDriver}
           vehicle={selectedVehicle}
+          rides={rides}
           onClose={() => {
             setShowDetailModal(false);
             setSelectedDriver(null);

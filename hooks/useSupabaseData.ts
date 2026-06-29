@@ -306,14 +306,14 @@ export function useSupabaseData() {
             ? driver.is_approved 
             : false;
 
-        // ✅ FIX : Calculer les stats depuis les courses complétées si le KV les a à 0
+        // ✅ FIX : Calculer les stats depuis les courses complétées
         const completedRides = ridesData.filter((r: any) =>
           (r.driver_id === driver.id || r.driverId === driver.id) &&
           r.status === 'completed'
         );
         const computedRides    = completedRides.length;
         const computedEarnings = completedRides.reduce(
-          (sum: number, r: any) => sum + (r.total_amount || r.price || r.fare || r.amount || 0), 0
+          (sum: number, r: any) => sum + (r.totalPrice || r.total_amount || r.finalPrice || r.price || r.estimatedPrice || r.fare || r.amount || 0), 0
         );
 
         return {
@@ -331,9 +331,9 @@ export function useSupabaseData() {
           vehicle_plate: driver.vehicle?.license_plate || '',
           vehicle_color: driver.vehicle?.color || '',
           vehicle_category: driver.vehicle?.category || driver.vehicleType || 'standard',
-          // ✅ Stats réelles : priorité KV, sinon calculé depuis les courses
-          total_rides:    (driver.total_rides    > 0) ? driver.total_rides    : computedRides,
-          total_earnings: (driver.total_earnings > 0) ? driver.total_earnings : computedEarnings,
+          // ✅ Stats réelles : toujours basé sur les courses, fallback KV
+          total_rides:    computedRides > 0 ? computedRides : (driver.total_rides || driver.totalRides || 0),
+          total_earnings: computedEarnings > 0 ? computedEarnings : (driver.total_earnings || 0),
         };
       });
 
