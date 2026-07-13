@@ -197,15 +197,15 @@ function App() {
     window.addEventListener('popstate', () => {
       window.history.pushState(null, '', window.location.href);
     });
-    (async () => {
-      try {
-        const { App } = await import('@capacitor/app');
-        App.removeAllListeners();
-        App.addListener('backButton', () => {
-          App.exitApp();
+    try {
+      const cap = (window as any).Capacitor;
+      if (cap?.Plugins?.App) {
+        cap.Plugins.App.removeAllListeners();
+        cap.Plugins.App.addListener('backButton', () => {
+          cap.Plugins.App.exitApp();
         });
-      } catch {}
-    })();
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
