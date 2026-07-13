@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { GoogleMapView } from '../GoogleMapView';
+import { MapView } from '../MapView';
 import { useAppState } from '../../hooks/useAppState';
 import { MapPin, Loader2 } from '../../lib/icons';
 
@@ -81,7 +81,7 @@ export function MapScreenSimple() {
       {/* Carte */}
       <div className="flex-1 relative">
         <div className="absolute inset-0">
-          <GoogleMapView
+          <MapView
             center={currentLocation}
             drivers={[]}
             zoom={13}

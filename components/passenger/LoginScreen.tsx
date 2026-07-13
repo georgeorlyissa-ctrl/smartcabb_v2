@@ -439,7 +439,7 @@ export function LoginScreen() {
               </p>
             </div>
 
-            <div className="text-center">
+            <div className="text-center hide-in-apk">
               <button 
                 type="button"
                 onClick={() => {

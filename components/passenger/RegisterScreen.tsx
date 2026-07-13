@@ -212,12 +212,12 @@ export function RegisterScreen() {
             setCurrentView(null);
             setCurrentScreen('landing');
           }}
-          className="w-10 h-10"
+          className="w-10 h-10 hide-in-apk"
         >
           <ArrowLeftIcon className="w-5 h-5" />
         </Button>
         <h1 className="text-xl">Inscription</h1>
-        <div className="w-10" />
+        <div className="w-10 hide-in-apk" />
       </div>
 
       {/* Form */}

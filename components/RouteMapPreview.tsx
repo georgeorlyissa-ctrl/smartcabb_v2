@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from '../lib/motion';
 import { formatDuration, getCurrentTrafficConditions } from '../lib/duration-calculator';
-import { GoogleMapView } from './GoogleMapView';
+import { MapView } from './MapView';
 
 interface Location {
   lat: number;
@@ -114,7 +114,7 @@ export function RouteMapPreview({
     <div className={`relative ${className}`}>
       {/* 🗺️ CARTE GOOGLE MAPS INTERACTIVE avec tracé de route */}
       <div className="relative w-full h-44 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
-        <GoogleMapView
+        <MapView
           center={stablePickup}
           zoom={13}
           showRoute={true}

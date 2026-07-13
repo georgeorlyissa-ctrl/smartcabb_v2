@@ -17,7 +17,7 @@ import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { useAppState } from '../hooks/useAppState';
 import { toast } from '../lib/toast';
 import { motion } from '../lib/motion';
-import { GoogleMapView } from './GoogleMapView';
+import { MapView } from './MapView';
 
 interface Location {
   lat: number;
@@ -137,7 +137,7 @@ export function LiveRideTracking({
   return (
     <div className="relative h-full w-full">
       {/* 🗺️ CARTE GOOGLE MAPS COMPLÈTE */}
-      <GoogleMapView
+      <MapView
         center={vehicleLocation || normalizedPickup}
         zoom={14}
         showRoute={true}

@@ -187,6 +187,7 @@ export function SettingsScreen() {
               variant="ghost"
               size="sm"
               onClick={() => setCurrentScreen('map')}
+              className="hide-in-apk"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>

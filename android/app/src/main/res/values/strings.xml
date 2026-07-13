@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SmartCabb</string>
+    <string name="title_activity_main">SmartCabb</string>
+    <string name="package_name">com.smartcabb.app</string>
+    <string name="custom_url_scheme">com.smartcabb.app</string>
+</resources>

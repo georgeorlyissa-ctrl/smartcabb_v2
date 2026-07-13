@@ -48,8 +48,8 @@ export function UserSelectionScreen() {
         }} />
       </div>
 
-      {/* Bouton Admin en haut à droite */}
-      <div className="absolute top-6 right-6 z-20">
+      {/* Bouton Admin en haut à droite — caché dans l'APK */}
+      <div className="absolute top-6 right-6 z-20 hide-in-apk">
         <button
           onClick={handleAdminClick}
           className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-all cursor-pointer shadow-xl shadow-yellow-400/50"

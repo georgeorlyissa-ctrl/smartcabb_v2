@@ -2,7 +2,7 @@ import { motion } from '../../lib/motion'; // ✅ FIX: Utiliser l'implémentatio
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { useAppState } from '../../hooks/useAppState';
-import { GoogleMapView } from '../GoogleMapView';
+import { MapView } from '../MapView';
 import { useState, useEffect } from 'react';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
@@ -249,7 +249,7 @@ Contact : ${currentRide.driver?.phone}`;
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Carte en plein écran avec Google Maps */}
       <div className="flex-1 relative">
-        <GoogleMapView
+        <MapView
           center={driverLocation || currentRide.pickup}
           zoom={14}
           showRoute={true}

@@ -150,6 +150,9 @@ export function GoogleMapView({
   const driverMarkersRef = useRef<any[]>([]);
   const routeMarkersRef = useRef<{ start: any; end: any }>({ start: null, end: null });
 
+  // ✅ FIX COÛT — cache de la dernière route affichée
+  const lastRouteKeyRef = useRef<string>("");
+
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentZoom, setCurrentZoom] = useState(zoom);
@@ -361,6 +364,21 @@ export function GoogleMapView({
       if (routeMarkersRef.current.end) { routeMarkersRef.current.end.setMap(null); routeMarkersRef.current.end = null; }
       return;
     }
+
+    // ✅ FIX COÛT — cache de route : si les coordonnées n'ont pas changé (arrondi ~11m), on ne rappelle PAS l'API
+    const routeKey = [
+      effectiveRouteStart.lat.toFixed(4),
+      effectiveRouteStart.lng.toFixed(4),
+      effectiveRouteEnd.lat.toFixed(4),
+      effectiveRouteEnd.lng.toFixed(4),
+    ].join('|');
+
+    if (routeKey === lastRouteKeyRef.current) {
+      return;
+    }
+
+    lastRouteKeyRef.current = routeKey;
+    console.log('🗺️ Nouveau tracé de route détecté, appel API Directions:', routeKey);
 
     const createRouteMarkers = (start: Location, end: Location) => {
       if (!mapInstanceRef.current) return;

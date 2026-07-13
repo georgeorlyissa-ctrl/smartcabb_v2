@@ -1,4 +1,5 @@
 import { isGeolocationAvailable } from './graceful-geolocation';
+import { detectNative, getCurrentPosition as capGetCurrentPosition, watchPosition as capWatchPosition, clearWatch as capClearWatch } from './capacitor-bridge';
 
 /**
  * 🎯 SYSTÈME DE GÉOLOCALISATION ULTRA-PRÉCIS
@@ -170,74 +171,47 @@ export class PreciseGPSTracker {
     onError?: (error: string) => void;
     lockOnAccuracy?: number;
   }) {
-    // Sauvegarder les callbacks
     this.onPositionUpdate = options?.onPositionUpdate;
     this.onAccuracyReached = options?.onAccuracyReached;
     this.onError = options?.onError;
-    
+
     const lockOnAccuracy = options?.lockOnAccuracy || 20;
-    
-    // Vérifier si l'API de géolocalisation existe
-    if (!navigator.geolocation) {
-      console.warn('⚠️ Géolocalisation non supportée par ce navigateur');
+    const isNative = await detectNative();
+
+    if (!isNative && !navigator.geolocation) {
+      console.warn('⚠️ Géolocalisation non supportée');
       this.onError?.('Géolocalisation non supportée');
       return;
     }
 
-    console.log('🎯 Démarrage géolocalisation RAPIDE...');
-    
-    // ⚡ OPTIMISATION: Options RAPIDES pour la première position
-    const quickGeoOptions: PositionOptions = {
-      enableHighAccuracy: false, // ⚡ WiFi/cellulaire = RAPIDE
-      timeout: 3000, // ⚡ 3 secondes max
-      maximumAge: 60000 // ⚡ Accepter position de 1 minute
-    };
+    console.log(`🎯 Démarrage géolocalisation ${isNative ? 'NATIVE' : 'WEB'}...`);
 
-    // 🎯 Première position RAPIDE immédiate
-    console.log('⚡ Obtention position rapide...');
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        console.log('✅ Position rapide obtenue !');
-        this.handlePosition(position, lockOnAccuracy);
-      },
-      (error) => {
-        // Ne pas bloquer si la position rapide échoue
-        if (error.message.includes('permissions policy')) {
-          console.log('📍 Géolocalisation bloquée par permissions policy');
-          this.onError?.('Géolocalisation non disponible dans cet environnement');
-        } else {
-          console.log('⚠️ Position rapide échouée, passage en mode précis...');
-        }
-      },
-      quickGeoOptions
-    );
+    try {
+      const quickPos = await capGetCurrentPosition({ timeout: 3000 });
+      const mockEvent = {
+        coords: { latitude: quickPos.lat, longitude: quickPos.lng, accuracy: quickPos.accuracy, speed: null, heading: null, altitude: null, altitudeAccuracy: null },
+        timestamp: Date.now(),
+      } as unknown as GeolocationPosition;
+      this.handlePosition(mockEvent, lockOnAccuracy);
+      console.log('✅ Position rapide obtenue !');
+    } catch {
+      console.log('⚠️ Position rapide échouée, tracking continu...');
+    }
 
-    // 🔄 TRACKING CONTINU : watchPosition avec options équilibrées
-    const balancedGeoOptions: PositionOptions = {
-      enableHighAccuracy: isMobileDevice(), // Haute précision uniquement sur mobile
-      timeout: 8000, // 8 secondes (compromis)
-      maximumAge: 5000 // Accepter position de 5 secondes
-    };
-    
-    this.watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        // Si position verrouillée, ignorer les nouvelles mises à jour
-        if (this.isLocked) {
-          console.log('🔒 Position verrouillée - Mise à jour ignorée');
-          return;
-        }
-        
-        this.handlePosition(position, lockOnAccuracy);
+    const watchId = await capWatchPosition(
+      (pos) => {
+        if (this.isLocked) return;
+        const mockEvent = {
+          coords: { latitude: pos.lat, longitude: pos.lng, accuracy: pos.accuracy, speed: null, heading: null, altitude: null, altitudeAccuracy: null },
+          timestamp: Date.now(),
+        } as unknown as GeolocationPosition;
+        this.handlePosition(mockEvent, lockOnAccuracy);
       },
-      (error) => {
-        // Ne pas afficher d'erreurs alarmantes
-        if (!error.message.includes('permissions policy')) {
-          console.log('⚠️ GPS tracking:', error.message);
-        }
-        // Ne pas appeler onError pour les erreurs de tracking continu
-      },
-      balancedGeoOptions
+      (err) => {
+        if (!isNative) console.log('⚠️ GPS tracking:', err?.message || err);
+      }
     );
+    this.watchId = Number(watchId);
   }
 
   /**
@@ -245,7 +219,7 @@ export class PreciseGPSTracker {
    */
   stop(): void {
     if (this.watchId !== null) {
-      navigator.geolocation.clearWatch(this.watchId);
+      capClearWatch(String(this.watchId));
       this.watchId = null;
       console.log('🛑 Tracking GPS arrêté');
     }

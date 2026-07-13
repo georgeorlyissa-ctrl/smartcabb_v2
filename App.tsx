@@ -40,7 +40,7 @@ import { DebugAccountChecker } from './components/debug/DebugAccountChecker';
 import { applyBrowserOptimizations, applySafariFixes, isPrivateBrowsing } from './utils/browserDetection';
 import './lib/cache-buster';
 
-const BUILD_VERSION = '518.4.1'; // ✅ FIX: Maximum call stack size exceeded (iOS Safari)
+const BUILD_VERSION = '518.5.0'; // ✅ APK standalone passager + fix flash site
 const BUILD_TIMESTAMP = new Date().toISOString();
 
 import { startUpdateDetection } from './utils/updateDetector';
@@ -163,9 +163,51 @@ function MaintenanceBanner() {
   );
 }
 
+// 📱 Module-level APK detection : injecter CSS IMMÉDIATEMENT via ?platform=apk
+function initAPKCSS() {
+  try {
+    if (typeof window !== 'undefined' && window.location.search.includes('platform=apk')) {
+      const style = document.createElement('style');
+      style.id = 'apk-hide-style';
+      style.textContent = '.hide-in-apk { display: none !important; }';
+      document.head.appendChild(style);
+    }
+  } catch {}
+}
+initAPKCSS();
+
 function App() {
   console.log(`🚀 SmartCabb v${BUILD_VERSION} - Build ${BUILD_TIMESTAMP} - Démarrage...`);
-  
+
+  // 📱 Détection synchrone APK : via ?platform=apk
+  const isNativeApp = typeof window !== 'undefined' && window.location.search.includes('platform=apk');
+
+  if (isNativeApp && (window.location.pathname === '/' || window.location.pathname === '')) {
+    window.history.replaceState(null, '', '/app/passenger');
+  }
+
+  // 📱 Initialisation APK : cacher les boutons de navigation + bloquer back + quitter
+  useEffect(() => {
+    if (!isNativeApp) return;
+    document.documentElement.classList.add('cap-apk');
+    document.querySelectorAll('.hide-in-apk').forEach(el => {
+      (el as HTMLElement).style.display = 'none';
+    });
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', () => {
+      window.history.pushState(null, '', window.location.href);
+    });
+    (async () => {
+      try {
+        const { App } = await import('@capacitor/app');
+        App.removeAllListeners();
+        App.addListener('backButton', () => {
+          App.exitApp();
+        });
+      } catch {}
+    })();
+  }, []);
+
   useEffect(() => {
     try {
       applyBrowserOptimizations();

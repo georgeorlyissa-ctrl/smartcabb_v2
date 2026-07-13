@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
-import { GoogleMapView } from '../GoogleMapView';
+import { MapView } from '../MapView';
 import { YangoStyleSearch } from './YangoStyleSearch';
 import { FavoriteLocations } from './FavoriteLocations';
 import { SmartCabbPromoSection } from './SmartCabbPromoSection';
@@ -203,7 +203,7 @@ export function MapScreen() {
 
       {/* ========== CARTE ========== */}
       <div className="flex-1 relative">
-        <GoogleMapView
+        <MapView
           center={currentLocation}
           zoom={15}
           className="w-full h-full"

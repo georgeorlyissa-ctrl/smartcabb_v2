@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { Button } from '../ui/button';
-import { GoogleMapView } from '../GoogleMapView';
+import { MapView } from '../MapView';
 import { RideCompletionSummaryDialog } from '../RideCompletionSummaryDialog';
 
 import { VEHICLE_PRICING, getExchangeRate, type VehicleCategory } from '../../lib/pricing';
@@ -366,7 +366,7 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
         {/* ── Carte ─────────────────────────────────────────────────────── */}
         {ride?.pickup?.lat && ride?.destination?.lat ? (
           <div className="rounded-xl overflow-hidden shadow-sm h-48">
-            <GoogleMapView
+            <MapView
               center={phase === 'in_progress' ? ride.destination : ride.pickup}
               zoom={13}
               showRoute

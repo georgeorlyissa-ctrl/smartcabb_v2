@@ -1,6 +1,6 @@
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
-import { GoogleMapView } from '../GoogleMapView';
+import { MapView } from '../MapView';
 import { useState, useEffect } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { Button } from '../ui/button';
@@ -139,7 +139,7 @@ export function ActiveRideScreenWithOSM() {
          currentRide?.pickup?.lng && 
          currentRide?.destination?.lat && 
          currentRide?.destination?.lng ? (
-          <GoogleMapView
+          <MapView
             pickup={currentRide.pickup}
             destination={currentRide.destination}
             height="h-full"

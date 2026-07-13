@@ -1,6 +1,6 @@
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
-import { GoogleMapView } from '../GoogleMapView';
+import { MapView } from '../MapView';
 import { motion } from '../../lib/motion'; // ✅ FIX: Import depuis lib/motion au lieu de motion/react
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
@@ -300,7 +300,7 @@ export function ClientInfoScreen() {
                currentRide?.pickup?.lng && 
                currentRide?.destination?.lat && 
                currentRide?.destination?.lng ? (
-                <GoogleMapView
+                <MapView
                   pickup={currentRide.pickup}
                   destination={currentRide.destination}
                   height="h-64"

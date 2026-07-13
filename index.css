@@ -8222,3 +8222,8 @@ input[type="email"], input[type="password"], input[type="text"], input[type="tel
     transform: translate3d(var(--tw-exit-translate-x, 0), var(--tw-exit-translate-y, 0), 0) scale3d(var(--tw-exit-scale, 1), var(--tw-exit-scale, 1), var(--tw-exit-scale, 1)) rotate(var(--tw-exit-rotate, 0));
   }
 }
+
+/* 🎯 APK : cacher les éléments de navigation inutiles dans l'app native */
+.cap-apk .hide-in-apk {
+  display: none !important;
+}

@@ -353,7 +353,7 @@ export function ProfileScreen() {
               variant="ghost"
               size="sm"
               onClick={() => setCurrentScreen('map')}
-              className="p-2 hover:bg-muted"
+              className="p-2 hover:bg-muted hide-in-apk"
             >
               <ArrowLeft className="w-5 h-5 text-primary" />
             </Button>

@@ -8,6 +8,18 @@ if (typeof window === 'undefined') {
 // Protection 2: Créer des stubs pour les APIs manquantes
 window.__SMARTCABB_CLIENT_READY__ = false;
 
+// 🎯 APK mode detection: inject CSS BEFORE any React render
+(function() {
+  try {
+    if (window.location.search.indexOf('platform=apk') !== -1 || window.location.href.indexOf('platform=apk') !== -1) {
+      var s = document.createElement('style');
+      s.id = 'apk-hide-style';
+      s.textContent = '.hide-in-apk { display: none !important; }';
+      document.head.appendChild(s);
+    }
+  } catch(e) {}
+})();
+
 // Protection 3: Wrapper sécurisé pour localStorage/sessionStorage
 (function() {
   try {

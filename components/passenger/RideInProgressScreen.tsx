@@ -461,8 +461,13 @@ export function RideInProgressScreen() {
           className="w-full h-full"
           showUserLocation={false}
           enableGeolocation={false}
-          showRoute={!!(currentRide.destination?.lat && currentRide.destination?.lng)}
-          routeStart={driverLocation}
+          showRoute={!!(currentRide.pickup?.lat && currentRide.destination?.lat && currentRide.destination?.lng)}
+          // ✅ FIX COÛT — routeStart = départ FIXE (pickup), pas driverLocation qui change toutes les 2s
+          routeStart={{
+            lat: currentRide.pickup.lat,
+            lng: currentRide.pickup.lng,
+            address: currentRide.pickup.address
+          }}
           routeEnd={currentRide.destination?.lat && currentRide.destination?.lng ? {
             lat: currentRide.destination.lat,
             lng: currentRide.destination.lng,

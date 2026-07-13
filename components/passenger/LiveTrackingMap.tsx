@@ -3,7 +3,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { useAppState } from '../../hooks/useAppState';
 import { toast } from '../../lib/toast';
 import { motion } from '../../lib/motion';
-import { GoogleMapView } from '../GoogleMapView';
+import { MapView } from '../MapView';
 
 interface Location {
   lat: number;
@@ -121,7 +121,7 @@ export function LiveTrackingMap({ driverId, pickup, destination, driverName }: L
   return (
     <div className="relative h-full w-full">
       {/* 🗺️ CARTE GOOGLE MAPS avec itinéraire et position conducteur */}
-      <GoogleMapView
+      <MapView
         center={driverLocation || pickup}
         zoom={14}
         showRoute={true}
