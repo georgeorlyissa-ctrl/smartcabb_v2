@@ -181,137 +181,148 @@ export function DriverLoginScreen() {
     if (e.key === 'Enter' && !loading) handleLogin();
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in duration-300">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Car className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Connexion Conducteur</h1>
-          <p className="text-gray-600">Accédez à votre espace conducteur</p>
-        </div>
-
-        {successMsg && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+  try {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in duration-300">
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Car className="w-8 h-8 text-white" />
             </div>
-            <p className="text-green-800 font-medium">{successMsg}</p>
-          </div>
-        )}
-
-        {errorMsg && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-            <p className="text-red-800 font-medium">{errorMsg}</p>
-          </div>
-        )}
-
-        <div className="space-y-6">
-          <div>
-            <PhoneInput
-              id="driver-identifier"
-              value={identifier}
-              onChange={(value) => setIdentifier(value)}
-              onKeyPress={handleKeyPress}
-              className="px-4 h-12 text-base"
-              disabled={loading}
-              autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck="false"
-              label="Numéro de téléphone"
-            />
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Connexion Conducteur</h1>
+            <p className="text-gray-600">Accédez à votre espace conducteur</p>
           </div>
 
-          <div>
-            <Label htmlFor="password">Mot de passe</Label>
-            <div className="relative mt-2">
-              <Input
-                id="driver-password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+          {successMsg && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-green-800 font-medium">{successMsg}</p>
+            </div>
+          )}
+
+          {errorMsg && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <p className="text-red-800 font-medium">{errorMsg}</p>
+            </div>
+          )}
+
+          <div className="space-y-6">
+            <div>
+              <PhoneInput
+                id="driver-identifier"
+                value={identifier}
+                onChange={(value) => setIdentifier(value)}
                 onKeyPress={handleKeyPress}
-                className="px-4 pr-12 h-12 text-base"
+                className="px-4 h-12 text-base"
                 disabled={loading}
-                autoComplete="new-password"
+                autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck="false"
+                label="Numéro de téléphone"
               />
-              <button
+            </div>
+
+            <div>
+              <Label htmlFor="password">Mot de passe</Label>
+              <div className="relative mt-2">
+                <Input
+                  id="driver-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="px-4 pr-12 h-12 text-base"
+                  disabled={loading}
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                  disabled={loading}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleLogin();
+              }}
+              disabled={loading}
+              className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white text-lg transition-colors"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Connexion...</span>
+                </div>
+              ) : (
+                'Se connecter'
+              )}
+            </Button>
+
+            <div className="text-center">
+              <button 
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                onClick={() => setCurrentScreen('forgot-password-driver')}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 disabled={loading}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                Mot de passe oublié ?
+              </button>
+            </div>
+
+            <div className="text-center">
+              <p className="text-gray-600">
+                Nouveau conducteur ?{' '}
+                <button 
+                  type="button"
+                  onClick={() => setCurrentScreen('driver-registration')}
+                  className="text-blue-500 hover:text-blue-600 font-semibold transition-colors"
+                  disabled={loading}
+                >
+                  Postuler maintenant
+                </button>
+              </p>
+            </div>
+
+            <div className="text-center hide-in-apk">
+              <button 
+                type="button"
+                onClick={() => setCurrentScreen('driver-welcome')}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                disabled={loading}
+              >
+                ← Retour
               </button>
             </div>
           </div>
-
-          <Button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleLogin();
-            }}
-            disabled={loading}
-            className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white text-lg transition-colors"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Connexion...</span>
-              </div>
-            ) : (
-              'Se connecter'
-            )}
-          </Button>
-
-          <div className="text-center">
-            <button 
-              type="button"
-              onClick={() => setCurrentScreen('forgot-password-driver')}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-              disabled={loading}
-            >
-              Mot de passe oublié ?
-            </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-gray-600">
-              Nouveau conducteur ?{' '}
-              <button 
-                type="button"
-                onClick={() => setCurrentScreen('driver-registration')}
-                className="text-blue-500 hover:text-blue-600 font-semibold transition-colors"
-                disabled={loading}
-              >
-                Postuler maintenant
-              </button>
-            </p>
-          </div>
-
-          <div className="text-center hide-in-apk">
-            <button 
-              type="button"
-              onClick={() => setCurrentScreen('driver-welcome')}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-              disabled={loading}
-            >
-              ← Retour
-            </button>
-          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  } catch (error) {
+    return (
+      <div className="min-h-screen bg-red-100 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Erreur de rendu</h1>
+          <p className="text-gray-700">{String(error)}</p>
+        </div>
+      </div>
+    );
+  }
 }
