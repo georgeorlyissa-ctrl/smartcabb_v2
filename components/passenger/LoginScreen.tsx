@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { PhoneInput } from '../PhoneInput'; // ✅ FIX: Ajout import PhoneInput
 import { useAppState } from '../../hooks/useAppState';
 import { toast } from '../../lib/toast';
-import { Eye, EyeOff, ArrowLeft, Loader2, AlertCircle } from '../../lib/icons';
+import { Eye, EyeOff, AlertCircle } from '../../lib/icons';
 import { useNavigate } from '../../lib/simple-router';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { validatePhoneNumberRDC } from '../../lib/phone-utils';
@@ -320,10 +320,10 @@ export function LoginScreen() {
 
   try {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-cyan-400 via-cyan-500 to-cyan-600 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in duration-300">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-2xl font-bold">SC</span>
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Connexion</h1>
@@ -402,7 +402,7 @@ export function LoginScreen() {
                 doLogin();
               }}
               disabled={loading}
-              className="w-full h-12 bg-cyan-500 hover:bg-cyan-600 text-white text-lg transition-colors"
+              className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white text-lg transition-colors"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -418,7 +418,7 @@ export function LoginScreen() {
               <button 
                 type="button"
                 onClick={() => setCurrentScreen('forgot-password')}
-                className="text-sm text-cyan-600 hover:text-cyan-700 font-medium transition-colors"
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
                 disabled={loading}
               >
                 Mot de passe oublié ?
@@ -431,7 +431,7 @@ export function LoginScreen() {
                 <button 
                   type="button"
                   onClick={() => setCurrentScreen('register')}
-                  className="text-cyan-500 hover:text-cyan-600 font-semibold transition-colors"
+                  className="text-blue-500 hover:text-blue-600 font-semibold transition-colors"
                   disabled={loading}
                 >
                   S'inscrire
