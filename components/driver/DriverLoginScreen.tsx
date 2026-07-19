@@ -234,9 +234,7 @@ export function DriverLoginScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4">
-      <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8"
-      >
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in duration-300">
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Car className="w-8 h-8 text-white" />
@@ -279,7 +277,8 @@ export function DriverLoginScreen() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                disabled={loading}
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -287,9 +286,14 @@ export function DriverLoginScreen() {
           </div>
 
           <Button
-            onClick={handleLogin}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleLogin();
+            }}
             disabled={loading}
-            className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white text-lg"
+            className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white text-lg transition-colors"
           >
             {loading ? (
               <div className="flex items-center justify-center gap-2">
@@ -303,6 +307,7 @@ export function DriverLoginScreen() {
 
           <div className="text-center">
             <button 
+              type="button"
               onClick={() => setCurrentScreen('forgot-password-driver')}
               className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
               disabled={loading}
@@ -315,8 +320,9 @@ export function DriverLoginScreen() {
             <p className="text-gray-600">
               Nouveau conducteur ?{' '}
               <button 
+                type="button"
                 onClick={() => setCurrentScreen('driver-registration')}
-                className="text-blue-500 hover:text-blue-600 font-semibold"
+                className="text-blue-500 hover:text-blue-600 font-semibold transition-colors"
                 disabled={loading}
               >
                 Postuler maintenant
@@ -324,10 +330,11 @@ export function DriverLoginScreen() {
             </p>
           </div>
 
-          <div className="text-center">
+          <div className="text-center hide-in-apk">
             <button 
+              type="button"
               onClick={() => setCurrentScreen('driver-welcome')}
-              className="text-sm text-gray-500 hover:text-gray-700"
+              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
               disabled={loading}
             >
               ← Retour

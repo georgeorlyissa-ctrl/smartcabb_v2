@@ -375,13 +375,7 @@ export function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              {/* Eyebrow pill */}
-              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}>
-                <span className="section-eyebrow">
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
-                  {language === 'fr' ? 'Disponible à Kinshasa, RDC' : 'Available in Kinshasa, DRC'}
-                </span>
-              </motion.div>
+
 
               <motion.h1 initial={{ opacity: 0, y: 36 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.7, ease }}
                 style={{ fontSize: 'clamp(38px, 5vw, 62px)', fontWeight: '900', color: '#222222', lineHeight: '1.08', marginBottom: '24px', letterSpacing: '-0.03em' }}>
