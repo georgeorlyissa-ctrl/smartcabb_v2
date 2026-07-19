@@ -124,7 +124,7 @@ export function PassengerLanguageSelector({
                 padding: '16px',
                 borderRadius: 16,
                 background: language === lang.code ? '#EFF6FF' : '#F9FAFB',
-                border: language === lang.code ? '2px solid #0891b2' : '2px solid transparent',
+                border: language === lang.code ? '2px solid #007AFF' : '2px solid transparent',
                 cursor: 'pointer',
                 transition: 'all 150ms',
               }}
@@ -143,7 +143,7 @@ export function PassengerLanguageSelector({
                   width: 24,
                   height: 24,
                   borderRadius: '50%',
-                  backgroundColor: '#0891b2',
+                  backgroundColor: '#007AFF',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',

@@ -101,7 +101,7 @@ const initApp = () => {
           <button 
             onclick="window.location.reload()" 
             style="
-              background: #0891b2;
+              background: #007AFF;
               color: white;
               border: none;
               padding: 0.75rem 2rem;

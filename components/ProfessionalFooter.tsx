@@ -13,11 +13,11 @@ export function ProfessionalFooter() {
           {/* Colonne Logo + Description */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl">
                 SC
               </div>
               <span className="text-3xl font-black">
-                SMART<span className="text-cyan-400">CABB</span>
+                SMART<span className="text-blue-400">CABB</span>
               </span>
             </div>
             <p className="text-gray-400 mb-6 leading-relaxed max-w-sm">
@@ -30,7 +30,7 @@ export function ProfessionalFooter() {
                 href="https://facebook.com/smartcabb" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="w-11 h-11 bg-slate-800 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                className="w-11 h-11 bg-slate-800 hover:bg-blue-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
                 aria-label="Facebook"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -41,7 +41,7 @@ export function ProfessionalFooter() {
                 href="https://twitter.com/smartcabb" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="w-11 h-11 bg-slate-800 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                className="w-11 h-11 bg-slate-800 hover:bg-blue-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
                 aria-label="X (Twitter)"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -63,7 +63,7 @@ export function ProfessionalFooter() {
                 href="https://linkedin.com/company/smartcabb" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="w-11 h-11 bg-slate-800 hover:bg-cyan-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                className="w-11 h-11 bg-slate-800 hover:bg-blue-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
                 aria-label="LinkedIn"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -78,22 +78,22 @@ export function ProfessionalFooter() {
             <h3 className="text-lg font-bold mb-5 text-white">{t('footer.quickLinks')}</h3>
             <ul className="space-y-3">
               <li>
-                <Link to="/" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <Link to="/" className="text-gray-400 hover:text-blue-400 transition-colors">
                   {t('nav.home')}
                 </Link>
               </li>
               <li>
-                <Link to="/services" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <Link to="/services" className="text-gray-400 hover:text-blue-400 transition-colors">
                   {t('nav.services')}
                 </Link>
               </li>
               <li>
-                <Link to="/about" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <Link to="/about" className="text-gray-400 hover:text-blue-400 transition-colors">
                   {t('nav.about')}
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <Link to="/contact" className="text-gray-400 hover:text-blue-400 transition-colors">
                   {t('nav.contact')}
                 </Link>
               </li>
@@ -105,22 +105,22 @@ export function ProfessionalFooter() {
   <h3 className="text-lg font-bold mb-5 text-white">{t('footer.services')}</h3>
   <ul className="space-y-3">
     <li>
-      <a href="/services#standard" className="text-gray-400 hover:text-cyan-400 transition-colors">
+      <a href="/services#standard" className="text-gray-400 hover:text-blue-400 transition-colors">
         Standard
       </a>
     </li>
     <li>
-      <a href="/services#confort" className="text-gray-400 hover:text-cyan-400 transition-colors">
+      <a href="/services#confort" className="text-gray-400 hover:text-blue-400 transition-colors">
         Confort
       </a>
     </li>
     <li>
-      <a href="/services#business" className="text-gray-400 hover:text-cyan-400 transition-colors">
+      <a href="/services#business" className="text-gray-400 hover:text-blue-400 transition-colors">
         Business
       </a>
     </li>
     <li>
-      <a href="/services#familia" className="text-gray-400 hover:text-cyan-400 transition-colors">
+      <a href="/services#familia" className="text-gray-400 hover:text-blue-400 transition-colors">
         Familia
       </a>
     </li>
@@ -132,23 +132,23 @@ export function ProfessionalFooter() {
             <h3 className="text-lg font-bold mb-5 text-white">{t('footer.legal')}</h3>
             <ul className="space-y-3">
               <li>
-                <Link to="/terms" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <Link to="/terms" className="text-gray-400 hover:text-blue-400 transition-colors">
                   {t('nav.terms')}
                 </Link>
               </li>
               <li>
-                <Link to="/privacy" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <Link to="/privacy" className="text-gray-400 hover:text-blue-400 transition-colors">
                   {t('nav.privacy')}
                 </Link>
               </li>
               {/* ❌ DÉSACTIVÉ: Mentions légales pour raisons de sécurité */}
               {/* <li>
-                <Link to="/legal" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <Link to="/legal" className="text-gray-400 hover:text-blue-400 transition-colors">
                   {t('nav.legal')}
                 </Link>
               </li> */}
               <li>
-                <Link to="/drivers" className="text-gray-400 hover:text-cyan-400 transition-colors">
+                <Link to="/drivers" className="text-gray-400 hover:text-blue-400 transition-colors">
                   {t('nav.drivers')}
                 </Link>
               </li>

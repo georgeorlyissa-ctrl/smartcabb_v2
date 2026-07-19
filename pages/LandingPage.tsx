@@ -16,12 +16,12 @@ function PlayStoreBadge({ lang }: { lang: 'fr' | 'en' }) {
       rel="noopener noreferrer"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: '10px',
-        padding: '11px 20px', background: '#111827', color: 'white',
+        padding: '11px 20px', background: '#222222', color: 'white',
         borderRadius: '10px', textDecoration: 'none', border: '1.5px solid rgba(255,255,255,0.08)',
         transition: 'all 0.22s', cursor: 'pointer', flexShrink: 0,
       }}
       onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.background = '#1f2937'; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)'; }}
-      onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.background = '#111827'; el.style.transform = 'translateY(0)'; el.style.boxShadow = 'none'; }}
+      onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.background = '#222222'; el.style.transform = 'translateY(0)'; el.style.boxShadow = 'none'; }}
     >
       {/* Google Play logo */}
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -167,17 +167,17 @@ export function LandingPage() {
         html { scroll-behavior: smooth; }
 
         .nav-link { font-size: 15px; font-weight: 500; color: #374151; transition: color 0.2s; text-decoration: none; }
-        .nav-link:hover, .nav-link.active { color: #0891b2; }
+        .nav-link:hover, .nav-link.active { color: #007AFF; }
 
         /* ── CTA section buttons ── */
         .btn-primary {
           display: inline-flex; align-items: center; justify-content: center;
-          padding: 16px 36px; background: white; color: #0891b2;
+          padding: 16px 36px; background: white; color: #007AFF;
           font-weight: 800; font-size: 16px; border-radius: 10px;
           transition: all 0.25s; text-decoration: none; cursor: pointer;
           white-space: nowrap; border: none;
         }
-        .btn-primary:hover { background: #f0f9ff; transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.18); }
+        .btn-primary:hover { background: #E0E0E0; transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.18); }
 
         .btn-secondary {
           display: inline-flex; align-items: center; justify-content: center;
@@ -191,7 +191,7 @@ export function LandingPage() {
         /* ── Hero buttons ── */
         .btn-hero-primary {
           display: inline-flex; align-items: center; gap: 8px;
-          padding: 14px 28px; background: #0891b2; color: white;
+          padding: 14px 28px; background: #007AFF; color: white;
           font-weight: 700; font-size: 15px; border-radius: 10px;
           transition: all 0.25s; text-decoration: none; cursor: pointer;
           box-shadow: 0 4px 14px rgba(8,145,178,0.3);
@@ -200,12 +200,12 @@ export function LandingPage() {
 
         .btn-hero-secondary {
           display: inline-flex; align-items: center; gap: 8px;
-          padding: 13px 28px; background: white; color: #0891b2;
+          padding: 13px 28px; background: white; color: #007AFF;
           font-weight: 700; font-size: 15px; border-radius: 10px;
           border: 2px solid #e0f2fe; transition: all 0.25s;
           text-decoration: none; cursor: pointer;
         }
-        .btn-hero-secondary:hover { background: #f0f9ff; border-color: #0891b2; transform: translateY(-2px); }
+        .btn-hero-secondary:hover { background: #E0E0E0; border-color: #007AFF; transform: translateY(-2px); }
 
         /* ── Cards ── */
         .card {
@@ -217,7 +217,7 @@ export function LandingPage() {
           transform: translateY(-6px);
         }
 
-        .step-number { font-size: 80px; font-weight: 900; color: #f0f9ff; position: absolute; top: 12px; right: 16px; line-height: 1; user-select: none; }
+        .step-number { font-size: 80px; font-weight: 900; color: #E0E0E0; position: absolute; top: 12px; right: 16px; line-height: 1; user-select: none; }
 
         /* ── Reveal animations ── */
         .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1); }
@@ -243,10 +243,10 @@ export function LandingPage() {
         /* ── Shimmer tag confiance ── */
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
         .trust-tag {
-          background: linear-gradient(90deg, #f0f9ff 25%, #bae6fd 50%, #f0f9ff 75%);
+          background: linear-gradient(90deg, #E0E0E0 25%, #bae6fd 50%, #E0E0E0 75%);
           background-size: 200% auto; animation: shimmer 3s linear infinite;
           display: inline-block; padding: 4px 14px; border: 1px solid #bae6fd;
-          border-radius: 20px; font-size: 11px; font-weight: 700; color: #0891b2; margin-bottom: 20px;
+          border-radius: 20px; font-size: 11px; font-weight: 700; color: #007AFF; margin-bottom: 20px;
           letter-spacing: 0.04em; text-transform: uppercase;
         }
 
@@ -264,25 +264,25 @@ export function LandingPage() {
           background: white; border: 1px solid #e5e7eb; border-radius: 12px;
           transition: all 0.25s; min-width: 0;
         }
-        .country-card:hover { border-color: #0891b2; box-shadow: 0 4px 16px rgba(8,145,178,0.12); transform: translateY(-2px); }
+        .country-card:hover { border-color: #007AFF; box-shadow: 0 4px 16px rgba(8,145,178,0.12); transform: translateY(-2px); }
 
-        .stat-box { padding: 20px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 14px; transition: all 0.25s; }
+        .stat-box { padding: 20px; background: #E0E0E0; border: 1px solid #bae6fd; border-radius: 14px; transition: all 0.25s; }
         .stat-box:hover { background: #e0f2fe; transform: scale(1.03); box-shadow: 0 6px 20px rgba(8,145,178,0.12); }
 
-        .accent-line { height: 4px; background: linear-gradient(90deg,#0891b2,#06b6d4); border-radius: 2px; margin-bottom: 20px; max-width: 56px; }
+        .accent-line { height: 4px; background: linear-gradient(90deg,#007AFF,#007AFF); border-radius: 2px; margin-bottom: 20px; max-width: 56px; }
 
         /* ── Section label ── */
         .section-eyebrow {
           display: inline-flex; align-items: center; gap: 6px;
           font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: #0891b2;
-          background: #f0f9ff; border: 1px solid #bae6fd;
+          text-transform: uppercase; color: #007AFF;
+          background: #E0E0E0; border: 1px solid #bae6fd;
           padding: 5px 12px; border-radius: 20px; margin-bottom: 20px;
         }
 
         /* ── App download banner ── */
         .app-banner-card {
-          background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0891b2 100%);
+          background: linear-gradient(135deg, #222222 0%, #1e3a5f 50%, #007AFF 100%);
           border-radius: 24px; padding: 56px; position: relative; overflow: hidden;
         }
         .app-banner-card::before {
@@ -321,8 +321,8 @@ export function LandingPage() {
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
                 <img src="/logo-smartcabb.jpeg" alt="SmartCabb" width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
-              <span style={{ fontSize: '20px', fontWeight: '900', color: '#0f172a', letterSpacing: '-0.02em' }}>
-                SMART<span style={{ color: '#0891b2' }}>CABB</span>
+              <span style={{ fontSize: '20px', fontWeight: '900', color: '#222222', letterSpacing: '-0.02em' }}>
+                SMART<span style={{ color: '#007AFF' }}>CABB</span>
               </span>
             </Link>
             <div className="hidden lg:flex items-center" style={{ gap: '28px' }}>
@@ -353,7 +353,7 @@ export function LandingPage() {
       </motion.nav>
 
       {/* ═══════════════════ HERO ═══════════════════ */}
-      <section id="home" style={{ paddingTop: '112px', paddingBottom: '88px', position: 'relative', overflow: 'hidden', background: '#fafbff' }}>
+      <section id="home" style={{ paddingTop: '112px', paddingBottom: '88px', position: 'relative', overflow: 'hidden', background: '#f0f0f0' }}>
         {/* Background photos avec overlay beaucoup plus net */}
         {backgrounds.map((bg, i) =>
           currentBg === i || currentBg === (i + 1) % backgrounds.length ? (
@@ -384,10 +384,10 @@ export function LandingPage() {
               </motion.div>
 
               <motion.h1 initial={{ opacity: 0, y: 36 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.7, ease }}
-                style={{ fontSize: 'clamp(38px, 5vw, 62px)', fontWeight: '900', color: '#0f172a', lineHeight: '1.08', marginBottom: '24px', letterSpacing: '-0.03em' }}>
+                style={{ fontSize: 'clamp(38px, 5vw, 62px)', fontWeight: '900', color: '#222222', lineHeight: '1.08', marginBottom: '24px', letterSpacing: '-0.03em' }}>
                 {language === 'fr'
-                  ? <><span style={{ color: '#0891b2' }}>Votre trajet,</span><br />votre choix.</>
-                  : <><span style={{ color: '#0891b2' }}>Your ride,</span><br />your choice.</>}
+                  ? <><span style={{ color: '#007AFF' }}>Votre trajet,</span><br />votre choix.</>
+                  : <><span style={{ color: '#007AFF' }}>Your ride,</span><br />your choice.</>}
               </motion.h1>
 
               <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.6 }}
@@ -413,8 +413,8 @@ export function LandingPage() {
                 style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px' }}>
                 {[{ target: 150, suffix: '+', label: t('hero.activeDrivers') }, { target: 1000, suffix: '+', label: t('hero.happyClients') }, { target: 24, suffix: '/7', label: t('hero.available') }].map((s, i) => (
                   <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.1 }}
-                    style={{ borderLeft: '3px solid #0891b2', paddingLeft: '16px' }}>
-                    <div className="stat-number" data-target={s.target} data-suffix={s.suffix} style={{ fontSize: '30px', fontWeight: '900', color: '#0891b2', lineHeight: 1.1 }}>0</div>
+                    style={{ borderLeft: '3px solid #007AFF', paddingLeft: '16px' }}>
+                    <div className="stat-number" data-target={s.target} data-suffix={s.suffix} style={{ fontSize: '30px', fontWeight: '900', color: '#007AFF', lineHeight: 1.1 }}>0</div>
                     <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', fontWeight: '500' }}>{s.label}</div>
                   </motion.div>
                 ))}
@@ -466,12 +466,12 @@ export function LandingPage() {
                 style={{ top: '-16px', right: '-16px', padding: '12px 18px' }}
                 initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.9, type: 'spring', stiffness: 220 }}>
                 <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 4px rgba(34,197,94,0.2)', flexShrink: 0 }} />
-                <span style={{ fontWeight: '700', fontSize: '14px', color: '#0f172a' }}>50+ {language === 'fr' ? 'en ligne' : 'online'}</span>
+                <span style={{ fontWeight: '700', fontSize: '14px', color: '#222222' }}>50+ {language === 'fr' ? 'en ligne' : 'online'}</span>
               </motion.div>
 
               {/* Badge flottant — note */}
               <motion.div className="float-badge"
-                style={{ bottom: '-16px', left: '-16px', padding: '14px 20px', background: '#0891b2', flexDirection: 'column', gap: '2px' }}
+                style={{ bottom: '-16px', left: '-16px', padding: '14px 20px', background: '#007AFF', flexDirection: 'column', gap: '2px' }}
                 initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.05, type: 'spring', stiffness: 220 }}>
                 <div style={{ fontSize: '22px', fontWeight: '900', color: 'white', lineHeight: 1 }}>4.9 / 5</div>
                 <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>{language === 'fr' ? 'Note moyenne' : 'Average rating'}</div>
@@ -489,7 +489,7 @@ export function LandingPage() {
                 </svg>
                 <div>
                   <div style={{ fontSize: '9px', color: '#94a3b8', lineHeight: 1 }}>App disponible</div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', lineHeight: 1.2 }}>Google Play</div>
+                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#222222', lineHeight: 1.2 }}>Google Play</div>
                 </div>
               </motion.div>
             </div>
@@ -502,8 +502,8 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '64px' }}>
             <div className={`accent-line reveal d1 ${howInView ? 'in' : ''}`} />
-            <h2 className={`reveal d2 ${howInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#0f172a', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-              {t('how.title1')} <span style={{ color: '#0891b2' }}>{t('how.title2')}</span>
+            <h2 className={`reveal d2 ${howInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#222222', marginBottom: '16px', letterSpacing: '-0.02em' }}>
+              {t('how.title1')} <span style={{ color: '#007AFF' }}>{t('how.title2')}</span>
             </h2>
             <p className={`reveal d3 ${howInView ? 'in' : ''}`} style={{ fontSize: '18px', color: '#64748b', maxWidth: '480px', lineHeight: 1.7 }}>{t('how.subtitle')}</p>
           </div>
@@ -531,8 +531,8 @@ export function LandingPage() {
                 </div>
                 <div style={{ padding: '28px', position: 'relative' }}>
                   <div className="step-number">{step.number}</div>
-                  <div style={{ width: '32px', height: '3px', background: 'linear-gradient(90deg,#0891b2,#06b6d4)', borderRadius: '2px', marginBottom: '14px' }} />
-                  <h3 style={{ fontSize: '19px', fontWeight: '800', color: '#0f172a', marginBottom: '10px', lineHeight: 1.3 }}>{step.title}</h3>
+                  <div style={{ width: '32px', height: '3px', background: 'linear-gradient(90deg,#007AFF,#007AFF)', borderRadius: '2px', marginBottom: '14px' }} />
+                  <h3 style={{ fontSize: '19px', fontWeight: '800', color: '#222222', marginBottom: '10px', lineHeight: 1.3 }}>{step.title}</h3>
                   <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.65' }}>{step.description}</p>
                 </div>
               </div>
@@ -542,7 +542,7 @@ export function LandingPage() {
       </section>
 
       {/* ═══════════════════ TÉLÉCHARGER L'APP — bandeau ═══════════════════ */}
-      <section ref={appRef as any} style={{ padding: '80px 0', background: '#fafbff' }}>
+      <section ref={appRef as any} style={{ padding: '80px 0', background: '#f0f0f0' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className={`app-banner-card reveal ${appInView ? 'in' : ''}`}>
             <div className="grid lg:grid-cols-2 gap-12 items-center" style={{ position: 'relative', zIndex: 1 }}>
@@ -603,8 +603,8 @@ export function LandingPage() {
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <div>
               <div className={`accent-line reveal-left d1 ${whyInView ? 'in' : ''}`} />
-              <h2 className={`reveal-left d2 ${whyInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#0f172a', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-                {t('why.title1')} <span style={{ color: '#0891b2' }}>{t('why.title2')}</span>
+              <h2 className={`reveal-left d2 ${whyInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#222222', marginBottom: '16px', letterSpacing: '-0.02em' }}>
+                {t('why.title1')} <span style={{ color: '#007AFF' }}>{t('why.title2')}</span>
               </h2>
               <p className={`reveal-left d3 ${whyInView ? 'in' : ''}`} style={{ fontSize: '18px', color: '#64748b', marginBottom: '32px', maxWidth: '480px', lineHeight: 1.7 }}>{t('why.subtitle')}</p>
               <div className={`reveal-left d4 ${whyInView ? 'in' : ''}`}>
@@ -616,8 +616,8 @@ export function LandingPage() {
                 const descs = [t('why.fastDesc'), t('why.secureDesc'), t('why.affordableDesc'), t('why.simpleDesc'), t('why.qualityDesc'), t('why.flexibleDesc'), t('why.reliableDesc')];
                 return (
                   <div key={i} className={`card reveal ${whyInView ? 'in' : ''}`} style={{ padding: '22px', transitionDelay: `${0.05 + i * 0.07}s` }}>
-                    <div style={{ width: '28px', height: '3px', background: 'linear-gradient(90deg,#0891b2,#06b6d4)', borderRadius: '2px', marginBottom: '12px' }} />
-                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>{title}</div>
+                    <div style={{ width: '28px', height: '3px', background: 'linear-gradient(90deg,#007AFF,#007AFF)', borderRadius: '2px', marginBottom: '12px' }} />
+                    <div style={{ fontSize: '15px', fontWeight: '700', color: '#222222', marginBottom: '6px' }}>{title}</div>
                     <div style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.55' }}>{descs[i]}</div>
                   </div>
                 );
@@ -628,12 +628,12 @@ export function LandingPage() {
       </section>
 
       {/* ═══════════════════ CONFIANCE ═══════════════════ */}
-      <section id="trust" ref={trustRef as any} style={{ padding: '96px 0', background: '#fafbff', borderTop: '1px solid #f1f5f9' }}>
+      <section id="trust" ref={trustRef as any} style={{ padding: '96px 0', background: '#f0f0f0', borderTop: '1px solid #f1f5f9' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '64px' }}>
             <div className={`accent-line reveal d1 ${trustInView ? 'in' : ''}`} />
-            <h2 className={`reveal d2 ${trustInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#0f172a', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-              {language === 'fr' ? 'Pourquoi nous ' : 'Why '}<span style={{ color: '#0891b2' }}>{language === 'fr' ? 'faire confiance ?' : 'trust us?'}</span>
+            <h2 className={`reveal d2 ${trustInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#222222', marginBottom: '16px', letterSpacing: '-0.02em' }}>
+              {language === 'fr' ? 'Pourquoi nous ' : 'Why '}<span style={{ color: '#007AFF' }}>{language === 'fr' ? 'faire confiance ?' : 'trust us?'}</span>
             </h2>
             <p className={`reveal d3 ${trustInView ? 'in' : ''}`} style={{ fontSize: '18px', color: '#64748b', maxWidth: '480px', lineHeight: 1.7 }}>
               {language === 'fr' ? 'SmartCabb met la sécurité de chaque trajet au premier plan.' : 'SmartCabb puts the safety of every ride first.'}
@@ -647,7 +647,7 @@ export function LandingPage() {
             ].map((item, i) => (
               <div key={i} className={`card reveal ${trustInView ? 'in' : ''}`} style={{ padding: '36px', transitionDelay: `${0.1 + i * 0.15}s` }}>
                 <div className="trust-tag">{language === 'fr' ? item.tagFR : item.tagEN}</div>
-                <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', marginBottom: '12px', lineHeight: 1.3 }}>{language === 'fr' ? item.titleFR : item.titleEN}</h3>
+                <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#222222', marginBottom: '12px', lineHeight: 1.3 }}>{language === 'fr' ? item.titleFR : item.titleEN}</h3>
                 <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.7' }}>{language === 'fr' ? item.descFR : item.descEN}</p>
               </div>
             ))}
@@ -658,17 +658,17 @@ export function LandingPage() {
             style={{ marginTop: '52px', padding: '44px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '24px', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '32px', marginBottom: '32px' }}>
               <div style={{ maxWidth: '480px' }}>
-                <h3 style={{ fontSize: '26px', fontWeight: '800', color: '#0f172a', marginBottom: '10px', letterSpacing: '-0.01em' }}>
+                <h3 style={{ fontSize: '26px', fontWeight: '800', color: '#222222', marginBottom: '10px', letterSpacing: '-0.01em' }}>
                   {language === 'fr' ? 'Prix transparents en Franc Congolais' : 'Transparent prices in Congolese Franc'}
                 </h3>
                 <p style={{ fontSize: '15px', color: '#64748b', lineHeight: '1.65' }}>
-                  {language === 'fr' ? <span>Le prix est affiché <strong style={{ color: '#0f172a' }}>avant</strong> de confirmer. Zéro surprise.</span> : <span>The price is displayed <strong style={{ color: '#0f172a' }}>before</strong> confirming. Zero surprise.</span>}
+                  {language === 'fr' ? <span>Le prix est affiché <strong style={{ color: '#222222' }}>avant</strong> de confirmer. Zéro surprise.</span> : <span>The price is displayed <strong style={{ color: '#222222' }}>before</strong> confirming. Zero surprise.</span>}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                {[{ val: 'FC', sub: language === 'fr' ? 'Franc Congolais' : 'Congolese Franc', color: '#0891b2' }, { val: '0', sub: language === 'fr' ? 'Frais cachés' : 'Hidden fees', color: '#16a34a' }, { val: '100%', sub: 'Transparent', color: '#0891b2' }].map((b, i) => (
+                {[{ val: 'FC', sub: language === 'fr' ? 'Franc Congolais' : 'Congolese Franc', color: '#007AFF' }, { val: '0', sub: language === 'fr' ? 'Frais cachés' : 'Hidden fees', color: '#16a34a' }, { val: '100%', sub: 'Transparent', color: '#007AFF' }].map((b, i) => (
                   <div key={i} style={{ textAlign: 'center', padding: '16px 18px', border: '1px solid #e2e8f0', borderRadius: '14px', minWidth: '80px', transition: 'all 0.2s', cursor: 'default' }}
-                    onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#0891b2'; el.style.transform = 'scale(1.06)'; el.style.boxShadow = '0 4px 16px rgba(8,145,178,0.12)'; }}
+                    onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#007AFF'; el.style.transform = 'scale(1.06)'; el.style.boxShadow = '0 4px 16px rgba(8,145,178,0.12)'; }}
                     onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.borderColor = '#e2e8f0'; el.style.transform = 'scale(1)'; el.style.boxShadow = 'none'; }}>
                     <div style={{ fontSize: '22px', fontWeight: '900', color: b.color }}>{b.val}</div>
                     <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{b.sub}</div>
@@ -685,7 +685,7 @@ export function LandingPage() {
                 <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '56px', background: 'linear-gradient(to left, white, transparent)', zIndex: 1 }} />
                 <div className="ticker-track">
                   {[...paymentMethods, ...paymentMethods].map((p, i) => (
-                    <div key={i} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 22px', border: '1px solid #f1f5f9', borderRadius: '10px', background: '#fafbff', marginRight: '14px' }}>
+                    <div key={i} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 22px', border: '1px solid #f1f5f9', borderRadius: '10px', background: '#f0f0f0', marginRight: '14px' }}>
                       <img src={p.src} alt={p.label} loading="lazy" height={28} style={{ height: '28px', width: 'auto', objectFit: 'contain', display: 'block' }} onError={e => { e.currentTarget.style.display = 'none'; }} />
                       <span style={{ fontSize: '13px', fontWeight: '600', color: '#374151', whiteSpace: 'nowrap' }}>{p.label}</span>
                     </div>
@@ -702,8 +702,8 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '64px' }}>
             <div className={`accent-line reveal d1 ${testimonialsInView ? 'in' : ''}`} />
-            <h2 className={`reveal d2 ${testimonialsInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#0f172a', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-              {t('testimonials.title1')} <span style={{ color: '#0891b2' }}>{t('testimonials.title2')}</span>
+            <h2 className={`reveal d2 ${testimonialsInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#222222', marginBottom: '16px', letterSpacing: '-0.02em' }}>
+              {t('testimonials.title1')} <span style={{ color: '#007AFF' }}>{t('testimonials.title2')}</span>
             </h2>
             <p className={`reveal d3 ${testimonialsInView ? 'in' : ''}`} style={{ fontSize: '18px', color: '#64748b', maxWidth: '480px', lineHeight: 1.7 }}>{t('testimonials.subtitle')}</p>
           </div>
@@ -726,11 +726,11 @@ export function LandingPage() {
                 <p style={{ fontSize: '14px', color: '#475569', lineHeight: '1.75', fontStyle: 'italic', marginBottom: '20px' }}>"{t2.text}"</p>
                 <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {/* Avatar initiale */}
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg,#0891b2,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg,#007AFF,#007AFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'white', fontWeight: '700', fontSize: '13px' }}>{t2.name.charAt(0)}</span>
                   </div>
                   <div>
-                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>{t2.name}</div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: '#222222' }}>{t2.name}</div>
                     <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>{t2.role}</div>
                   </div>
                 </div>
@@ -740,12 +740,12 @@ export function LandingPage() {
 
           {/* Stats témoignages */}
           <div className={`reveal d6 ${testimonialsInView ? 'in' : ''}`}
-            style={{ marginTop: '56px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0', background: '#fafbff', borderRadius: '20px', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
+            style={{ marginTop: '56px', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '0', background: '#f0f0f0', borderRadius: '20px', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
             {[{ val: '1000+', label: t('testimonials.reviews5Stars') }, { val: '98%', label: t('testimonials.satisfaction') }, { val: '4.9/5', label: t('testimonials.avgRating') }].map((s, i) => (
               <div key={i} style={{ textAlign: 'center', padding: '36px 48px', flex: '1 1 160px', borderRight: i < 2 ? '1px solid #f1f5f9' : 'none', transition: 'background 0.2s', cursor: 'default' }}
-                onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = '#f0f9ff'; }}
+                onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = '#E0E0E0'; }}
                 onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-                <div style={{ fontSize: '36px', fontWeight: '900', color: '#0891b2', letterSpacing: '-0.02em' }}>{s.val}</div>
+                <div style={{ fontSize: '36px', fontWeight: '900', color: '#007AFF', letterSpacing: '-0.02em' }}>{s.val}</div>
                 <div style={{ fontSize: '13px', color: '#64748b', marginTop: '6px', fontWeight: '500' }}>{s.label}</div>
               </div>
             ))}
@@ -754,13 +754,13 @@ export function LandingPage() {
       </section>
 
       {/* ═══════════════════ AFRIQUE ═══════════════════ */}
-      <section id="africa" ref={africaRef as any} style={{ padding: '96px 0', background: '#fafbff', borderTop: '1px solid #f1f5f9' }}>
+      <section id="africa" ref={africaRef as any} style={{ padding: '96px 0', background: '#f0f0f0', borderTop: '1px solid #f1f5f9' }}>
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '64px' }}>
             <div className={`accent-line reveal d1 ${africaInView ? 'in' : ''}`} />
-            <h2 className={`reveal d2 ${africaInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#0f172a', marginBottom: '16px', letterSpacing: '-0.02em' }}>
+            <h2 className={`reveal d2 ${africaInView ? 'in' : ''}`} style={{ fontSize: '42px', fontWeight: '900', color: '#222222', marginBottom: '16px', letterSpacing: '-0.02em' }}>
               {language === 'fr' ? 'SmartCabb est présent en ' : 'SmartCabb is present in '}
-              <span style={{ color: '#0891b2' }}>{language === 'fr' ? 'Afrique' : 'Africa'}</span>
+              <span style={{ color: '#007AFF' }}>{language === 'fr' ? 'Afrique' : 'Africa'}</span>
             </h2>
           </div>
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -772,15 +772,15 @@ export function LandingPage() {
               <div style={{ position: 'absolute', top: '52%', left: '55%' }}>
                 <div style={{ position: 'relative' }}>
                   <div className="ping-dot" style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', background: 'rgba(8,145,178,0.25)' }} />
-                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#0891b2', border: '3px solid white', boxShadow: '0 4px 16px rgba(8,145,178,0.5)', position: 'relative', zIndex: 1 }} />
-                  <div style={{ position: 'absolute', top: '22px', left: '50%', transform: 'translateX(-50%)', background: '#0891b2', color: 'white', fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '6px', whiteSpace: 'nowrap', zIndex: 2 }}>Kinshasa</div>
+                  <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: '#007AFF', border: '3px solid white', boxShadow: '0 4px 16px rgba(8,145,178,0.5)', position: 'relative', zIndex: 1 }} />
+                  <div style={{ position: 'absolute', top: '22px', left: '50%', transform: 'translateX(-50%)', background: '#007AFF', color: 'white', fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '6px', whiteSpace: 'nowrap', zIndex: 2 }}>Kinshasa</div>
                 </div>
               </div>
             </div>
             <div className={`reveal-right ${africaInView ? 'in' : ''}`}>
-              <h3 style={{ fontSize: '36px', fontWeight: '900', color: '#0f172a', marginBottom: '20px', lineHeight: '1.15', letterSpacing: '-0.02em' }}>
+              <h3 style={{ fontSize: '36px', fontWeight: '900', color: '#222222', marginBottom: '20px', lineHeight: '1.15', letterSpacing: '-0.02em' }}>
                 {language === 'fr' ? '1 pays actif,' : '1 active country,'}<br />
-                <span style={{ color: '#0891b2' }}>{language === 'fr' ? '54 pays ciblés' : '54 countries targeted'}</span>
+                <span style={{ color: '#007AFF' }}>{language === 'fr' ? '54 pays ciblés' : '54 countries targeted'}</span>
               </h3>
               <p style={{ fontSize: '16px', color: '#64748b', lineHeight: '1.75', marginBottom: '32px' }}>
                 {language === 'fr' ? "Né à Kinshasa, SmartCabb ambitionne de connecter toute l'Afrique avec un transport sûr, abordable et local." : 'Born in Kinshasa, SmartCabb aims to connect all of Africa with safe, affordable and local transport.'}
@@ -792,7 +792,7 @@ export function LandingPage() {
                       style={{ width: '28px', height: '18px', objectFit: 'cover', borderRadius: '3px', display: 'block', flexShrink: 0 }}
                     />
                     <div>
-                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', lineHeight: '1.2' }}>{language === 'fr' ? p.nameFR : p.nameEN}</div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#222222', lineHeight: '1.2' }}>{language === 'fr' ? p.nameFR : p.nameEN}</div>
                       <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: '1.2' }}>{language === 'fr' ? p.cityFR : p.cityEN}</div>
                     </div>
                     <div style={{ padding: '2px 8px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px', fontSize: '10px', fontWeight: '700', color: '#92400e' }}>{language === 'fr' ? 'Bientôt' : 'Soon'}</div>
@@ -802,7 +802,7 @@ export function LandingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {africaStats.map((s, i) => (
                   <div key={i} className="stat-box" style={{ opacity: africaInView ? 1 : 0, transform: africaInView ? 'translateY(0)' : 'translateY(24px)', transition: `all 0.5s cubic-bezier(0.22,1,0.36,1) ${0.4 + i * 0.1}s` }}>
-                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#0891b2' }}>{s.val}<span style={{ fontSize: '16px' }}>{s.suf}</span></div>
+                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#007AFF' }}>{s.val}<span style={{ fontSize: '16px' }}>{s.suf}</span></div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', fontWeight: '500' }}>{language === 'fr' ? s.labelFR : s.labelEN}</div>
                   </div>
                 ))}
@@ -813,7 +813,7 @@ export function LandingPage() {
       </section>
 
       {/* ═══════════════════ CTA FINAL ═══════════════════ */}
-      <section id="cta" ref={ctaRef as any} style={{ padding: '96px 0', background: '#0891b2', position: 'relative', overflow: 'hidden' }}>
+      <section id="cta" ref={ctaRef as any} style={{ padding: '96px 0', background: '#007AFF', position: 'relative', overflow: 'hidden' }}>
         {/* Formes décoratives */}
         <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-80px', left: '-80px', width: '300px', height: '300px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />

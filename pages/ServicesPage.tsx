@@ -45,8 +45,8 @@ export function ServicesPage() {
       tagline: language === 'fr' ? "L'essentiel du confort" : 'Essential comfort',
       subtitleFR: 'Solution économique et climatisée pour vos déplacements quotidiens. Idéal pour 3 personnes.',
       subtitleEN: 'Economical and air-conditioned solution for your daily trips. Ideal for 3 people.',
-      accentColor: '#0891b2',
-      lightBg: '#f0f9ff',
+      accentColor: '#007AFF',
+      lightBg: '#E0E0E0',
       lightBorder: '#bae6fd',
       gradientFrom: 'from-cyan-500',
       gradientTo: 'to-blue-500',
@@ -191,7 +191,7 @@ export function ServicesPage() {
           font-weight: 700;
           letter-spacing: 0.1em;
           text-transform: uppercase;
-          color: #0891b2;
+          color: #007AFF;
           margin-bottom: 12px;
         }
 
@@ -220,7 +220,7 @@ export function ServicesPage() {
           border-radius: 10px;
           transition: all 0.2s;
         }
-        .feature-item:hover { border-color: #0891b2; background: #f0f9ff; }
+        .feature-item:hover { border-color: #007AFF; background: #E0E0E0; }
 
         .card-hidden { opacity: 0; transform: translateY(40px); }
         .card-visible { opacity: 1; transform: translateY(0); transition: all 0.6s ease; }
@@ -236,8 +236,8 @@ export function ServicesPage() {
           color: #374151;
           background: white;
         }
-        .nav-pill:hover { border-color: #0891b2; color: #0891b2; }
-        .nav-pill.active { background: #0891b2; color: white; border-color: #0891b2; }
+        .nav-pill:hover { border-color: #007AFF; color: #007AFF; }
+        .nav-pill.active { background: #007AFF; color: white; border-color: #007AFF; }
       `}</style>
 
       <SiteNavigation />
@@ -256,9 +256,9 @@ export function ServicesPage() {
         <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             
-            <h1 style={{ fontSize: '48px', fontWeight: '900', color: '#111827', lineHeight: '1.1', marginBottom: '16px' }}>
+            <h1 style={{ fontSize: '48px', fontWeight: '900', color: '#222222', lineHeight: '1.1', marginBottom: '16px' }}>
   {language === 'fr' ? 'Choisissez votre' : 'Choose your'}<br />
-  <span style={{ color: '#0891b2' }}>
+  <span style={{ color: '#007AFF' }}>
     {language === 'fr' ? 'expérience' : 'experience'}
   </span>
 </h1>
@@ -339,7 +339,7 @@ export function ServicesPage() {
                             {service.badge}
                           </div>
 
-                          <h2 style={{ fontSize: '30px', fontWeight: '900', color: '#111827', marginBottom: '6px' }}>{service.name}</h2>
+                          <h2 style={{ fontSize: '30px', fontWeight: '900', color: '#222222', marginBottom: '6px' }}>{service.name}</h2>
                           <p style={{ fontSize: '14px', fontWeight: '600', color: service.accentColor, marginBottom: '16px' }}>{service.tagline}</p>
                           <p style={{ fontSize: '15px', color: '#6b7280', lineHeight: '1.7', marginBottom: '28px' }}>
                             {language === 'fr' ? service.subtitleFR : service.subtitleEN}
@@ -349,7 +349,7 @@ export function ServicesPage() {
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '24px' }}>
                             {features.map((f, idx) => (
                               <div key={idx} className="feature-item">
-                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827' }}>{f.text}</div>
+                                <div style={{ fontSize: '14px', fontWeight: '700', color: '#222222' }}>{f.text}</div>
                                 <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{f.detail}</div>
                               </div>
                             ))}
@@ -397,7 +397,7 @@ export function ServicesPage() {
       </section>
 
       {/* CTA */}
-      <section style={{ padding: '80px 0', background: '#0891b2' }}>
+      <section style={{ padding: '80px 0', background: '#007AFF' }}>
         <div className="max-w-4xl mx-auto px-6" style={{ textAlign: 'center' }}>
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} viewport={{ once: true }}>
             <h2 style={{ fontSize: '42px', fontWeight: '900', color: 'white', marginBottom: '16px', lineHeight: '1.2' }}>{t('cta.title')}</h2>

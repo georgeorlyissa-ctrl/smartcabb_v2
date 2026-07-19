@@ -38,7 +38,7 @@ export function PrivacyPage() {
         * { font-family: 'Inter', sans-serif !important; }
         .section-label {
           font-size: 12px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: #0891b2; margin-bottom: 12px;
+          text-transform: uppercase; color: #007AFF; margin-bottom: 12px;
         }
       `}</style>
 

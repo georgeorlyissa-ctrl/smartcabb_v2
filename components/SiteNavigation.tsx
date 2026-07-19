@@ -14,8 +14,8 @@ export function SiteNavigation() {
           {/* Logo Premium */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
-              <div className="relative w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
+              <div className="relative w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl">
                 SC
               </div>
             </div>
@@ -29,19 +29,19 @@ export function SiteNavigation() {
 
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-8">
-            <Link to="/" className="font-semibold text-gray-700 hover:text-cyan-600 transition-all">
+            <Link to="/" className="font-semibold text-gray-700 hover:text-blue-600 transition-all">
               {t('nav.home')}
             </Link>
-            <Link to="/services" className="font-semibold text-gray-700 hover:text-cyan-600 transition-all">
+            <Link to="/services" className="font-semibold text-gray-700 hover:text-blue-600 transition-all">
               {t('nav.services')}
             </Link>
-            <Link to="/about" className="font-semibold text-gray-700 hover:text-cyan-600 transition-all">
+            <Link to="/about" className="font-semibold text-gray-700 hover:text-blue-600 transition-all">
               {t('nav.about')}
             </Link>
-            <Link to="/drivers" className="font-semibold text-gray-700 hover:text-cyan-600 transition-all">
+            <Link to="/drivers" className="font-semibold text-gray-700 hover:text-blue-600 transition-all">
               {t('nav.drivers')}
             </Link>
-            <Link to="/contact" className="font-semibold text-gray-700 hover:text-cyan-600 transition-all">
+            <Link to="/contact" className="font-semibold text-gray-700 hover:text-blue-600 transition-all">
               {t('nav.contact')}
             </Link>
             
@@ -50,7 +50,7 @@ export function SiteNavigation() {
             
             <Link 
               to="/app/passenger"
-              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold rounded-full hover:shadow-xl hover:scale-105 transition-all"
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-full hover:shadow-xl hover:scale-105 transition-all"
             >
               {t('nav.login')}
             </Link>
@@ -71,18 +71,18 @@ export function SiteNavigation() {
         {isMenuOpen && (
           <div className="lg:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col gap-3">
-              <Link to="/" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.home')}</Link>
-              <Link to="/services" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.services')}</Link>
-              <Link to="/about" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.about')}</Link>
-              <Link to="/drivers" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.drivers')}</Link>
-              <Link to="/contact" className="font-semibold text-gray-700 hover:text-cyan-600 py-2">{t('nav.contact')}</Link>
+              <Link to="/" className="font-semibold text-gray-700 hover:text-blue-600 py-2">{t('nav.home')}</Link>
+              <Link to="/services" className="font-semibold text-gray-700 hover:text-blue-600 py-2">{t('nav.services')}</Link>
+              <Link to="/about" className="font-semibold text-gray-700 hover:text-blue-600 py-2">{t('nav.about')}</Link>
+              <Link to="/drivers" className="font-semibold text-gray-700 hover:text-blue-600 py-2">{t('nav.drivers')}</Link>
+              <Link to="/contact" className="font-semibold text-gray-700 hover:text-blue-600 py-2">{t('nav.contact')}</Link>
               
               {/* Language Selector Mobile */}
               <div className="py-2">
                 <LanguageSelector />
               </div>
               
-              <Link to="/app/passenger" className="mt-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold rounded-full text-center">
+              <Link to="/app/passenger" className="mt-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold rounded-full text-center">
                 {t('nav.login')}
               </Link>
             </div>
@@ -92,7 +92,7 @@ export function SiteNavigation() {
 
       <style>{`
         .gradient-text {
-          background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+          background: linear-gradient(135deg, #007AFF 0%, #0066CC 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;

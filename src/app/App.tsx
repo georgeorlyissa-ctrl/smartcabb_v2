@@ -435,7 +435,7 @@ function LanguageModal({ onClose }: { onClose: () => void }) {
         style={{ animation: "slideUp 0.25s ease-out" }}
       >
         <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-5" />
-        <h3 className="text-center mb-6" style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>
+        <h3 className="text-center mb-6" style={{ fontSize: 18, fontWeight: 700, color: "#222222" }}>
           {t("switch_language")}
         </h3>
         <div className="space-y-3">
@@ -446,12 +446,12 @@ function LanguageModal({ onClose }: { onClose: () => void }) {
               className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all"
               style={{
                 background: lang === opt.code ? "#EFF6FF" : "#F9FAFB",
-                border: lang === opt.code ? "2px solid #3B82F6" : "2px solid transparent",
+                border: lang === opt.code ? "2px solid #007AFF" : "2px solid transparent",
               }}
             >
               <span style={{ fontSize: 32 }}>{opt.flag}</span>
               <div className="flex-1 text-left">
-                <div style={{ fontSize: 16, fontWeight: 600, color: "#111827" }}>{opt.nativeName}</div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: "#222222" }}>{opt.nativeName}</div>
                 <div style={{ fontSize: 13, color: "#6B7280" }}>{opt.label}</div>
               </div>
               {lang === opt.code && (
@@ -510,7 +510,7 @@ function BottomNav({ screen, onNavigate }: { screen: Screen; onNavigate: (s: Scr
           key={id}
           onClick={() => onNavigate(id)}
           className="flex-1 flex flex-col items-center pt-3 pb-2 gap-1 transition-colors"
-          style={{ color: active === id ? "#3B82F6" : "#9CA3AF" }}
+          style={{ color: active === id ? "#007AFF" : "#9CA3AF" }}
         >
           <Icon />
           <span style={{ fontSize: 11, fontWeight: active === id ? 700 : 400 }}>{label}</span>
@@ -532,7 +532,7 @@ function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const [password, setPassword] = useState("");
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #0F172A 0%, #1E3A5F 50%, #0F172A 100%)" }}>
+    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(135deg, #222222 0%, #1E3A5F 50%, #222222 100%)" }}>
       {showLang && <LanguageModal onClose={() => setShowLang(false)} />}
 
       {/* Language button top right */}
@@ -542,7 +542,7 @@ function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
 
       {/* Logo */}
       <div className="flex flex-col items-center px-6 pt-8 pb-10">
-        <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-4 shadow-2xl" style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)" }}>
+        <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-4 shadow-2xl" style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)" }}>
           <span style={{ fontSize: 36 }}>🚖</span>
         </div>
         <h1 style={{ fontSize: 28, fontWeight: 800, color: "white", letterSpacing: -0.5 }}>{t("app_name")}</h1>
@@ -551,7 +551,7 @@ function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
 
       {/* Card */}
       <div className="flex-1 bg-white rounded-t-3xl px-6 pt-8 pb-6">
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", marginBottom: 4 }}>{t("login_title")}</h2>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: "#222222", marginBottom: 4 }}>{t("login_title")}</h2>
         <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 28 }}>{t("login_subtitle")}</p>
 
         <div className="space-y-4">
@@ -566,7 +566,7 @@ function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
               placeholder="+243 XXX XXX XXX"
               className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
               style={{ borderColor: "#E5E7EB", fontSize: 14, background: "#F9FAFB" }}
-              onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
+              onFocus={(e) => (e.target.style.borderColor = "#007AFF")}
               onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
             />
           </div>
@@ -583,7 +583,7 @@ function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
                 placeholder="••••••••"
                 className="w-full px-4 py-3 pr-12 rounded-xl border outline-none transition-all"
                 style={{ borderColor: "#E5E7EB", fontSize: 14, background: "#F9FAFB" }}
-                onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
+                onFocus={(e) => (e.target.style.borderColor = "#007AFF")}
                 onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
               />
               <button
@@ -596,7 +596,7 @@ function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
           </div>
 
           <div className="flex justify-end">
-            <button style={{ fontSize: 13, color: "#3B82F6", fontWeight: 500 }}>
+            <button style={{ fontSize: 13, color: "#007AFF", fontWeight: 500 }}>
               {t("forgot_password")}
             </button>
           </div>
@@ -604,7 +604,7 @@ function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
           <button
             onClick={() => onNavigate("home")}
             className="w-full py-4 rounded-2xl text-white transition-all active:scale-95 shadow-lg"
-            style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)", fontSize: 15, fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)", fontSize: 15, fontWeight: 700 }}
           >
             {t("login_btn")}
           </button>
@@ -612,7 +612,7 @@ function LoginScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
 
         <div className="flex items-center justify-center gap-1 mt-6">
           <span style={{ fontSize: 14, color: "#6B7280" }}>{t("no_account")}</span>
-          <button onClick={() => onNavigate("register")} style={{ fontSize: 14, color: "#3B82F6", fontWeight: 600 }}>
+          <button onClick={() => onNavigate("register")} style={{ fontSize: 14, color: "#007AFF", fontWeight: 600 }}>
             {t("register_link")}
           </button>
         </div>
@@ -637,7 +637,7 @@ function RegisterScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
         <button onClick={() => onNavigate("login")} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
           <Icons.ArrowLeft />
         </button>
-        <h1 style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>{t("register_title")}</h1>
+        <h1 style={{ fontSize: 17, fontWeight: 700, color: "#222222" }}>{t("register_title")}</h1>
         <LangButton onClick={() => setShowLang(true)} />
       </div>
 
@@ -657,7 +657,7 @@ function RegisterScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
                 placeholder={placeholder}
                 className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
                 style={{ borderColor: "#E5E7EB", fontSize: 14, background: "#F9FAFB" }}
-                onFocus={(e) => (e.target.style.borderColor = "#3B82F6")}
+                onFocus={(e) => (e.target.style.borderColor = "#007AFF")}
                 onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
               />
             </div>
@@ -667,21 +667,21 @@ function RegisterScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
             <input type="checkbox" id="terms" className="mt-1 w-4 h-4 accent-blue-500" />
             <label htmlFor="terms" style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.5 }}>
               {t("terms_agree")}{" "}
-              <span style={{ color: "#3B82F6", fontWeight: 600 }}>{t("terms_link")}</span>
+              <span style={{ color: "#007AFF", fontWeight: 600 }}>{t("terms_link")}</span>
             </label>
           </div>
 
           <button
             onClick={() => onNavigate("home")}
             className="w-full py-4 rounded-2xl text-white transition-all active:scale-95 shadow-lg"
-            style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)", fontSize: 15, fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)", fontSize: 15, fontWeight: 700 }}
           >
             {t("register_btn")}
           </button>
 
           <div className="flex items-center justify-center gap-1">
             <span style={{ fontSize: 14, color: "#6B7280" }}>{t("already_account")}</span>
-            <button onClick={() => onNavigate("login")} style={{ fontSize: 14, color: "#3B82F6", fontWeight: 600 }}>
+            <button onClick={() => onNavigate("login")} style={{ fontSize: 14, color: "#007AFF", fontWeight: 600 }}>
               {t("login_link")}
             </button>
           </div>
@@ -759,7 +759,7 @@ function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
             onChange={(e) => setDestination(e.target.value)}
             placeholder={t("enter_destination")}
             className="flex-1 bg-transparent outline-none"
-            style={{ fontSize: 14, color: "#111827" }}
+            style={{ fontSize: 14, color: "#222222" }}
           />
         </div>
 
@@ -771,7 +771,7 @@ function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
               <button key={i} className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-gray-50 transition-colors text-left">
                 <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 flex-shrink-0">{r.icon}</div>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{r.place}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#222222" }}>{r.place}</div>
                   <div style={{ fontSize: 11, color: "#9CA3AF" }}>{r.sub}</div>
                 </div>
               </button>
@@ -782,7 +782,7 @@ function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
 
       {/* Vehicles */}
       <div className="px-4 mt-4">
-        <p style={{ fontSize: 15, fontWeight: 700, color: "#111827", marginBottom: 12 }}>{t("choose_vehicle")}</p>
+        <p style={{ fontSize: 15, fontWeight: 700, color: "#222222", marginBottom: 12 }}>{t("choose_vehicle")}</p>
         <div className="space-y-3">
           {vehicles.map((v) => (
             <button
@@ -791,7 +791,7 @@ function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
               className="w-full flex items-center gap-3 p-3 rounded-2xl transition-all"
               style={{
                 background: selectedVehicle === v.id ? "#EFF6FF" : "white",
-                border: selectedVehicle === v.id ? "2px solid #3B82F6" : "2px solid #F3F4F6",
+                border: selectedVehicle === v.id ? "2px solid #007AFF" : "2px solid #F3F4F6",
                 boxShadow: selectedVehicle === v.id ? "0 0 0 3px rgba(59,130,246,0.1)" : "none",
               }}
             >
@@ -799,11 +799,11 @@ function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
                 <span style={{ fontSize: 24 }}>{v.icon}</span>
               </div>
               <div className="flex-1 text-left">
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{v.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#222222" }}>{v.name}</div>
                 <div style={{ fontSize: 12, color: "#6B7280" }}>{v.desc} • {v.seats} {t("seats")}</div>
               </div>
               <div className="text-right">
-                <div style={{ fontSize: 13, fontWeight: 700, color: selectedVehicle === v.id ? "#3B82F6" : "#111827" }}>{v.price}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: selectedVehicle === v.id ? "#007AFF" : "#222222" }}>{v.price}</div>
                 <div style={{ fontSize: 10, color: "#9CA3AF" }}>{t("from")}</div>
               </div>
             </button>
@@ -813,7 +813,7 @@ function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
         <button
           onClick={() => onNavigate("searching")}
           className="w-full mt-4 py-4 rounded-2xl text-white transition-all active:scale-95 shadow-lg mb-24"
-          style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)", fontSize: 15, fontWeight: 700 }}
+          style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)", fontSize: 15, fontWeight: 700 }}
         >
           {t("book_ride")}
         </button>
@@ -841,7 +841,7 @@ function SearchingScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   }, [onNavigate]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: "linear-gradient(135deg, #0F172A 0%, #1E3A5F 100%)" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: "linear-gradient(135deg, #222222 0%, #1E3A5F 100%)" }}>
       {/* Animated rings */}
       <div className="relative w-48 h-48 flex items-center justify-center mb-8">
         {[0, 1, 2].map((i) => (
@@ -856,7 +856,7 @@ function SearchingScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
             }}
           />
         ))}
-        <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)" }}>
+        <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)" }}>
           <span style={{ fontSize: 36 }}>🚖</span>
         </div>
       </div>
@@ -873,7 +873,7 @@ function SearchingScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
         <div className="h-2 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}>
           <div
             className="h-2 rounded-full transition-all duration-300"
-            style={{ width: `${progress}%`, background: "linear-gradient(90deg, #3B82F6, #06B6D4)" }}
+            style={{ width: `${progress}%`, background: "linear-gradient(90deg, #007AFF, #007AFF)" }}
           />
         </div>
       </div>
@@ -914,7 +914,7 @@ function DriverFoundScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) 
           <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
             <span style={{ fontSize: 40 }}>⭐</span>
           </div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#111827", marginBottom: 8 }}>{t("rate_your_ride")}</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#222222", marginBottom: 8 }}>{t("rate_your_ride")}</h2>
           <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 24 }}>{t("how_was_driver")}</p>
 
           <div className="flex gap-2 mb-6">
@@ -934,7 +934,7 @@ function DriverFoundScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) 
           <button
             onClick={() => onNavigate("home")}
             className="w-full py-4 rounded-2xl text-white"
-            style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)", fontSize: 15, fontWeight: 700 }}
+            style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)", fontSize: 15, fontWeight: 700 }}
           >
             {t("submit_rating")}
           </button>
@@ -953,10 +953,10 @@ function DriverFoundScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) 
           <div className="relative">
             {/* Route line */}
             <svg width="200" height="120" viewBox="0 0 200 120">
-              <path d="M20 100 Q100 20 180 100" stroke="#3B82F6" strokeWidth="3" fill="none" strokeDasharray="6 3" />
-              <circle cx="20" cy="100" r="8" fill="#3B82F6" />
+              <path d="M20 100 Q100 20 180 100" stroke="#007AFF" strokeWidth="3" fill="none" strokeDasharray="6 3" />
+              <circle cx="20" cy="100" r="8" fill="#007AFF" />
               <circle cx="180" cy="100" r="8" fill="#EF4444" />
-              <circle cx="85" cy="45" r="12" fill="white" stroke="#3B82F6" strokeWidth="2" />
+              <circle cx="85" cy="45" r="12" fill="white" stroke="#007AFF" strokeWidth="2" />
               <text x="85" y="50" textAnchor="middle" fontSize="12">🚖</text>
             </svg>
           </div>
@@ -977,11 +977,11 @@ function DriverFoundScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) 
         <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 16 }}>{t("driver_on_way")}</p>
 
         <div className="flex items-center gap-4 p-3 rounded-2xl" style={{ background: "#F9FAFB" }}>
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)" }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)" }}>
             <span style={{ fontSize: 28 }}>👨</span>
           </div>
           <div className="flex-1">
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Jean-Pierre Kabila</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#222222" }}>Jean-Pierre Kabila</div>
             <div className="flex items-center gap-1">
               <span style={{ color: "#F59E0B", fontSize: 14 }}>★</span>
               <span style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>4.9</span>
@@ -999,7 +999,7 @@ function DriverFoundScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) 
             { label: t("price"), value: "4 500 CDF" },
           ].map(({ label, value }) => (
             <div key={label} className="text-center p-3 rounded-xl" style={{ background: "#F3F4F6" }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{value}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#222222" }}>{value}</div>
               <div style={{ fontSize: 11, color: "#9CA3AF" }}>{label}</div>
             </div>
           ))}
@@ -1010,14 +1010,14 @@ function DriverFoundScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) 
           <span style={{ fontSize: 13, color: "#6B7280" }}>{t("payment_method")}</span>
           <div className="flex items-center gap-2">
             <span style={{ fontSize: 16 }}>💵</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{t("cash")}</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#222222" }}>{t("cash")}</span>
           </div>
         </div>
 
         <button
           onClick={() => setShowRating(true)}
           className="w-full mt-4 py-4 rounded-2xl text-white"
-          style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)", fontSize: 15, fontWeight: 700 }}
+          style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)", fontSize: 15, fontWeight: 700 }}
         >
           {t("ride_in_progress")} →
         </button>
@@ -1042,7 +1042,7 @@ function SettingsScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
       items: [
         {
           icon: Icons.Globe,
-          color: "#3B82F6",
+          color: "#007AFF",
           title: t("language_settings"),
           desc: lang === "fr" ? "🇫🇷 Français" : "🇬🇧 English",
           action: () => setShowLangModal(true),
@@ -1085,7 +1085,7 @@ function SettingsScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
       items: [
         {
           icon: Icons.User,
-          color: "#06B6D4",
+          color: "#007AFF",
           title: t("my_profile"),
           desc: t("my_profile_desc"),
           action: () => onNavigate("profile"),
@@ -1108,7 +1108,7 @@ function SettingsScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>{t("settings")}</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#222222" }}>{t("settings")}</h1>
           <LangButton onClick={() => setShowLangModal(true)} />
         </div>
       </div>
@@ -1116,11 +1116,11 @@ function SettingsScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
       <div className="px-4 pt-4 pb-28">
         {/* User card */}
         <div className="bg-white rounded-2xl p-4 mb-4 shadow-sm flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)" }}>
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)" }}>
             <span style={{ fontSize: 28 }}>👨</span>
           </div>
           <div className="flex-1">
-            <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Jean Mukendi</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#222222" }}>Jean Mukendi</div>
             <div style={{ fontSize: 13, color: "#6B7280" }}>jean.mukendi@email.com</div>
             <div style={{ fontSize: 12, color: "#9CA3AF" }}>+243 XXX XXX XXX</div>
           </div>
@@ -1131,18 +1131,18 @@ function SettingsScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
         <button
           onClick={() => setShowLangModal(true)}
           className="w-full bg-white rounded-2xl p-4 mb-4 shadow-sm flex items-center gap-4 transition-all hover:shadow-md active:scale-95"
-          style={{ border: "2px solid #3B82F6" }}
+          style={{ border: "2px solid #007AFF" }}
         >
           <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "#EFF6FF" }}>
             <span style={{ fontSize: 28 }}>{lang === "fr" ? "🇫🇷" : "🇬🇧"}</span>
           </div>
           <div className="flex-1 text-left">
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#3B82F6" }}>{t("switch_language")}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#007AFF" }}>{t("switch_language")}</div>
             <div style={{ fontSize: 13, color: "#6B7280" }}>
               {lang === "fr" ? "Actuellement : Français" : "Currently: English"}
             </div>
           </div>
-          <div className="px-3 py-1 rounded-full" style={{ background: "#3B82F6", color: "white", fontSize: 12, fontWeight: 700 }}>
+          <div className="px-3 py-1 rounded-full" style={{ background: "#007AFF", color: "white", fontSize: 12, fontWeight: 700 }}>
             {lang.toUpperCase()}
           </div>
         </button>
@@ -1166,14 +1166,14 @@ function SettingsScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
                         <div style={{ color: item.color }}><Icon /></div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{item.title}</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: "#222222" }}>{item.title}</div>
                         <div style={{ fontSize: 12, color: "#6B7280" }}>{item.desc}</div>
                       </div>
                       {"toggle" in item ? (
                         <div
                           onClick={(e) => { e.stopPropagation(); item.onToggle?.(); }}
                           className="w-12 h-6 rounded-full relative flex-shrink-0 transition-all cursor-pointer"
-                          style={{ background: item.toggle ? "#3B82F6" : "#D1D5DB" }}
+                          style={{ background: item.toggle ? "#007AFF" : "#D1D5DB" }}
                         >
                           <div
                             className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
@@ -1181,7 +1181,7 @@ function SettingsScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
                           />
                         </div>
                       ) : item.badge ? (
-                        <div className="px-2 py-0.5 rounded-full" style={{ background: "#EFF6FF", color: "#3B82F6", fontSize: 11, fontWeight: 700 }}>
+                        <div className="px-2 py-0.5 rounded-full" style={{ background: "#EFF6FF", color: "#007AFF", fontSize: 11, fontWeight: 700 }}>
                           {item.badge}
                         </div>
                       ) : (
@@ -1235,7 +1235,7 @@ function HistoryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
       {showLang && <LanguageModal onClose={() => setShowLang(false)} />}
       <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>{t("ride_history")}</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#222222" }}>{t("ride_history")}</h1>
           <LangButton onClick={() => setShowLang(true)} />
         </div>
       </div>
@@ -1246,15 +1246,15 @@ function HistoryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{r.from}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#222222" }}>{r.from}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-red-500" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{r.to}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#222222" }}>{r.to}</span>
                 </div>
               </div>
               <div className="text-right">
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{r.price}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "#222222" }}>{r.price}</div>
                 <div className="flex">
                   {[...Array(r.rating)].map((_, j) => (
                     <span key={j} style={{ fontSize: 12, color: "#F59E0B" }}>★</span>
@@ -1286,12 +1286,12 @@ function WalletScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
       {showLang && <LanguageModal onClose={() => setShowLang(false)} />}
       <div className="bg-white border-b border-gray-100 px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
-          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#111827" }}>{t("wallet")}</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: "#222222" }}>{t("wallet")}</h1>
           <LangButton onClick={() => setShowLang(true)} />
         </div>
       </div>
       <div className="px-4 pt-4 pb-28">
-        <div className="rounded-3xl p-6 mb-6 text-white shadow-xl" style={{ background: "linear-gradient(135deg, #3B82F6, #06B6D4)" }}>
+        <div className="rounded-3xl p-6 mb-6 text-white shadow-xl" style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)" }}>
           <p style={{ fontSize: 13, opacity: 0.8, marginBottom: 4 }}>{t("wallet_balance")}</p>
           <p style={{ fontSize: 36, fontWeight: 800 }}>25 000 <span style={{ fontSize: 18 }}>CDF</span></p>
           <div className="flex gap-3 mt-4">
@@ -1311,7 +1311,7 @@ function WalletScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
             <div key={m.name} className="bg-white rounded-2xl p-4 shadow-sm flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "#F3F4F6", fontSize: 24 }}>{m.icon}</div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#111827" }}>{m.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#222222" }}>{m.name}</div>
                 <div style={{ fontSize: 12, color: "#6B7280" }}>{m.desc}</div>
               </div>
             </div>

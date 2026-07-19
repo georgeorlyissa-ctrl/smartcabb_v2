@@ -93,13 +93,13 @@ export function DriversLandingPage() {
     {
       icon: (
         <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px' }}>
-          <rect width="64" height="64" rx="16" fill="#f0f9ff"/>
-          <rect x="12" y="20" width="40" height="28" rx="4" fill="#0891b2" opacity="0.15"/>
-          <rect x="12" y="20" width="40" height="28" rx="4" stroke="#0891b2" strokeWidth="2.5"/>
-          <circle cx="24" cy="31" r="5" stroke="#0891b2" strokeWidth="2.5"/>
-          <line x1="32" y1="28" x2="44" y2="28" stroke="#0891b2" strokeWidth="2.5" strokeLinecap="round"/>
-          <line x1="32" y1="34" x2="44" y2="34" stroke="#0891b2" strokeWidth="2.5" strokeLinecap="round"/>
-          <line x1="16" y1="40" x2="48" y2="40" stroke="#0891b2" strokeWidth="2" strokeLinecap="round" opacity="0.5"/>
+          <rect width="64" height="64" rx="16" fill="#E0E0E0"/>
+          <rect x="12" y="20" width="40" height="28" rx="4" fill="#007AFF" opacity="0.15"/>
+          <rect x="12" y="20" width="40" height="28" rx="4" stroke="#007AFF" strokeWidth="2.5"/>
+          <circle cx="24" cy="31" r="5" stroke="#007AFF" strokeWidth="2.5"/>
+          <line x1="32" y1="28" x2="44" y2="28" stroke="#007AFF" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="32" y1="34" x2="44" y2="34" stroke="#007AFF" strokeWidth="2.5" strokeLinecap="round"/>
+          <line x1="16" y1="40" x2="48" y2="40" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" opacity="0.5"/>
         </svg>
       ),
       textFR: 'Permis de conduire valide',
@@ -108,13 +108,13 @@ export function DriversLandingPage() {
     {
       icon: (
         <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px' }}>
-          <rect width="64" height="64" rx="16" fill="#f0f9ff"/>
-          <rect x="8" y="28" width="48" height="20" rx="5" fill="#0891b2" opacity="0.15"/>
-          <rect x="8" y="28" width="48" height="20" rx="5" stroke="#0891b2" strokeWidth="2.5"/>
-          <path d="M14 28 Q18 18 32 18 Q46 18 50 28" stroke="#0891b2" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-          <circle cx="18" cy="48" r="5" fill="white" stroke="#0891b2" strokeWidth="2.5"/>
-          <circle cx="46" cy="48" r="5" fill="white" stroke="#0891b2" strokeWidth="2.5"/>
-          <line x1="26" y1="38" x2="38" y2="38" stroke="#0891b2" strokeWidth="2" strokeLinecap="round"/>
+          <rect width="64" height="64" rx="16" fill="#E0E0E0"/>
+          <rect x="8" y="28" width="48" height="20" rx="5" fill="#007AFF" opacity="0.15"/>
+          <rect x="8" y="28" width="48" height="20" rx="5" stroke="#007AFF" strokeWidth="2.5"/>
+          <path d="M14 28 Q18 18 32 18 Q46 18 50 28" stroke="#007AFF" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+          <circle cx="18" cy="48" r="5" fill="white" stroke="#007AFF" strokeWidth="2.5"/>
+          <circle cx="46" cy="48" r="5" fill="white" stroke="#007AFF" strokeWidth="2.5"/>
+          <line x1="26" y1="38" x2="38" y2="38" stroke="#007AFF" strokeWidth="2" strokeLinecap="round"/>
         </svg>
       ),
       textFR: 'Vehicule en bon etat',
@@ -123,9 +123,9 @@ export function DriversLandingPage() {
     {
       icon: (
         <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px' }}>
-          <rect width="64" height="64" rx="16" fill="#f0f9ff"/>
-          <path d="M32 10 L48 17 L48 32 C48 42 40 50 32 54 C24 50 16 42 16 32 L16 17 Z" fill="#0891b2" opacity="0.15" stroke="#0891b2" strokeWidth="2.5" strokeLinejoin="round"/>
-          <path d="M24 32 L29 37 L40 26" stroke="#0891b2" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+          <rect width="64" height="64" rx="16" fill="#E0E0E0"/>
+          <path d="M32 10 L48 17 L48 32 C48 42 40 50 32 54 C24 50 16 42 16 32 L16 17 Z" fill="#007AFF" opacity="0.15" stroke="#007AFF" strokeWidth="2.5" strokeLinejoin="round"/>
+          <path d="M24 32 L29 37 L40 26" stroke="#007AFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       ),
       textFR: 'Casier judiciaire vierge',
@@ -134,11 +134,11 @@ export function DriversLandingPage() {
     {
       icon: (
         <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '40px', height: '40px' }}>
-          <rect width="64" height="64" rx="16" fill="#f0f9ff"/>
-          <circle cx="32" cy="26" r="10" fill="#0891b2" opacity="0.15" stroke="#0891b2" strokeWidth="2.5"/>
-          <path d="M16 50 C16 42 23 36 32 36 C41 36 48 42 48 50" stroke="#0891b2" strokeWidth="2.5" strokeLinecap="round"/>
-          <path d="M38 14 C40 16 42 20 40 24" stroke="#0891b2" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
-          <text x="28" y="30" fontSize="10" fontWeight="900" fill="#0891b2">21</text>
+          <rect width="64" height="64" rx="16" fill="#E0E0E0"/>
+          <circle cx="32" cy="26" r="10" fill="#007AFF" opacity="0.15" stroke="#007AFF" strokeWidth="2.5"/>
+          <path d="M16 50 C16 42 23 36 32 36 C41 36 48 42 48 50" stroke="#007AFF" strokeWidth="2.5" strokeLinecap="round"/>
+          <path d="M38 14 C40 16 42 20 40 24" stroke="#007AFF" strokeWidth="2" strokeLinecap="round" opacity="0.6"/>
+          <text x="28" y="30" fontSize="10" fontWeight="900" fill="#007AFF">21</text>
         </svg>
       ),
       textFR: 'Age minimum 21 ans',
@@ -171,7 +171,7 @@ export function DriversLandingPage() {
 
         .btn-primary {
           display: inline-block; padding: 14px 32px;
-          background: #0891b2; color: white; font-weight: 700;
+          background: #007AFF; color: white; font-weight: 700;
           font-size: 15px; border-radius: 8px;
           transition: all 0.2s; text-decoration: none;
         }
@@ -181,14 +181,14 @@ export function DriversLandingPage() {
           background: white; border: 1px solid #e5e7eb;
           border-radius: 14px; transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
         }
-        .drv-card:hover { border-color: #0891b2; box-shadow: 0 12px 40px rgba(8,145,178,0.12); transform: translateY(-5px); }
+        .drv-card:hover { border-color: #007AFF; box-shadow: 0 12px 40px rgba(8,145,178,0.12); transform: translateY(-5px); }
 
         .req-card {
           background: white; border: 1px solid #e5e7eb;
           border-radius: 14px; padding: 16px 12px;
           text-align: center; transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
         }
-        .req-card:hover { border-color: #0891b2; box-shadow: 0 12px 40px rgba(8,145,178,0.12); transform: translateY(-5px); }
+        .req-card:hover { border-color: #007AFF; box-shadow: 0 12px 40px rgba(8,145,178,0.12); transform: translateY(-5px); }
 
         .step-card {
           background: white; border: 1px solid #e5e7eb;
@@ -196,12 +196,12 @@ export function DriversLandingPage() {
           position: relative; text-align: center;
           transition: all 0.3s cubic-bezier(0.22,1,0.36,1);
         }
-        .step-card:hover { border-color: #0891b2; box-shadow: 0 12px 40px rgba(8,145,178,0.12); }
+        .step-card:hover { border-color: #007AFF; box-shadow: 0 12px 40px rgba(8,145,178,0.12); }
 
         .benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         @media (min-width: 768px) { .benefits-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
-        .accent-line { height: 4px; background: linear-gradient(90deg,#0891b2,#06b6d4); border-radius: 2px; margin-bottom: 20px; max-width: 64px; }
+        .accent-line { height: 4px; background: linear-gradient(90deg,#007AFF,#007AFF); border-radius: 2px; margin-bottom: 20px; max-width: 64px; }
 
         .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.65s cubic-bezier(0.22,1,0.36,1), transform 0.65s cubic-bezier(0.22,1,0.36,1); }
         .reveal.in { opacity: 1; transform: translateY(0); }
@@ -234,13 +234,13 @@ export function DriversLandingPage() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1, duration: 0.5 }}
-                style={{ height: '4px', background: 'linear-gradient(90deg,#0891b2,#06b6d4)', borderRadius: '2px', maxWidth: '64px', marginBottom: '20px' }}
+                style={{ height: '4px', background: 'linear-gradient(90deg,#007AFF,#007AFF)', borderRadius: '2px', maxWidth: '64px', marginBottom: '20px' }}
               />
               <motion.h1
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.7, ease }}
-                style={{ fontSize: 'clamp(36px, 5vw, 52px)', fontWeight: '900', color: '#111827', lineHeight: '1.1', marginBottom: '20px', letterSpacing: '-0.02em' }}
+                style={{ fontSize: 'clamp(36px, 5vw, 52px)', fontWeight: '900', color: '#222222', lineHeight: '1.1', marginBottom: '20px', letterSpacing: '-0.02em' }}
               >
                 {t('drivers.title')}
               </motion.h1>
@@ -289,8 +289,8 @@ export function DriversLandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '40px', textAlign: 'center' }}>
             <div className={`accent-line reveal d0 ${earnInView ? 'in' : ''}`} style={{ margin: '0 auto 20px' }} />
-            <h2 className={`reveal d1 ${earnInView ? 'in' : ''}`} style={{ fontSize: '40px', fontWeight: '900', color: '#111827', marginBottom: '12px' }}>
-              {language === 'fr' ? 'Combien pouvez-vous ' : 'How much can you '}<span style={{ color: '#0891b2' }}>{language === 'fr' ? 'gagner ?' : 'earn?'}</span>
+            <h2 className={`reveal d1 ${earnInView ? 'in' : ''}`} style={{ fontSize: '40px', fontWeight: '900', color: '#222222', marginBottom: '12px' }}>
+              {language === 'fr' ? 'Combien pouvez-vous ' : 'How much can you '}<span style={{ color: '#007AFF' }}>{language === 'fr' ? 'gagner ?' : 'earn?'}</span>
             </h2>
             <p className={`reveal d2 ${earnInView ? 'in' : ''}`} style={{ fontSize: '17px', color: '#6b7280', maxWidth: '560px', margin: '0 auto' }}>
               {language === 'fr'
@@ -302,10 +302,10 @@ export function DriversLandingPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '28px' }}>
             {earningsData.map((e, i) => (
               <div key={e.key} className={`req-card reveal ${earnInView ? 'in' : ''}`} style={{ transitionDelay: `${0.1 + i * 0.1}s`, padding: '18px 14px' }}>
-                <p style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#0891b2', marginBottom: '8px' }}>
+                <p style={{ fontSize: '12px', fontWeight: '700', letterSpacing: '0.05em', textTransform: 'uppercase', color: '#007AFF', marginBottom: '8px' }}>
                   {language === 'fr' ? e.titleFR : e.titleEN}
                 </p>
-                <p style={{ fontSize: '22px', fontWeight: '900', color: '#111827', marginBottom: '2px' }}>
+                <p style={{ fontSize: '22px', fontWeight: '900', color: '#222222', marginBottom: '2px' }}>
                   {e.monthly.toLocaleString()} <span style={{ fontSize: '13px', fontWeight: '700', color: '#9ca3af' }}>CDF/{language === 'fr' ? 'mois' : 'mo'}</span>
                 </p>
                 <p style={{ fontSize: '12px', color: '#9ca3af' }}>
@@ -321,7 +321,7 @@ export function DriversLandingPage() {
               { fr: 'Aucun frais caché', en: 'No hidden fees' },
               { fr: 'Travaillez jour ou nuit selon vos disponibilités', en: 'Work day or night, your choice' },
             ].map((tag, i) => (
-              <span key={i} style={{ fontSize: '13px', fontWeight: '700', color: '#0891b2', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '20px', padding: '8px 16px' }}>
+              <span key={i} style={{ fontSize: '13px', fontWeight: '700', color: '#007AFF', background: '#E0E0E0', border: '1px solid #bae6fd', borderRadius: '20px', padding: '8px 16px' }}>
                 {language === 'fr' ? tag.fr : tag.en}
               </span>
             ))}
@@ -340,7 +340,7 @@ export function DriversLandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '40px' }}>
             <div className={`accent-line reveal d0 ${reqInView ? 'in' : ''}`} />
-            <h2 className={`reveal d1 ${reqInView ? 'in' : ''}`} style={{ fontSize: '34px', fontWeight: '900', color: '#111827', marginBottom: '8px' }}>
+            <h2 className={`reveal d1 ${reqInView ? 'in' : ''}`} style={{ fontSize: '34px', fontWeight: '900', color: '#222222', marginBottom: '8px' }}>
               {t('drivers.requirements')}
             </h2>
             <p className={`reveal d2 ${reqInView ? 'in' : ''}`} style={{ fontSize: '15px', color: '#6b7280' }}>
@@ -358,7 +358,7 @@ export function DriversLandingPage() {
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
                   {req.icon}
                 </div>
-                <p style={{ fontSize: '13px', fontWeight: '700', color: '#111827', lineHeight: '1.3' }}>
+                <p style={{ fontSize: '13px', fontWeight: '700', color: '#222222', lineHeight: '1.3' }}>
                   {language === 'fr' ? req.textFR : req.textEN}
                 </p>
               </div>
@@ -374,7 +374,7 @@ export function DriversLandingPage() {
 
             <div>
               <div className={`accent-line reveal-left d0 ${benefitsInView ? 'in' : ''}`} />
-              <h2 className={`reveal-left d1 ${benefitsInView ? 'in' : ''}`} style={{ fontSize: '34px', fontWeight: '900', color: '#111827', marginBottom: '12px', lineHeight: '1.15' }}>
+              <h2 className={`reveal-left d1 ${benefitsInView ? 'in' : ''}`} style={{ fontSize: '34px', fontWeight: '900', color: '#222222', marginBottom: '12px', lineHeight: '1.15' }}>
                 {t('drivers.benefits')}
               </h2>
               <p className={`reveal-left d2 ${benefitsInView ? 'in' : ''}`} style={{ fontSize: '15px', color: '#6b7280', lineHeight: '1.6', marginBottom: '24px' }}>
@@ -392,8 +392,8 @@ export function DriversLandingPage() {
                   className={`drv-card reveal ${benefitsInView ? 'in' : ''}`}
                   style={{ padding: '14px', transitionDelay: `${0.05 + i * 0.08}s` }}
                 >
-                  <div style={{ width: '28px', height: '3px', background: '#0891b2', borderRadius: '2px', marginBottom: '8px' }} />
-                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#111827', marginBottom: '4px' }}>
+                  <div style={{ width: '28px', height: '3px', background: '#007AFF', borderRadius: '2px', marginBottom: '8px' }} />
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#222222', marginBottom: '4px' }}>
                     {language === 'fr' ? b.titleFR : b.titleEN}
                   </div>
                   <div style={{ fontSize: '12px', color: '#9ca3af', lineHeight: '1.4' }}>
@@ -412,7 +412,7 @@ export function DriversLandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div style={{ marginBottom: '56px' }}>
             <div className={`accent-line reveal d0 ${stepsInView ? 'in' : ''}`} />
-            <h2 className={`reveal d1 ${stepsInView ? 'in' : ''}`} style={{ fontSize: '40px', fontWeight: '900', color: '#111827', marginBottom: '12px' }}>
+            <h2 className={`reveal d1 ${stepsInView ? 'in' : ''}`} style={{ fontSize: '40px', fontWeight: '900', color: '#222222', marginBottom: '12px' }}>
               {t('drivers.howItWorks')}
             </h2>
             <p className={`reveal d2 ${stepsInView ? 'in' : ''}`} style={{ fontSize: '17px', color: '#6b7280' }}>
@@ -430,14 +430,14 @@ export function DriversLandingPage() {
                 <div style={{
                   position: 'absolute', top: '-18px', left: '50%', transform: 'translateX(-50%)',
                   width: '36px', height: '36px', borderRadius: '50%',
-                  background: '#0891b2', color: 'white',
+                  background: '#007AFF', color: 'white',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '13px', fontWeight: '900', boxShadow: '0 4px 12px rgba(8,145,178,0.4)',
                 }}>
                   {step.num}
                 </div>
                 <div style={{ marginTop: '16px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', marginBottom: '8px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#222222', marginBottom: '8px' }}>
                     {language === 'fr' ? step.titleFR : step.titleEN}
                   </h3>
                   <p style={{ fontSize: '13px', color: '#9ca3af', lineHeight: '1.6' }}>
@@ -455,7 +455,7 @@ export function DriversLandingPage() {
       </section>
 
       {/* CTA */}
-      <section style={{ padding: '80px 0', background: '#0891b2' }}>
+      <section style={{ padding: '80px 0', background: '#007AFF' }}>
         <div className="max-w-4xl mx-auto px-6" style={{ textAlign: 'center' }}>
           <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} viewport={{ once: true }}>
             <h2 style={{ fontSize: '42px', fontWeight: '900', color: 'white', marginBottom: '16px', lineHeight: '1.2' }}>

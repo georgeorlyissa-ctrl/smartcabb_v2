@@ -35,7 +35,8 @@ export const BRAND_NAME = 'SmartCabb';
 export const BRAND_TAGLINE_FR = 'Transport intelligent';
 export const BRAND_TAGLINE_EN = 'Smart transport';
 
-// ─── Couleurs primaires (utilisées comme fallback si pas de logo) ─────────────
-export const BRAND_COLOR_PRIMARY = '#003D7A';   // Bleu marine
-export const BRAND_COLOR_ACCENT  = '#0098FF';   // Cyan/Bleu vif
-export const BRAND_COLOR_YELLOW  = '#FFD600';   // Jaune
+// ─── Couleurs de la marque (Charte graphique SmartCabb) ───────────────────────
+export const BRAND_COLOR_PRIMARY = '#007AFF';   // Bleu Principal — confiance, sécurité
+export const BRAND_COLOR_ACCENT  = '#FFCC00';   // Jaune Secondaire — vivacité, CTA
+export const BRAND_COLOR_BG      = '#E0E0E0';   // Gris Clair — arrière-plans
+export const BRAND_COLOR_TEXT    = '#222222';   // Noir — texte principal

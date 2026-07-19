@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
@@ -6,81 +7,81 @@
   --vh: 1vh;
   --font-size: 16px;
   --background: #ffffff;
-  --foreground: #003D7A;
+  --foreground: #222222;
   --card: #ffffff;
-  --card-foreground: #003D7A;
+  --card-foreground: #222222;
   --popover: #ffffff;
-  --popover-foreground: #003D7A;
-  --primary: #003D7A;
+  --popover-foreground: #222222;
+  --primary: #007AFF;
   --primary-foreground: #ffffff;
-  --secondary: #0098FF;
-  --secondary-foreground: #ffffff;
-  --muted: #E8F4FD;
-  --muted-foreground: #4A6B8A;
-  --accent: #FFD600;
-  --accent-foreground: #003D7A;
+  --secondary: #FFCC00;
+  --secondary-foreground: #222222;
+  --muted: #E0E0E0;
+  --muted-foreground: #666666;
+  --accent: #FFCC00;
+  --accent-foreground: #222222;
   --destructive: #d4183d;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 152, 255, 0.15);
+  --border: rgba(0, 122, 255, 0.15);
   --input: transparent;
-  --input-background: #F5FAFF;
+  --input-background: #F0F0F0;
   --switch-background: #B3D9FF;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #0098FF;
-  --chart-1: #0098FF;
-  --chart-2: #FFD600;
-  --chart-3: #003D7A;
+  --ring: #007AFF;
+  --chart-1: #007AFF;
+  --chart-2: #FFCC00;
+  --chart-3: #222222;
   --chart-4: #66C2FF;
   --chart-5: #FFF066;
   --radius: 0.625rem;
-  --sidebar: #F5FAFF;
-  --sidebar-foreground: #003D7A;
-  --sidebar-primary: #003D7A;
+  --sidebar: #F0F0F0;
+  --sidebar-foreground: #222222;
+  --sidebar-primary: #007AFF;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #E8F4FD;
-  --sidebar-accent-foreground: #003D7A;
-  --sidebar-border: rgba(0, 152, 255, 0.15);
-  --sidebar-ring: #0098FF;
+  --sidebar-accent: #FFCC00;
+  --sidebar-accent-foreground: #222222;
+  --sidebar-border: rgba(0, 122, 255, 0.15);
+  --sidebar-ring: #007AFF;
 }
 
 .dark {
-  --background: #001428;
+  --background: #1a1a2e;
   --foreground: #E8F4FD;
-  --card: #002447;
+  --card: #16213e;
   --card-foreground: #E8F4FD;
-  --popover: #002447;
+  --popover: #16213e;
   --popover-foreground: #E8F4FD;
-  --primary: #0098FF;
+  --primary: #007AFF;
   --primary-foreground: #ffffff;
-  --secondary: #003D7A;
-  --secondary-foreground: #ffffff;
-  --muted: #003052;
+  --secondary: #FFCC00;
+  --secondary-foreground: #222222;
+  --muted: #1a1a2e;
   --muted-foreground: #B3D9FF;
-  --accent: #FFD600;
-  --accent-foreground: #001428;
+  --accent: #FFCC00;
+  --accent-foreground: #1a1a2e;
   --destructive: #FF4466;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 152, 255, 0.2);
-  --input: rgba(0, 152, 255, 0.1);
-  --input-background: #002447;
-  --switch-background: #003D7A;
+  --border: rgba(0, 122, 255, 0.2);
+  --input: rgba(0, 122, 255, 0.1);
+  --input-background: #16213e;
+  --switch-background: #007AFF;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #0098FF;
-  --chart-1: #0098FF;
-  --chart-2: #FFD600;
+  --ring: #007AFF;
+  --chart-1: #007AFF;
+  --chart-2: #FFCC00;
   --chart-3: #66C2FF;
-  --chart-4: #003D7A;
+  --chart-4: #222222;
   --chart-5: #FFF066;
-  --sidebar: #002447;
+  --sidebar: #16213e;
   --sidebar-foreground: #E8F4FD;
-  --sidebar-primary: #0098FF;
+  --sidebar-primary: #007AFF;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #003052;
-  --sidebar-accent-foreground: #E8F4FD;
-  --sidebar-border: rgba(0, 152, 255, 0.2);
-  --sidebar-ring: #0098FF;
+  --sidebar-accent: #FFCC00;
+  --sidebar-accent-foreground: #1a1a2e;
+  --sidebar-border: rgba(0, 122, 255, 0.2);
+  --sidebar-ring: #007AFF;
 }
 
 @theme inline {
@@ -172,22 +173,25 @@
 }
 
 /**
- * Base typography
+ * Base typography — Charter SmartCabb
+ * Titles: Montserrat, Body: Poppins
  */
 @layer base {
   h1, h2, h3, h4, label, button {
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: var(--font-weight-medium);
     line-height: 1.5;
   }
 
-  p, input {
+  p, input, div, span, li {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: var(--font-weight-normal);
     line-height: 1.5;
   }
 
-  h1 { font-size: 1.5rem; }
-  h2 { font-size: 1.25rem; }
-  h3 { font-size: 1.125rem; }
+  h1 { font-size: 1.5rem; font-weight: 700; }
+  h2 { font-size: 1.25rem; font-weight: 600; }
+  h3 { font-size: 1.125rem; font-weight: 600; }
   h4, p, label, button, input { font-size: 1rem; }
 }
 
@@ -227,14 +231,14 @@ input[type="tel"] {
 
 .leaflet-control-zoom a {
   background-color: white;
-  color: #0098FF;
+  color: #007AFF;
   border: none;
   transition: all 0.2s;
 }
 
 .leaflet-control-zoom a:hover {
-  background-color: #f0f9ff;
-  color: #003D7A;
+  background-color: #f0f0f0;
+  color: #007AFF;
 }
 
 /* User location marker animation */
