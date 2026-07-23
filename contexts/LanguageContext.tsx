@@ -72,7 +72,8 @@ const translations = {
       drivers: 'Chauffeurs',
       terms: 'Conditions',
       privacy: 'Confidentialité',
-      legal: 'Mentions légales'
+      legal: 'Mentions légales',
+      deleteAccount: 'Supprimer mon compte'
     },
     hero: {
       badge: '🚀 Transport moderne en RD Congo',
@@ -273,7 +274,8 @@ const translations = {
       drivers: 'Drivers',
       terms: 'Terms',
       privacy: 'Privacy',
-      legal: 'Legal'
+      legal: 'Legal',
+      deleteAccount: 'Delete my account'
     },
     hero: {
       badge: '🚀 Modern transport in DR Congo',

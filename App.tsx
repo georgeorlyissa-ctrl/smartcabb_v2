@@ -77,6 +77,7 @@ import { AboutPage } from './pages/AboutPage';
 import { TermsPage } from './pages/TermsPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { LegalPage } from './pages/LegalPage';
+import { AccountDeletionPage } from './pages/AccountDeletionPage';
 
 // 📱 Passenger App
 import { PassengerApp } from './pages/PassengerApp';
@@ -454,6 +455,7 @@ function App() {
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="/privacy" element={<PrivacyPage />} />
                   <Route path="/legal" element={<LegalPage />} />
+                  <Route path="/account-deletion" element={<AccountDeletionPage />} />
                   
                   {/* Driver App */}
                   <Route path="/driver/*" element={<DriverApp />} />

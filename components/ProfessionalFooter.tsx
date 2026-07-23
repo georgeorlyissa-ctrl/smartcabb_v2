@@ -141,6 +141,11 @@ export function ProfessionalFooter() {
                   {t('nav.privacy')}
                 </Link>
               </li>
+              <li>
+                <Link to="/account-deletion" className="text-gray-400 hover:text-blue-400 transition-colors">
+                  {t('nav.deleteAccount')}
+                </Link>
+              </li>
               {/* ❌ DÉSACTIVÉ: Mentions légales pour raisons de sécurité */}
               {/* <li>
                 <Link to="/legal" className="text-gray-400 hover:text-blue-400 transition-colors">
