@@ -1,21 +1,33 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# SmartCabb - ProGuard Rules for Capacitor Android App
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Keep line numbers for crash stack traces
+-keepattributes SourceFile,LineNumberTable
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Keep WebView JavaScript interface (required for Capacitor bridge)
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# Keep Capacitor bridge classes
+-keep class com.getcapacitor.** { *; }
+-keep class com.getcapacitor.plugin.** { *; }
+-keep class com.getcapacitor.community.** { *; }
+-keep class * extends com.getcapacitor.Plugin { *; }
+
+# Keep Capacitor Cordova plugins
+-keep class org.apache.cordova.** { *; }
+
+# Keep AndroidX WebKit classes
+-keep class androidx.webkit.** { *; }
+
+# Keep Google Maps-related classes
+-keep class com.google.android.gms.maps.** { *; }
+-keep class com.google.maps.** { *; }
+
+# Keep Gson serialization
+-keep class com.google.gson.** { *; }
+-keepattributes Signature
+-keepattributes *Annotation*
+
+# Keep your app's plugin classes (com.smartcabb.app)
+-keep class com.smartcabb.app.** { *; }
