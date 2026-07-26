@@ -123,7 +123,7 @@ export function TimerControl({
               <DollarSign className="w-6 h-6 animate-pulse" />
             </div>
             <p className="text-center text-sm mb-3 font-medium">
-              {freeWaitingDisabled && waitingTime < 600 
+              {freeWaitingDisabled && waitingTime < 180 
                 ? "Attente gratuite désactivée - Facturation dès maintenant" 
                 : "Période d'attente gratuite épuisée - Facturation active"}
             </p>
@@ -156,7 +156,7 @@ export function TimerControl({
           </div>
           {!isBillingActive && (
             <p className="text-xs text-blue-600 mt-1">
-              🆓 Gratuit pendant encore {Math.floor((600 - waitingTime) / 60)}min {(600 - waitingTime) % 60}s
+              🆓 Gratuit pendant encore {Math.floor((180 - waitingTime) / 60)}min {(180 - waitingTime) % 60}s
             </p>
           )}
         </div>
@@ -197,7 +197,7 @@ export function TimerControl({
         )}
 
         {/* OPTION DE RÉACTIVATION - Si désactivé manuellement ET encore dans les 10 min */}
-        {isBillingActive && freeWaitingDisabled && waitingTime < 600 && (
+        {isBillingActive && freeWaitingDisabled && waitingTime < 180 && (
           <div
             className="p-3 rounded-lg border border-green-300 bg-green-50"
           >

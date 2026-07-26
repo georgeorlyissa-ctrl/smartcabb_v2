@@ -143,6 +143,7 @@ export function DriverDashboardNew() {
   const [rideHistory, setRideHistory]       = useState<any[]>([]);
   const [rideStats, setRideStats]           = useState<any>({ today: { count: 0, earnings: 0 }, week: { count: 0, earnings: 0 }, month: { count: 0, earnings: 0 }, total: { count: 0, earnings: 0 } });
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isAccepting, setIsAccepting] = useState(false);
 
   // 👁️ Masquer/Afficher les soldes
   const [showBalance, setShowBalance] = useState(true);
@@ -1036,7 +1037,8 @@ export function DriverDashboardNew() {
             createdAt: new Date().toISOString()
           }}
           onAccept={async (rideId) => {
-            if (!driver) return;
+            if (!driver || isAccepting) return;
+            setIsAccepting(true);
             const snapshot = pendingRideRequest; // capturer avant setState async
 
             try {
@@ -1151,6 +1153,8 @@ export function DriverDashboardNew() {
               toast.error('Erreur réseau lors de l\'acceptation');
               setPendingRideRequest(null);
               stopAllNotifications();
+            } finally {
+              setIsAccepting(false);
             }
           }}
           onDecline={(rideId) => {

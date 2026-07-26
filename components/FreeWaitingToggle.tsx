@@ -17,7 +17,7 @@ import { toast } from '../lib/toast';
 import { useAppState } from '../hooks/useAppState';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 
-const FREE_WAITING_TIME = 10 * 60; // 10 minutes en secondes
+const FREE_WAITING_TIME = 3 * 60; // 3 minutes en secondes
 
 /**
  * 🆕 COMPOSANT AUTONOME POUR CONDUCTEUR

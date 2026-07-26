@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   smsEnabled: true,
   nightTimeStart: '21:00',
   nightTimeEnd: '06:00',
-  freeWaitingMinutes: 10,
+  freeWaitingMinutes: 3,
   distantZoneMultiplier: 2,
   postpaidEnabled: true,
   postpaidFee: 5000,

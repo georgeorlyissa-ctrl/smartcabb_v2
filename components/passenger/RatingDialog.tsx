@@ -7,7 +7,7 @@ interface RatingDialogProps {
   onClose: () => void;
 }
 
-const FREE_WAITING_TIME = 10 * 60; // 10 minutes en secondes
+const FREE_WAITING_TIME = 3 * 60; // 3 minutes en secondes
 
 // Fonction pour détecter jour/nuit au moment de la course
 function getTimeOfDayFromTimestamp(timestamp: string | Date): 'jour' | 'nuit' {

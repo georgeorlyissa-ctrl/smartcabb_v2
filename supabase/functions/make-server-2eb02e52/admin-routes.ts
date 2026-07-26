@@ -222,7 +222,7 @@ app.get("/stats", async (c) => {
 const CONFIG_KEY = "smartcabb_global_config";
 const DEFAULT_SETTINGS = {
   exchangeRate: 2800, commissionRate: 10, nightTimeStart: "21:00",
-  nightTimeEnd: "06:00", freeWaitingMinutes: 10, distantZoneMultiplier: 2,
+  nightTimeEnd: "06:00", freeWaitingMinutes: 3, distantZoneMultiplier: 2,
   postpaidEnabled: true, postpaidFee: 5000, flutterwaveEnabled: true,
   smsEnabled: true, smsProvider: "africas_talking", notificationsEnabled: true,
   appVersion: "1.0.0", maintenanceMode: false, commissionEnabled: true,

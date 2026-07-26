@@ -161,7 +161,7 @@ export interface AppState {
     smartStandardRate: number; // CDF per hour
     smartConfortRate: number; // CDF per hour  
     smartPlusRate: number; // CDF per hour
-    freeWaitingTime: number; // seconds (default 600 = 10 minutes)
+    freeWaitingTime: number; // seconds (default 180 = 3 minutes)
     commissionEnabled: boolean;
     commissionRate: number; // percentage
     minimumCommission: number; // CDF

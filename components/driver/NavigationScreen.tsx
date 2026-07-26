@@ -4,9 +4,7 @@ import { Button } from '../ui/button';
 import { MapView } from '../MapView';
 import { RideCompletionSummaryDialog } from '../RideCompletionSummaryDialog';
 
-import { VEHICLE_PRICING, getExchangeRate, type VehicleCategory } from '../../lib/pricing';
-
-import { VEHICLE_PRICING, type VehicleCategory, getCommissionRate, calculateCommission, calculateDriverEarnings } from '../../lib/pricing';
+import { VEHICLE_PRICING, getExchangeRate, getCommissionRate, calculateCommission, calculateDriverEarnings, type VehicleCategory } from '../../lib/pricing';
 
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
@@ -25,7 +23,7 @@ const User     = ({ className = "w-6 h-6" }: { className?: string }) => <svg cla
 
 type Phase = 'pickup' | 'waiting' | 'in_progress';
 
-const FREE_WAIT_SECONDS = 10 * 60; // 10 minutes
+const FREE_WAIT_SECONDS = 3 * 60; // 3 minutes d'attente gratuite
 
 interface NavigationScreenProps {
   onBack?: () => void;
@@ -64,11 +62,11 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
     return () => clearInterval(iv);
   }, [phase, freeWaitDisabled]);
 
-  // Auto-activate billing after 10 min
+  // Auto-activate billing after 3 min
   useEffect(() => {
     if (phase === 'waiting' && waitingTime >= FREE_WAIT_SECONDS && !freeWaitDisabled) {
       setFreeWaitDisabled(true);
-      toast.warning('⏱️ 10 min écoulées — Facturation activée', {
+      toast.warning('⏱️ 3 min écoulées — Facturation activée', {
         description: 'Vous pouvez maintenant démarrer la course'
       });
     }
@@ -116,10 +114,31 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const handleArriveAtPickup = () => {
+  const handleArriveAtPickup = async () => {
     setPhase('waiting');
+    if (ride?.id && driver?.id) {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/arrived`,
+          {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rideId: ride.id, driverId: driver.id })
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ride?.driverArrivedAt && updateRide) {
+            updateRide(ride.id, { status: 'arrived', driverArrivedAt: data.ride.driverArrivedAt });
+          }
+          console.log('✅ Arrivée notifiée au backend');
+        }
+      } catch (e) {
+        console.error('❌ Erreur notification arrivée:', e);
+      }
+    }
     toast.success('✅ Arrivé chez le client !', {
-      description: '10 minutes d\'attente gratuites. Démarrez quand le passager est à bord.'
+      description: '3 minutes d\'attente gratuites. Démarrez quand le passager est à bord.'
     });
   };
 

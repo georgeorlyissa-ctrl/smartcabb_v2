@@ -254,7 +254,7 @@ export function RideCompletionSummaryDialog({
                     </div>
                     
                     {/* Afficher le temps de facturation si attente gratuite désactivée OU temps > 10min */}
-                    {(rideData.freeWaitingDisabled || (rideData.waitingTime && rideData.waitingTime > 600)) && (
+                    {(rideData.freeWaitingDisabled || (rideData.waitingTime && rideData.waitingTime > 180)) && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">
                           {rideData.freeWaitingDisabled ? (
