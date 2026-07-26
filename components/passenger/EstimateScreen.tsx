@@ -581,17 +581,28 @@ export function EstimateScreen() {
                     nightPriceCDF = convertUSDtoCDF(nightPriceUSD);
                   }
 
+                  const isReservationOnly = RESERVATION_CATEGORIES.includes(vehicle.id);
+
                   return (
                     <motion.button
                       key={vehicle.id}
                       onClick={() => setSelectedVehicle(vehicle.id)}
                       whileTap={{ scale: 0.97 }}
                       className={`w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left ${
-                        isSelected
-                          ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
-                          : 'border-border hover:border-secondary/50 hover:shadow-md'
-                      }`}
+                        isReservationOnly
+                          ? 'border-purple-200 hover:border-purple-400'
+                          : isSelected
+                            ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
+                            : 'border-border hover:border-secondary/50 hover:shadow-md'
+                      } ${isReservationOnly ? 'opacity-90' : ''}`}
                     >
+                      {/* Badge Réservation uniquement */}
+                      {isReservationOnly && (
+                        <div className="absolute top-2 right-2 z-10 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                          📅 Réservation
+                        </div>
+                      )}
+
                       {vehicle.images && vehicle.images.length > 0 && (
                         <VehicleImageCarousel
                           images={vehicle.images}
@@ -752,7 +763,7 @@ export function EstimateScreen() {
             </span>
           ) : (
             RESERVATION_CATEGORIES.includes(selectedVehicle)
-              ? (language === 'en' ? 'Book (Scheduled)' : 'Reserver (Programme)')
+              ? (language === 'en' ? '📅 Book (Reservation)' : '📅 Reserver (Programme)')
               : t('confirm_booking')
           )}
         </Button>
@@ -765,10 +776,10 @@ export function EstimateScreen() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
-              Réservation {selectedVehicle === 'smart_plus' ? 'Familiale' : 'Business'}
+              🚗 {selectedVehicle === 'smart_plus' ? 'SmartCabb Familiale' : 'SmartCabb Business'} — Réservation
             </DialogTitle>
             <DialogDescription>
-              Ce véhicule est disponible uniquement sur réservation. Choisissez votre date et heure.
+              Catégorie <strong>{selectedVehicle === 'smart_plus' ? 'Familiale (6 places)' : 'Business VIP (4 places)'}</strong> disponible uniquement sur réservation. Choisissez votre date et heure.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">

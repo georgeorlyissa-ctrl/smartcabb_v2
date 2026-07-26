@@ -605,6 +605,12 @@ app.post("/signup", async (c) => {
         color: vehicleColor,
         category: vehicleCategory,
       },
+      // ✅ Scoring intelligent : propreté du véhicule (1-5, défaut 3)
+      cleanliness: 3,
+      vehicle_cleanliness: 3,
+      // ✅ Scoring intelligent : préférences de course
+      preferences: {},
+      ride_preferences: {},
       profile_photo: profilePhoto || null,
       // Approbation
       status: "pending",

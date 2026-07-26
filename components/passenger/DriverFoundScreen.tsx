@@ -108,6 +108,22 @@ export function DriverFoundScreen() {
 
         if (hasNavigatedRef.current) return;
 
+        if (status === 'arrived') {
+          console.log('🚗 [DriverFoundScreen] Le conducteur est arrivé !');
+          if (updateRide && state.currentRide?.id) {
+            updateRide(state.currentRide.id, {
+              status: 'arrived',
+              driverArrivedAt: ride.driverArrivedAt || new Date().toISOString()
+            });
+          }
+          toast.success('🚗 Conducteur arrivé !', {
+            description: 'Le conducteur est à votre position. Vous avez 3 minutes gratuites.',
+            duration: 6000
+          });
+          setCurrentScreen('ride-in-progress');
+          return;
+        }
+
         if (status === 'in_progress') {
           hasNavigatedRef.current = true;
           if (pollingRef.current) clearInterval(pollingRef.current);

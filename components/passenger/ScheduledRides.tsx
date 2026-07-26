@@ -259,11 +259,32 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                   className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
                 >
                   {/* Date et heure */}
-                  <div className={`flex items-center gap-2 mb-3 ${urgencyClass}`}>
+                  <div className={`flex items-center gap-2 mb-2 ${urgencyClass}`}>
                     <Calendar className="w-4 h-4" />
-                    <span className="text-sm">
+                    <span className="text-sm font-medium">
                       {dateStr} à {timeStr}
                     </span>
+                  </div>
+
+                  {/* Catégorie avec badge prix */}
+                  <div className="flex items-center justify-between mb-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-2.5 border border-blue-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                        <span className="text-white text-sm">🚗</span>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-blue-900">{category.label}</p>
+                        <p className="text-[10px] text-blue-600">
+                          {ride.category === 'smart_business' ? 'VIP · Rafraîchissements' : 'Climatisation · GPS'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-blue-900">
+                        ~{ride.estimated_price.toLocaleString()} CDF
+                      </p>
+                      <p className="text-[10px] text-blue-600">Prix estimé</p>
+                    </div>
                   </div>
 
                   {/* Itinéraire */}
@@ -283,16 +304,6 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                         <p className="text-sm text-gray-900">{ride.dropoff_address}</p>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Catégorie et prix */}
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded">
-                      {category.label}
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      ~{ride.estimated_price.toLocaleString()} CDF
-                    </span>
                   </div>
 
                   {/* Actions */}
@@ -398,38 +409,60 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
             {/* Catégorie */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">Categorie de vehicule</Label>
+              <Label className="text-sm font-medium mb-2 block">Catégorie de véhicule</Label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: 'smart_plus', label: 'Plus (Familiale)', price: 30000, features: '6 places · Grand espace' },
-                  { value: 'smart_business', label: 'Business', price: 450000, features: 'VIP · Data · Rafraichissements' }
-                ].map((cat) => (
-                  <button
-                    key={cat.value}
-                    type="button"
-                    onClick={() => setNewRide({ 
-                      ...newRide, 
-                      category: cat.value as any,
-                      estimated_price: cat.price
-                    })}
-                    className={`w-full rounded-xl border-2 transition-all duration-300 p-3 text-left ${
-                      newRide.category === cat.value
-                        ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
-                        : 'border-border hover:border-secondary/50 hover:shadow-md'
-                    }`}
-                  >
-                    <div className="flex flex-col gap-1.5">
-                      <span className={`text-sm font-bold ${newRide.category === cat.value ? 'text-secondary' : 'text-foreground'}`}>
-                        {cat.label}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">{cat.features}</span>
-                      <span className={`text-base font-bold ${newRide.category === cat.value ? 'text-secondary' : 'text-primary'}`}>
-                        {cat.price.toLocaleString()}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground -mt-1">CDF</span>
-                    </div>
-                  </button>
-                ))}
+                  { value: 'smart_standard', label: 'Standard', price: 20000, features: '3 places · Climatisation · GPS', capacity: 3 },
+                  { value: 'smart_confort', label: 'Confort', price: 25000, features: '3 places · Data · Clim Premium', capacity: 3 },
+                  { value: 'smart_plus', label: 'Plus (Familiale)', price: 30000, features: '6 places · Data · Grand espace', capacity: 6 },
+                  { value: 'smart_business', label: 'Business', price: 450000, features: 'VIP · Data · Rafraîchissements', capacity: 4 }
+                ].map((cat) => {
+                  const isSelected = newRide.category === cat.value;
+                  return (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() => setNewRide({ 
+                        ...newRide, 
+                        category: cat.value as any,
+                        estimated_price: cat.price
+                      })}
+                      className={`relative w-full rounded-xl border-2 transition-all duration-300 p-3 text-left ${
+                        isSelected
+                          ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20 ring-2 ring-secondary/30'
+                          : 'border-border hover:border-secondary/50 hover:shadow-md'
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-secondary rounded-full flex items-center justify-center shadow-lg">
+                          <span className="text-white text-xs font-bold">✓</span>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-sm font-bold ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
+                            {cat.label}
+                          </span>
+                          {cat.value === 'smart_plus' || cat.value === 'smart_business' ? (
+                            <span className="text-[8px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full font-medium">
+                              Réservation
+                            </span>
+                          ) : null}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{cat.features}</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-sm font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
+                            {cat.price.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">CDF</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <span>👤 {cat.capacity} places</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -498,17 +531,37 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                   </div>
                 </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm px-2 py-1 bg-blue-50 text-blue-700 rounded">
-                  {getCategoryLabel(detailsRide.category).label}
-                </span>
-                <span className="text-lg font-semibold">
-                  {detailsRide.estimated_price.toLocaleString()} CDF
-                </span>
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                      <span className="text-white text-lg">🚗</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-blue-900">
+                        {getCategoryLabel(detailsRide.category).label}
+                      </p>
+                      <p className="text-xs text-blue-600">
+                        {detailsRide.category === 'smart_standard' && 'Standard · 3 places'}
+                        {detailsRide.category === 'smart_confort' && 'Confort · 3 places · Data'}
+                        {detailsRide.category === 'smart_plus' && 'Familiale · 6 places · Grand espace'}
+                        {detailsRide.category === 'smart_business' && 'Business VIP · 4 places · Rafraîchissements'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-blue-900">
+                      {detailsRide.estimated_price.toLocaleString()} CDF
+                    </p>
+                    <p className="text-xs text-blue-600">Prix estimé</p>
+                  </div>
+                </div>
               </div>
-              <div className="text-xs text-gray-400">
-                ID reservation: {detailsRide.id}
-              </div>
+              {detailsRide.id && (
+                <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-2 text-center">
+                  ID réservation: {detailsRide.id.substring(0, 8)}...
+                </div>
+              )}
               <Button
                 className="w-full"
                 onClick={() => setShowDetailsDialog(false)}

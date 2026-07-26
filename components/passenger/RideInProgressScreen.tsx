@@ -64,7 +64,7 @@ declare global {
   interface Window { L: any; }
 }
 
-const FREE_WAITING_TIME = 10 * 60; // 10 minutes en secondes
+const FREE_WAITING_TIME = 3 * 60; // 3 minutes en secondes (gratuites après arrivée conducteur)
 
 function getTimeOfDay(): 'jour' | 'nuit' {
   const hour = new Date().getHours();
@@ -208,6 +208,18 @@ export function RideInProgressScreen() {
     }
   }, [currentRide?.billingStartTime, currentRide?.billingElapsedTime, currentRide?.status, billingActive, rideCompleted]);
 
+  // ─── DÉTECTION ARRIVÉE CONDUCTEUR ─────────────────────────
+  useEffect(() => {
+    if (!currentRide || rideCompleted) return;
+    if (currentRide.driverArrivedAt && !billingActive && elapsedTime === 0) {
+      console.log('🚗 Conducteur arrivé au point de prise en charge !');
+      toast.success('🚗 Conducteur arrivé !', {
+        description: 'Le conducteur est arrivé. Vous avez 3 minutes gratuites.',
+        duration: 6000
+      });
+    }
+  }, [currentRide?.driverArrivedAt, billingActive, elapsedTime, rideCompleted]);
+
   // ─── DÉTECTION CLÔTURE DE COURSE ─────────────────────────────
   useEffect(() => {
     if (!currentRide) return;
@@ -255,9 +267,11 @@ export function RideInProgressScreen() {
       setNotificationsSent(prev => ({ ...prev, rideStarted: true }));
     }
 
-    const startTime = currentRide.startedAt
-      ? new Date(currentRide.startedAt).getTime()
-      : Date.now();
+    const startTime = currentRide.driverArrivedAt
+      ? new Date(currentRide.driverArrivedAt).getTime()
+      : currentRide.startedAt
+        ? new Date(currentRide.startedAt).getTime()
+        : Date.now();
 
     const interval = setInterval(() => {
       const now = Date.now();

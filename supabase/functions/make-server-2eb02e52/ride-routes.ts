@@ -64,8 +64,63 @@ function isValidUUID(uuid: string): boolean {
  * Trouve les chauffeurs disponibles à proximité et leur envoie des notifications
  */
 /**
- * 🎯 MATCHING SÉQUENTIEL - 15 secondes par chauffeur
- * Driver 1 → 15s → Driver 2 → 15s → etc.
+ * 🎯 SYSTÈME DE SCORING INTELLIGENT
+ * Calcule un score de matching basé sur distance, note, propreté et préférences
+ */
+function calculateDriverScore(driver: any, distanceToPickup: number): number {
+  // Poids des critères (total = 100)
+  const WEIGHT_DISTANCE = 40;     // Distance au point de prise en charge
+  const WEIGHT_RATING = 25;       // Note du conducteur
+  const WEIGHT_EXPERIENCE = 15;   // Nombre de courses effectuées
+  const WEIGHT_CLEANLINESS = 10;  // Propreté du véhicule
+  const WEIGHT_PREFERENCE = 10;   // Correspondance aux préférences
+
+  // Score de distance (0-100) : plus proche = meilleur score
+  const maxDistance = 50; // km — distance max considérée
+  const distanceScore = Math.max(0, 100 - (distanceToPickup / maxDistance) * 100);
+
+  // Score de note (0-100) : sur base de 5 étoiles
+  const rating = driver.rating || driver.note || 0;
+  const ratingScore = Math.min(100, (rating / 5) * 100);
+
+  // Score d'expérience (0-100) : plus de courses = meilleur score
+  const totalRides = driver.totalRides || driver.total_rides || driver.total_trips || 0;
+  const experienceScore = Math.min(100, (totalRides / 100) * 100);
+
+  // Score de propreté (0-100) : note de propreté du véhicule
+  const cleanliness = driver.cleanliness || driver.vehicle_cleanliness || 3;
+  const cleanlinessScore = Math.min(100, (cleanliness / 5) * 100);
+
+  // Score de préférence de zone/distances (0-100)
+  const preferences = driver.preferences || driver.ride_preferences || {};
+  let preferenceScore = 50; // valeur neutre par défaut
+  if (preferences.prefersLongRides === true && distanceToPickup > 10) {
+    preferenceScore = 90; // préfère les longues distances → bonus
+  } else if (preferences.prefersLongRides === false && distanceToPickup > 10) {
+    preferenceScore = 10; // n'aime pas les longues distances → malus
+  }
+  if (preferences.prefersShortRides === true && distanceToPickup <= 5) {
+    preferenceScore = 90;
+  } else if (preferences.prefersShortRides === false && distanceToPickup <= 5) {
+    preferenceScore = 10;
+  }
+
+  // Score total pondéré
+  const totalScore = (
+    (distanceScore * WEIGHT_DISTANCE) +
+    (ratingScore * WEIGHT_RATING) +
+    (experienceScore * WEIGHT_EXPERIENCE) +
+    (cleanlinessScore * WEIGHT_CLEANLINESS) +
+    (preferenceScore * WEIGHT_PREFERENCE)
+  ) / 100;
+
+  return Math.round(totalScore * 100) / 100;
+}
+
+/**
+ * 🎯 MATCHING SÉQUENTIEL INTELLIGENT - 7 secondes par chauffeur
+ * Driver 1 → 7s → Driver 2 → 7s → etc.
+ * Le tri est basé sur un score combiné (distance, note, propreté, préférences)
  */
 async function findAndNotifyNearbyDrivers(ride: any) {
   try {
@@ -98,18 +153,22 @@ async function findAndNotifyNearbyDrivers(ride: any) {
       return { success: false, reason: 'no_drivers_available' };
     }
 
-    // Trier par distance
+    // Calculer la distance ET le score pour chaque chauffeur
     const pickupLat = ride.pickup?.coordinates?.lat || -4.3276;
     const pickupLng = ride.pickup?.coordinates?.lng || 15.3136;
 
-    const driversWithDistance = eligibleDrivers.map((driver: any) => {
+    const driversWithScore = eligibleDrivers.map((driver: any) => {
       const driverLat = driver.currentLocation?.lat || driver.current_location?.lat || driver.location?.lat || -4.3276;
       const driverLng = driver.currentLocation?.lng || driver.current_location?.lng || driver.location?.lng || 15.3136;
-      return { ...driver, distanceToPickup: calculateDistance(pickupLat, pickupLng, driverLat, driverLng) };
+      const distance = calculateDistance(pickupLat, pickupLng, driverLat, driverLng);
+      const score = calculateDriverScore(driver, distance);
+      console.log(`📊 Driver ${driver.full_name || driver.name}: distance=${distance.toFixed(1)}km, note=${driver.rating || 0}, courses=${driver.totalRides || 0}, propreté=${driver.cleanliness || 3}, score=${score}`);
+      return { ...driver, distanceToPickup: distance, matchingScore: score };
     });
 
-    driversWithDistance.sort((a, b) => a.distanceToPickup - b.distanceToPickup);
-    const nearbyDrivers = driversWithDistance.slice(0, 5);
+    // Trier par score décroissant (meilleur score en premier)
+    driversWithScore.sort((a, b) => b.matchingScore - a.matchingScore);
+    const nearbyDrivers = driversWithScore.slice(0, 5);
 
     console.log(`📍 ${nearbyDrivers.length} chauffeurs à notifier séquentiellement`);
 
@@ -208,7 +267,7 @@ async function notifyDriverAtIndex(ride: any, drivers: any[], index: number) {
     driverIndex: index.toString(),
     totalDrivers: drivers.length.toString(),
     notifiedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 15000).toISOString()
+    expiresAt: new Date(Date.now() + 7000).toISOString()
   };
   await kv.set(`driver_notification:${driver.id}`, notificationPayload);
   console.log(`📥 Notification KV écrite pour driver ${driver.id} (polling fallback actif)`);
@@ -240,13 +299,13 @@ async function notifyDriverAtIndex(ride: any, drivers: any[], index: number) {
     await kv.set(`matching:${ride.id}`, matching);
   }
 
-  // Attendre 15 secondes puis passer au suivant
-  await new Promise(resolve => setTimeout(resolve, 15000));
+  // Attendre 7 secondes puis passer au suivant
+  await new Promise(resolve => setTimeout(resolve, 7000));
 
   // ✅ Nettoyer la notification KV après expiration
   await kv.delete(`driver_notification:${driver.id}`);
 
-  // Re-vérifier le statut de la course après 15s
+  // Re-vérifier le statut de la course après 7s
   const rideAfterWait = await kv.get<any>(`ride:${ride.id}`);
   if (!rideAfterWait || rideAfterWait.status !== 'searching') {
     console.log(`✅ Course ${ride.id} acceptée ou annulée pendant l'attente`);
@@ -893,7 +952,7 @@ app.post("/decline", async (c) => {
       driverIndex: nextIndex.toString(),
       totalDrivers: queuedDrivers.length.toString(),
       notifiedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 15000).toISOString()
+      expiresAt: new Date(Date.now() + 7000).toISOString()
     };
     await kv.set(`driver_notification:${nextDriver.id}`, nextNotification);
     console.log(`📥 Notification KV écrite pour driver suivant ${nextDriver.id}`);
@@ -917,6 +976,59 @@ app.post("/decline", async (c) => {
     return c.json({ success: true, nextDriverNotified: fcmResult.success });
   } catch (error) {
     console.error("❌ Erreur refus course:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ============================================
+// POST /arrived - Conducteur arrivé au point de prise en charge
+// ============================================
+app.post("/arrived", async (c) => {
+  try {
+    const { rideId, driverId } = await c.req.json();
+
+    if (!isValidUUID(rideId)) {
+      return c.json({ success: false, error: "ID course invalide" }, 400);
+    }
+
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    if (!ride) {
+      return c.json({ success: false, error: "Course non trouvée" }, 404);
+    }
+
+    if (ride.driverId !== driverId) {
+      return c.json({ success: false, error: "Vous n'êtes pas le chauffeur assigné" }, 403);
+    }
+
+    if (ride.status !== 'accepted') {
+      return c.json({ success: false, error: "La course n'est pas en statut accepté" }, 400);
+    }
+
+    // Marquer le conducteur comme arrivé
+    ride.status = 'arrived';
+    ride.driverArrivedAt = new Date().toISOString();
+
+    await kv.set(`ride:${rideId}`, ride);
+
+    console.log(`🚗 Conducteur arrivé pour course ${rideId} à ${ride.driverArrivedAt}`);
+
+    // Notifier le passager
+    try {
+      const passenger = await kv.get<any>(`passenger:${ride.passengerId}`);
+      if (passenger?.fcmToken) {
+        await sendFCMNotification(passenger.fcmToken, {
+          title: '🚗 Conducteur arrivé !',
+          body: `${ride.driverName || 'Votre conducteur'} est arrivé au point de rendez-vous`,
+          data: { rideId, type: 'driver_arrived', driverId }
+        });
+      }
+    } catch (error) {
+      console.error('❌ Erreur notification arrivée conducteur:', error);
+    }
+
+    return c.json({ success: true, ride });
+  } catch (error) {
+    console.error("❌ Erreur arrivée conducteur:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
   }
 });

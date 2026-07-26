@@ -30,12 +30,12 @@ export function RideTimer({
       const start = startTime || now;
       const diffInSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
       
-      if (showWaitingTime && diffInSeconds < 600) { // 10 minutes de waiting
+      if (showWaitingTime && diffInSeconds < 180) { // 3 minutes de waiting gratuites
         setIsWaiting(true);
         setWaitingTime(diffInSeconds);
       } else {
         setIsWaiting(false);
-        const billingTime = diffInSeconds - (showWaitingTime ? 600 : 0);
+        const billingTime = diffInSeconds - (showWaitingTime ? 180 : 0);
         setElapsedTime(Math.max(0, billingTime));
         
         // Calculer le coût
@@ -106,16 +106,16 @@ export function RideTimer({
           <div className="text-right">
             <div className="text-sm font-medium text-amber-600">Attente gratuite</div>
             <div className="text-xs text-gray-500">
-              {Math.max(0, 600 - waitingTime)}s restantes
+              {Math.max(0, 180 - waitingTime)}s restantes
             </div>
           </div>
         )}
       </div>
       
-      {isWaiting && waitingTime >= 590 && (
+      {isWaiting && waitingTime >= 170 && (
         <div className="mt-3 p-2 bg-amber-100 rounded-lg">
           <p className="text-xs text-amber-800">
-            La facturation commencera dans {600 - waitingTime} secondes
+            La facturation commencera dans {180 - waitingTime} secondes
           </p>
         </div>
       )}
