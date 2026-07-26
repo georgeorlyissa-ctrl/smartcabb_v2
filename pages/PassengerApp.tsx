@@ -378,10 +378,9 @@ function PassengerAppContent() {
     <ErrorBoundary>
       {showRLSModal && <RLSFixModal />}
 
-      {/* Responsive layout: plein écran mobile, centré desktop */}
-      <div className="min-h-screen bg-gray-100 flex justify-center">
-        <div className="w-full max-w-lg h-dvh md:h-screen relative overflow-y-auto bg-white shadow-2xl">
-          <div className="min-h-full transition-opacity duration-300" style={{ willChange: 'opacity' }}>
+      <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen max-w-2xl mx-auto bg-white shadow-sm">
+          <div className="transition-opacity duration-300" style={{ willChange: 'opacity' }}>
             {screenComponent}
           </div>
         </div>
