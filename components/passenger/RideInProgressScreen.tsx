@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
-import { convertUSDtoCDF, convertCDFtoUSD, getExchangeRate } from '../../lib/pricing';
+import { convertUSDtoCDF, convertCDFtoUSD, getExchangeRate, type VehicleCategory } from '../../lib/pricing';
 
 // ─── Icônes SVG inline ────────────────────────────────────────
 const MapPin = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -328,8 +328,8 @@ export function RideInProgressScreen() {
   const calculateBillingCost = (totalSeconds: number): { costCDF: number; costUSD: number } => {
     if (totalSeconds <= 0) return { costCDF: 0, costUSD: 0 };
 
-    const category = currentRide?.vehicleCategory || 'smart_standard';
-    const categoryConfig = PRICING_CONFIG[category as keyof typeof PRICING_CONFIG];
+    const category: VehicleCategory = (currentRide?.vehicleType || currentRide?.vehicleCategory || 'smart_standard') as VehicleCategory;
+    const categoryConfig = PRICING_CONFIG[category];
     const baseHourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 7;
 
     // Prix proportionnel au temps réel (minimum 15 min = 0.25h)
@@ -381,8 +381,8 @@ export function RideInProgressScreen() {
     return `${mins}min ${secs}s`;
   };
 
-  const category = currentRide.vehicleCategory || 'smart_standard';
-  const categoryConfig = PRICING_CONFIG[category as keyof typeof PRICING_CONFIG];
+  const category = (currentRide.vehicleType || currentRide.vehicleCategory || 'smart_standard') as VehicleCategory;
+  const categoryConfig = PRICING_CONFIG[category];
   const hourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 7;
 
   // ─── PARTAGE COURSE ──────────────────────────────────────────
@@ -455,7 +455,7 @@ export function RideInProgressScreen() {
     isOnline: true,
     isAvailable: false,
     documentsVerified: true,
-    vehicleType: currentRide.vehicleCategory || 'standard',
+    vehicleType: currentRide.vehicleType || currentRide.vehicleCategory || 'standard',
     vehiclePlate: currentRide.vehiclePlate || 'CD-XXX-XXX',
     rating: 4.8,
     totalRides: 0,
@@ -730,7 +730,7 @@ export function RideInProgressScreen() {
                     <div className="flex items-center space-x-2">
                       <div className="px-3 py-1 bg-blue-100 rounded-full">
                         <p className="text-xs font-medium text-blue-700 capitalize">
-                          {currentRide.vehicleCategory || 'Standard'}
+                          {currentRide.vehicleType || currentRide.vehicleCategory || 'Standard'}
                         </p>
                       </div>
                     </div>
