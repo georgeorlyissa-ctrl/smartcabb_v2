@@ -1697,7 +1697,7 @@ app.get("/driver/:driverId/rides", async (c) => {
 // ============================================
 app.post("/rate", async (c) => {
   try {
-    const { rideId, driverId, passengerId, rating, comment } = await c.req.json();
+    const { rideId, driverId, passengerId, rating, comment, tags } = await c.req.json();
 
     if (!rideId || !driverId || !rating) {
       return c.json({ success: false, error: "rideId, driverId et rating requis" }, 400);
@@ -1711,6 +1711,7 @@ app.post("/rate", async (c) => {
     // Mettre à jour la course avec la note
     ride.passengerRating  = rating;
     ride.passengerComment = comment || '';
+    ride.passengerRatingTags = tags || [];
     ride.ratedAt          = new Date().toISOString();
     ride.status           = 'rated';
     await kv.set(`ride:${rideId}`, ride);

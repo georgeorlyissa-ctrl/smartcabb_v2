@@ -20,11 +20,26 @@ function getTimeOfDayFromTimestamp(timestamp: string | Date): 'jour' | 'nuit' {
   return 'nuit';
 }
 
+const RATING_TAGS = [
+  { key: 'excellent', label: 'Excellent', emoji: '🌟' },
+  { key: 'bon', label: 'Bon', emoji: '👍' },
+  { key: 'correct', label: 'Correct', emoji: '😐' },
+  { key: 'mauvais', label: 'Mauvais', emoji: '👎' },
+  { key: 'tres_mauvais', label: 'Très mauvais', emoji: '😡' },
+];
+
 export function RatingDialog({ ride, onClose }: RatingDialogProps) {
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const toggleTag = (key: string) => {
+    setSelectedTags(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
 
   // Calculer les détails de coût avec taux dynamique
   const exchangeRate = getExchangeRate();
@@ -78,7 +93,8 @@ export function RatingDialog({ ride, onClose }: RatingDialogProps) {
           body: JSON.stringify({
             rideId: ride.id,
             rating,
-            comment
+            comment,
+            tags: selectedTags
           })
         }
       );
@@ -256,10 +272,9 @@ export function RatingDialog({ ride, onClose }: RatingDialogProps) {
             </div>
           </Card>
 
-          {/* Notation */}
-          <div className="text-center space-y-3">
-            <p className="font-semibold">Comment était votre course ?</p>
-            
+          {/* Note par étoiles */}
+          <div className="text-center space-y-2">
+            <p className="font-semibold">Note globale</p>
             <div className="flex justify-center space-x-2">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button
@@ -279,7 +294,6 @@ export function RatingDialog({ ride, onClose }: RatingDialogProps) {
                 </button>
               ))}
             </div>
-
             {rating > 0 && (
               <p className="text-sm text-gray-600">
                 {rating === 5 && '🌟 Excellent !'}
@@ -289,6 +303,37 @@ export function RatingDialog({ ride, onClose }: RatingDialogProps) {
                 {rating === 1 && '😞 Mauvaise expérience'}
               </p>
             )}
+          </div>
+
+          {/* Catégories (cases à cocher) */}
+          <div>
+            <p className="font-semibold text-center mb-2">Points à améliorer</p>
+            <div className="grid grid-cols-2 gap-2">
+              {RATING_TAGS.map((tag) => {
+                const isSelected = selectedTags.includes(tag.key);
+                return (
+                  <button
+                    key={tag.key}
+                    type="button"
+                    onClick={() => toggleTag(tag.key)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className={`w-5 h-5 flex items-center justify-center rounded border-2 text-xs ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-500 text-white'
+                        : 'border-gray-300'
+                    }`}>
+                      {isSelected ? '✓' : ''}
+                    </span>
+                    <span>{tag.emoji} {tag.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Commentaire */}
