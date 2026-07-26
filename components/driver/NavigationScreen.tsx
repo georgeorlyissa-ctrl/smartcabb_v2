@@ -29,6 +29,18 @@ interface NavigationScreenProps {
   onBack?: () => void;
 }
 
+function normalizeVehicleType(vt: string | undefined): 'Smart Standard' | 'Smart Confort' | 'Smart Plus' {
+  const map: Record<string, 'Smart Standard' | 'Smart Confort' | 'Smart Plus'> = {
+    smart_standard: 'Smart Standard',
+    smart_confort: 'Smart Confort',
+    smart_plus: 'Smart Plus',
+    'Smart Standard': 'Smart Standard',
+    'Smart Confort': 'Smart Confort',
+    'Smart Plus': 'Smart Plus',
+  };
+  return map[vt || ''] || 'Smart Standard';
+}
+
 function fmt(s: number) {
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
@@ -589,7 +601,7 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
           freeWaitingDisabled:  freeWaitDisabled,
           billingElapsedTime:   elapsedTime || 0,
           passengerName:        ride?.passengerName || 'Passager',
-          vehicleType:          (ride?.vehicleType || 'Smart Confort') as 'Smart Standard' | 'Smart Confort' | 'Smart Plus',
+          vehicleType:          normalizeVehicleType(ride?.vehicleType),
           startLocation:        ride?.pickup?.address  || 'Départ',
           endLocation:          ride?.destination?.address || 'Destination'
         }}

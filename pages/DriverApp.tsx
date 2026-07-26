@@ -147,16 +147,18 @@ function DriverAppContent() {
     <>
       {showRLSModal && <RLSFixModal />}
 
-      {/* Contrainte mobile 430px */}
+      {/* Responsive layout: plein écran mobile, centré desktop */}
       <div className="min-h-screen bg-gray-100 flex justify-center">
-        <div className="w-full max-w-[430px] h-screen relative overflow-hidden bg-white shadow-2xl">
-          <div className="h-full overflow-y-auto">
+        <div className="w-full max-w-lg h-dvh md:h-screen relative overflow-y-auto bg-white shadow-2xl md:my-0 md:rounded-none">
+          <div className="min-h-full">
             {currentScreen === 'driver-welcome' && <DriverWelcomeScreen />}
             {currentScreen === 'driver-login' && <DriverLoginScreen />}
             {currentScreen === 'driver-registration' && <DriverRegistrationScreen />}
             {currentScreen === 'driver-dashboard' && <DriverDashboardNew />}
             {(currentScreen === 'driver-navigation' || currentScreen === 'navigation') && (
-              <NavigationScreen onBack={() => setCurrentScreen('driver-dashboard')} />
+              <ErrorBoundary>
+                <NavigationScreen onBack={() => setCurrentScreen('driver-dashboard')} />
+              </ErrorBoundary>
             )}
             {currentScreen === 'driver-earnings' && <EarningsScreen />}
             {currentScreen === 'driver-settings' && <DriverSettingsScreen />}
