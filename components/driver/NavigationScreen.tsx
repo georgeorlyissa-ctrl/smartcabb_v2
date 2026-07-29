@@ -222,7 +222,7 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
     }
     setIsCompleting(true);
 
-    const finalCost = currentCost > 0 ? currentCost : ride.estimatedPrice || 0;
+    const finalCost = ride?.estimatedPrice || ride?.fare || ride?.price || currentCost || 0;
     const pickupAddress = ride.pickup?.address || 'Point de départ';
     const destAddress   = ride.destination?.address || 'Destination';
 
@@ -544,15 +544,15 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
                 </div>
                 <div className="bg-white rounded-lg p-3 text-center shadow-sm">
                   <DollarSign className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                  <p className="text-xs text-gray-500">Coût actuel</p>
-                  <p className="text-xl font-bold text-green-700">{currentCost.toLocaleString()} <span className="text-sm">CDF</span></p>
+                  <p className="text-xs text-gray-500">Prix fixe</p>
+                  <p className="text-xl font-bold text-green-700">{(ride?.estimatedPrice || currentCost).toLocaleString()} <span className="text-sm">CDF</span></p>
                 </div>
               </div>
 
               {/* Gains estimés */}
               <div className="mt-3 flex justify-between text-xs text-gray-500 bg-white rounded-lg p-2">
-                <span>Gain net ({100 - getCommissionRate()} %) : <span className="font-semibold text-green-700">{calculateDriverEarnings(currentCost).toLocaleString()} CDF</span></span>
-                <span>Commission ({getCommissionRate()} %) : <span className="font-semibold text-orange-600">{calculateCommission(currentCost).toLocaleString()} CDF</span></span>
+                <span>Gain net ({100 - getCommissionRate()} %) : <span className="font-semibold text-green-700">{calculateDriverEarnings(ride?.estimatedPrice || currentCost).toLocaleString()} CDF</span></span>
+                <span>Commission ({getCommissionRate()} %) : <span className="font-semibold text-orange-600">{calculateCommission(ride?.estimatedPrice || currentCost).toLocaleString()} CDF</span></span>
               </div>
             </div>
 
@@ -597,7 +597,7 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
           baseCost:             0,
           waitingTime:          waitingTime || 0,
           waitingCost:          0,
-          totalCost:            currentCost || ride?.estimatedPrice || 0,
+          totalCost:            ride?.estimatedPrice || currentCost || 0,
           freeWaitingDisabled:  freeWaitDisabled,
           billingElapsedTime:   elapsedTime || 0,
           passengerName:        ride?.passengerName || 'Passager',

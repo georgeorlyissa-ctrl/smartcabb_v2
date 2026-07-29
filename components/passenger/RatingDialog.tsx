@@ -21,11 +21,12 @@ function getTimeOfDayFromTimestamp(timestamp: string | Date): 'jour' | 'nuit' {
 }
 
 const RATING_TAGS = [
-  { key: 'excellent', label: 'Excellent', emoji: '🌟' },
-  { key: 'bon', label: 'Bon', emoji: '👍' },
-  { key: 'correct', label: 'Correct', emoji: '😐' },
-  { key: 'mauvais', label: 'Mauvais', emoji: '👎' },
-  { key: 'tres_mauvais', label: 'Très mauvais', emoji: '😡' },
+  { key: 'ponctuel', label: 'Ponctuel', emoji: '⏰' },
+  { key: 'respectueux', label: 'Respectueux', emoji: '🙏' },
+  { key: 'conduite_agreable', label: 'Conduite agréable', emoji: '🚗' },
+  { key: 'vehicule_propre', label: 'Véhicule propre', emoji: '✨' },
+  { key: 'professionnel', label: 'Professionnel', emoji: '💼' },
+  { key: 'aimable', label: 'Aimable', emoji: '😊' },
 ];
 
 export function RatingDialog({ ride, onClose }: RatingDialogProps) {
@@ -41,21 +42,14 @@ export function RatingDialog({ ride, onClose }: RatingDialogProps) {
     );
   };
 
-  // Calculer les détails de coût avec taux dynamique
+  // ✅ Prix fixe depuis la commande (pas de compteur tournant)
   const exchangeRate = getExchangeRate();
   const category = ride.vehicleType || 'smart_standard';
   const categoryConfig = PRICING_CONFIG[category];
-  
-  // Déterminer si c'était jour ou nuit au début de la course
   const timeOfDay = ride.startedAt ? getTimeOfDayFromTimestamp(ride.startedAt) : 'jour';
   const hourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 0;
-  
-  // Calculer le coût total
-  const duration = ride.duration || 0; // en secondes
-  const billableSeconds = Math.max(0, duration - FREE_WAITING_TIME);
-  const billableHours = billableSeconds / 3600;
-  const totalCostUSD = billableHours * hourlyRateUSD;
-  const totalCostCDF = Math.round(totalCostUSD * exchangeRate);
+  const totalCostCDF = ride.estimatedPrice || ride.finalPrice || 0;
+  const totalCostUSD = totalCostCDF / (exchangeRate || 2800);
 
   // Calculer la durée
   const formatDuration = (seconds: number) => {
