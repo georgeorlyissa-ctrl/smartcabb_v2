@@ -324,10 +324,10 @@ export function EstimateScreen() {
       sessionStorage.setItem('smartcab_pending_ride', JSON.stringify(pendingRide));
       console.log('✅ pendingRide stocké, navigation vers searching-drivers');
       setCurrentScreen('searching-drivers');
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Erreur stockage sessionStorage:', err);
       setIsBooking(false);
-      toast.error(t('error'));
+      toast.error(`Erreur: ${err?.message || 'sessionStorage'}`);
     }
   };
 
@@ -368,9 +368,9 @@ export function EstimateScreen() {
       setShowScheduleDialog(false);
       setScheduleDate('');
       setScheduleTime('');
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Erreur réservation:', error);
-      toast.error('Erreur lors de la réservation');
+      toast.error(`Erreur: ${error?.message || error?.error || 'Erreur inconnue'}`);
     } finally {
       setIsScheduling(false);
     }
