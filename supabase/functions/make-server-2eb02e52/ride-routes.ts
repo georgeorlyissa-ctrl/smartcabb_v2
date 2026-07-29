@@ -118,10 +118,12 @@ function calculateDriverScore(driver: any, distanceToPickup: number): number {
 }
 
 /**
- * 🎯 MATCHING SÉQUENTIEL INTELLIGENT - 7 secondes par chauffeur
- * Driver 1 → 7s → Driver 2 → 7s → etc.
- * Le tri est basé sur un score combiné (distance, note, propreté, préférences)
+ * 🎯 MATCHING PARALLÈLE - Tous les chauffeurs notifiés simultanément
+ * Le premier à accepter remporte la course.
+ * Timeout global de 30s si aucun n'accepte.
  */
+const MATCHING_TIMEOUT_MS = 30000;
+
 async function findAndNotifyNearbyDrivers(ride: any) {
   try {
     console.log(`🔍 Recherche de chauffeurs pour la course ${ride.id}`);
@@ -130,7 +132,6 @@ async function findAndNotifyNearbyDrivers(ride: any) {
     console.log(`👥 Total chauffeurs dans la base: ${allDrivers.length}`);
 
     const eligibleDrivers = allDrivers.filter((driver: any) => {
-      // ✅ FIX CRITIQUE: isOnline/is_online = statut en ligne, PAS driver.status (qui = approbation)
       const isOnline = isDriverOnline(driver);
       const isAvailable = isDriverAvailable(driver);
       const driverCategory = driver.vehicleCategory || 
@@ -140,20 +141,17 @@ async function findAndNotifyNearbyDrivers(ride: any) {
                        driver.vehicle?.category ||
                        driver.vehicle?.type;
       const categoryMatch = driverCategory === ride.vehicleCategory;
-      // ✅ FIX: Ne plus exiger fcmToken — le polling de secours prend le relais
       return isOnline && isAvailable && categoryMatch;
     });
 
     if (eligibleDrivers.length === 0) {
       console.warn(`⚠️ Aucun chauffeur éligible pour ${ride.vehicleCategory}`);
-      // Log détaillé pour diagnostiquer
       allDrivers.forEach((d: any) => {
         console.log(`  Driver ${d.full_name || d.name}: isOnline=${isDriverOnline(d)}, isAvailable=${isDriverAvailable(d)}, cat=${d.vehicleCategory||d.vehicle_category||d.vehicle?.category}, fcm=${!!d.fcmToken}`);
       });
       return { success: false, reason: 'no_drivers_available' };
     }
 
-    // Calculer la distance ET le score pour chaque chauffeur
     const pickupLat = ride.pickup?.coordinates?.lat || -4.3276;
     const pickupLng = ride.pickup?.coordinates?.lng || 15.3136;
 
@@ -166,13 +164,11 @@ async function findAndNotifyNearbyDrivers(ride: any) {
       return { ...driver, distanceToPickup: distance, matchingScore: score };
     });
 
-    // Trier par score décroissant (meilleur score en premier)
     driversWithScore.sort((a, b) => b.matchingScore - a.matchingScore);
-    const nearbyDrivers = driversWithScore.slice(0, 5);
+    const nearbyDrivers = driversWithScore.slice(0, 10);
 
-    console.log(`📍 ${nearbyDrivers.length} chauffeurs à notifier séquentiellement`);
+    console.log(`📍 ${nearbyDrivers.length} chauffeurs notifiés en parallèle`);
 
-    // Sauvegarder la file d'attente dans KV
     await kv.set(`matching:${ride.id}`, {
       rideId: ride.id,
       queue: nearbyDrivers.map(d => d.id),
@@ -181,12 +177,29 @@ async function findAndNotifyNearbyDrivers(ride: any) {
       status: 'searching'
     });
 
-    // Notifier le premier chauffeur
-    await notifyDriverAtIndex(ride, nearbyDrivers, 0);
+    // Notifier TOUS les chauffeurs en parallèle
+    const notifyPromises = nearbyDrivers.map(driver => notifyDriver(ride, driver));
+    await Promise.allSettled(notifyPromises);
+
+    // Timeout global : après 30s, si personne n'a accepté, annuler
+    setTimeout(async () => {
+      const currentRide = await kv.get<any>(`ride:${ride.id}`);
+      if (currentRide && currentRide.status === 'searching') {
+        console.warn(`⏰ Timeout de ${MATCHING_TIMEOUT_MS/1000}s pour la course ${ride.id}`);
+        currentRide.status = 'no_driver_found';
+        currentRide.noDriverFoundAt = new Date().toISOString();
+        await kv.set(`ride:${ride.id}`, currentRide);
+        // Nettoyer toutes les notifications
+        for (const d of nearbyDrivers) {
+          await kv.delete(`driver_notification:${d.id}`);
+        }
+        await kv.delete(`matching:${ride.id}`);
+      }
+    }, MATCHING_TIMEOUT_MS);
 
     return {
       success: true,
-      driversNotified: 1,
+      driversNotified: nearbyDrivers.length,
       totalEligible: nearbyDrivers.length,
       nearbyDrivers: nearbyDrivers.map(d => ({
         id: d.id,
@@ -201,32 +214,7 @@ async function findAndNotifyNearbyDrivers(ride: any) {
   }
 }
 
-/**
- * Notifie un chauffeur et programme le passage au suivant après 15s
- */
-async function notifyDriverAtIndex(ride: any, drivers: any[], index: number) {
-  if (index >= drivers.length) {
-    console.warn(`⚠️ Tous les chauffeurs ont refusé la course ${ride.id}`);
-    // Marquer la course comme non trouvée
-    const currentRide = await kv.get<any>(`ride:${ride.id}`);
-    if (currentRide && currentRide.status === 'searching') {
-      currentRide.status = 'no_driver_found';
-      currentRide.noDriverFoundAt = new Date().toISOString();
-      await kv.set(`ride:${ride.id}`, currentRide);
-    }
-    await kv.delete(`matching:${ride.id}`);
-    return;
-  }
-
-  // Vérifier que la course est toujours en recherche
-  const currentRide = await kv.get<any>(`ride:${ride.id}`);
-  if (!currentRide || currentRide.status !== 'searching') {
-    console.log(`⏹️ Course ${ride.id} n'est plus en recherche (${currentRide?.status}), arrêt du matching`);
-    await kv.delete(`matching:${ride.id}`);
-    return;
-  }
-
-  const driver = drivers[index];
+async function notifyDriver(ride: any, driver: any) {
   const pickupName = ride.pickup?.name || 
                    ride.pickup?.address || 
                    ride.pickupAddress || 
@@ -244,9 +232,8 @@ async function notifyDriverAtIndex(ride: any, drivers: any[], index: number) {
   const destinationLat = ride.destination?.coordinates?.lat || -4.3276;
   const destinationLng = ride.destination?.coordinates?.lng || 15.3136;
 
-  console.log(`📱 Notification driver ${index + 1}/${drivers.length}: ${driver.full_name || driver.name} (FCM: ${!!driver.fcmToken})`);
+  console.log(`📱 Notification driver ${driver.full_name || driver.name} (FCM: ${!!driver.fcmToken})`);
 
-  // ✅ TOUJOURS écrire la notification KV pour le polling de secours
   const notificationPayload = {
     rideId: ride.id,
     type: 'new_ride_request',
@@ -264,57 +251,27 @@ async function notifyDriverAtIndex(ride: any, drivers: any[], index: number) {
     estimatedPrice: estimatedPrice.toString(),
     vehicleCategory: ride.vehicleCategory,
     distanceToPickup: (driver.distanceToPickup || 0).toFixed(1),
-    driverIndex: index.toString(),
-    totalDrivers: drivers.length.toString(),
     notifiedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 7000).toISOString()
+    expiresAt: new Date(Date.now() + MATCHING_TIMEOUT_MS).toISOString()
   };
-  await kv.set(`driver_notification:${driver.id}`, notificationPayload);
-  console.log(`📥 Notification KV écrite pour driver ${driver.id} (polling fallback actif)`);
 
-  // ✅ Essayer FCM si le token existe (non bloquant)
-  let fcmSent = false;
+  await kv.set(`driver_notification:${driver.id}`, notificationPayload);
+  console.log(`📥 Notification KV écrite pour ${driver.full_name || driver.name}`);
+
   if (driver.fcmToken) {
     const result = await sendFCMNotification(driver.fcmToken, {
       title: 'SmartCabb - Nouvelle Course',
       body: `${pickupName} vers ${destinationName} - ${distance.toFixed(1)} km - ${Math.round(estimatedPrice)} FC`,
       data: notificationPayload
     });
-    fcmSent = result.success;
-    if (fcmSent) {
+    if (result.success) {
       console.log(`✅ FCM envoyé à ${driver.full_name || driver.name}`);
     } else {
-      console.warn(`⚠️ Échec FCM pour ${driver.full_name || driver.name} — le polling prendra le relais`);
+      console.warn(`⚠️ Échec FCM pour ${driver.full_name || driver.name}`);
     }
   } else {
-    console.warn(`⚠️ Pas de token FCM pour ${driver.full_name || driver.name} — relais polling uniquement`);
+    console.warn(`⚠️ Pas de token FCM pour ${driver.full_name || driver.name}`);
   }
-
-  // Mettre à jour l'index courant
-  const matching = await kv.get<any>(`matching:${ride.id}`);
-  if (matching) {
-    matching.currentIndex = index;
-    matching.currentDriverId = driver.id;
-    matching.notifiedAt = new Date().toISOString();
-    await kv.set(`matching:${ride.id}`, matching);
-  }
-
-  // Attendre 7 secondes puis passer au suivant
-  await new Promise(resolve => setTimeout(resolve, 7000));
-
-  // ✅ Nettoyer la notification KV après expiration
-  await kv.delete(`driver_notification:${driver.id}`);
-
-  // Re-vérifier le statut de la course après 7s
-  const rideAfterWait = await kv.get<any>(`ride:${ride.id}`);
-  if (!rideAfterWait || rideAfterWait.status !== 'searching') {
-    console.log(`✅ Course ${ride.id} acceptée ou annulée pendant l'attente`);
-    await kv.delete(`matching:${ride.id}`);
-    return;
-  }
-
-  // Notifier le driver suivant
-  await notifyDriverAtIndex(ride, drivers, index + 1);
 }
 
 /**
@@ -866,114 +823,32 @@ app.post("/decline", async (c) => {
 
     console.log(`❌ Driver ${driverId} a refusé la course ${rideId}`);
 
+    await kv.delete(`driver_notification:${driverId}`);
+
     const ride = await kv.get<any>(`ride:${rideId}`);
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
 
-    if (ride.status !== 'searching') {
-      return c.json({ success: false, error: "Course non disponible" }, 400);
-    }
-
-    // Récupérer la file de matching
+    // Vérifier s'il reste des chauffeurs dans la file
     const matching = await kv.get<any>(`matching:${rideId}`);
-    if (!matching) {
-      return c.json({ success: true, message: "Matching déjà terminé" });
-    }
-
-    const currentIndex = matching.currentIndex || 0;
-    const nextIndex = currentIndex + 1;
-
-    // Récupérer les drivers de la file
-    const allDrivers = await kv.getByPrefix('driver:');
-    const queuedDriverIds: string[] = matching.queue || [];
-
-    const queuedDrivers = queuedDriverIds
-      .map((id: string) => allDrivers.find((d: any) => d.id === id))
-      .filter(Boolean);
-
-    console.log(`⏭️ Passage au driver suivant (index ${nextIndex}/${queuedDrivers.length})`);
-
-    if (nextIndex >= queuedDrivers.length) {
-      // Plus de drivers disponibles
-      console.warn(`⚠️ Tous les chauffeurs ont refusé la course ${rideId}`);
-      ride.status = 'no_driver_found';
-      ride.noDriverFoundAt = new Date().toISOString();
-      await kv.set(`ride:${rideId}`, ride);
-      await kv.delete(`matching:${rideId}`);
-      return c.json({ success: true, message: "Aucun chauffeur disponible" });
-    }
-
-    // Mettre à jour l'index
-    matching.currentIndex = nextIndex;
-    await kv.set(`matching:${rideId}`, matching);
-
-    // ✅ FIX: Nettoyer la notification KV du driver qui vient de refuser
-    await kv.delete(`driver_notification:${driverId}`);
-
-    // Notifier le driver suivant immédiatement
-    const nextDriver = queuedDrivers[nextIndex];
-    if (!nextDriver) {
-      return c.json({ success: true, message: "Driver suivant introuvable" });
-    }
-
-    const pickupName = ride.pickup?.name || 
-                   ride.pickup?.address || 
-                   ride.pickupAddress || 
-                   ride.from?.name || 
-                   'Point de départ';
-    const destinationName = ride.destination?.name || 
-                        ride.destination?.address || 
-                        ride.destinationAddress || 
-                        ride.to?.name || 
-                        'Destination';
-    const distance = ride.distance || 0;
-    const estimatedPrice = ride.estimatedPrice || 0;
-    const pickupLat = ride.pickup?.coordinates?.lat || -4.3276;
-    const pickupLng = ride.pickup?.coordinates?.lng || 15.3136;
-
-    // ✅ TOUJOURS écrire la notification KV pour le polling (indépendant du FCM)
-    const nextNotification = {
-      rideId: ride.id,
-      type: 'new_ride_request',
-      passengerId: ride.passengerId || '',
-      passengerName: ride.passengerName || 'Passager',
-      passengerPhone: ride.passengerPhone || ride.passenger_phone || '',
-      pickupLat: pickupLat.toString(),
-      pickupLng: pickupLng.toString(),
-      destinationLat: (ride.destination?.coordinates?.lat || -4.3276).toString(),
-      destinationLng: (ride.destination?.coordinates?.lng || 15.3136).toString(),
-      pickupName,
-      destinationName,
-      distance: distance.toString(),
-      duration: (ride.duration || 0).toString(),
-      estimatedPrice: estimatedPrice.toString(),
-      vehicleCategory: ride.vehicleCategory,
-      driverIndex: nextIndex.toString(),
-      totalDrivers: queuedDrivers.length.toString(),
-      notifiedAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 7000).toISOString()
-    };
-    await kv.set(`driver_notification:${nextDriver.id}`, nextNotification);
-    console.log(`📥 Notification KV écrite pour driver suivant ${nextDriver.id}`);
-
-    // Essayer FCM si token disponible
-    let fcmResult = { success: false };
-    if (nextDriver.fcmToken) {
-      fcmResult = await sendFCMNotification(nextDriver.fcmToken, {
-        title: 'SmartCabb - Nouvelle Course',
-        body: `${pickupName} vers ${destinationName} - ${distance.toFixed(1)} km - ${Math.round(estimatedPrice)} FC`,
-        data: nextNotification
-      });
-
-      if (fcmResult.success) {
-        console.log(`✅ Driver suivant notifié via FCM: ${nextDriver.full_name || nextDriver.name}`);
+    if (matching) {
+      const remaining = (matching.queue || []).filter((id: string) => id !== driverId);
+      if (remaining.length === 0) {
+        console.warn(`⚠️ Tous les chauffeurs ont refusé la course ${rideId}`);
+        if (ride.status === 'searching') {
+          ride.status = 'no_driver_found';
+          ride.noDriverFoundAt = new Date().toISOString();
+          await kv.set(`ride:${rideId}`, ride);
+        }
+        await kv.delete(`matching:${rideId}`);
       } else {
-        console.warn(`⚠️ Échec FCM driver suivant — polling actif pour ${nextDriver.id}`);
+        matching.queue = remaining;
+        await kv.set(`matching:${rideId}`, matching);
       }
     }
 
-    return c.json({ success: true, nextDriverNotified: fcmResult.success });
+    return c.json({ success: true });
   } catch (error) {
     console.error("❌ Erreur refus course:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
