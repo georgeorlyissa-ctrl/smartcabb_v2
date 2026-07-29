@@ -58,8 +58,8 @@ export function EstimateScreen() {
   // 🔒 Désactive le bouton après 1 clic (anti double-soumission)
   const [isBooking, setIsBooking] = useState(false);
 
-  // 📅 Réservation pour catégories Familiale & Business
-  const RESERVATION_CATEGORIES = ['smart_plus', 'smart_business'];
+  // 📅 Réservation pour toutes les catégories
+  const RESERVATION_ONLY = ['smart_plus', 'smart_business'];
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleTime, setScheduleTime] = useState('');
@@ -283,7 +283,7 @@ export function EstimateScreen() {
     }
 
     // 📅 VÉHICULES SUR RÉSERVATION UNIQUEMENT
-    if (RESERVATION_CATEGORIES.includes(selectedVehicle)) {
+    if (RESERVATION_ONLY.includes(selectedVehicle)) {
       setIsBooking(false);
       setShowScheduleDialog(true);
       return;
@@ -581,7 +581,7 @@ export function EstimateScreen() {
                     nightPriceCDF = convertUSDtoCDF(nightPriceUSD);
                   }
 
-                  const isReservationOnly = RESERVATION_CATEGORIES.includes(vehicle.id);
+                  const isReservationOnly = RESERVATION_ONLY.includes(vehicle.id);
 
                   return (
                     <motion.button
@@ -743,43 +743,63 @@ export function EstimateScreen() {
           </div>
         </div>
 
-        <Button
-          onClick={handleBookRide}
-          disabled={isBooking}
-          className={`w-full h-14 rounded-xl shadow-lg transition-all duration-300 text-base font-semibold ${
-            isBooking
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-              : 'bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white shadow-secondary/30 hover:shadow-xl'
-          }`}
-        >
-          {isBooking ? (
-            <span className="flex items-center gap-2 justify-center">
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
-              {/* ✅ TRADUIT */}
-              {t('searching_driver')}
-            </span>
-          ) : (
-            RESERVATION_CATEGORIES.includes(selectedVehicle)
-              ? (language === 'en' ? '📅 Book (Reservation)' : '📅 Reserver (Programme)')
-              : t('confirm_booking')
+        <div className="flex gap-2">
+          <Button
+            onClick={handleBookRide}
+            disabled={isBooking}
+            className={`flex-1 h-14 rounded-xl shadow-lg transition-all duration-300 text-base font-semibold ${
+              isBooking
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                : 'bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white shadow-secondary/30 hover:shadow-xl'
+            }`}
+          >
+            {isBooking ? (
+              <span className="flex items-center gap-2 justify-center">
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                {t('searching_driver')}
+              </span>
+            ) : (
+              RESERVATION_ONLY.includes(selectedVehicle)
+                ? (language === 'en' ? '📅 Book (Reservation)' : '📅 Reserver (Programme)')
+                : t('confirm_booking')
+            )}
+          </Button>
+          {!RESERVATION_ONLY.includes(selectedVehicle) && (
+            <Button
+              onClick={() => setShowScheduleDialog(true)}
+              disabled={isBooking}
+              className="h-14 px-4 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-400 text-blue-600 font-medium text-sm shadow-lg transition-all"
+            >
+              <Calendar className="w-5 h-5" />
+            </Button>
           )}
-        </Button>
+        </div>
 
       </motion.div>
 
-      {/* 📅 DIALOG RÉSERVATION POUR FAMILIALE & BUSINESS */}
+      {/* 📅 DIALOG RÉSERVATION POUR TOUTES CATÉGORIES */}
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
-              🚗 {selectedVehicle === 'smart_plus' ? 'SmartCabb Familiale' : 'SmartCabb Business'} — Réservation
+              🚗 {{
+                smart_standard: 'SmartCabb Standard',
+                smart_confort: 'SmartCabb Confort',
+                smart_plus: 'SmartCabb Familiale',
+                smart_business: 'SmartCabb Business'
+              }[selectedVehicle] || 'SmartCabb'} — Réservation
             </DialogTitle>
             <DialogDescription>
-              Catégorie <strong>{selectedVehicle === 'smart_plus' ? 'Familiale (6 places)' : 'Business VIP (4 places)'}</strong> disponible uniquement sur réservation. Choisissez votre date et heure.
+              Programmez votre course <strong>{{
+                smart_standard: 'Standard (3 places)',
+                smart_confort: 'Confort (3 places + Data)',
+                smart_plus: 'Familiale (6 places)',
+                smart_business: 'Business VIP (4 places)'
+              }[selectedVehicle] || ''}</strong>. Choisissez votre date et heure.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
