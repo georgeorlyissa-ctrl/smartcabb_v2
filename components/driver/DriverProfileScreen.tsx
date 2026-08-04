@@ -308,9 +308,9 @@ export function DriverProfileScreen() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validation taille (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('La photo ne doit pas dépasser 5 MB');
+    // Validation taille (max 1MB)
+    if (file.size > 1 * 1024 * 1024) {
+      toast.error('La photo ne doit pas dépasser 1 MB');
       return;
     }
 
