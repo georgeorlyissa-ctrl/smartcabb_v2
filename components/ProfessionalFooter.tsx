@@ -97,6 +97,11 @@ export function ProfessionalFooter() {
                   {t('nav.contact')}
                 </Link>
               </li>
+              <li>
+                <Link to="/app/admin" className="text-gray-400 hover:text-blue-400 transition-colors">
+                  Espace Admin
+                </Link>
+              </li>
             </ul>
           </div>
 

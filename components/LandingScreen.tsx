@@ -4,10 +4,8 @@ import { SmartCabbLogo } from './SmartCabbLogo';
 import { Button } from './ui/button';
 import { 
   ArrowLeft,
-  Shield,
   UserPlus,
-  LogIn,
-  Car
+  LogIn
 } from '../lib/icons';
 
 export function LandingScreen() {
@@ -24,11 +22,6 @@ export function LandingScreen() {
   const handleLogin = () => {
     console.log('🔐 Navigation vers connexion passager');
     setCurrentScreen('login');
-  };
-
-  const handleAdminAccess = () => {
-    console.log('👨‍💼 handleAdminAccess appelé - Navigation vers /app/admin');
-    navigate('/app/admin');
   };
 
   const handleBackToSite = () => {
@@ -68,18 +61,6 @@ export function LandingScreen() {
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
-      </div>
-
-      {/* Badge Admin - EN HAUT À DROITE */}
-      <div className="absolute top-6 right-6 animate-in fade-in slide-in-from-right duration-500 z-20">
-        <button
-          type="button"
-          onClick={handleAdminAccess}
-          className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center hover:scale-110 transition-all cursor-pointer shadow-xl shadow-yellow-400/50 hover:shadow-yellow-400/70"
-          title="Accès Admin"
-        >
-          <Shield className="w-6 h-6 text-gray-900" />
-        </button>
       </div>
 
       {/* Content centré */}
@@ -143,25 +124,6 @@ export function LandingScreen() {
             <LogIn className="w-5 h-5 mr-2" />
             Connexion
           </Button>
-        </div>
-
-        {/* Help text en bas */}
-        <div className="text-center mt-8 flex items-center justify-center gap-6 animate-in fade-in duration-1000" style={{ animationDelay: '400ms' }}>
-          <button 
-            type="button"
-            onClick={() => navigate('/contact')}
-            className="text-sm text-white/70 hover:text-white transition-colors font-medium"
-          >
-            Besoin d'aide ?
-          </button>
-          <div className="w-1 h-1 bg-white/50 rounded-full"></div>
-          <button 
-            type="button"
-            onClick={() => navigate('/about')}
-            className="text-sm text-white/70 hover:text-white transition-colors font-medium"
-          >
-            À propos
-          </button>
         </div>
       </div>
     </div>
