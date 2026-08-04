@@ -26,6 +26,7 @@ const IS_SAMSUNG = /samsungbrowser/i.test(_ua);
 
 // ─── AudioContext — singleton pré-chauffé ─────────────────────────────────────
 let _audioCtx: AudioContext | null = null;
+let _soundAllowed = true; // false (après stop) → les beeps en attente sont ignorés
 
 function getAudioContext(): AudioContext | null {
   try {
@@ -57,6 +58,7 @@ function warmUpAudioContext(): void {
 
 // ─── Beep double-ton (880 Hz → 1100 Hz) ──────────────────────────────────────
 function playNotificationBeep(): void {
+  if (!_soundAllowed) return; // stop déjà demandé → beep ignoré
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -328,6 +330,7 @@ export async function playRideNotification(rideDetails?: {
   estimatedEarnings?: number;
 }): Promise<void> {
   console.log('🚖 playRideNotification');
+  _soundAllowed = true;
 
   // Beeps — 3×, espacés de 700 ms
   playNotificationBeep();
@@ -357,8 +360,15 @@ export async function playRideNotification(rideDetails?: {
 
 /** Arrête tout (son + vibration) */
 export function stopAllNotifications(): void {
-  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch {}
+  _soundAllowed = false;
+  try {
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  } catch {}
   try { navigator.vibrate(0); } catch {}
+  try {
+    // Coupe immédiatement les oscillateurs encore en lecture
+    if (_audioCtx && _audioCtx.state === 'running') _audioCtx.suspend().catch(() => {});
+  } catch {}
 }
 
 /** Demande la permission pour les notifications navigateur */
