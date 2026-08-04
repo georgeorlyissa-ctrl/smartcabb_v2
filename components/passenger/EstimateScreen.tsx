@@ -446,11 +446,13 @@ export function EstimateScreen() {
     const isReservationOnly = RESERVATION_ONLY.includes(vehicle.id);
 
     return (
-      <motion.button
+      <motion.div
         key={vehicle.id}
         onClick={() => setSelectedVehicle(vehicle.id)}
         whileTap={{ scale: 0.97 }}
-        className={`relative ${fullWidth ? 'col-span-2' : ''} w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left ${
+        role="button"
+        tabIndex={0}
+        className={`relative ${fullWidth ? 'col-span-2' : ''} w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left cursor-pointer ${
           isReservationOnly
             ? 'border-purple-200 hover:border-purple-400'
             : isSelected
@@ -540,8 +542,40 @@ export function EstimateScreen() {
               <span className="text-[9px] font-bold text-secondary">✓ {t('success')}</span>
             </div>
           )}
+
+          {/* 🚀 BOUTON COMMANDER — juste à côté du choix */}
+          {isSelected && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isBooking) return;
+                handleBookRide();
+              }}
+              className={`w-full h-10 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all ${
+                isBooking
+                  ? 'bg-gray-300 text-gray-500'
+                  : 'bg-gradient-to-r from-secondary to-primary text-white shadow-md shadow-secondary/30'
+              }`}
+            >
+              {isBooking ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  {t('searching_driver')}
+                </>
+              ) : (
+                <>
+                  🚗 {RESERVATION_ONLY.includes(vehicle.id)
+                    ? (language === 'en' ? '📅 Book (Reservation)' : '📅 Reserver (Programme)')
+                    : t('confirm_booking')}
+                </>
+              )}
+            </button>
+          )}
         </div>
-      </motion.button>
+      </motion.div>
     );
   };
 
@@ -551,7 +585,7 @@ export function EstimateScreen() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -300, opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="h-full bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col overflow-hidden"
+      className="h-[100dvh] w-full bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col overflow-hidden"
     >
       {/* ── HEADER ── */}
       <div className="flex items-center justify-between p-4 bg-white/80 backdrop-blur-sm border-b border-border flex-shrink-0">
@@ -817,7 +851,7 @@ export function EstimateScreen() {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="flex-shrink-0 p-4 border-t border-border bg-white/95 backdrop-blur-sm shadow-2xl"
+        className="flex-shrink-0 p-4 pt-3 border-t-2 border-secondary/30 bg-white shadow-[0_-8px_30px_-12px_rgba(0,0,0,0.35)]"
       >
         {/* Prix résumé */}
         <div className="flex items-center justify-between mb-3 px-1">
