@@ -43,7 +43,7 @@ export {
 export function getExchangeRate(): number {
   try {
     if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-      return 2000;
+      return 2500;
     }
 
     for (const key of ['smartcabb_config_cache', 'smartcab_system_settings', 'smartcabb_exchange_rate']) {
@@ -66,7 +66,7 @@ export function getExchangeRate(): number {
   } catch (error) {
     console.warn('⚠️ Erreur lecture taux de conversion:', error);
   }
-  return 2000;
+  return 2500;
 }
 
 /**

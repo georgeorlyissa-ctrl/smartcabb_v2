@@ -50,7 +50,7 @@ export interface GlobalConfig {
  * Configuration par défaut
  */
 export const DEFAULT_CONFIG: GlobalConfig = {
-  exchangeRate: 2800,
+  exchangeRate: 2500,
   commissionRate: 10,
   nightTimeStart: '21:00',
   nightTimeEnd: '06:00',

@@ -221,7 +221,7 @@ app.get("/stats", async (c) => {
 // ─── Constante config ─────────────────────────────────────────────────────────
 const CONFIG_KEY = "smartcabb_global_config";
 const DEFAULT_SETTINGS = {
-  exchangeRate: 2800, commissionRate: 10, nightTimeStart: "21:00",
+  exchangeRate: 2500, commissionRate: 10, nightTimeStart: "21:00",
   nightTimeEnd: "06:00", freeWaitingMinutes: 3, distantZoneMultiplier: 2,
   postpaidEnabled: true, postpaidFee: 5000, flutterwaveEnabled: true,
   smsEnabled: true, smsProvider: "africas_talking", notificationsEnabled: true,
@@ -598,7 +598,7 @@ app.get("/revenue", async (c) => {
 
     // Get exchange rate from config
     const config = await kvGet("smartcabb_global_config");
-    const exchangeRate = config?.exchangeRate || 2800;
+    const exchangeRate = config?.exchangeRate || 2500;
 
     return c.json({
       success: true,

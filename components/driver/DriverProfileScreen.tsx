@@ -29,7 +29,7 @@ import {
 
 // Helper functions
 const convertUSDtoCDF = (usdAmount: number) => {
-  const exchangeRate = 2800; // 1 USD = 2800 CDF (taux indicatif)
+  const exchangeRate = 2500; // 1 USD = 2500 CDF (taux actuel — réglable depuis le panel admin)
   return Math.round(usdAmount * exchangeRate);
 };
 

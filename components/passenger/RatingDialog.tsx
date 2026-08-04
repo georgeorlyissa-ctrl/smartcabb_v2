@@ -49,7 +49,7 @@ export function RatingDialog({ ride, onClose }: RatingDialogProps) {
   const timeOfDay = ride.startedAt ? getTimeOfDayFromTimestamp(ride.startedAt) : 'jour';
   const hourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 0;
   const totalCostCDF = ride.estimatedPrice || ride.finalPrice || 0;
-  const totalCostUSD = totalCostCDF / (exchangeRate || 2800);
+  const totalCostUSD = totalCostCDF / (exchangeRate || 2500);
 
   // Calculer la durée
   const formatDuration = (seconds: number) => {

@@ -659,7 +659,7 @@ export function RideInProgressScreen() {
                       {(currentRide.estimatedPrice || (currentCost > 0 ? currentCost : calculateBillingCost(elapsedTime).costCDF)).toLocaleString()} {t('cdf')}
                       </p>
                       <p className="text-xs text-white/70">
-                        ≈ {((currentRide.estimatedPrice || (currentCost > 0 ? currentCost : calculateBillingCost(elapsedTime).costCDF)) / (getExchangeRate() || 2800)).toFixed(2)} USD
+                        ≈ {((currentRide.estimatedPrice || (currentCost > 0 ? currentCost : calculateBillingCost(elapsedTime).costCDF)) / (getExchangeRate() || 2500)).toFixed(2)} USD
                       </p>
                     </div>
                   </div>

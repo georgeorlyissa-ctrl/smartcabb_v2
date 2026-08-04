@@ -41,7 +41,7 @@ async function kvSet(key: string, value: any): Promise<void> {
 // ─── Config par défaut ────────────────────────────────────────────────────────
 
 const DEFAULT_CONFIG = {
-  exchangeRate:           2800,
+  exchangeRate:           2500,
   commissionRate:         10,
   nightTimeStart:         "21:00",
   nightTimeEnd:           "06:00",

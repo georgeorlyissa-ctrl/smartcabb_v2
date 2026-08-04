@@ -6,7 +6,7 @@ import { projectId, publicAnonKey } from '../utils/supabase/info';
  * Garantit que tous les appareils ont le même taux de change
  */
 export function useExchangeRate() {
-  const [exchangeRate, setExchangeRate] = useState<number>(2000);
+  const [exchangeRate, setExchangeRate] = useState<number>(2500);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,7 +28,7 @@ export function useExchangeRate() {
 
       if (response.ok) {
         const data = await response.json();
-        const rate = data.config?.exchangeRate || 2000;
+        const rate = data.config?.exchangeRate || 2500;
         
         setExchangeRate(rate);
         

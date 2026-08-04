@@ -45,7 +45,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
   });
 
   const [currencySettings, setCurrencySettings] = useState(() => ({
-    exchangeRateUSDToCDF: state.systemSettings?.exchangeRate || 2000, // 🔄 Mis à jour : 2000 CDF par défaut
+    exchangeRateUSDToCDF: state.systemSettings?.exchangeRate || 2500, // 🔄 Taux actuel : 2500 CDF
     postpaidInterestRate: state.systemSettings?.postpaidInterestRate || 15,
     allowMixedPayment: true,
     allowUSDPayment: true
@@ -215,7 +215,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     // Initialiser les paramètres de devise et de tarification à partir des paramètres du système
     if (state.systemSettings) {
       setCurrencySettings({
-        exchangeRateUSDToCDF: state.systemSettings.exchangeRate || 2000, // 🔄 Mis à jour : 2000 CDF par défaut
+        exchangeRateUSDToCDF: state.systemSettings.exchangeRate || 2500, // 🔄 Taux actuel : 2500 CDF
         postpaidInterestRate: state.systemSettings.postpaidInterestRate || 15,
         allowMixedPayment: true,
         allowUSDPayment: true

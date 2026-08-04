@@ -21,9 +21,9 @@ export function ExchangeRateSync() {
           }
         }
       }
-      // Aucune valeur → utiliser 2800 CDF (aligné avec le backend)
-      localStorage.setItem('smartcabb_exchange_rate', '2800');
-      console.log('ℹ️ Taux de change par défaut : 2800 CDF');
+      // Aucune valeur → utiliser 2500 CDF (taux @ 2026-08-04, défini via panel admin)
+      localStorage.setItem('smartcabb_exchange_rate', '2500');
+      console.log('ℹ️ Taux de change par défaut : 2500 CDF');
     } catch (_) {}
 
     // Écouter les mises à jour admin en temps réel
@@ -58,7 +58,7 @@ export function useExchangeRate(): number {
         }
       }
     } catch (_) {}
-    return 2800;
+    return 2500;
   });
 
   useEffect(() => {

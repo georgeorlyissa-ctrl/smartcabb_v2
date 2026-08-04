@@ -47,7 +47,7 @@ function getExchangeRate(): number {
   } catch (error) {
     console.warn('⚠️ Erreur lecture taux de conversion, utilisation valeur par défaut:', error);
   }
-  return 2800;
+  return 2500;
 }
 
 /**

@@ -60,8 +60,8 @@ export function BackendSyncProvider() {
       if (checkResponse.ok) {
         const backendData = await checkResponse.json();
         
-        // Si le backend est vide ou a des valeurs par défaut, on migre
-        if (!backendData.exchangeRate || backendData.exchangeRate === 2800) {
+        // Si le backend est vide ou n'a pas de taux, on migre
+        if (!backendData.exchangeRate) {
           shouldMigrate = true;
         }
       } else {

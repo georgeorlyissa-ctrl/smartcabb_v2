@@ -39,7 +39,7 @@ export interface AdminConfig {
 }
 
 const DEFAULTS: AdminConfig = {
-  exchangeRate:          2800,
+  exchangeRate:          2500,
   commissionRate:        10,
   nightTimeStart:        '21:00',
   nightTimeEnd:          '06:00',
