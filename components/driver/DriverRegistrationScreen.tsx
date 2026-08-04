@@ -170,6 +170,10 @@ export function DriverRegistrationScreen() {
         toast.error('Seuls les fichiers JPG sont acceptés pour la photo');
         return;
       }
+      if (file.size > 1 * 1024 * 1024) {
+        toast.error('La photo ne doit pas dépasser 1 MB');
+        return;
+      }
       
       setProfilePhoto(file);
       const reader = new FileReader();
@@ -187,6 +191,10 @@ export function DriverRegistrationScreen() {
       const extension = file.name.toLowerCase().split('.').pop();
       if (extension !== 'jpg' && extension !== 'jpeg') {
         toast.error('Seuls les fichiers JPG sont acceptés pour la photo du véhicule');
+        return;
+      }
+      if (file.size > 1 * 1024 * 1024) {
+        toast.error('La photo du véhicule ne doit pas dépasser 1 MB');
         return;
       }
       setVehiclePhoto(file);
