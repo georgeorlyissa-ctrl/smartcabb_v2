@@ -489,7 +489,7 @@ export function DriverRegistrationScreen() {
                       <p className="text-sm font-medium text-gray-700">
                         {profilePhotoPreview ? 'Changer la photo' : 'Ajouter une photo'}
                       </p>
-                      <p className="text-xs text-gray-500">JPG uniquement, max 5MB</p>
+                      <p className="text-xs text-gray-500">JPG uniquement, max 1MB</p>
                     </div>
                   </div>
                 </label>
