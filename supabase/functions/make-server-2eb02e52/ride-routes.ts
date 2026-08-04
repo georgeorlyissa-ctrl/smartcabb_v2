@@ -13,6 +13,15 @@ function isDriverAvailable(d: any): boolean {
   return d.available === true || d.is_available === true || d.status === 'online';
 }
 
+// ✅ Catégories Standard : 'smart_standard' (requêtes passager) est compatible avec
+// les produits 'smart_standard_clim' et 'smart_standard_no_clim' (choix chauffeur)
+const STANDARD_VARIANTS = ['smart_standard', 'smart_standard_clim', 'smart_standard_no_clim'];
+function categoriesCompatible(a: string | undefined, b: string | undefined): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  return STANDARD_VARIANTS.includes(a) && STANDARD_VARIANTS.includes(b);
+}
+
 // ─── Table KV & helpers inlinés ──────────────────────────────────────────────
 const KV_TABLE = "kv_store_2eb02e52";
 function kvClient() {
@@ -140,7 +149,7 @@ async function findAndNotifyNearbyDrivers(ride: any) {
                        driver.vehicleType ||
                        driver.vehicle?.category ||
                        driver.vehicle?.type;
-      const categoryMatch = driverCategory === ride.vehicleCategory;
+      const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
       return isOnline && isAvailable && categoryMatch;
     });
 
@@ -495,7 +504,7 @@ app.post("/check-drivers-availability", async (c) => {
                       d.vehicle?.category ||
                       d.vehicle?.type;
       
-      const categoryMatch = driverCategory === vehicleCategory;
+      const categoryMatch = categoriesCompatible(driverCategory, vehicleCategory);
       
       // Log détaillé pour debugging
       if (isOnline && isAvailable && hasPositiveBalance && !categoryMatch) {
@@ -536,7 +545,7 @@ app.post("/check-drivers-availability", async (c) => {
                       d.vehicleType ||
                       d.vehicle?.category ||
                       d.vehicle?.type;
-            return isOnline && isAvailable && hasPositiveBalance && driverCategory === cat;
+            return isOnline && isAvailable && hasPositiveBalance && categoriesCompatible(driverCategory, cat);
           }).length;
           return { category: cat, count };
         })
@@ -592,7 +601,7 @@ app.get("/check-availability/:id", async (c) => {
                       d.vehicleType ||
                       d.vehicle?.category ||
                       d.vehicle?.type;
-      const categoryMatch = driverCategory === ride.vehicleCategory;
+      const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
       
       return isOnline && isAvailable && hasPositiveBalance && categoryMatch;
     });
@@ -618,7 +627,7 @@ app.get("/check-availability/:id", async (c) => {
                       d.vehicleType ||
                       d.vehicle?.category ||
                       d.vehicle?.type;
-            return isOnline && isAvailable && hasPositiveBalance && driverCategory === cat;
+            return isOnline && isAvailable && hasPositiveBalance && categoriesCompatible(driverCategory, cat);
           }).length;
           return { category: cat, count };
         })
@@ -773,7 +782,7 @@ app.post("/accept", async (c) => {
                        d.vehicle?.type;
         return d.id !== driverId &&
                isDriverOnline(d) &&
-               driverCategory === ride.vehicleCategory &&
+               categoriesCompatible(driverCategory, ride.vehicleCategory) &&
                d.fcmToken;
       });
 
@@ -1060,7 +1069,7 @@ app.post("/cancel", async (c) => {
                          d.vehicleType ||
                          d.vehicle?.category ||
                          d.vehicle?.type;
-        return isDriverOnline(d) && driverCategory === ride.vehicleCategory && d.fcmToken;
+        return isDriverOnline(d) && categoriesCompatible(driverCategory, ride.vehicleCategory) && d.fcmToken;
       });
 
       for (const d of categoryDrivers) {

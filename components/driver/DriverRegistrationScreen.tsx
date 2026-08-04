@@ -135,11 +135,15 @@ export function DriverRegistrationScreen() {
 
   // Nouvelle structure avec catégorie automatique basée sur le type - Grille Officielle 2025
   const vehicleTypes = [
-    { value: 'smart_standard', label: 'SmartCabb Standard', category: '3 places', rates: '7$/h (jour) - 10$/h (nuit)' },
+    { value: 'smart_standard_clim', label: 'SmartCabb Standard avec Clim', category: '3 places (avec clim)', rates: '7$/h (jour) - 10$/h (nuit)' },
+    { value: 'smart_standard_no_clim', label: 'SmartCabb Standard sans Clim', category: '3 places (sans clim)', rates: '7$/h (jour) - 10$/h (nuit)' },
     { value: 'smart_confort', label: 'SmartCabb Confort', category: '3 places + Data', rates: '15$/h (jour) - 17$/h (nuit)' },
     { value: 'smart_plus', label: 'SmartCabb Plus', category: '4 places + Data', rates: '15$/h (jour) - 20$/h (nuit)' },
     { value: 'smart_business', label: 'SmartCabb Business', category: '4 places VIP', rates: '160$/jour (location uniquement)' }
   ];
+
+  // ✅ Un véhicule se situe dans la catégorie Standard tant que le choix Clim/sans Clim est en attente
+  const isStandardPending = (vehicleType: string) => vehicleType === 'smart_standard';
 
   // Fonction pour obtenir la catégorie du véhicule
   const getVehicleCategory = (vehicleType: string) => {
@@ -224,6 +228,11 @@ export function DriverRegistrationScreen() {
       return;
     }
 
+    if (formData.vehicleType === 'smart_standard') {
+      toast.error('Veuillez préciser si votre véhicule Standard dispose de la climatisation');
+      return;
+    }
+
     // 🚫 SUPPRIMÉ : Vérification des documents (économie d'espace)
     // Les documents seront déposés physiquement au bureau
     // if (documents.length < 1) {
@@ -268,7 +277,7 @@ export function DriverRegistrationScreen() {
       }
       
       // Inscription via Supabase
-      const vehicleCategory = formData.vehicleType as 'smart_standard' | 'smart_confort' | 'smart_plus' | 'smart_business';
+      const vehicleCategory = formData.vehicleType as 'smart_standard_clim' | 'smart_standard_no_clim' | 'smart_confort' | 'smart_plus' | 'smart_business';
       
       const result = await signUpDriver({
         phone: formData.phone,
@@ -624,24 +633,60 @@ export function DriverRegistrationScreen() {
                       {formData.vehicleMake} {formData.vehicleModel}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Type :</span>
-                    <span className="font-semibold text-green-900">
-                      {vehicleTypes.find(t => t.value === formData.vehicleType)?.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Catégorie :</span>
-                    <span className="font-semibold text-green-900">
-                      {getVehicleCategory(formData.vehicleType)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-green-200">
-                    <span className="text-sm text-gray-600">Tarification :</span>
-                    <span className="text-sm text-green-700 font-medium">
-                      {vehicleTypes.find(t => t.value === formData.vehicleType)?.rates}
-                    </span>
-                  </div>
+                  {isStandardPending(formData.vehicleType) ? (
+                    <>
+                      <div className="pt-2 border-t border-green-200">
+                        <p className="text-sm font-medium text-green-900 mb-2">
+                          🚗 Ce {formData.vehicleMake} {formData.vehicleModel} dispose-t-il de la climatisation ?
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => handleInputChange('vehicleType', 'smart_standard_clim')}
+                            className={`py-3 rounded-xl border-2 font-semibold text-sm transition-all ${
+                              formData.vehicleType === 'smart_standard_clim'
+                                ? 'border-green-500 bg-green-500 text-white shadow-lg'
+                                : 'border-green-300 bg-white text-green-800 hover:bg-green-50'
+                            }`}
+                          >
+                            ❄️ Avec Clim
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInputChange('vehicleType', 'smart_standard_no_clim')}
+                            className={`py-3 rounded-xl border-2 font-semibold text-sm transition-all ${
+                              formData.vehicleType === 'smart_standard_no_clim'
+                                ? 'border-green-500 bg-green-500 text-white shadow-lg'
+                                : 'border-green-300 bg-white text-green-800 hover:bg-green-50'
+                            }`}
+                          >
+                            🚗 Sans Clim
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Type :</span>
+                        <span className="font-semibold text-green-900">
+                          {vehicleTypes.find(t => t.value === formData.vehicleType)?.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Catégorie :</span>
+                        <span className="font-semibold text-green-900">
+                          {getVehicleCategory(formData.vehicleType)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-green-200">
+                        <span className="text-sm text-gray-600">Tarification :</span>
+                        <span className="text-sm text-green-700 font-medium">
+                          {vehicleTypes.find(t => t.value === formData.vehicleType)?.rates}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
