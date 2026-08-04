@@ -894,41 +894,18 @@ export function EstimateScreen() {
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button
-            onClick={handleBookRide}
-            disabled={isBooking}
-            className={`flex-1 h-14 rounded-xl shadow-lg transition-all duration-300 text-base font-semibold ${
-              isBooking
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                : 'bg-gradient-to-r from-secondary to-primary hover:from-secondary/90 hover:to-primary/90 text-white shadow-secondary/30 hover:shadow-xl'
-            }`}
-          >
-            {isBooking ? (
-              <span className="flex items-center gap-2 justify-center">
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                </svg>
-                {t('searching_driver')}
-              </span>
-            ) : (
-              RESERVATION_ONLY.includes(selectedVehicle)
-                ? (language === 'en' ? '📅 Book (Reservation)' : '📅 Reserver (Programme)')
-                : t('confirm_booking')
-            )}
-          </Button>
-          {!RESERVATION_ONLY.includes(selectedVehicle) && (
+        {!RESERVATION_ONLY.includes(selectedVehicle) && (
+          <div className="flex justify-end">
             <Button
               onClick={() => setShowScheduleDialog(true)}
               disabled={isBooking}
-              className="h-14 px-4 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-400 text-blue-600 font-medium text-sm shadow-lg transition-all"
+              className="px-4 py-2.5 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-400 text-blue-600 font-medium text-sm shadow-md transition-all"
             >
-              <Calendar className="w-5 h-5" />
+              <Calendar className="w-4 h-4 mr-1.5" />
+              {language === 'en' ? 'Schedule' : 'Programmer'}
             </Button>
-          )}
-        </div>
-
+          </div>
+        )}
       </motion.div>
 
       {/* 📅 DIALOG RÉSERVATION POUR TOUTES CATÉGORIES */}
