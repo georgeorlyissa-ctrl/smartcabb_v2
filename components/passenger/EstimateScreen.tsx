@@ -596,37 +596,21 @@ export function EstimateScreen() {
             <div className="px-4">
               <div className="grid grid-cols-2 gap-3">
                 {vehicles.map((vehicle) => {
-                  const Icon = vehicle.icon;
                   const isSelected = selectedVehicle === vehicle.id;
-                  const vehiclePrice = calculatePrice(vehicle.id, estimatedDuration);
 
                   const currentHour = new Date().getHours();
                   const isDay = isDayTime(currentHour);
                   const isNight = !isDay;
                   const pricing = VEHICLE_PRICING[vehicle.id];
 
-                  let dayPriceUSD, nightPriceUSD, dayPriceCDF, nightPriceCDF;
-
-                  const zone = rideZone.zone;
-
-                  if (vehicle.id === 'smart_business') {
-                    dayPriceUSD = pricing.pricing.location_jour.usd;
-                    dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
-                    nightPriceUSD = null;
-                    nightPriceCDF = null;
-                  } else if (zone === 'C' && (pricing.pricing.location_jour.usd || 0) > 0) {
-                    dayPriceUSD = pricing.pricing.location_jour.usd;
-                    dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
-                    nightPriceUSD = null;
-                    nightPriceCDF = null;
-                  } else {
-                    const hours = Math.max(0.25, estimatedDuration / 60);
-                    const zoneMultiplier = zone === 'B' ? hours + 1 : hours;
-                    dayPriceUSD = (pricing.pricing.course_heure.jour.usd || 0) * zoneMultiplier;
-                    dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
-                    nightPriceUSD = (pricing.pricing.course_heure.nuit.usd || 0) * zoneMultiplier;
-                    nightPriceCDF = convertUSDtoCDF(nightPriceUSD);
-                  }
+                  // 🏷️ GRILLE TARIFAIRE OFFICIELLE (tarifs unitaires, pas la durée du trajet)
+                  const hourDayUSD = pricing.pricing.course_heure.jour.usd || 0;
+                  const hourNightUSD = pricing.pricing.course_heure.nuit.usd || 0;
+                  const loc = pricing.pricing.location_jour;
+                  const locUSD = loc.usd || 0;
+                  const hasDaily = !!loc.available && locUSD > 0;
+                  // Business : uniquement location à la journée (pas de course à l'heure)
+                  const isLocationOnly = hourDayUSD === 0 && hourNightUSD === 0;
 
                   const isReservationOnly = RESERVATION_ONLY.includes(vehicle.id);
 
@@ -668,46 +652,56 @@ export function EstimateScreen() {
                           </p>
                         </div>
 
-                        <div className="flex items-baseline justify-between">
-                          <span className={`text-base font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
-                            {vehiclePrice.toLocaleString()}
-                          </span>
-                          <span className="text-[9px] text-muted-foreground">{t('cdf')}</span>
-                        </div>
-                        <div className="text-[9px] text-muted-foreground -mt-0.5">
-                          ≈ {vehicle.id === 'smart_business'
-                            ? `${dayPriceUSD}$/jour`
-                            : `${isNight ? nightPriceUSD?.toFixed(1) : dayPriceUSD.toFixed(1)}$ USD`
-                          }
-                        </div>
-
-                        {/* Tarifs Jour / Nuit — ✅ TRADUIT */}
-                        {vehicle.id !== 'smart_business' && (
-                          <div className="bg-muted/30 rounded-lg px-1.5 py-1 space-y-0.5">
+                        {/* Grille tarifaire officielle — ✅ TRADUIT */}
+                        <div className="bg-muted/30 rounded-lg px-1.5 py-1 space-y-0.5">
+                          {isLocationOnly ? (
                             <div className="flex items-center justify-between text-[9px]">
                               <div className="flex items-center gap-0.5">
-                                <Sun className="w-2.5 h-2.5 text-amber-500" />
-                                <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>
-                                  {dayLabel}
-                                </span>
+                                <Calendar className="w-2.5 h-2.5 text-purple-500" />
+                                <span className="text-muted-foreground">Journée</span>
                               </div>
-                              <span className={`font-medium ${isNight ? 'text-muted-foreground' : 'text-primary'}`}>
-                                {Math.round(dayPriceCDF).toLocaleString()}
+                              <span className={`font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
+                                {locUSD}$/jour · {Math.round(convertUSDtoCDF(locUSD)).toLocaleString()} {t('cdf')}
                               </span>
                             </div>
-                            <div className="flex items-center justify-between text-[9px]">
-                              <div className="flex items-center gap-0.5">
-                                <Moon className="w-2.5 h-2.5 text-blue-500" />
-                                <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>
-                                  {nightLabel}
+                          ) : (
+                            <>
+                              <div className="flex items-center justify-between text-[9px]">
+                                <div className="flex items-center gap-0.5">
+                                  <Sun className="w-2.5 h-2.5 text-amber-500" />
+                                  <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>
+                                    {dayLabel}
+                                  </span>
+                                </div>
+                                <span className={`font-medium ${isNight ? 'text-muted-foreground' : 'text-primary'}`}>
+                                  {hourDayUSD}$/h · {Math.round(convertUSDtoCDF(hourDayUSD)).toLocaleString()} {t('cdf')}
                                 </span>
                               </div>
-                              <span className={`font-medium ${isNight ? 'text-primary' : 'text-muted-foreground'}`}>
-                                {Math.round(nightPriceCDF ?? 0).toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        )}
+                              <div className="flex items-center justify-between text-[9px]">
+                                <div className="flex items-center gap-0.5">
+                                  <Moon className="w-2.5 h-2.5 text-blue-500" />
+                                  <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                                    {nightLabel}
+                                  </span>
+                                </div>
+                                <span className={`font-medium ${isNight ? 'text-primary' : 'text-muted-foreground'}`}>
+                                  {hourNightUSD}$/h · {Math.round(convertUSDtoCDF(hourNightUSD)).toLocaleString()} {t('cdf')}
+                                </span>
+                              </div>
+                              {hasDaily && (
+                                <div className="flex items-center justify-between text-[9px]">
+                                  <div className="flex items-center gap-0.5">
+                                    <Calendar className="w-2.5 h-2.5 text-purple-500" />
+                                    <span className="text-muted-foreground">Journée</span>
+                                  </div>
+                                  <span className="font-bold text-purple-600">
+                                    {locUSD}$/jour · {Math.round(convertUSDtoCDF(locUSD)).toLocaleString()} {t('cdf')}
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
 
                         {/* Badge sélectionné — ✅ TRADUIT */}
                         {isSelected && (
