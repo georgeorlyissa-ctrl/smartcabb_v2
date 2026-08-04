@@ -69,8 +69,8 @@ export function ServicesPage() {
         { text: 'Secured', detail: 'GPS included' },
         { text: 'Fast', detail: '< 5 minutes' },
       ],
-      priceFR: '15 000 FC',
-      priceEN: '15,000 FC',
+      priceFR: '15 000 FC/h',
+      priceEN: '15,000 FC/h',
       popular: false,
     },
     {
@@ -103,8 +103,8 @@ export function ServicesPage() {
         { text: 'Free Data', detail: 'High speed' },
         { text: 'Secured', detail: 'Insured' },
       ],
-      priceFR: '33 000 FC',
-      priceEN: '33,000 FC',
+      priceFR: '25 000 FC/h',
+      priceEN: '25,000 FC/h',
       popular: true,
     },
     {
@@ -140,8 +140,8 @@ export function ServicesPage() {
         { text: 'Free Data', detail: 'Premium' },
         { text: 'Secured', detail: 'Escort' },
       ],
-      priceFR: '352 000 FC',
-      priceEN: '352,000 FC',
+      priceFR: '400 000 FC/j',
+      priceEN: '400,000 FC/day',
       popular: false,
     },
     {
@@ -174,8 +174,8 @@ export function ServicesPage() {
         { text: 'Free Data', detail: 'Shared' },
         { text: 'Secured', detail: 'Family' },
       ],
-      priceFR: '33 000 FC',
-      priceEN: '33,000 FC',
+      priceFR: '30 000 FC/h',
+      priceEN: '30,000 FC/h',
       popular: false,
     },
   ];

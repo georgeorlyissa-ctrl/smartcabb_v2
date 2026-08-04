@@ -55,16 +55,16 @@ const QUICK_REPLIES: Record<string, { fr: QuickReply[]; en: QuickReply[] }> = {
 const SMARTCABB_KNOWLEDGE = {
   prix: {
     keywords: ['prix', 'tarif', 'coût', 'combien', 'coute', 'payer', 'montant', 'price', 'cost', 'fare', 'facturation', 'minimum', 'smartcabb standard', 'smartcabb confort', 'smartcabb plus', 'smartcabb business', 'course standard', 'course confort', 'course plus', 'course business'],
-    fr: `Nos tarifs sont calculés en francs congolais selon la catégorie de véhicule.
+    fr: `Nos tarifs sont calculés selon la catégorie de véhicule, à l'heure ou à la journée.
 
-Le SmartCabb Standard, économique, revient à 2 500 CDF par kilomètre ou 50 000 CDF de l'heure. Le Confort coûte 5 000 CDF/km ou 100 000 CDF/heure. Pour les familles ou les groupes, le SmartCabb Plus (7 places) est à 7 500 CDF/km ou 150 000 CDF/heure. Et si vous souhaitez plus de confort, le SmartCabb Business est disponible en location à la journée pour 500 000 CDF.
+Le SmartCabb Standard (3 places, climatisé) est à 15 000 CDF de l'heure (25 000 CDF/nuit) ou 125 000 CDF la journée. Le Confort (3 places + Data) coûte 25 000 CDF de l'heure (37 500 CDF/nuit) ou 175 000 CDF la journée. Pour les familles, le SmartCabb Familiale (7 places + Data) est à 30 000 CDF de l'heure (37 500 CDF/nuit) ou 250 000 CDF la journée, sur réservation. Le SmartCabb Business (location VIP à la journée) est à 400 000 CDF la journée, sur réservation.
 
-À noter qu'un supplément de 50% s'applique la nuit, entre 22h et 5h, et que la facturation minimum est de 2 km ou 10 minutes.`,
-    en: `Our prices are calculated in Congolese francs based on the vehicle category.
+La nuit, de 21h à 06h, un supplément s'applique comme indiqué entre parenthèses.`,
+    en: `Our rates are based on the vehicle category, per hour or per day.
 
-SmartCabb Standard, our economy option, is 2,500 CDF per kilometer or 50,000 CDF per hour. Confort is 5,000 CDF/km or 100,000 CDF/hour. For families or groups, SmartCabb Plus (7 seats) is 7,500 CDF/km or 150,000 CDF/hour. And if you'd like something more upscale, SmartCabb Business is available as a daily rental for 500,000 CDF.
+SmartCabb Standard (3 seats, air-conditioned) is 15,000 CDF per hour (25,000 CDF at night) or 125,000 CDF per day. Confort (3 seats + Data) is 25,000 CDF per hour (37,500 CDF at night) or 175,000 CDF per day. For families, SmartCabb Familiale (7 seats + Data) is 30,000 CDF per hour (37,500 CDF at night) or 250,000 CDF per day, on reservation. SmartCabb Business (VIP daily rental) is 400,000 CDF per day, on reservation.
 
-Keep in mind that a 50% surcharge applies at night, between 10pm and 5am, and the minimum charge is 2km or 10 minutes.`
+At night, from 9pm to 6am, a surcharge applies as shown in brackets.`
   },
 
   chauffeur: {

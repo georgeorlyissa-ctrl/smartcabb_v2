@@ -82,16 +82,16 @@ window.translations = {
         en: 'Economical and air-conditioned. Ideal for 1-4 people. Vehicles: IST, Suzuki Swift, Vitz.'
     },
     'services.flex.price': {
-        fr: 'À partir de 8$ / 20 000 CDF par heure',
-        en: 'From $8 / 20,000 CDF per hour'
+        fr: 'À partir de 6$ / 15 000 CDF par heure',
+        en: 'From $6 / 15,000 CDF per hour'
     },
     'services.confort.desc': {
         fr: 'Confort premium pour 1-4 personnes. Véhicules : Blade, Ractis, Nissan Juke, Terrios, Runx.',
         en: 'Premium comfort for 1-4 people. Vehicles: Blade, Ractis, Nissan Juke, Terrios, Runx.'
     },
     'services.confort.price': {
-        fr: 'À partir de 9.6$ / 24 000 CDF par heure',
-        en: 'From $9.6 / 24,000 CDF per hour'
+        fr: 'À partir de 10$ / 25 000 CDF par heure',
+        en: 'From $10 / 25,000 CDF per hour'
     },
     'services.plus.desc': {
         fr: 'Luxe et espace pour 1-6 personnes. Véhicules : Toyota Marx, Crown, Mercedes C-Class, Harrier, Vanguard.',
@@ -106,16 +106,16 @@ window.translations = {
         en: '7 seats with free Data connection. Perfect for families. Vehicles: Noah, Alphard, Voxy.'
     },
     'services.familial.price': {
-        fr: 'À partir de 15$ / 37 500 CDF par heure',
-        en: 'From $15 / 37,500 CDF per hour'
+        fr: 'Location sur réservation : 100$ / 250 000 CDF par jour',
+        en: 'Reservation daily rental: $100 / 250,000 CDF per day'
     },
     'services.vip.desc': {
         fr: 'Luxe ultime avec chauffeur professionnel. Véhicules : Prado, Range Rover, Land Cruiser, Mercedes GLE.',
         en: 'Ultimate luxury with professional driver. Vehicles: Prado, Range Rover, Land Cruiser, Mercedes GLE.'
     },
     'services.vip.price': {
-        fr: 'À partir de 17.6$ / 44 000 CDF par heure',
-        en: 'From $17.6 / 44,000 CDF per hour'
+        fr: 'Location journalière : 160$ / 400 000 CDF',
+        en: 'Daily rental: $160 / 400,000 CDF'
     },
     'services.book': {
         fr: 'Réserver maintenant',
