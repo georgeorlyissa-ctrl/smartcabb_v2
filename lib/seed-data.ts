@@ -197,8 +197,8 @@ export async function seedDatabase() {
         category: 'standard',
         confirmation_code: 'SC001',
         status: 'completed',
-        hourly_rate: 7,
-        base_fare: 19600, // 7 USD * 2800
+        hourly_rate: 6,
+        base_fare: 16800, // 6 USD * 2800
         duration_minutes: 35,
         total_amount: 19600,
         payment_method: 'cash',
@@ -220,8 +220,8 @@ export async function seedDatabase() {
         category: 'comfort',
         confirmation_code: 'SC002',
         status: 'completed',
-        hourly_rate: 9,
-        base_fare: 25200, // 9 USD * 2800
+        hourly_rate: 10,
+        base_fare: 28000, // 10 USD * 2800
         duration_minutes: 42,
         total_amount: 25200,
         payment_method: 'mobile_money',

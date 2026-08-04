@@ -105,7 +105,7 @@ export function DriverRegistrationScreen() {
     { value: 'Orange', label: 'Orange' },
   ];
 
-  // NOUVEAU : Mapping des véhicules complets avec leur type - Grille Officielle 2025
+  // NOUVEAU : Mapping des véhicules complets avec leur type - Grille Officielle 2026
   const predefinedVehicles = [
     // SmartCabb Standard (3 places)
     { make: 'Toyota', model: 'IST', type: 'smart_standard', label: 'Toyota IST (Standard)' },
@@ -114,7 +114,8 @@ export function DriverRegistrationScreen() {
     { make: 'Toyota', model: 'Blade', type: 'smart_standard', label: 'Toyota Blade (Standard)' },
     { make: 'Toyota', model: 'Ractis', type: 'smart_standard', label: 'Toyota Ractis (Standard)' },
     { make: 'Toyota', model: 'Runx', type: 'smart_standard', label: 'Toyota Runx (Standard)' },
-    
+    { make: 'Toyota', model: 'Belta', type: 'smart_standard', label: 'Toyota Belta (Standard)' },
+
     // SmartCabb Confort (3 places + Data)
     { make: 'Toyota', model: 'Marx', type: 'smart_confort', label: 'Toyota Marx (Confort)' },
     { make: 'Toyota', model: 'Crown', type: 'smart_confort', label: 'Toyota Crown (Confort)' },
@@ -122,23 +123,25 @@ export function DriverRegistrationScreen() {
     { make: 'Toyota', model: 'Harrier', type: 'smart_confort', label: 'Harrier (Confort)' },
     { make: 'Toyota', model: 'Vanguard', type: 'smart_confort', label: 'Toyota Vanguard (Confort)' },
     { make: 'Nissan', model: 'Juke', type: 'smart_confort', label: 'Nissan Juke (Confort)' },
-    
-    // SmartCabb Plus (4 places + Data)
-    { make: 'Toyota', model: 'Noah', type: 'smart_plus', label: 'Noah (Plus)' },
-    { make: 'Toyota', model: 'Alphard', type: 'smart_plus', label: 'Alphard (Plus)' },
-    { make: 'Toyota', model: 'Voxy', type: 'smart_plus', label: 'Voxy (Plus)' },
-    
+    { make: 'Toyota', model: 'RAV4', type: 'smart_confort', label: 'Toyota RAV4 (Confort)' },
+    { make: 'Suzuki', model: 'Vitara', type: 'smart_confort', label: 'Suzuki Vitara (Confort)' },
+
+    // SmartCabb Familiale (7 places + Data)
+    { make: 'Toyota', model: 'Noah', type: 'smart_plus', label: 'Noah (Familiale)' },
+    { make: 'Toyota', model: 'Alphard', type: 'smart_plus', label: 'Alphard (Familiale)' },
+    { make: 'Toyota', model: 'Voxy', type: 'smart_plus', label: 'Voxy (Familiale)' },
+
     // SmartCabb Business (4 places + Data + Rafraîchissement)
     { make: 'Toyota', model: 'Prado', type: 'smart_business', label: 'Prado (Business)' },
     { make: 'Toyota', model: 'Fortuner', type: 'smart_business', label: 'Fortuner (Business)' },
   ];
 
-  // Nouvelle structure avec catégorie automatique basée sur le type - Grille Officielle 2025
+  // Nouvelle structure avec catégorie automatique basée sur le type - Grille Officielle 2026
   const vehicleTypes = [
-    { value: 'smart_standard_clim', label: 'SmartCabb Standard avec Clim', category: '3 places (avec clim)', rates: '7$/h (jour) - 10$/h (nuit)' },
+    { value: 'smart_standard_clim', label: 'SmartCabb Standard avec Clim', category: '3 places (avec clim)', rates: '6$/h (jour) - 10$/h (nuit)' },
     { value: 'smart_standard_no_clim', label: 'SmartCabb Standard sans Clim', category: '3 places (sans clim)', rates: '7$/h (jour) - 10$/h (nuit)' },
-    { value: 'smart_confort', label: 'SmartCabb Confort', category: '3 places + Data', rates: '15$/h (jour) - 17$/h (nuit)' },
-    { value: 'smart_plus', label: 'SmartCabb Plus', category: '4 places + Data', rates: '15$/h (jour) - 20$/h (nuit)' },
+    { value: 'smart_confort', label: 'SmartCabb Confort', category: '3 places + Data', rates: '10$/h (jour) - 15$/h (nuit)' },
+    { value: 'smart_plus', label: 'SmartCabb Familiale', category: '7 places + Data', rates: '12$/h (jour) - 15$/h (nuit)' },
     { value: 'smart_business', label: 'SmartCabb Business', category: '4 places VIP', rates: '160$/jour (location uniquement)' }
   ];
 

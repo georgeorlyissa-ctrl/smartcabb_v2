@@ -694,17 +694,17 @@ app.post("/accept", async (c) => {
 
     // ✅ Seuil basé sur le tarif de BASE de la catégorie (taux fixe 2 800 CDF/USD)
     // On N'utilise PAS le prix réel de la course — sinon une course chère bloquerait
-    // un driver éligible. Ex: standard 4 000 CDF > seuil 2 940 CDF → accepté.
+    // un driver éligible. Ex: standard 4 000 CDF > seuil 2 520 CDF → accepté.
     const MIN_COMMISSION_BY_CATEGORY: Record<string, number> = {
-      smart_standard: Math.round(0.15 * 7   * 2800), // 2 940 CDF
-      smart_confort:  Math.round(0.15 * 9   * 2800), // 3 780 CDF
-      smart_plus:     Math.round(0.15 * 10  * 2800), // 4 200 CDF
+      smart_standard: Math.round(0.15 * 6   * 2800), // 2 520 CDF
+      smart_confort:  Math.round(0.15 * 10  * 2800), // 4 200 CDF
+      smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
       smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
     };
     const rideCategory = ride.vehicleCategory || ride.vehicleType ||
                          driver.vehicleCategory || driver.vehicle?.category || 'smart_standard';
     const requiredBalance = MIN_COMMISSION_BY_CATEGORY[rideCategory] ??
-                            Math.round(0.15 * 7 * 2800); // fallback standard
+                            Math.round(0.15 * 6 * 2800); // fallback standard
 
     console.log(`💰 Vérification solde conducteur ${driverName}:`, {
       solde: driverBalance,
@@ -1253,14 +1253,14 @@ app.post("/complete", async (c) => {
         // ✅ FIX AUTO-OFFLINE : forcer hors ligne si solde sous le seuil minimum
         // Seuil = 15% du tarif de base par catégorie (taux fixe 2 800 CDF/USD)
         const MIN_CREDITS_BY_CATEGORY: Record<string, number> = {
-          smart_standard: Math.round(0.15 * 7   * 2800), // 2 940 CDF
-          smart_confort:  Math.round(0.15 * 9   * 2800), // 3 780 CDF
-          smart_plus:     Math.round(0.15 * 10  * 2800), // 4 200 CDF
+          smart_standard: Math.round(0.15 * 6   * 2800), // 2 520 CDF
+          smart_confort:  Math.round(0.15 * 10  * 2800), // 4 200 CDF
+          smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
           smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
         };
         const driverCategory = driver.vehicleCategory || driver.vehicle_category ||
                                driver.vehicle?.category || 'smart_standard';
-        const minimumCredit  = MIN_CREDITS_BY_CATEGORY[driverCategory] ?? Math.round(0.15 * 7 * 2800);
+        const minimumCredit  = MIN_CREDITS_BY_CATEGORY[driverCategory] ?? Math.round(0.15 * 6 * 2800);
 
         let forcedOffline = false;
         if (newBalance < minimumCredit) {
@@ -1372,9 +1372,9 @@ app.post("/:id/complete", async (c) => {
 
         // ✅ FIX AUTO-OFFLINE — seuil = 15% du tarif de base par catégorie (taux 2 800 CDF/USD)
         const MIN_CREDITS_BY_CATEGORY: Record<string, number> = {
-          smart_standard: Math.round(0.15 * 7   * 2800), // 2 940 CDF
-          smart_confort:  Math.round(0.15 * 9   * 2800), // 3 780 CDF
-          smart_plus:     Math.round(0.15 * 10  * 2800), // 4 200 CDF
+          smart_standard: Math.round(0.15 * 6   * 2800), // 2 520 CDF
+          smart_confort:  Math.round(0.15 * 10  * 2800), // 4 200 CDF
+          smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
           smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
         };
         const driverCategory = driver.vehicleCategory || driver.vehicle_category ||

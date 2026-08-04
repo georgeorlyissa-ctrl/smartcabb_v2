@@ -21,6 +21,7 @@ import { supabase } from '../../lib/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { classifyRideZone } from '../../lib/zones-data';
 
 // 🚗 CHEMINS DES IMAGES DE VÉHICULES
 const standardVehicle1 = '/vehicles/smartcabb_standard/Standard_1.png';
@@ -94,6 +95,7 @@ export function EstimateScreen() {
   const distanceKm = routeInfo?.distance || calculateDistanceHaversine(pickup.lat, pickup.lng, destination.lat, destination.lng);
   const trafficCondition = getCurrentTrafficConditions();
   const pickupInstructions = state.pickupInstructions || '';
+  const rideZone = classifyRideZone(pickup, destination);
 
   // 🛣️ CALCUL OSRM ASYNC AU CHARGEMENT
   useEffect(() => {
@@ -202,35 +204,57 @@ export function EstimateScreen() {
 
     const currentHour = new Date().getHours();
     const isDay = isDayTime(currentHour);
+    const zone = rideZone.zone;
 
-    if (vehicleType === 'smart_business') {
-      const dailyRateUSD = pricing.pricing.location_jour.usd;
-      let priceCDF = convertUSDtoCDF(dailyRateUSD);
+    const applyWalletDiscount = (priceCDF: number) => {
       const walletBalance = state.currentUser?.walletBalance || 0;
       const hasWalletDiscount = walletBalance >= convertUSDtoCDF(20);
       if (hasWalletDiscount) {
         priceCDF = Math.round(priceCDF * 0.95);
-        console.log('🎁 Réduction wallet 5% appliquée (Business)');
+        console.log('🎁 Réduction wallet 5% appliquée');
       }
       return priceCDF;
+    };
+
+    if (vehicleType === 'smart_business') {
+      const dailyRateUSD = pricing.pricing.location_jour.usd;
+      let priceCDF = convertUSDtoCDF(dailyRateUSD);
+      priceCDF = applyWalletDiscount(priceCDF);
+      console.log('🎁 Réduction wallet 5% appliquée (Business)');
+      return priceCDF;
+    }
+
+    // 🗺️ ZONE C : facturation forfaitaire journalière obligatoire
+    if (zone === 'C') {
+      const dailyRateUSD = pricing.pricing.location_jour.usd || 0;
+      if (dailyRateUSD > 0) {
+        let priceCDF = convertUSDtoCDF(dailyRateUSD);
+        priceCDF = applyWalletDiscount(priceCDF);
+        console.log(`💰 Zone C — forfait jour ${dailyRateUSD}$/jour appliqué (${vehicleType})`);
+        return priceCDF;
+      }
+      console.warn(`⚠️ Zone C sans tarif journalier configuré pour ${vehicleType}, repli sur l'horaire`);
     }
 
     const hours = Math.max(0.25, durationMinutes / 60); // Minimum 15 min facturé
     const hourlyRateUSD = isDay
       ? pricing.pricing.course_heure.jour.usd
       : pricing.pricing.course_heure.nuit.usd;
-    const priceUSD = hours * hourlyRateUSD;
-    let priceCDF = convertUSDtoCDF(priceUSD);
-    const walletBalance = state.currentUser?.walletBalance || 0;
-    const hasWalletDiscount = walletBalance >= convertUSDtoCDF(20);
-    if (hasWalletDiscount) {
-      priceCDF = Math.round(priceCDF * 0.95);
-      console.log('🎁 Réduction wallet 5% appliquée');
+    let priceUSD = hours * hourlyRateUSD;
+
+    // 🗺️ ZONE B : 1ère heure facturée double (une seule fois par course)
+    if (zone === 'B') {
+      priceUSD += hourlyRateUSD;
+      console.log(`💰 Zone B — 1ère heure doublée (+1h = +${hourlyRateUSD}$) appliquée (${vehicleType})`);
     }
+
+    let priceCDF = convertUSDtoCDF(priceUSD);
+    priceCDF = applyWalletDiscount(priceCDF);
 
     console.log(`💰 Calcul prix ${vehicleType}:`, {
       heure: `${currentHour}h`,
       période: isDay ? '☀️ JOUR (06h-20h)' : '🌙 NUIT (21h-05h)',
+      zone: `🗺️ ${zone}`,
       tarifHoraire: `${hourlyRateUSD} USD/h`,
       durée: `${durationMinutes} min → ${hours}h facturées`,
       prixUSD: `${priceUSD} USD`,
@@ -309,6 +333,7 @@ export function EstimateScreen() {
       estimatedDuration,
       distance: distanceKm,
       passengerCount,
+      zone: rideZone.zone,
       promoCode: appliedPromo?.code,
       promoDiscount: appliedPromo
         ? (appliedPromo.type === 'percentage'
@@ -568,16 +593,24 @@ export function EstimateScreen() {
 
                   let dayPriceUSD, nightPriceUSD, dayPriceCDF, nightPriceCDF;
 
+                  const zone = rideZone.zone;
+
                   if (vehicle.id === 'smart_business') {
+                    dayPriceUSD = pricing.pricing.location_jour.usd;
+                    dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
+                    nightPriceUSD = null;
+                    nightPriceCDF = null;
+                  } else if (zone === 'C' && (pricing.pricing.location_jour.usd || 0) > 0) {
                     dayPriceUSD = pricing.pricing.location_jour.usd;
                     dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
                     nightPriceUSD = null;
                     nightPriceCDF = null;
                   } else {
                     const hours = Math.max(0.25, estimatedDuration / 60);
-                    dayPriceUSD = (pricing.pricing.course_heure.jour.usd || 0) * hours;
+                    const zoneMultiplier = zone === 'B' ? hours + 1 : hours;
+                    dayPriceUSD = (pricing.pricing.course_heure.jour.usd || 0) * zoneMultiplier;
                     dayPriceCDF = convertUSDtoCDF(dayPriceUSD);
-                    nightPriceUSD = (pricing.pricing.course_heure.nuit.usd || 0) * hours;
+                    nightPriceUSD = (pricing.pricing.course_heure.nuit.usd || 0) * zoneMultiplier;
                     nightPriceCDF = convertUSDtoCDF(nightPriceUSD);
                   }
 
@@ -722,6 +755,15 @@ export function EstimateScreen() {
               </span>
               <span className="text-sm font-medium text-muted-foreground">{t('cdf')}</span>
             </div>
+            {rideZone.zone !== 'A' && (
+              <p className={`text-[11px] font-medium mt-0.5 ${
+                rideZone.zone === 'C' ? 'text-red-600' : 'text-orange-600'
+              }`}>
+                {rideZone.zone === 'C'
+                  ? `📍 Zone C — Forfait journalier appliqué`
+                  : `📍 Zone B — 1ère heure doublée`}
+              </p>
+            )}
             {appliedPromo && (
               <p className="text-xs text-secondary font-medium">
                 Promo -{(basePrice - finalPrice).toLocaleString()} {t('cdf')}

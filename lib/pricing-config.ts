@@ -162,17 +162,17 @@ export function getDisplayPrice(
  * = 15% du tarif de base de la catégorie, calculé avec le TAUX FIXE 2 800 CDF/USD.
  * ⚠️ On utilise volontairement le taux fixe (pas dynamique) pour éviter que
  * les ajustements de taux de change de l'admin ne bloquent des drivers éligibles.
- * Ex: standard = 15% × 7 USD × 2 800 = 2 940 CDF → un driver avec 4 000 CDF est éligible.
+ * Ex: standard = 15% × 6 USD × 2 800 = 2 520 CDF → un driver avec 4 000 CDF est éligible.
  */
 export function getMinimumCreditForCategory(category: VehicleCategory): number {
   const FIXED_RATE = 2800; // Taux de référence fixe pour le calcul du seuil
   const BASE_USD: Record<VehicleCategory, number> = {
-    smart_standard: 7,    // → 2 940 CDF
-    smart_confort:  9,    // → 3 780 CDF
-    smart_plus:     10,   // → 4 200 CDF
+    smart_standard: 6,    // → 2 520 CDF
+    smart_confort:  10,   // → 4 200 CDF
+    smart_plus:     12,   // → 5 040 CDF
     smart_business: 160,  // → 67 200 CDF
   };
-  const baseUSD = BASE_USD[category] ?? 7;
+  const baseUSD = BASE_USD[category] ?? 6;
   return Math.round(0.15 * baseUSD * FIXED_RATE);
 }
 
