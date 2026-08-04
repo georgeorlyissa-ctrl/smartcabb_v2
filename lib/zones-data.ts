@@ -117,8 +117,8 @@ export function classifyZone(
 /**
  * 🧮 Détermine la zone à appliquer pour une course (pickup + destination)
  * Règle : si l'une des deux extrémités est en Zone C → Zone C (forfait jour)
- *         sinon si l'une des deux est en Zone B → Zone B (1ère heure doublée, 1x)
- *         sinon → Zone A (normal)
+ *         sinon si la course traverse les zones A et B (A↔B) → Zone B (1ère heure doublée, 1x)
+ *         sinon (A→A, B→B) → Zone A (normal)
  */
 export function classifyRideZone(
   pickup: { lat: number; lng: number },
@@ -133,7 +133,10 @@ export function classifyRideZone(
   let finalZone: ZoneCode = 'A';
   if (pickupZone === 'C' || destZone === 'C') {
     finalZone = 'C';
-  } else if (pickupZone === 'B' || destZone === 'B') {
+  } else if (
+    (pickupZone === 'B' && destZone === 'A') ||
+    (pickupZone === 'A' && destZone === 'B')
+  ) {
     finalZone = 'B';
   }
 
