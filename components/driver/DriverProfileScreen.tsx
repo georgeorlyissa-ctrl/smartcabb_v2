@@ -7,7 +7,7 @@ import { Label } from '../ui/label';
 import { Card } from '../ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { supabase } from '../../lib/supabase';
-import { VEHICLE_PRICING, type VehicleCategory } from '../../lib/pricing';
+import { VEHICLE_PRICING, getExchangeRate, type VehicleCategory } from '../../lib/pricing';
 import { notifyVehicleUpdated, notifyProfileUpdated } from '../../lib/sms-service';
 import { motion } from '../../lib/motion'; // ✅ FIX: Utiliser l'implémentation locale
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -29,8 +29,8 @@ import {
 
 // Helper functions
 const convertUSDtoCDF = (usdAmount: number) => {
-  const exchangeRate = 2500; // 1 USD = 2500 CDF (taux actuel — réglable depuis le panel admin)
-  return Math.round(usdAmount * exchangeRate);
+  const rate = getExchangeRate();
+  return Math.round(usdAmount * rate);
 };
 
 // ✅ v517.77 - Protection contre null/undefined

@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { useAppState } from '../hooks/useAppState';
+import { getExchangeRate } from '../lib/pricing';
 import { 
   CheckCircle, 
   Star, 
@@ -60,8 +61,8 @@ export function RideCompletionSummaryDialog({
   const [selectedTip, setSelectedTip] = useState(0);
   const [showInDollars, setShowInDollars] = useState(false);
 
-  // Taux de change depuis les paramètres admin ou valeur par défaut
-  const exchangeRate = state.adminSettings?.exchangeRate || 2500;
+  // Taux de change depuis les paramètres admin (source fiable dynamique)
+  const exchangeRate = getExchangeRate();
 
   // ✅ UTILISER LES VRAIES ADRESSES DEPUIS currentRide
   const startLocation = state.currentRide?.pickup?.address || rideData.startLocation || 'Point de départ';

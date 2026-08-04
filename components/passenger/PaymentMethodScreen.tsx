@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { useAppState } from '../../hooks/useAppState';
+import { getExchangeRate } from '../../lib/pricing';
 import { CurrencySelector } from '../CurrencySelector';
 import { MixedPaymentSelector } from '../MixedPaymentSelector';
 import { 
@@ -26,8 +27,8 @@ export function PaymentMethodScreen() {
   const [cashAmount, setCashAmount] = useState(0);
   const [mobileMoneyAmount, setMobileMoneyAmount] = useState(0);
   
-  // Exchange rate - could come from admin settings
-  const exchangeRate = state.systemSettings?.exchangeRate || 2850;
+  // Exchange rate - readonly from admin settings (source fiable)
+  const exchangeRate = getExchangeRate();
   
   // ✅ NOUVEAU : Récupérer le solde du passager
   const userBalance = state.currentUser?.balance || 0;
