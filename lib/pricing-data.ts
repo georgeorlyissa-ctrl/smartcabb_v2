@@ -8,10 +8,12 @@
  * 🚗 TYPES DE CATÉGORIES DE VÉHICULES
  */
 export type VehicleCategory = 
-  | 'smart_standard'   // 3 places
-  | 'smart_confort'    // 3 places + Data
-  | 'smart_plus'       // 7 places + Data (Familiale)
-  | 'smart_business';  // 4 places VIP + Data + Rafraîchissement
+  | 'smart_standard'        // 3 places — catégorie générique (rétro-compat)
+  | 'smart_standard_clim'   // 3 places avec Clim
+  | 'smart_standard_no_clim'// 3 places sans Clim
+  | 'smart_confort'         // 3 places + Data
+  | 'smart_plus'            // 7 places + Data (Familiale)
+  | 'smart_business';       // 4 places VIP + Data + Rafraîchissement
 
 /**
  * 📋 TYPES DE SERVICES
@@ -45,7 +47,9 @@ export const USD_TO_CDF = 2800;
  *  Business  : 15% × 160 USD × 2 800 = 67 200 CDF
  */
 export const MINIMUM_CREDITS_BY_CATEGORY = {
-  smart_standard: Math.round(0.15 * 6   * USD_TO_CDF), // 2 520 CDF
+  smart_standard:      Math.round(0.15 * 6   * USD_TO_CDF), // 2 520 CDF
+  smart_standard_clim: Math.round(0.15 * 6   * USD_TO_CDF), // 2 520 CDF
+  smart_standard_no_clim: Math.round(0.15 * 7 * USD_TO_CDF), // 2 940 CDF
   smart_confort:  Math.round(0.15 * 10  * USD_TO_CDF), // 4 200 CDF
   smart_plus:     Math.round(0.15 * 12  * USD_TO_CDF), // 5 040 CDF
   smart_business: Math.round(0.15 * 160 * USD_TO_CDF), // 67 200 CDF
@@ -71,6 +75,66 @@ export const PRICING_CONFIG = {
         usd: 50,
         cdf: 50 * USD_TO_CDF,
         available: true
+      },
+      trajet_aeroport: {
+        aller: { usd: 0, cdf: 0, available: false },
+        aller_retour: { usd: 0, cdf: 0, available: false }
+      }
+    },
+    rules: {
+      zone_lointaine: true, // Zone B : 1ère heure facturée double
+      data_included: false,
+      refreshments: false
+    }
+  },
+
+  smart_standard_clim: {
+    id: 'smart_standard_clim',
+    name: 'SmartCabb Standard avec Clim',
+    displayName: 'Standard Clim',
+    capacity: 3,
+    features: ['3 places', 'Climatisation', 'GPS'],
+    vehicles: ['Toyota IST', 'Toyota Ractis', 'Toyota Belta', 'Suzuki Swift', 'Toyota Vitz', 'Toyota Blade', 'Toyota Runx'],
+    pricing: {
+      course_heure: {
+        jour: { usd: 6, cdf: 6 * USD_TO_CDF },
+        nuit: { usd: 10, cdf: 10 * USD_TO_CDF }
+      },
+      location_jour: {
+        usd: 50,
+        cdf: 50 * USD_TO_CDF,
+        available: true
+      },
+      trajet_aeroport: {
+        aller: { usd: 0, cdf: 0, available: false },
+        aller_retour: { usd: 0, cdf: 0, available: false }
+      }
+    },
+    rules: {
+      zone_lointaine: true, // Zone B : 1ère heure facturée double
+      data_included: false,
+      refreshments: false
+    }
+  },
+
+  smart_standard_no_clim: {
+    id: 'smart_standard_no_clim',
+    name: 'SmartCabb Standard sans Clim',
+    displayName: 'Standard sans Clim',
+    capacity: 3,
+    features: ['3 places', 'GPS'],
+    vehicles: ['Toyota IST', 'Toyota Ractis', 'Toyota Belta', 'Suzuki Swift', 'Toyota Vitz', 'Toyota Blade', 'Toyota Runx'],
+    pricing: {
+      // ANCIEN système de tarification : course par trajet A→B,
+      // prix fixé par le système (pas de location journalière)
+      course_heure: {
+        jour: { usd: 7, cdf: 7 * USD_TO_CDF },
+        nuit: { usd: 10, cdf: 10 * USD_TO_CDF }
+      },
+      location_jour: {
+        usd: 0,
+        cdf: 0,
+        available: false // Ancien système : pas de location à la journée
       },
       trajet_aeroport: {
         aller: { usd: 0, cdf: 0, available: false },

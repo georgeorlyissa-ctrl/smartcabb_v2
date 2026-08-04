@@ -153,6 +153,8 @@ export function getPricingDisplay(category: VehicleCategory) {
 export function isValidCategory(category: string): category is VehicleCategory {
   const validCategories: VehicleCategory[] = [
     'smart_standard',
+    'smart_standard_clim',
+    'smart_standard_no_clim',
     'smart_confort',
     'smart_plus',
     'smart_business'

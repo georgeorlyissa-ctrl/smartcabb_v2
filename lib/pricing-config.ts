@@ -167,10 +167,12 @@ export function getDisplayPrice(
 export function getMinimumCreditForCategory(category: VehicleCategory): number {
   const FIXED_RATE = 2800; // Taux de référence fixe pour le calcul du seuil
   const BASE_USD: Record<VehicleCategory, number> = {
-    smart_standard: 6,    // → 2 520 CDF
-    smart_confort:  10,   // → 4 200 CDF
-    smart_plus:     12,   // → 5 040 CDF
-    smart_business: 160,  // → 67 200 CDF
+    smart_standard:         6,    // → 2 520 CDF
+    smart_standard_clim:    6,    // → 2 520 CDF
+    smart_standard_no_clim: 7,    // → 2 940 CDF
+    smart_confort:          10,   // → 4 200 CDF
+    smart_plus:             12,   // → 5 040 CDF
+    smart_business:         160,  // → 67 200 CDF
   };
   const baseUSD = BASE_USD[category] ?? 6;
   return Math.round(0.15 * baseUSD * FIXED_RATE);

@@ -50,7 +50,7 @@ const businessVehicle6 = '/vehicles/smartcabb_business/Business_6.png';
 export function EstimateScreen() {
   const { t, language } = useTranslation();
   const { setCurrentScreen, createRide, state, calculateDistance } = useAppState();
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('smart_standard');
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('smart_standard_clim');
   const [passengerCount, setPassengerCount] = useState(1);
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [basePrice, setBasePrice] = useState(12500);
@@ -141,17 +141,31 @@ export function EstimateScreen() {
 
   const vehicles = [
     {
-      id: 'smart_standard' as VehicleCategory,
-      name: t('smart_standard'),
-      description: `${VEHICLE_PRICING.smart_standard.capacity} ${t('seats')} · Climatisation · GPS`,
-      capacity: VEHICLE_PRICING.smart_standard.capacity,
+      id: 'smart_standard_clim' as VehicleCategory,
+      name: 'SmartCabb Standard',
+      description: `${VEHICLE_PRICING.smart_standard_clim.capacity} ${t('seats')} · Climatisation · GPS`,
+      capacity: VEHICLE_PRICING.smart_standard_clim.capacity,
       icon: Car,
       color: 'bg-gray-100',
-      hourlyRateUSD: VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd,
-      nightRateUSD: VEHICLE_PRICING.smart_standard.pricing.course_heure.nuit.usd,
-      hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd),
-      rateText: `${VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd}$/h`,
-      rateTextNight: `${VEHICLE_PRICING.smart_standard.pricing.course_heure.nuit.usd}$/h`,
+      hourlyRateUSD: VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.jour.usd,
+      nightRateUSD: VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.nuit.usd,
+      hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.jour.usd),
+      rateText: `${VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.jour.usd}$/h`,
+      rateTextNight: `${VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.nuit.usd}$/h`,
+      images: [standardVehicle1, standardVehicle2, standardVehicle3, standardVehicle4, standardVehicle5, standardVehicle6]
+    },
+    {
+      id: 'smart_standard_no_clim' as VehicleCategory,
+      name: 'SmartCabb Standard sans Clim',
+      description: `${VEHICLE_PRICING.smart_standard_no_clim.capacity} ${t('seats')} · Sans Clim`,
+      capacity: VEHICLE_PRICING.smart_standard_no_clim.capacity,
+      icon: Car,
+      color: 'bg-gray-50',
+      hourlyRateUSD: VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.jour.usd,
+      nightRateUSD: VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.nuit.usd,
+      hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.jour.usd),
+      rateText: `${VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.jour.usd}$/h`,
+      rateTextNight: `${VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.nuit.usd}$/h`,
       images: [standardVehicle1, standardVehicle2, standardVehicle3, standardVehicle4, standardVehicle5, standardVehicle6]
     },
     {
@@ -830,6 +844,8 @@ export function EstimateScreen() {
               <Calendar className="w-5 h-5" />
               🚗 {{
                 smart_standard: 'SmartCabb Standard',
+                smart_standard_clim: 'SmartCabb Standard avec Clim',
+                smart_standard_no_clim: 'SmartCabb Standard sans Clim',
                 smart_confort: 'SmartCabb Confort',
                 smart_plus: 'SmartCabb Familiale',
                 smart_business: 'SmartCabb Business'
@@ -838,6 +854,8 @@ export function EstimateScreen() {
             <DialogDescription>
               Programmez votre course <strong>{{
                 smart_standard: 'Standard (3 places)',
+                smart_standard_clim: 'Standard Clim (3 places)',
+                smart_standard_no_clim: 'Standard sans Clim (3 places)',
                 smart_confort: 'Confort (3 places + Data)',
                 smart_plus: 'Familiale (6 places)',
                 smart_business: 'Business VIP (4 places)'

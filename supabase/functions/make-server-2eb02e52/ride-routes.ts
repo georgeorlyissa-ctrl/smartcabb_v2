@@ -13,13 +13,20 @@ function isDriverAvailable(d: any): boolean {
   return d.available === true || d.is_available === true || d.status === 'online';
 }
 
-// ✅ Catégories Standard : 'smart_standard' (requêtes passager) est compatible avec
-// les produits 'smart_standard_clim' et 'smart_standard_no_clim' (choix chauffeur)
+// ✅ Catégories Standard : 'smart_standard' (legacy passager) est compatible avec
+// les produits 'smart_standard_clim' et 'smart_standard_no_clim' (choix chauffeur).
+// ⚠️ Une demande EXPLICITE clim (smart_standard_clim) ne match QUE des chauffeurs clim
+//    (ou legacy), et no_clim ne match QUE des chauffeurs no_clim (ou legacy).
 const STANDARD_VARIANTS = ['smart_standard', 'smart_standard_clim', 'smart_standard_no_clim'];
 function categoriesCompatible(a: string | undefined, b: string | undefined): boolean {
   if (!a || !b) return false;
   if (a === b) return true;
-  return STANDARD_VARIANTS.includes(a) && STANDARD_VARIANTS.includes(b);
+  // Legacy 'smart_standard' : compatible avec les deux variantes
+  if (a === 'smart_standard' || b === 'smart_standard') {
+    return STANDARD_VARIANTS.includes(a) && STANDARD_VARIANTS.includes(b);
+  }
+  // Sinon : compatibility stricte (clim <-> clim, no_clim <-> no_clim)
+  return a === b;
 }
 
 // ─── Table KV & helpers inlinés ──────────────────────────────────────────────
@@ -696,7 +703,9 @@ app.post("/accept", async (c) => {
     // On N'utilise PAS le prix réel de la course — sinon une course chère bloquerait
     // un driver éligible. Ex: standard 4 000 CDF > seuil 2 520 CDF → accepté.
     const MIN_COMMISSION_BY_CATEGORY: Record<string, number> = {
-      smart_standard: Math.round(0.15 * 6   * 2800), // 2 520 CDF
+      smart_standard:       Math.round(0.15 * 6   * 2800), // 2 520 CDF
+      smart_standard_clim:  Math.round(0.15 * 6   * 2800), // 2 520 CDF
+      smart_standard_no_clim: Math.round(0.15 * 7 * 2800), // 2 940 CDF
       smart_confort:  Math.round(0.15 * 10  * 2800), // 4 200 CDF
       smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
       smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
@@ -1253,7 +1262,9 @@ app.post("/complete", async (c) => {
         // ✅ FIX AUTO-OFFLINE : forcer hors ligne si solde sous le seuil minimum
         // Seuil = 15% du tarif de base par catégorie (taux fixe 2 800 CDF/USD)
         const MIN_CREDITS_BY_CATEGORY: Record<string, number> = {
-          smart_standard: Math.round(0.15 * 6   * 2800), // 2 520 CDF
+          smart_standard:       Math.round(0.15 * 6   * 2800), // 2 520 CDF
+          smart_standard_clim:  Math.round(0.15 * 6   * 2800), // 2 520 CDF
+          smart_standard_no_clim: Math.round(0.15 * 7 * 2800), // 2 940 CDF
           smart_confort:  Math.round(0.15 * 10  * 2800), // 4 200 CDF
           smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
           smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
@@ -1372,7 +1383,9 @@ app.post("/:id/complete", async (c) => {
 
         // ✅ FIX AUTO-OFFLINE — seuil = 15% du tarif de base par catégorie (taux 2 800 CDF/USD)
         const MIN_CREDITS_BY_CATEGORY: Record<string, number> = {
-          smart_standard: Math.round(0.15 * 6   * 2800), // 2 520 CDF
+          smart_standard:       Math.round(0.15 * 6   * 2800), // 2 520 CDF
+          smart_standard_clim:  Math.round(0.15 * 6   * 2800), // 2 520 CDF
+          smart_standard_no_clim: Math.round(0.15 * 7 * 2800), // 2 940 CDF
           smart_confort:  Math.round(0.15 * 10  * 2800), // 4 200 CDF
           smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
           smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
