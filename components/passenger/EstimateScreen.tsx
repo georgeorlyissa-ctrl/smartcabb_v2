@@ -6,7 +6,7 @@ import { Badge } from '../ui/badge';
 import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
 import { toast } from '../../lib/toast';
-import { ArrowLeft, Car, Users, Clock, MapPin, Info, Sun, Moon, Calendar } from '../../lib/icons';
+import { ArrowLeft, Car, Users, Clock, MapPin, Info, Sun, Moon, Calendar, ChevronDown, ChevronUp } from '../../lib/icons';
 import { VehicleCategory, PromoCode } from '../../types';
 import { VEHICLE_PRICING, convertUSDtoCDF, formatCDF, isDayTime } from '../../lib/pricing';
 import { calculateRoute, calculateDistanceHaversine } from '../../lib/distance-calculator';
@@ -51,6 +51,7 @@ export function EstimateScreen() {
   const { t, language } = useTranslation();
   const { setCurrentScreen, createRide, state, calculateDistance } = useAppState();
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('smart_standard_clim');
+  const [standardExpanded, setStandardExpanded] = useState(true);
   const [passengerCount, setPassengerCount] = useState(1);
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [basePrice, setBasePrice] = useState(12500);
@@ -419,6 +420,131 @@ export function EstimateScreen() {
   const dayLabel = t('good_morning').startsWith('Bonjour') ? 'Jour' : 'Day';
   const nightLabel = t('good_evening').startsWith('Bonsoir') ? 'Nuit' : 'Night';
 
+  const isStandardVariant = (id: string) => id === 'smart_standard_clim' || id === 'smart_standard_no_clim';
+  const standardVehicles = vehicles.filter(v => isStandardVariant(v.id));
+  const otherVehicles = vehicles.filter(v => !isStandardVariant(v.id));
+  const isStandardSelected = isStandardVariant(selectedVehicle);
+
+  const renderVehicleCard = (vehicle: (typeof vehicles)[number]) => {
+    const isSelected = selectedVehicle === vehicle.id;
+    const fullWidth = isStandardVariant(vehicle.id);
+
+    const currentHour = new Date().getHours();
+    const isDay = isDayTime(currentHour);
+    const isNight = !isDay;
+    const pricing = VEHICLE_PRICING[vehicle.id];
+
+    // 🏷️ GRILLE TARIFAIRE OFFICIELLE (tarifs unitaires, pas la durée du trajet)
+    const hourDayUSD = pricing.pricing.course_heure.jour.usd || 0;
+    const hourNightUSD = pricing.pricing.course_heure.nuit.usd || 0;
+    const loc = pricing.pricing.location_jour;
+    const locUSD = loc.usd || 0;
+    const hasDaily = !!loc.available && locUSD > 0;
+    // Business : uniquement location à la journée (pas de course à l'heure)
+    const isLocationOnly = hourDayUSD === 0 && hourNightUSD === 0;
+
+    const isReservationOnly = RESERVATION_ONLY.includes(vehicle.id);
+
+    return (
+      <motion.button
+        key={vehicle.id}
+        onClick={() => setSelectedVehicle(vehicle.id)}
+        whileTap={{ scale: 0.97 }}
+        className={`relative ${fullWidth ? 'col-span-2' : ''} w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left ${
+          isReservationOnly
+            ? 'border-purple-200 hover:border-purple-400'
+            : isSelected
+              ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
+              : 'border-border hover:border-secondary/50 hover:shadow-md'
+        } ${isReservationOnly ? 'opacity-90' : ''}`}
+      >
+        {/* Badge Réservation uniquement */}
+        {isReservationOnly && (
+          <div className="absolute top-2 right-2 z-10 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+            📅 Réservation
+          </div>
+        )}
+
+        {vehicle.images && vehicle.images.length > 0 && (
+          <VehicleImageCarousel
+            images={vehicle.images}
+            alt={vehicle.name}
+            isSelected={isSelected}
+          />
+        )}
+
+        <div className="p-2.5 space-y-1.5">
+          <div>
+            <h3 className={`text-xs font-bold leading-tight ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
+              {vehicle.name}
+            </h3>
+            <p className="text-[9px] text-muted-foreground mt-0.5">
+              {vehicle.capacity} {t('seats')} · {VEHICLE_PRICING[vehicle.id].features[0]}
+            </p>
+          </div>
+
+          {/* Grille tarifaire officielle — ✅ TRADUIT */}
+          <div className="bg-muted/30 rounded-lg px-1.5 py-1 space-y-0.5">
+            {isLocationOnly ? (
+              <div className="flex items-center justify-between text-[9px]">
+                <div className="flex items-center gap-0.5">
+                  <Calendar className="w-2.5 h-2.5 text-purple-500" />
+                  <span className="text-muted-foreground">Journée</span>
+                </div>
+                <span className={`font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
+                  {locUSD}$/jour · {Math.round(convertUSDtoCDF(locUSD)).toLocaleString()} {t('cdf')}
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-[9px]">
+                  <div className="flex items-center gap-0.5">
+                    <Sun className="w-2.5 h-2.5 text-amber-500" />
+                    <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>
+                      {dayLabel}
+                    </span>
+                  </div>
+                  <span className={`font-medium ${isNight ? 'text-muted-foreground' : 'text-primary'}`}>
+                    {hourDayUSD}$/h · {Math.round(convertUSDtoCDF(hourDayUSD)).toLocaleString()} {t('cdf')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[9px]">
+                  <div className="flex items-center gap-0.5">
+                    <Moon className="w-2.5 h-2.5 text-blue-500" />
+                    <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                      {nightLabel}
+                    </span>
+                  </div>
+                  <span className={`font-medium ${isNight ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {hourNightUSD}$/h · {Math.round(convertUSDtoCDF(hourNightUSD)).toLocaleString()} {t('cdf')}
+                  </span>
+                </div>
+                {hasDaily && (
+                  <div className="flex items-center justify-between text-[9px]">
+                    <div className="flex items-center gap-0.5">
+                      <Calendar className="w-2.5 h-2.5 text-purple-500" />
+                      <span className="text-muted-foreground">Journée</span>
+                    </div>
+                    <span className="font-bold text-purple-600">
+                      {locUSD}$/jour · {Math.round(convertUSDtoCDF(locUSD)).toLocaleString()} {t('cdf')}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Badge sélectionné — ✅ TRADUIT */}
+          {isSelected && (
+            <div className="flex items-center justify-center gap-1 py-0.5 bg-secondary/10 rounded-lg">
+              <span className="text-[9px] font-bold text-secondary">✓ {t('success')}</span>
+            </div>
+          )}
+        </div>
+      </motion.button>
+    );
+  };
+
   return (
     <motion.div
       initial={{ x: 300, opacity: 0 }}
@@ -595,124 +721,65 @@ export function EstimateScreen() {
             {/* Grille véhicules */}
             <div className="px-4">
               <div className="grid grid-cols-2 gap-3">
-                {vehicles.map((vehicle) => {
-                  const isSelected = selectedVehicle === vehicle.id;
-
-                  const currentHour = new Date().getHours();
-                  const isDay = isDayTime(currentHour);
-                  const isNight = !isDay;
-                  const pricing = VEHICLE_PRICING[vehicle.id];
-
-                  // 🏷️ GRILLE TARIFAIRE OFFICIELLE (tarifs unitaires, pas la durée du trajet)
-                  const hourDayUSD = pricing.pricing.course_heure.jour.usd || 0;
-                  const hourNightUSD = pricing.pricing.course_heure.nuit.usd || 0;
-                  const loc = pricing.pricing.location_jour;
-                  const locUSD = loc.usd || 0;
-                  const hasDaily = !!loc.available && locUSD > 0;
-                  // Business : uniquement location à la journée (pas de course à l'heure)
-                  const isLocationOnly = hourDayUSD === 0 && hourNightUSD === 0;
-
-                  const isReservationOnly = RESERVATION_ONLY.includes(vehicle.id);
-
-                  return (
-                    <motion.button
-                      key={vehicle.id}
-                      onClick={() => setSelectedVehicle(vehicle.id)}
-                      whileTap={{ scale: 0.97 }}
-                      className={`w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left ${
-                        isReservationOnly
-                          ? 'border-purple-200 hover:border-purple-400'
-                          : isSelected
-                            ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
-                            : 'border-border hover:border-secondary/50 hover:shadow-md'
-                      } ${isReservationOnly ? 'opacity-90' : ''}`}
-                    >
-                      {/* Badge Réservation uniquement */}
-                      {isReservationOnly && (
-                        <div className="absolute top-2 right-2 z-10 bg-gradient-to-r from-purple-600 to-purple-700 text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-lg">
-                          📅 Réservation
-                        </div>
-                      )}
-
-                      {vehicle.images && vehicle.images.length > 0 && (
-                        <VehicleImageCarousel
-                          images={vehicle.images}
-                          alt={vehicle.name}
-                          isSelected={isSelected}
-                        />
-                      )}
-
-                      <div className="p-2.5 space-y-1.5">
-                        <div>
-                          <h3 className={`text-xs font-bold leading-tight ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
-                            {vehicle.name}
-                          </h3>
-                          <p className="text-[9px] text-muted-foreground mt-0.5">
-                            {vehicle.capacity} {t('seats')} · {VEHICLE_PRICING[vehicle.id].features[0]}
-                          </p>
-                        </div>
-
-                        {/* Grille tarifaire officielle — ✅ TRADUIT */}
-                        <div className="bg-muted/30 rounded-lg px-1.5 py-1 space-y-0.5">
-                          {isLocationOnly ? (
-                            <div className="flex items-center justify-between text-[9px]">
-                              <div className="flex items-center gap-0.5">
-                                <Calendar className="w-2.5 h-2.5 text-purple-500" />
-                                <span className="text-muted-foreground">Journée</span>
-                              </div>
-                              <span className={`font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
-                                {locUSD}$/jour · {Math.round(convertUSDtoCDF(locUSD)).toLocaleString()} {t('cdf')}
-                              </span>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex items-center justify-between text-[9px]">
-                                <div className="flex items-center gap-0.5">
-                                  <Sun className="w-2.5 h-2.5 text-amber-500" />
-                                  <span className={isNight ? 'text-muted-foreground' : 'text-primary font-medium'}>
-                                    {dayLabel}
-                                  </span>
-                                </div>
-                                <span className={`font-medium ${isNight ? 'text-muted-foreground' : 'text-primary'}`}>
-                                  {hourDayUSD}$/h · {Math.round(convertUSDtoCDF(hourDayUSD)).toLocaleString()} {t('cdf')}
-                                </span>
-                              </div>
-                              <div className="flex items-center justify-between text-[9px]">
-                                <div className="flex items-center gap-0.5">
-                                  <Moon className="w-2.5 h-2.5 text-blue-500" />
-                                  <span className={isNight ? 'text-primary font-medium' : 'text-muted-foreground'}>
-                                    {nightLabel}
-                                  </span>
-                                </div>
-                                <span className={`font-medium ${isNight ? 'text-primary' : 'text-muted-foreground'}`}>
-                                  {hourNightUSD}$/h · {Math.round(convertUSDtoCDF(hourNightUSD)).toLocaleString()} {t('cdf')}
-                                </span>
-                              </div>
-                              {hasDaily && (
-                                <div className="flex items-center justify-between text-[9px]">
-                                  <div className="flex items-center gap-0.5">
-                                    <Calendar className="w-2.5 h-2.5 text-purple-500" />
-                                    <span className="text-muted-foreground">Journée</span>
-                                  </div>
-                                  <span className="font-bold text-purple-600">
-                                    {locUSD}$/jour · {Math.round(convertUSDtoCDF(locUSD)).toLocaleString()} {t('cdf')}
-                                  </span>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-
-                        {/* Badge sélectionné — ✅ TRADUIT */}
-                        {isSelected && (
-                          <div className="flex items-center justify-center gap-1 py-0.5 bg-secondary/10 rounded-lg">
-                            <span className="text-[9px] font-bold text-secondary">✓ {t('success')}</span>
-                          </div>
+                {/* Carte principale SmartCabb Standard — pliable */}
+                <motion.button
+                  key="standard-group"
+                  onClick={() => setStandardExpanded(!standardExpanded)}
+                  whileTap={{ scale: 0.97 }}
+                  className={`col-span-2 w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left ${
+                    isStandardSelected && standardExpanded
+                      ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
+                      : 'border-border hover:border-secondary/50 hover:shadow-md'
+                  }`}
+                >
+                  <div className="p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Car className="w-4 h-4 text-secondary" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xs font-bold text-foreground">SmartCabb Standard</h3>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          {isStandardSelected
+                            ? selectedVehicle === 'smart_standard_clim'
+                              ? `✓ ${t('success')} · 3 ${t('seats')} · Climatisation`
+                              : `✓ ${t('success')} · 3 ${t('seats')} · Sans Clim`
+                            : 'Choisissez : avec ou sans clim'
+                          }
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <span className="text-[9px] font-bold text-secondary">
+                          {isStandardSelected ? `✓ ${t('success')}` : ''}
+                        </span>
+                        {standardExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
                         )}
                       </div>
-                    </motion.button>
-                  );
-                })}
+                    </div>
+                  </div>
+                </motion.button>
+
+                {!standardExpanded && (
+                  <motion.div
+                    key="standard-collapsed-hint"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="col-span-2 px-1 -mt-1"
+                  >
+                    <p className="text-[9px] text-muted-foreground italic">
+                      👇 Touchez « SmartCabb Standard » pour voir les deux options (avec clim / sans clim)
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* Variantes Standard (pleine largeur) */}
+                {standardExpanded && standardVehicles.map(renderVehicleCard)}
+
+                {/* Autres véhicules */}
+                {otherVehicles.map(renderVehicleCard)}
               </div>
             </div>
 
