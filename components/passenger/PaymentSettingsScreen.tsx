@@ -55,7 +55,7 @@ export function PaymentSettingsScreen() {
           id: '1',
           type: 'mobile_money',
           name: 'Orange Money',
-          details: '+243 990 666 661',
+          details: '+243 960 624 008',
           isDefault: true,
           logo: '🟠'
         }

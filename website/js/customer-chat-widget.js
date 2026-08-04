@@ -199,7 +199,7 @@
                 // Afficher quand même une réponse locale
                 setTimeout(() => {
                     addMessageToUI(
-                        'Merci pour votre message ! Notre équipe SmartCabb vous répondra dans les plus brefs délais. Pour une assistance immédiate, appelez le +243 990 666 661.',
+                        'Merci pour votre message ! Notre équipe SmartCabb vous répondra dans les plus brefs délais. Pour une assistance immédiate, appelez le +243 990 624 008.',
                         'bot'
                     );
                 }, CONFIG.autoReplyDelay);
@@ -210,7 +210,7 @@
             // Afficher une réponse locale en cas d'erreur
             setTimeout(() => {
                 addMessageToUI(
-                    'Merci pour votre message ! Notre équipe SmartCabb vous répondra dans les plus brefs délais. Pour une assistance immédiate, appelez le +243 990 666 661.',
+                    'Merci pour votre message ! Notre équipe SmartCabb vous répondra dans les plus brefs délais. Pour une assistance immédiate, appelez le +243 990 624 008.',
                     'bot'
                 );
             }, CONFIG.autoReplyDelay);

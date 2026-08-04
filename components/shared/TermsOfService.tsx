@@ -287,7 +287,7 @@ export const TermsOfService = memo(function TermsOfService() {
             </p>
             <div className="space-y-2 text-sm text-gray-700">
               <p><strong>📧 Email :</strong> support@smartcabb.cd</p>
-              <p><strong>📞 Téléphone :</strong> +243 990 666 661 ou +243 814 018 048</p>
+              <p><strong>📞 Téléphone :</strong> +243 960 624 008 ou +243 814 018 048</p>
               <p><strong>📍 Adresse :</strong> Kinshasa, République Démocratique du Congo</p>
               <p><strong>🕐 Support :</strong> Disponible 24h/24, 7j/7</p>
             </div>

@@ -75,14 +75,14 @@ En échange, on vous propose des revenus flexibles, des horaires que vous choisi
 
 L'inscription se fait en quatre étapes : vous remplissez le formulaire en ligne sur smartcabb.com/chauffeurs, on vérifie vos documents, vous suivez une courte formation à l'application, puis vous pouvez commencer à rouler.
 
-Pour toute question, vous pouvez nous appeler au +243 990 666 661.`,
+Pour toute question, vous pouvez nous appeler au +243 960 624 008.`,
     en: `To become a SmartCabb driver, you'll need a valid driver's license, a vehicle in good condition, a clean criminal record, and to be at least 21 years old.
 
 In return, we offer flexible income, hours you choose yourself, insurance included, free training, and support available at all times.
 
 Signing up takes four steps: you fill out the online form at smartcabb.com/drivers, we verify your documents, you go through a short app training, and then you can start earning.
 
-For any questions, feel free to call us at +243 990 666 661.`
+For any questions, feel free to call us at +243 960 624 008.`
   },
 
   zones: {
@@ -119,38 +119,38 @@ All payments are secure and our prices are transparent, with no hidden fees. Onc
     keywords: ['réservation', 'reservation', 'commander', 'réserver', 'reserver', 'commande', 'book', 'booking', 'course', 'trajet', 'voyage', 'commander une course'],
     fr: `Réserver une course chez SmartCabb est simple. Rendez-vous sur smartcabb.com, cliquez sur Commander, indiquez votre adresse de départ puis votre destination, choisissez le véhicule qui vous convient et confirmez.
 
-Vous pouvez aussi nous appeler directement au +243 990 666 661. Petit conseil : passez par le site pour avoir une estimation du prix avant même de réserver.`,
+Vous pouvez aussi nous appeler directement au +243 960 624 008. Petit conseil : passez par le site pour avoir une estimation du prix avant même de réserver.`,
     en: `Booking a SmartCabb ride is simple. Go to smartcabb.com, click Book Now, enter your pickup address and your destination, choose the vehicle that suits you, and confirm.
 
-You can also call us directly at +243 990 666 661. A tip: use the website to get a price estimate before you even book.`
+You can also call us directly at +243 960 624 008. A tip: use the website to get a price estimate before you even book.`
   },
 
   annulation: {
     keywords: ['annulation', 'annuler', 'cancel', 'cancellation', 'remboursement', 'refund', 'rembourser', 'annulé'],
     fr: `Si vous devez annuler une course, sachez que c'est gratuit tant que le chauffeur n'est pas encore arrivé. Une fois sur place, l'annulation entraîne des frais de 2 000 CDF, et si la course a déjà commencé, elle reste due.
 
-En cas de remboursement, le traitement prend généralement entre 24 et 48 heures et l'argent est recrédité sur votre compte mobile money. Pour toute question, contactez-nous au +243 990 666 661.`,
+En cas de remboursement, le traitement prend généralement entre 24 et 48 heures et l'argent est recrédité sur votre compte mobile money. Pour toute question, contactez-nous au +243 960 624 008.`,
     en: `If you need to cancel a ride, it's free as long as the driver hasn't arrived yet. Once they're on site, cancelling costs a 2,000 CDF fee, and if the ride has already started, it remains payable.
 
-If a refund is involved, it's usually processed within 24 to 48 hours and credited back to your mobile money account. For any questions, reach out to us at +243 990 666 661.`
+If a refund is involved, it's usually processed within 24 to 48 hours and credited back to your mobile money account. For any questions, reach out to us at +243 960 624 008.`
   },
 
   securite: {
     keywords: ['sécurité', 'sûr', 'sécurisé', 'security', 'safe', 'protection', 'danger', 'urgence', 'emergency', 'agression', 'accident', 'crime'],
     fr: `Votre sécurité est une priorité chez SmartCabb. Chaque chauffeur passe par une vérification de son casier judiciaire et de son permis, suit une formation obligatoire et est noté par les passagers après chaque course.
 
-Les véhicules sont régulièrement inspectés et assurés, et chaque trajet est suivi par GPS. Vous pouvez aussi partager votre trajet en temps réel avec un proche, et un bouton d'urgence est disponible dans l'application. Notre support reste joignable à tout moment au +243 990 666 661.`,
+Les véhicules sont régulièrement inspectés et assurés, et chaque trajet est suivi par GPS. Vous pouvez aussi partager votre trajet en temps réel avec un proche, et un bouton d'urgence est disponible dans l'application. Notre support reste joignable à tout moment au +243 960 624 008.`,
     en: `Your safety is a priority at SmartCabb. Every driver goes through a criminal record check and license verification, completes mandatory training, and is rated by passengers after each ride.
 
-Vehicles are regularly inspected and insured, and every trip is tracked by GPS. You can also share your trip in real time with someone you trust, and an emergency button is available in the app. Our support team can be reached at any time at +243 990 666 661.`
+Vehicles are regularly inspected and insured, and every trip is tracked by GPS. You can also share your trip in real time with someone you trust, and an emergency button is available in the app. Our support team can be reached at any time at +243 960 624 008.`
   },
 
   contact: {
     keywords: ['contact', 'téléphone', 'email', 'joindre', 'appeler', 'call', 'reach', 'support', 'aide', 'help', 'service client', 'hotline', 'whatsapp'],
-    fr: `Vous pouvez nous joindre par téléphone au +243 990 666 661, par email à admin@smartcabb.com, ou directement ici dans ce chat.
+    fr: `Vous pouvez nous joindre par téléphone au +243 960 624 008, par email à admin@smartcabb.com, ou directement ici dans ce chat.
 
 Vous nous retrouverez aussi sur Facebook (SmartCabbRDC) et Instagram (smartcabb_cd). Notre siège se trouve à Kinshasa. Pour une réponse rapide, le téléphone ou ce chat restent les options les plus efficaces.`,
-    en: `You can reach us by phone at +243 990 666 661, by email at admin@smartcabb.com, or right here in this chat.
+    en: `You can reach us by phone at +243 960 624 008, by email at admin@smartcabb.com, or right here in this chat.
 
 You'll also find us on Facebook (SmartCabbRDC) and Instagram (smartcabb_cd). Our headquarters are in Kinshasa. For a fast response, calling or using this chat are your best options.`
   },
@@ -169,10 +169,10 @@ For larger luggage, it's best to choose SmartCabb Plus and let the driver know w
     keywords: ['animal', 'animaux', 'chien', 'chat', 'pet', 'petit', 'animal domestique'],
     fr: `Les petits animaux voyagent gratuitement avec vous, à condition d'être dans un sac de transport adapté. Les chiens guides pour personnes handicapées sont bien sûr toujours acceptés, sans restriction.
 
-Pour un animal plus grand, le mieux est de nous appeler au +243 990 666 661 afin qu'on organise un véhicule adapté. Pensez simplement à prévenir le chauffeur lors de la réservation.`,
+Pour un animal plus grand, le mieux est de nous appeler au +243 960 624 008 afin qu'on organise un véhicule adapté. Pensez simplement à prévenir le chauffeur lors de la réservation.`,
     en: `Small pets can travel with you free of charge, as long as they're in a suitable carrier. Guide dogs for people with disabilities are always welcome, no restrictions.
 
-For larger animals, it's best to call us at +243 990 666 661 so we can arrange a suitable vehicle. Just remember to let the driver know when booking.`
+For larger animals, it's best to call us at +243 960 624 008 so we can arrange a suitable vehicle. Just remember to let the driver know when booking.`
   },
 
   horaires: {
@@ -187,10 +187,10 @@ The average wait time in Kinshasa is around 5 to 15 minutes, and can go up to 20
 
   reclamation: {
     keywords: ['réclamation', 'reclamation', 'plainte', 'complain', 'probleme', 'problem', 'problème', 'insatisfait', 'objet perdu', 'perdu', 'lost', 'found'],
-    fr: `Pour toute réclamation, écrivez-nous à admin@smartcabb.com ou appelez le +243 990 666 661.
+    fr: `Pour toute réclamation, écrivez-nous à admin@smartcabb.com ou appelez le +243 960 624 008.
 
 Si vous avez perdu un objet, contactez-nous rapidement en précisant la date et l'heure de votre course, nous nous chargeons de joindre le chauffeur. En général, votre demande sera traitée en 24 à 48 heures et vous recevrez une réponse par SMS ou par email.`,
-    en: `For any complaint, write to us at admin@smartcabb.com or call +243 990 666 661.
+    en: `For any complaint, write to us at admin@smartcabb.com or call +243 960 624 008.
 
 If you've lost an item, contact us quickly with the date and time of your ride, and we'll reach out to the driver. Your request is usually handled within 24 to 48 hours, and you'll get a response by SMS or email.`
   },
@@ -209,10 +209,10 @@ All our services include insurance, GPS tracking, safety features, and mobile mo
     keywords: ['combien', 'vehicule', 'véhicule', 'voiture', 'combien de vehicule', 'combien des vehicule', 'combien de voiture', 'combien des voiture', 'parc', 'flotte', 'fleet', 'nombre de vehicule', 'nombre de voiture', 'nombre de véhicule', 'effectif', 'taille de la flotte'],
     fr: `Notre flotte se compose de berlines économiques pour le Standard, de berlines climatisées pour le Confort, de minibus 7 places pour le Plus, et de véhicules haut de gamme pour le Business.
 
-Elle est entretenue et renouvelée régulièrement, et nous comptons des centaines de chauffeurs partenaires à Kinshasa, avec une capacité qui s'adapte à la demande. Pour plus de détails, vous pouvez nous appeler au +243 990 666 661.`,
+Elle est entretenue et renouvelée régulièrement, et nous comptons des centaines de chauffeurs partenaires à Kinshasa, avec une capacité qui s'adapte à la demande. Pour plus de détails, vous pouvez nous appeler au +243 960 624 008.`,
     en: `Our fleet includes economy sedans for Standard, air-conditioned sedans for Confort, 7-seat minibuses for Plus, and upscale vehicles for Business.
 
-It's regularly maintained and renewed, and we have hundreds of partner drivers in Kinshasa, with capacity that scales with demand. For more details, feel free to call us at +243 990 666 661.`
+It's regularly maintained and renewed, and we have hundreds of partner drivers in Kinshasa, with capacity that scales with demand. For more details, feel free to call us at +243 960 624 008.`
   },
 
   salutation: {
@@ -229,23 +229,23 @@ I'm the SmartCabb assistant, and I can help you with pricing, becoming a partner
     keywords: ['merci', 'thank', 'thanks', 'thank you', 'merci beaucoup', 'thanks a lot'],
     fr: `Avec plaisir. N'hésitez pas si vous avez d'autres questions.
 
-Pour réserver, rendez-vous sur smartcabb.com, et pour toute aide, appelez le +243 990 666 661. Bonne journée !`,
+Pour réserver, rendez-vous sur smartcabb.com, et pour toute aide, appelez le +243 960 624 008. Bonne journée !`,
     en: `You're welcome. Don't hesitate if you have other questions.
 
-To book, go to smartcabb.com, and for any help, call +243 990 666 661. Have a great day!`
+To book, go to smartcabb.com, and for any help, call +243 960 624 008. Have a great day!`
   },
 
   au_revoir: {
     keywords: ['au revoir', 'bye', 'goodbye', 'à bientôt', 'a bientot', 'ciao', 'adieu', 'bonne journée'],
     fr: `Merci d'avoir contacté SmartCabb, nous restons disponibles 24h/24 si besoin.
 
-Téléphone : +243 990 666 661
+Téléphone : +243 960 624 008
 Email : admin@smartcabb.com
 
 À bientôt sur smartcabb.com !`,
     en: `Thank you for contacting SmartCabb, we remain available 24/7 if you need us.
 
-Phone: +243 990 666 661
+Phone: +243 960 624 008
 Email: admin@smartcabb.com
 
 See you soon on smartcabb.com!`
@@ -394,7 +394,7 @@ How can I help you today?`;
           const isReclamation = lower.includes('perdu') || lower.includes('plainte');
           addMessage(
             isReclamation
-              ? (lang === 'fr' ? `Pour cela, contactez directement notre support au +243 990 666 661 ou par email à admin@smartcabb.com.` : `For that, please contact our support directly at +243 990 666 661 or by email at admin@smartcabb.com.`)
+              ? (lang === 'fr' ? `Pour cela, contactez directement notre support au +243 960 624 008 ou par email à admin@smartcabb.com.` : `For that, please contact our support directly at +243 960 624 008 or by email at admin@smartcabb.com.`)
               : (lang === 'fr' ? `Je n'ai pas trouvé de réponse précise à votre question. Je peux vous renseigner sur nos tarifs, sur la manière de devenir chauffeur, sur nos zones de service, sur l'application, sur les paiements, ou vous mettre en contact avec notre équipe.` : `I couldn't find a precise answer to your question. I can help with pricing, becoming a driver, our service areas, the app, payments, or put you in touch with our team.`),
             'bot',
             QUICK_REPLIES.welcome[lang]
@@ -402,7 +402,7 @@ How can I help you today?`;
         }
       } catch (err) {
         console.error('ChatWidget error:', err);
-        addMessage('Vous pouvez contacter le +243 990 666 661 pour obtenir de l\'aide.', 'bot');
+        addMessage('Vous pouvez contacter le +243 960 624 008 pour obtenir de l\'aide.', 'bot');
       }
 
       setIsTyping(false);

@@ -153,7 +153,7 @@ export function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg mb-1">{t('contact.phone')}</h3>
-                    <p className="text-gray-600">+243 990 666 661<br />Disponible 24/7</p>
+                    <p className="text-gray-600">+243 960 624 008<br />Disponible 24/7</p>
                   </div>
                 </div>
 

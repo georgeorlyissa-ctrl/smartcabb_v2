@@ -202,7 +202,7 @@ export const PrivacyPolicy = memo(function PrivacyPolicy() {
             <p className="font-medium text-gray-800">Pour toute question concernant cette politique :</p>
             <div className="space-y-1 text-gray-700">
               <p><strong>Email :</strong> privacy@smartcabb.cd</p>
-              <p><strong>Téléphone :</strong> +243 990 666 661 ou +243 814 018 048</p>
+              <p><strong>Téléphone :</strong> +243 960 624 008 ou +243 814 018 048</p>
               <p><strong>Adresse :</strong> Kinshasa, République Démocratique du Congo</p>
             </div>
           </div>

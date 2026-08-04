@@ -304,10 +304,10 @@ export function DriverSettingsScreen() {
             <HelpCircle className="w-5 h-5 text-gray-500" />
             <span className="text-sm font-medium text-gray-700">Centre d'aide</span>
           </button>
-          <a href="tel:+243990666661" className="block">
+          <a href="tel:+243960624008" className="block">
             <button type="button" className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors text-left">
               <Smartphone className="w-5 h-5 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Support (+243 990 666 661)</span>
+              <span className="text-sm font-medium text-gray-700">Support (+243 960 624 008)</span>
             </button>
           </a>
           <button type="button"

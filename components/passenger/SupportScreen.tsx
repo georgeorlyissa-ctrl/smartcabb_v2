@@ -29,11 +29,11 @@ export function SupportScreen() {
       icon: Phone,
       title: 'Appel téléphonique',
       description: 'Contactez-nous directement',
-      value: '+243 990 666 661',
+      value: '+243 960 624 008',
       action: 'Appeler maintenant',
       available: '24h/7j',
       color: 'bg-green-500',
-      link: 'tel:+243990666661'
+      link: 'tel:+243960624008'
     },
     {
       icon: Phone,
@@ -49,11 +49,11 @@ export function SupportScreen() {
       icon: MessageCircle,
       title: 'WhatsApp',
       description: 'Chat instantané',
-      value: '+243 990 666 661',
+      value: '+243 960 624 008',
       action: 'Ouvrir WhatsApp',
       available: 'En ligne',
       color: 'bg-blue-600',
-      link: 'https://wa.me/243990666661?text='
+      link: 'https://wa.me/243960624008?text='
     },
     {
       icon: Mail,
