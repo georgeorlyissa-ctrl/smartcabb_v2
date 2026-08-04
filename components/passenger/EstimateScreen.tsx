@@ -251,11 +251,12 @@ export function EstimateScreen() {
       console.warn(`⚠️ Zone C sans tarif journalier configuré pour ${vehicleType}, repli sur l'horaire`);
     }
 
-    const hours = Math.max(0.25, durationMinutes / 60); // Minimum 15 min facturé
+    // ⏱️ FACTURATION PAR HEURE PLEINE (minimum 1 heure, arrondi à l'heure supérieure)
+    const billedHours = Math.max(1, Math.ceil(durationMinutes / 60));
     const hourlyRateUSD = isDay
       ? pricing.pricing.course_heure.jour.usd
       : pricing.pricing.course_heure.nuit.usd;
-    let priceUSD = hours * hourlyRateUSD;
+    let priceUSD = billedHours * hourlyRateUSD;
 
     // 🗺️ ZONE B : 1ère heure facturée double (une seule fois par course)
     if (zone === 'B') {
@@ -271,7 +272,7 @@ export function EstimateScreen() {
       période: isDay ? '☀️ JOUR (06h-20h)' : '🌙 NUIT (21h-05h)',
       zone: `🗺️ ${zone}`,
       tarifHoraire: `${hourlyRateUSD} USD/h`,
-      durée: `${durationMinutes} min → ${hours}h facturées`,
+      durée: `${durationMinutes} min → ${billedHours}h facturées (heure pleine)`,
       prixUSD: `${priceUSD} USD`,
       prixCDF: `${priceCDF.toLocaleString()} CDF`,
     });
