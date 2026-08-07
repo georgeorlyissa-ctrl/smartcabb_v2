@@ -2,6 +2,7 @@ import { Link } from '../lib/simple-router';
 import { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { LanguageSelector } from './LanguageSelector';
+import { SmartCabbLogo } from './SmartCabbLogo';
 
 export function SiteNavigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,9 +16,7 @@ export function SiteNavigation() {
           <Link to="/" className="flex items-center gap-3 group">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
-              <div className="relative w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl">
-                SC
-              </div>
+              <SmartCabbLogo plain className="relative w-12 h-12" />
             </div>
             <div className="flex flex-col">
               <span className="text-2xl font-black tracking-tight">

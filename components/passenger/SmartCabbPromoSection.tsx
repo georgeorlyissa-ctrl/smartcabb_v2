@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppState } from '../../hooks/useAppState';
+import { SmartCabbLogo } from '../SmartCabbLogo';
 
 // ─── IMAGES ───────────────────────────────────────────────────
 const IMG_CAR    = 'https://images.unsplash.com/photo-1479226414628-56b454fc107e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600';
@@ -144,9 +145,7 @@ export function SmartCabbPromoSection() {
               <p className="text-white/80 text-[10px]">{slide.sub}</p>
             </div>
             {/* Logo */}
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center border border-white/30 flex-shrink-0">
-              <span className="text-white font-black text-[9px]">SC</span>
-            </div>
+            <SmartCabbLogo className="w-8 h-8 flex-shrink-0" />
           </div>
 
           <div className="flex items-center justify-between">

@@ -1,4 +1,5 @@
 import { Link } from '../lib/simple-router';
+import { SmartCabbLogo } from './SmartCabbLogo';
 
 export function SocialFooter() {
   return (
@@ -7,9 +8,7 @@ export function SocialFooter() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-cyan-500 rounded-xl flex items-center justify-center text-white font-bold">
-                SC
-              </div>
+              <SmartCabbLogo plain className="w-10 h-10" />
               <span className="text-xl font-bold">SMARTCABB</span>
             </div>
             <p className="text-gray-400 text-sm">

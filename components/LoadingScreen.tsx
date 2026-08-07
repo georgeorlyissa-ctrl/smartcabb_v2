@@ -1,3 +1,5 @@
+import { SmartCabbLogo } from './SmartCabbLogo';
+
 // Loader2 icon inline (évite import lucide-react qui échoue avec esm.sh)
 const Loader2Icon = ({ className }: { className?: string }) => (
   <svg
@@ -50,13 +52,7 @@ export function LoadingScreen({ message = 'Chargement...' }: LoadingScreenProps)
           </div>
           
           {/* Logo principal */}
-          <div className="relative w-32 h-32 mx-auto bg-white rounded-3xl shadow-2xl shadow-black/30 flex items-center justify-center transform hover:scale-105 transition-transform duration-300">
-            <div className="text-center">
-              <div className="text-4xl font-black bg-gradient-to-br from-cyan-500 to-green-500 bg-clip-text text-transparent">
-                SC
-              </div>
-            </div>
-          </div>
+          <SmartCabbLogo className="relative w-32 h-32 mx-auto rounded-3xl shadow-2xl shadow-black/30" />
         </div>
 
         {/* Nom de l'app avec typographie moderne */}

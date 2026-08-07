@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { SmartCabbLogo } from './SmartCabbLogo';
 
 interface ImageCarouselProps {
   images: string[];
@@ -80,9 +81,7 @@ export function ImageCarousel({ images, serviceName }: ImageCarouselProps) {
 
       {/* Logo SmartCabb dans l'image */}
       <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg shadow-md">
-        <div className="w-6 h-6 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-lg flex items-center justify-center text-white font-black text-xs">
-          SC
-        </div>
+        <SmartCabbLogo plain className="w-6 h-6" />
         <span className="text-xs font-bold text-gray-900">
           {serviceName && serviceName.includes(' ') ? serviceName.split(' ')[1] : serviceName || 'SmartCabb'}
         </span>

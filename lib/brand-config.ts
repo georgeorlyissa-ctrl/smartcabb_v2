@@ -28,12 +28,12 @@
  * ⚠️  NOTE : Le fichier logo-smartcabb.jpeg est dans /public/ par défaut.
  *     Remplacez-le par votre propre image ou changez la valeur ci-dessous.
  */
-export const BRAND_LOGO_URL = '/logo-smartcabb.jpeg';
+export const BRAND_LOGO_URL = '/mon-logo.png';
 
 // ─── Nom & slogans ────────────────────────────────────────────────────────────
 export const BRAND_NAME = 'SmartCabb';
-export const BRAND_TAGLINE_FR = 'Transport intelligent';
-export const BRAND_TAGLINE_EN = 'Smart transport';
+export const BRAND_TAGLINE_FR = 'Ride Smart, Live Smart';
+export const BRAND_TAGLINE_EN = 'Ride Smart, Live Smart';
 
 // ─── Couleurs de la marque (Charte graphique SmartCabb) ───────────────────────
 export const BRAND_COLOR_PRIMARY = '#007AFF';   // Bleu Principal — confiance, sécurité

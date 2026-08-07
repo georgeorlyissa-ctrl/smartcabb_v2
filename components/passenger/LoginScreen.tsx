@@ -14,6 +14,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { validatePhoneNumberRDC } from '../../lib/phone-utils';
 import { supabase } from '../../lib/supabase';
 import { signIn } from '../../lib/auth-service';
+import { SmartCabbLogo } from '../SmartCabbLogo';
 
 export function LoginScreen() {
   console.log('🔐 LoginScreen - Début du render');
@@ -323,9 +324,7 @@ export function LoginScreen() {
       <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in duration-300">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-white text-2xl font-bold">SC</span>
-            </div>
+            <SmartCabbLogo plain className="w-16 h-16 mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Connexion</h1>
             <p className="text-gray-600">Bienvenue sur SmartCabb</p>
           </div>

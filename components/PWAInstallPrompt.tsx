@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SmartCabbLogo } from './SmartCabbLogo';
 
 // ✅ Utiliser des emojis au lieu de lucide-react pour éviter les erreurs esm.sh
 interface BeforeInstallPromptEvent extends Event {
@@ -127,11 +128,7 @@ export function PWAInstallPrompt() {
           </button>
           
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
-              <span className="text-2xl font-black bg-gradient-to-br from-cyan-500 to-emerald-500 bg-clip-text text-transparent">
-                SC
-              </span>
-            </div>
+            <SmartCabbLogo className="w-12 h-12" />
             <div>
               <h3 className="font-bold text-lg">Installer SmartCabb</h3>
               <p className="text-sm text-white/90">Accès rapide depuis votre écran d'accueil</p>

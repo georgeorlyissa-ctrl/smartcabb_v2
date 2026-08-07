@@ -1,5 +1,6 @@
 import { Link } from '../lib/simple-router';
 import { useLanguage } from '../contexts/LanguageContext';
+import { SmartCabbLogo } from './SmartCabbLogo';
 
 export function ProfessionalFooter() {
   const { t } = useLanguage();
@@ -13,9 +14,7 @@ export function ProfessionalFooter() {
           {/* Colonne Logo + Description */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-xl">
-                SC
-              </div>
+              <SmartCabbLogo plain className="w-14 h-14" />
               <span className="text-3xl font-black">
                 SMART<span className="text-blue-400">CABB</span>
               </span>

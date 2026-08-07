@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useNavigate } from '../lib/simple-router';
-import { useEffect, Suspense } from 'react';
+import { useEffect, Suspense, useState } from 'react';
 import { LoadingScreen } from './LoadingScreen';
+import { SplashScreen } from './SplashScreen';
 
 // Applications principales - Import direct pour fiabilité
 import { LandingScreen } from './LandingScreen';
@@ -12,9 +13,11 @@ import { AdminApp } from '../pages/AdminApp';
  * AppRouter - Routeur principal pour /app/*
  * Gère la landing page et les 3 applications (Passager, Conducteur, Admin)
  * 🔥 v517.33 - FIX: Redirection optimisée sans double render
+ * ✨ SplashScreen 2 phases (logo → slogan) affiché à chaque ouverture
  */
 export function AppRouter() {
   const navigate = useNavigate();
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const currentPath = window.location.pathname;
@@ -25,6 +28,11 @@ export function AppRouter() {
       navigate('/app/landing', { replace: true });
     }
   }, []); // Dépendances vides pour n'exécuter qu'une fois
+
+  // ✨ Splash au démarrage (une fois par chargement, comme Yango)
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+  }
 
   return (
     <Suspense fallback={
