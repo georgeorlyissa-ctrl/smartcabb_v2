@@ -59,52 +59,35 @@ console.log('  ✅ App.tsx: Variable neutralScreen (undefined) → isNeutralScre
 console.log('  ✅ Hooks React: Ordre garanti sur iOS Safari (pas de violation)');
 console.log('');
 
-// 🌐 Landing Page
-import { LandingPage } from './pages/LandingPage';
-import AdminCleanSystem from './src/pages/AdminCleanSystem';
-
-// 🚀 LandingScreen
-import { LandingScreen } from './components/LandingScreen';
-
-// 🎯 AppRouter
+// 🎯 AppRouter (statique — contient le SplashScreen, doit charger en premier)
 import { AppRouter } from './components/AppRouter';
 
-// 🌐 Pages secondaires
-import { ServicesPage } from './pages/ServicesPage';
-import { DriversLandingPage } from './pages/DriversLandingPage';
-import { ContactPage } from './pages/ContactPage';
-import { AboutPage } from './pages/AboutPage';
-import { TermsPage } from './pages/TermsPage';
-import { PrivacyPage } from './pages/PrivacyPage';
-import { LegalPage } from './pages/LegalPage';
-import { AccountDeletionPage } from './pages/AccountDeletionPage';
-
-// 📱 Passenger App
-import { PassengerApp } from './pages/PassengerApp';
-
-// 🚗 Driver App
-import { DriverApp } from './pages/DriverApp';
-
-// 👨‍💼 Admin Panel
-import { AdminApp } from './pages/AdminApp';
-
-// 🔐 Reset Password Page
-import { ResetPasswordPage } from './components/auth/ResetPasswordPage';
-import { ForgotPasswordPage } from './components/auth/ForgotPasswordPage';
-import { ResetPasswordByPhonePage } from './components/auth/ResetPasswordByPhonePage';
-import { CreateAuthFromProfilePage } from './components/auth/CreateAuthFromProfilePage';
-
-// 🔧 Admin Diagnostic
-import { AdminLoginDiagnostic } from './components/admin/AdminLoginDiagnostic';
-import { AdminQuickSetup } from './components/admin/AdminQuickSetup';
-import { AdminAccountSync } from './components/admin/AdminAccountSync';
-import { QuickAdminSignup } from './components/admin/QuickAdminSignup';
-import { AdminForgotPasswordScreen } from './components/admin/AdminForgotPasswordScreen';
-import { FixEmailsPage } from './components/admin/FixEmailsPage';
-import { PurgeUserPage } from './components/admin/PurgeUserPage';
-
-// 🔍 Driver Diagnostic
-import { DriverSignupDiagnostic } from './components/driver/DriverSignupDiagnostic';
+// 🌐 Pages — chargées à la demande (lazy) pour un démarrage rapide et fluide
+const LandingPage = lazyWithRetry(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
+const AdminCleanSystem = lazyWithRetry(() => import('./src/pages/AdminCleanSystem'));
+const ServicesPage = lazyWithRetry(() => import('./pages/ServicesPage').then(m => ({ default: m.ServicesPage })));
+const DriversLandingPage = lazyWithRetry(() => import('./pages/DriversLandingPage').then(m => ({ default: m.DriversLandingPage })));
+const ContactPage = lazyWithRetry(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
+const AboutPage = lazyWithRetry(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
+const TermsPage = lazyWithRetry(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
+const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
+const LegalPage = lazyWithRetry(() => import('./pages/LegalPage').then(m => ({ default: m.LegalPage })));
+const AccountDeletionPage = lazyWithRetry(() => import('./pages/AccountDeletionPage').then(m => ({ default: m.AccountDeletionPage })));
+const PassengerApp = lazyWithRetry(() => import('./pages/PassengerApp').then(m => ({ default: m.PassengerApp })));
+const DriverApp = lazyWithRetry(() => import('./pages/DriverApp').then(m => ({ default: m.DriverApp })));
+const AdminApp = lazyWithRetry(() => import('./pages/AdminApp').then(m => ({ default: m.AdminApp })));
+const ResetPasswordPage = lazyWithRetry(() => import('./components/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+const ForgotPasswordPage = lazyWithRetry(() => import('./components/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordByPhonePage = lazyWithRetry(() => import('./components/auth/ResetPasswordByPhonePage').then(m => ({ default: m.ResetPasswordByPhonePage })));
+const CreateAuthFromProfilePage = lazyWithRetry(() => import('./components/auth/CreateAuthFromProfilePage').then(m => ({ default: m.CreateAuthFromProfilePage })));
+const AdminLoginDiagnostic = lazyWithRetry(() => import('./components/admin/AdminLoginDiagnostic').then(m => ({ default: m.AdminLoginDiagnostic })));
+const AdminQuickSetup = lazyWithRetry(() => import('./components/admin/AdminQuickSetup').then(m => ({ default: m.AdminQuickSetup })));
+const AdminAccountSync = lazyWithRetry(() => import('./components/admin/AdminAccountSync').then(m => ({ default: m.AdminAccountSync })));
+const QuickAdminSignup = lazyWithRetry(() => import('./components/admin/QuickAdminSignup').then(m => ({ default: m.QuickAdminSignup })));
+const AdminForgotPasswordScreen = lazyWithRetry(() => import('./components/admin/AdminForgotPasswordScreen').then(m => ({ default: m.AdminForgotPasswordScreen })));
+const FixEmailsPage = lazyWithRetry(() => import('./components/admin/FixEmailsPage').then(m => ({ default: m.FixEmailsPage })));
+const PurgeUserPage = lazyWithRetry(() => import('./components/admin/PurgeUserPage').then(m => ({ default: m.PurgeUserPage })));
+const DriverSignupDiagnostic = lazyWithRetry(() => import('./components/driver/DriverSignupDiagnostic').then(m => ({ default: m.DriverSignupDiagnostic })));
 
 // 🔧 Loading fallback
 const SuspenseFallback = () => {

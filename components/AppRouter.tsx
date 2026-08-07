@@ -1,13 +1,13 @@
 import { Routes, Route, Navigate, useNavigate } from '../lib/simple-router';
-import { useEffect, Suspense, useState } from 'react';
+import { useEffect, Suspense, lazy, useState } from 'react';
 import { LoadingScreen } from './LoadingScreen';
 import { SplashScreen } from './SplashScreen';
 
-// Applications principales - Import direct pour fiabilité
-import { LandingScreen } from './LandingScreen';
-import { PassengerApp } from '../pages/PassengerApp';
-import { DriverApp } from '../pages/DriverApp';
-import { AdminApp } from '../pages/AdminApp';
+// Applications principales — chargées à la demande pendant le splash (démarrage fluide)
+const LandingScreen = lazy(() => import('./LandingScreen').then(m => ({ default: m.LandingScreen })));
+const PassengerApp = lazy(() => import('../pages/PassengerApp').then(m => ({ default: m.PassengerApp })));
+const DriverApp = lazy(() => import('../pages/DriverApp').then(m => ({ default: m.DriverApp })));
+const AdminApp = lazy(() => import('../pages/AdminApp').then(m => ({ default: m.AdminApp })));
 
 /**
  * AppRouter - Routeur principal pour /app/*

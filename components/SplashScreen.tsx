@@ -22,12 +22,12 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   }, [onComplete]);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 overflow-hidden sc-splash-in">
       {/* Orbes flottants animés */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-yellow-400/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '0.7s' }}></div>
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-green-400/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.4s' }}></div>
+        <div className="absolute -top-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-2xl animate-pulse"></div>
+        <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-yellow-400/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.7s' }}></div>
+        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-green-400/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1.4s' }}></div>
 
         {/* Particules flottantes */}
         {[...Array(18)].map((_, i) => (
@@ -79,7 +79,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           </div>
 
           {/* Nom de la marque — apparaît avec le logo */}
-          <h1 className="text-5xl font-black text-white mb-2 tracking-tight text-center animate-in">
+          <h1 className="text-5xl font-black text-white mb-2 tracking-tight text-center sc-title-in">
             Smart<span className="text-yellow-300">Cabb</span>
           </h1>
         </div>
@@ -106,6 +106,19 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
 
       {/* Animations CSS personnalisées */}
       <style>{`
+        @keyframes sc-splash-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        .sc-splash-in {
+          animation: sc-splash-in 0.35s ease-out forwards;
+        }
+
         @keyframes sc-float {
           0%, 100% {
             transform: translateY(0) translateX(0);
@@ -128,7 +141,7 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
           }
         }
 
-        .animate-in {
+        .sc-title-in {
           animation: animate-in 0.6s ease-out forwards;
         }
       `}</style>
