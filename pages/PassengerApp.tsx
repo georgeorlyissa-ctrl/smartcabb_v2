@@ -38,6 +38,7 @@ import { RideTrackingScreen } from '../components/passenger/RideTrackingScreen';
 import { LiveTrackingScreen } from '../components/passenger/LiveTrackingScreen';
 import { SearchingDriversScreen } from '../components/passenger/SearchingDriversScreen';
 import { ScheduledRides } from '../components/passenger/ScheduledRides';
+import { usePassengerArrivalAlerts } from '../hooks/usePassengerArrivalAlerts';
 
 function PassengerAppContent() {
   const { state, setCurrentScreen, setCurrentView } = useAppState();
@@ -364,6 +365,9 @@ function PassengerAppContent() {
   }, [state.currentUser?.id, state.currentView]);
 
   console.log('🎯 PassengerApp render - screenToShow:', screenToShow);
+
+  // 🔊 Alerte sonore passager — approche/arrivée du chauffeur (tous écrans)
+  usePassengerArrivalAlerts();
 
   // ✅ Les return conditionnels sont APRÈS tous les hooks
   if (showRLSBlockingScreen) {

@@ -414,5 +414,51 @@ export async function testNotification(): Promise<void> {
   });
 }
 
+// ─── Sons passager (approche / arrivée du chauffeur) ─────────────────────────
+
+function playToneSequence(frequencies: number[], noteDuration: number, gapMs: number, volume: number): void {
+  if (!_soundAllowed) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const play = () => {
+      const now = ctx.currentTime;
+      const gap = gapMs / 1000;
+      frequencies.forEach((freq, i) => {
+        const start = now + i * (noteDuration + gap);
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(volume, start + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + noteDuration);
+        osc.start(start); osc.stop(start + noteDuration + 0.02);
+      });
+    };
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(play).catch(() => {});
+    } else {
+      play();
+    }
+  } catch (e) {
+    console.error('Erreur son passager:', e);
+  }
+}
+
+/** 🔔 Son d'approche passager — 2 notes douces et courtes (le chauffeur est à ~500 m) */
+export function playPassengerApproachSound(): void {
+  playToneSequence([659.25, 523.25], 0.22, 0.05, 0.35); // Mi → Do (doux)
+}
+
+/** 🚗 Son d'arrivée passager — 3 notes montantes distinctes + vibration (le chauffeur est là) */
+export function playPassengerArrivedSound(): void {
+  playToneSequence([523.25, 659.25, 783.99], 0.24, 0.07, 0.5); // Do → Mi → Sol (joyeux)
+  try { navigator.vibrate([180, 90, 300]); } catch {}
+}
+
 // Alias rétro-compatibilité
 export { playRideNotification as playRideNotificationSound };
