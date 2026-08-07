@@ -13,20 +13,24 @@ function isDriverAvailable(d: any): boolean {
   return d.available === true || d.is_available === true || d.status === 'online';
 }
 
-// ✅ Catégories Standard : 'smart_standard' (legacy passager) est compatible avec
-// les produits 'smart_standard_clim' et 'smart_standard_no_clim' (choix chauffeur).
-// ⚠️ Une demande EXPLICITE clim (smart_standard_clim) ne match QUE des chauffeurs clim
-//    (ou legacy), et no_clim ne match QUE des chauffeurs no_clim (ou legacy).
-const STANDARD_VARIANTS = ['smart_standard', 'smart_standard_clim', 'smart_standard_no_clim'];
+// ✅ Catégories Standard :
+//  - 'smart_standard' (legacy) == 'smart_standard_clim' : le produit historique "SmartCabb
+//    STANDARD (Clim)". Le legacy est normalisé → clim, pour ne PLUS jamais matcher
+//    une demande "sans clim" (bug : un chauffeur clim recevait les courses no_clim).
+//  - 'smart_standard_no_clim' : produit distinct (505 FC/km) → matche UNIQUEMENT
+//    les chauffeurs no_clim.
+// Compatibilité STRICTE après normalisation.
+function normalizeCategory(cat: string | undefined): string | undefined {
+  if (!cat) return undefined;
+  if (cat === 'smart_standard') return 'smart_standard_clim';
+  return cat;
+}
 function categoriesCompatible(a: string | undefined, b: string | undefined): boolean {
-  if (!a || !b) return false;
-  if (a === b) return true;
-  // Legacy 'smart_standard' : compatible avec les deux variantes
-  if (a === 'smart_standard' || b === 'smart_standard') {
-    return STANDARD_VARIANTS.includes(a) && STANDARD_VARIANTS.includes(b);
-  }
-  // Sinon : compatibility stricte (clim <-> clim, no_clim <-> no_clim)
-  return a === b;
+  const na = normalizeCategory(a);
+  const nb = normalizeCategory(b);
+  if (!na || !nb) return false;
+  // Compatibilité stricte : clim <-> clim, no_clim <-> no_clim
+  return na === nb;
 }
 
 // ─── Table KV & helpers inlinés ──────────────────────────────────────────────
