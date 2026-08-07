@@ -37,9 +37,11 @@ export const ZONE_REFERENCE_POINTS: ZonePoint[] = [
   { commune: 'Pompage', zone: 'B', lat: -4.3927, lng: 15.2225 },
   { commune: 'Mbudi', zone: 'B', lat: -4.3649, lng: 15.1901 },
   { commune: 'CPA', zone: 'B', lat: -4.3475, lng: 15.2023 },
-  { commune: 'UPN/UNIKIN', zone: 'B', lat: -4.4285, lng: 15.3103 },
+  { commune: 'UPN', zone: 'B', lat: -4.4043, lng: 15.2571 },
+  { commune: 'UNIKIN', zone: 'B', lat: -4.4185, lng: 15.3103 },
   { commune: 'Cité Verte', zone: 'B', lat: -4.3775, lng: 15.2611 },
-  { commune: 'Mont Ngafula', zone: 'B', lat: -4.4636, lng: 15.2725 },
+  { commune: 'Mont Ngafula', zone: 'B', lat: -4.4400, lng: 15.2670 },
+  { commune: 'Mvula', zone: 'B', lat: -4.4636, lng: 15.2725 },
   { commune: 'Ngaba', zone: 'B', lat: -4.3838, lng: 15.3161 },
   { commune: 'Makala', zone: 'B', lat: -4.3908, lng: 15.2989 },
   { commune: 'Kisenso', zone: 'B', lat: -4.3917, lng: 15.3611 },
@@ -90,6 +92,10 @@ export function classifyZone(
 
   let closest: ZonePoint | null = null;
   let minDist = Infinity;
+  let closestB: ZonePoint | null = null;
+  let minDistB = Infinity;
+  let closestC: ZonePoint | null = null;
+  let minDistC = Infinity;
 
   for (const point of ZONE_REFERENCE_POINTS) {
     const dist = haversineDistanceKm(lat, lng, point.lat, point.lng);
@@ -97,11 +103,34 @@ export function classifyZone(
       minDist = dist;
       closest = point;
     }
+    if (point.zone === 'B' && dist < minDistB) {
+      minDistB = dist;
+      closestB = point;
+    }
+    if (point.zone === 'C' && dist < minDistC) {
+      minDistC = dist;
+      closestC = point;
+    }
   }
 
   if (!closest) {
     // Fallback sécurité — zone A par défaut si rien trouvé
     return { zone: 'A', nearestCommune: 'Inconnu', distanceKm: 0, withinRadius: false };
+  }
+
+  // ⚠️ Départage anti-faux-Zone C :
+  // Un faux C impose un forfait journalier complet au client (très pénalisant),
+  // alors qu'un faux B est bénin (1ère heure doublée, une seule fois).
+  // Si le point C le plus proche ne bat un point B que de peu (ratio 1,5x),
+  // on préfère classer en B (zone frontalière : Mont Ngafula / Matadi Kibala, etc.).
+  if (closest.zone === 'C' && closestB && minDistB < minDistC * 1.5) {
+    const withinRadiusB = minDistB <= MAX_ZONE_RADIUS_KM;
+    return {
+      zone: withinRadiusB ? 'B' : 'A',
+      nearestCommune: closestB.commune,
+      distanceKm: minDistB,
+      withinRadius: withinRadiusB,
+    };
   }
 
   const withinRadius = minDist <= MAX_ZONE_RADIUS_KM;
@@ -123,7 +152,17 @@ export function classifyZone(
 export function classifyRideZone(
   pickup: { lat: number; lng: number },
   destination: { lat: number; lng: number }
-): { zone: ZoneCode; details: { pickup: ZoneCode; destination: ZoneCode } } {
+): {
+  zone: ZoneCode;
+  details: {
+    pickup: ZoneCode;
+    destination: ZoneCode;
+    pickupCommune: string;
+    destinationCommune: string;
+    pickupDistanceKm: number;
+    destinationDistanceKm: number;
+  };
+} {
   const pickupResult = classifyZone(pickup.lat, pickup.lng);
   const destResult = classifyZone(destination.lat, destination.lng);
 
@@ -140,5 +179,15 @@ export function classifyRideZone(
     finalZone = 'B';
   }
 
-  return { zone: finalZone, details: { pickup: pickupZone, destination: destZone } };
+  return {
+    zone: finalZone,
+    details: {
+      pickup: pickupZone,
+      destination: destZone,
+      pickupCommune: pickupResult.nearestCommune,
+      destinationCommune: destResult.nearestCommune,
+      pickupDistanceKm: pickupResult.distanceKm,
+      destinationDistanceKm: destResult.distanceKm,
+    },
+  };
 }

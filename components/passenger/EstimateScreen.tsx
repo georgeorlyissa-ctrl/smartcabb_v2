@@ -295,6 +295,8 @@ export function EstimateScreen() {
       heure: `${currentHour}h`,
       période: isDay ? '☀️ JOUR (06h-20h)' : '🌙 NUIT (21h-05h)',
       zone: `🗺️ ${zone}`,
+      pickup: `${rideZone.details.pickup} (${rideZone.details.pickupCommune}, ${rideZone.details.pickupDistanceKm.toFixed(1)} km du point de réf.)`,
+      destination: `${rideZone.details.destination} (${rideZone.details.destinationCommune}, ${rideZone.details.destinationDistanceKm.toFixed(1)} km)`,
       tarifHoraire: `${hourlyRateUSD} USD/h`,
       durée: `${durationMinutes} min → ${billedHours}h facturées (heure pleine)`,
       prixUSD: `${priceUSD} USD`,
@@ -927,8 +929,8 @@ export function EstimateScreen() {
                 rideZone.zone === 'C' ? 'text-red-600' : 'text-orange-600'
               }`}>
                 {rideZone.zone === 'C'
-                  ? `📍 Zone C — Forfait journalier appliqué`
-                  : `📍 Zone B — 1ère heure doublée`}
+                  ? `📍 Zone C — Forfait journalier appliqué (${rideZone.details.pickupCommune} → ${rideZone.details.destinationCommune})`
+                  : `📍 Zone B — 1ère heure doublée (${rideZone.details.pickupCommune} → ${rideZone.details.destinationCommune})`}
               </p>
             )}
             {appliedPromo && (
