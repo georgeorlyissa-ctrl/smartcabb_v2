@@ -55,6 +55,7 @@ const Timer = ({ className = "w-5 h-5" }: { className?: string }) => (
 );
 
 import { PRICING_CONFIG } from '../../lib/pricing-data';
+import { calculateDistanceHaversine } from '../../lib/distance-calculator';
 import { RatingDialog } from './RatingDialog';
 import { MapView } from '../MapView';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -330,6 +331,26 @@ export function RideInProgressScreen() {
 
     const category: VehicleCategory = (currentRide?.vehicleType || currentRide?.vehicleCategory || 'smart_standard') as VehicleCategory;
     const categoryConfig = PRICING_CONFIG[category];
+
+    // ✅ FACTURATION À LA DISTANCE (type Yango) — SmartCabb Standard sans Clim
+    const distancePricing = categoryConfig?.pricing?.course_distance;
+    if (distancePricing?.available) {
+      const distKm = currentRide?.pickup
+        ? calculateDistanceHaversine(
+            currentRide.pickup.lat, currentRide.pickup.lng,
+            driverLocation.lat, driverLocation.lng
+          )
+        : 0;
+      const minutes = totalSeconds / 60;
+      let costCDF = distancePricing.baseFare + distancePricing.perKm * distKm + distancePricing.perMinute * minutes;
+      if (costCDF < distancePricing.minimum) costCDF = distancePricing.minimum;
+      costCDF = Math.ceil(costCDF / distancePricing.rounding) * distancePricing.rounding;
+      return {
+        costCDF: costCDF || 0,
+        costUSD: parseFloat((costCDF / (getExchangeRate() || 2500)).toFixed(2))
+      };
+    }
+
     const baseHourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 7;
 
     // Prix proportionnel au temps réel (minimum 15 min = 0.25h)

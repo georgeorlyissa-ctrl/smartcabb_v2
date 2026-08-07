@@ -139,7 +139,7 @@ export function DriverRegistrationScreen() {
   // Nouvelle structure avec catégorie automatique basée sur le type - Grille Officielle 2026
   const vehicleTypes = [
     { value: 'smart_standard_clim', label: 'SmartCabb Standard avec Clim', category: '3 places (avec clim)', rates: '6$/h (jour) - 10$/h (nuit)' },
-    { value: 'smart_standard_no_clim', label: 'SmartCabb Standard sans Clim', category: '3 places (sans clim)', rates: '7$/h (jour) - 10$/h (nuit)' },
+    { value: 'smart_standard_no_clim', label: 'SmartCabb Standard sans Clim', category: '3 places (sans clim)', rates: '505 FC/km + 190 FC/min (min 3 200 FC)' },
     { value: 'smart_confort', label: 'SmartCabb Confort', category: '3 places + Data', rates: '10$/h (jour) - 15$/h (nuit)' },
     { value: 'smart_plus', label: 'SmartCabb Familiale', category: '7 places + Data', rates: '12$/h (jour) - 15$/h (nuit)' },
     { value: 'smart_business', label: 'SmartCabb Business', category: '4 places VIP', rates: '160$/jour (location uniquement)' }

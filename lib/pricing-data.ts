@@ -125,16 +125,26 @@ export const PRICING_CONFIG = {
     features: ['3 places', 'GPS'],
     vehicles: ['Toyota IST', 'Toyota Ractis', 'Toyota Belta', 'Suzuki Swift', 'Toyota Vitz', 'Toyota Blade', 'Toyota Runx'],
     pricing: {
-      // ANCIEN système de tarification : course par trajet A→B,
-      // prix fixé par le système (pas de location journalière)
+      // ✅ Facturation à la distance (type Yango) — 24h/24, 7j/7
+      course_distance: {
+        available: true,
+        baseFare: 1770,       // Prise en charge (CDF) : 3 200 − (505×1,1 + 190×4,6)
+        perKm: 505,           // CDF/km
+        perMinute: 190,       // CDF/min
+        minimum: 3200,        // Coût minimal (y compris 4,6 min et 1,1 km)
+        freeWaitingMinutes: 3,   // Attente gratuite
+        waitingPerMinute: 90,    // Attente payante CDF/min
+        rounding: 50,         // Arrondi au multiple de 50 supérieur
+        dayNightSame: true    // Même tarif jour et nuit
+      },
       course_heure: {
-        jour: { usd: 7, cdf: 7 * USD_TO_CDF },
-        nuit: { usd: 10, cdf: 10 * USD_TO_CDF }
+        jour: { usd: 0, cdf: 0 }, // Non utilisé — facturation distance
+        nuit: { usd: 0, cdf: 0 }
       },
       location_jour: {
         usd: 0,
         cdf: 0,
-        available: false // Ancien système : pas de location à la journée
+        available: false
       },
       trajet_aeroport: {
         aller: { usd: 0, cdf: 0, available: false },
@@ -142,9 +152,10 @@ export const PRICING_CONFIG = {
       }
     },
     rules: {
-      zone_lointaine: true, // Zone B : 1ère heure facturée double
+      zone_lointaine: false, // Pas de zone B/C — facturation purement distance
       data_included: false,
-      refreshments: false
+      refreshments: false,
+      distance_based: true   // Facturation à la distance (type Yango)
     }
   },
 

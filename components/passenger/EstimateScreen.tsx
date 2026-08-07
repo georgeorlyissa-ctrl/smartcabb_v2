@@ -217,6 +217,30 @@ export function EstimateScreen() {
     const pricing = VEHICLE_PRICING[vehicleType as VehicleCategory];
     if (!pricing) return 25000;
 
+    // ✅ FACTURATION À LA DISTANCE (type Yango) — SmartCabb Standard sans Clim
+    const distancePricing = pricing.pricing?.course_distance;
+    if (distancePricing?.available) {
+      const distKm = distanceKm || 0;
+      const minutes = durationMinutes || 0;
+      let priceCDF = distancePricing.baseFare + distancePricing.perKm * distKm + distancePricing.perMinute * minutes;
+      if (priceCDF < distancePricing.minimum) priceCDF = distancePricing.minimum;
+      priceCDF = Math.ceil(priceCDF / distancePricing.rounding) * distancePricing.rounding;
+      const walletBalance = state.currentUser?.walletBalance || 0;
+      const hasWalletDiscount = walletBalance >= convertUSDtoCDF(20);
+      if (hasWalletDiscount) priceCDF = Math.round(priceCDF * 0.95);
+      console.log(`💰 Calcul prix distance ${vehicleType}:`, {
+        km: distKm.toFixed(2),
+        min: minutes,
+        base: distancePricing.baseFare,
+        perKm: distancePricing.perKm,
+        perMinute: distancePricing.perMinute,
+        minTarif: distancePricing.minimum,
+        wallet: hasWalletDiscount ? '-5%' : 'non',
+        prixCDF: priceCDF.toLocaleString(),
+      });
+      return priceCDF;
+    }
+
     const currentHour = new Date().getHours();
     const isDay = isDayTime(currentHour);
     const zone = rideZone.zone;
@@ -443,6 +467,9 @@ export function EstimateScreen() {
     const hasDaily = !!loc.available && locUSD > 0;
     // Business : uniquement location à la journée (pas de course à l'heure)
     const isLocationOnly = hourDayUSD === 0 && hourNightUSD === 0;
+    // ✅ Facturation à la distance (type Yango) — SmartCabb Standard sans Clim
+    const distancePricing = pricing.pricing.course_distance;
+    const isDistanceBased = !!distancePricing?.available;
 
     const isReservationOnly = RESERVATION_ONLY.includes(vehicle.id);
 
@@ -488,7 +515,37 @@ export function EstimateScreen() {
 
           {/* Grille tarifaire officielle — ✅ TRADUIT */}
           <div className="bg-muted/30 rounded-lg px-1.5 py-1 space-y-0.5">
-            {isLocationOnly ? (
+            {isDistanceBased && distancePricing ? (
+              <>
+                <div className="flex items-center justify-between text-[9px]">
+                  <div className="flex items-center gap-0.5">
+                    <Sun className="w-2.5 h-2.5 text-amber-500" />
+                    <span className="text-primary font-medium">24h/24 · 7j/7</span>
+                  </div>
+                  <span className="font-medium text-primary">
+                    {distancePricing.perKm} FC/km
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[9px]">
+                  <div className="flex items-center gap-0.5">
+                    <Clock className="w-2.5 h-2.5 text-blue-500" />
+                    <span className="text-muted-foreground">Temps</span>
+                  </div>
+                  <span className="font-medium text-muted-foreground">
+                    {distancePricing.perMinute} FC/min
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-[9px]">
+                  <div className="flex items-center gap-0.5">
+                    <Info className="w-2.5 h-2.5 text-purple-500" />
+                    <span className="text-muted-foreground">Minimum</span>
+                  </div>
+                  <span className="font-bold text-purple-600">
+                    {distancePricing.minimum.toLocaleString()} FC
+                  </span>
+                </div>
+              </>
+            ) : isLocationOnly ? (
               <div className="flex items-center justify-between text-[9px]">
                 <div className="flex items-center gap-0.5">
                   <Calendar className="w-2.5 h-2.5 text-purple-500" />
@@ -865,7 +922,7 @@ export function EstimateScreen() {
               </span>
               <span className="text-sm font-medium text-muted-foreground">{t('cdf')}</span>
             </div>
-            {rideZone.zone !== 'A' && (
+            {!VEHICLE_PRICING[selectedVehicle as VehicleCategory]?.pricing?.course_distance?.available && rideZone.zone !== 'A' && (
               <p className={`text-[11px] font-medium mt-0.5 ${
                 rideZone.zone === 'C' ? 'text-red-600' : 'text-orange-600'
               }`}>
