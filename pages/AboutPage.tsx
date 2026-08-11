@@ -217,7 +217,7 @@ export function AboutPage() {
             className="mt-10 relative rounded-3xl overflow-hidden shadow-2xl h-80"
           >
             <img
-              src="/about-smartcabb.png"
+              src="/about-smartcabb.jpg"
               alt="SmartCabb en action"
               className="w-full h-full object-cover"
               onError={(e) => {

@@ -71,6 +71,10 @@ const initApp = () => {
         <App />
       </React.StrictMode>
     );
+    // Retirer le preloader HTML dès que React est monté (ne pas attendre window.load)
+    if (typeof window !== 'undefined' && typeof (window as any).__SMARTCABB_READY__ === 'function') {
+      (window as any).__SMARTCABB_READY__();
+    }
     console.log('✅ Application React montée avec succès');
   } catch (error) {
     console.error('❌ Erreur lors du montage de l\'application:', error);

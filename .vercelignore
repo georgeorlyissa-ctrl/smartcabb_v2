@@ -2,6 +2,10 @@
 supabase/functions/server/
 supabase/functions/server/**
 
+# App mobile Capacitor (buildée localement, pas sur Vercel)
+android/
+android/**
+
 # Documentation
 *.md
 !README.md

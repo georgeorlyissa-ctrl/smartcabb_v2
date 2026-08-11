@@ -4,6 +4,10 @@ import { SmartCabbLogo } from './SmartCabbLogo';
 const PHASE_1_DELAY = 1200; // ms — phase 1 : logo seul (zoom-in)
 const TOTAL_DELAY   = 2600; // ms — phase 2 : logo + slogan, puis onComplete()
 
+// ⚡ Perf : au 2e chargement (session), le splash est raccourci (assets en cache)
+const FAST_PHASE_1_DELAY = 400;
+const FAST_TOTAL_DELAY   = 1100;
+
 /**
  * SplashScreen — animation 2 phases façon Yango
  * Phase 1 : logo seul (zoom-in + cercles animés)
@@ -11,15 +15,21 @@ const TOTAL_DELAY   = 2600; // ms — phase 2 : logo + slogan, puis onComplete()
  */
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [phase, setPhase] = useState(0);
+  const isFast = typeof sessionStorage !== 'undefined' && sessionStorage.getItem('sc-splash-seen') === '1';
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase(1), PHASE_1_DELAY);
-    const t2 = setTimeout(onComplete, TOTAL_DELAY);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem('sc-splash-seen', '1');
+    }
+    const phaseDelay = isFast ? FAST_PHASE_1_DELAY : PHASE_1_DELAY;
+    const totalDelay = isFast ? FAST_TOTAL_DELAY : TOTAL_DELAY;
+    const t1 = setTimeout(() => setPhase(1), phaseDelay);
+    const t2 = setTimeout(onComplete, totalDelay);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [onComplete]);
+  }, [onComplete, isFast]);
 
   return (
     <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 overflow-hidden sc-splash-in">

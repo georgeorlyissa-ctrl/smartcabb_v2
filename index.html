@@ -25,10 +25,8 @@
     <!-- ── VIEWPORT & MOBILE ─────────────────────────────── -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-visual" />
 
-    <!-- ── CACHE (désactivé pour Figma Make) ─────────────── -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
+    <!-- ── CACHE (revalidation : le HTML est frais, les assets sont en cache immutable) ── -->
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
 
     <!-- ── PERMISSIONS (géolocalisation) ─────────────────── -->
     <meta http-equiv="Permissions-Policy" content="geolocation=(self), camera=(self), microphone=(self), payment=(self)" />

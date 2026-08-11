@@ -63,9 +63,9 @@ export function LandingPage() {
   const [heroImg, setHeroImg] = useState(0);
   const [vehiculeIndex, setVehiculeIndex] = useState(0);
   const { t, language } = useLanguage();
+  const backgrounds = ['/photo2_smartcabb.jpeg', '/Images_2.jpeg', '/fille_smartcabb.jpg'];
 
-  const backgrounds = ['/photo2_smartcabb.jpeg', '/Images_2.jpeg', '/fille_smartcabb.png'];
-  const heroImages = ['/hero-smartcabb.png', '/fille_smartcabb.png'];
+  const heroImages = ['/hero-smartcabb.jpg', '/fille_smartcabb.jpg'];
   const vehicules = ['/Stadard_5.png', '/TOYOTA NOAH_2.png', '/Confort_4.png'];
 
   const paymentMethods = [
@@ -77,7 +77,7 @@ export function LandingPage() {
   ];
 
   useEffect(() => {
-    const preload = ['/hero-smartcabb.png', '/photo2_smartcabb.jpeg'];
+    const preload = ['/hero-smartcabb.jpg', '/photo2_smartcabb.jpeg'];
     preload.forEach(src => {
       const link = document.createElement('link');
       link.rel = 'preload'; link.as = 'image'; link.href = src;
@@ -136,7 +136,7 @@ export function LandingPage() {
   const steps = [
     { number: '01', image: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600&h=400&fit=crop', title: t('how.step1.title'), description: t('how.step1.description'), isCarousel: false },
     { number: '02', image: vehicules[vehiculeIndex], title: t('how.step2.title'), description: t('how.step2.description'), isCarousel: true },
-    { number: '03', image: '/fille_smartcabb.png', title: t('how.step3.title'), description: t('how.step3.description'), isCarousel: false },
+    { number: '03', image: '/fille_smartcabb.jpg', title: t('how.step3.title'), description: t('how.step3.description'), isCarousel: false },
   ];
 
   const africanCountries = [
