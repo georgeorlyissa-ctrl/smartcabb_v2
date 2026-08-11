@@ -47,12 +47,19 @@ async function kvSet(key: string, value: any): Promise<void> {
 async function kvDel(key: string): Promise<void> {
   try { await kvClient().from(KV_TABLE).delete().eq("key", key); } catch (e) { console.error("KV del error:", e); }
 }
-async function getCommissionRate(): Promise<number> {
+// ✅ Lecture complète des paramètres de commission (taux + activé + minimum)
+async function getCommissionSettings(): Promise<{ rate: number; enabled: boolean; minimum: number }> {
   try {
     const config = await kvGet('smartcabb_global_config');
-    if (config && typeof config.commissionRate === 'number') return config.commissionRate;
-  } catch (e) { console.error('Error reading commission rate:', e); }
-  return 15;
+    if (config && typeof config === 'object') {
+      return {
+        rate:    typeof config.commissionRate === 'number' ? config.commissionRate : 10,
+        enabled: config.commissionEnabled !== false, // défaut : activé
+        minimum: typeof config.minimumCommission === 'number' ? config.minimumCommission : 0,
+      };
+    }
+  } catch (e) { console.error('Error reading commission settings:', e); }
+  return { rate: 10, enabled: true, minimum: 0 };
 }
 async function kvGetByPrefix(prefix: string): Promise<any[]> {
   try { const { data } = await kvClient().from(KV_TABLE).select("key, value").like("key", prefix + "%"); return data?.map((d: any) => d.value) ?? []; } catch { return []; }
@@ -449,7 +456,26 @@ app.get("/:id", async (c) => {
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
-    return c.json({ success: true, ride });
+
+    // ✅ SUIVI TEMPS RÉEL — joindre la dernière position connue du chauffeur
+    let driverLocation: any = null;
+    if (ride.driverId) {
+      try {
+        const driver = await kv.get<any>(`driver:${ride.driverId}`);
+        const loc = driver?.currentLocation || driver?.current_location || driver?.location || null;
+        if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+          driverLocation = {
+            lat: loc.lat,
+            lng: loc.lng,
+            updatedAt: loc.updatedAt || driver?.locationUpdatedAt || driver?.location_updated_at || null
+          };
+        }
+      } catch (e) {
+        console.error("⚠️ Erreur lecture position chauffeur:", e);
+      }
+    }
+
+    return c.json({ success: true, ride: { ...ride, driverLocation } });
   } catch (error) {
     console.error("❌ Erreur récupération course:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
@@ -1246,8 +1272,12 @@ app.post("/complete", async (c) => {
     if (effectiveDriverId && actualCost && !alreadyCompleted) {
       const driver = await kv.get<any>(`driver:${effectiveDriverId}`);
       if (driver) {
-        const commissionRate  = await getCommissionRate();
-        const commission      = Math.round(actualCost * commissionRate / 100);
+        // ✅ Commission depuis la config admin (taux + activé + minimum)
+        const cs = await getCommissionSettings();
+        let commission = 0;
+        if (cs.enabled) {
+          commission = Math.max(Math.round(actualCost * cs.rate / 100), cs.minimum);
+        }
         const driverEarnings  = actualCost - commission;
 
         const newBalance = (driver.balance || 0) - commission;
@@ -1302,8 +1332,8 @@ app.post("/complete", async (c) => {
         ride._driverNewBalance    = newBalance;
 
         console.log(`💰 [RIDE-COMPLETE] Driver ${effectiveDriverId}:`);
-        console.log(`   - Commission (${commissionRate}%): ${commission.toLocaleString('fr-FR')} CDF`);
-        console.log(`   - Gains (${100 - commissionRate}%): ${driverEarnings.toLocaleString('fr-FR')} CDF`);
+        console.log(`   - Commission (${cs.enabled ? cs.rate + '%' : 'DÉSACTIVÉE'}): ${commission.toLocaleString('fr-FR')} CDF`);
+        console.log(`   - Gains (${cs.enabled ? 100 - cs.rate + '%' : '100%'}): ${driverEarnings.toLocaleString('fr-FR')} CDF`);
         console.log(`   - Nouveau solde: ${newBalance.toLocaleString('fr-FR')} CDF`);
         console.log(`   - Forcé hors ligne: ${forcedOffline}`);
         console.log(`   - Total courses: ${driver.totalRides}`);
@@ -1370,8 +1400,12 @@ app.post("/:id/complete", async (c) => {
     if (effectiveDriverId && actualCost && !alreadyCompleted) {
       const driver = await kv.get<any>(`driver:${effectiveDriverId}`);
       if (driver) {
-        const commissionRate  = await getCommissionRate();
-        const commission      = Math.round(actualCost * commissionRate / 100);
+        // ✅ Commission depuis la config admin (taux + activé + minimum)
+        const cs = await getCommissionSettings();
+        let commission = 0;
+        if (cs.enabled) {
+          commission = Math.max(Math.round(actualCost * cs.rate / 100), cs.minimum);
+        }
         const driverEarnings  = actualCost - commission;
 
         const newBalance = (driver.balance || 0) - commission;
@@ -1468,11 +1502,12 @@ app.get("/driver/:driverId/earnings", async (c) => {
       );
     }
     
-    const commissionRate = await getCommissionRate();
+    const cs = await getCommissionSettings();
+    const effectiveRate = cs.enabled ? cs.rate : 0;
     const totalEarnings = filteredRides.reduce((sum: number, r: any) => 
       sum + (r.totalPrice || r.estimatedPrice || 0), 0
     );
-    const commission = Math.round(totalEarnings * commissionRate / 100);
+    const commission = Math.round(totalEarnings * effectiveRate / 100);
     const netEarnings = totalEarnings - commission;
     
     return c.json({
@@ -1571,12 +1606,13 @@ app.get("/driver/:driverId/rides", async (c) => {
     const weekRides  = completedRides.filter((r: any) => new Date(r.completedAt || r.createdAt) >= weekStart);
     const monthRides = completedRides.filter((r: any) => new Date(r.completedAt || r.createdAt) >= monthStart);
 
-    const cr = await getCommissionRate();
+    const cs = await getCommissionSettings();
+    const effRate = cs.enabled ? cs.rate : 0;
     const stats = {
-      today:  { count: todayRides.length,  earnings: Math.round(sumPrice(todayRides)  * (1 - cr / 100)) },
-      week:   { count: weekRides.length,   earnings: Math.round(sumPrice(weekRides)   * (1 - cr / 100)) },
-      month:  { count: monthRides.length,  earnings: Math.round(sumPrice(monthRides)  * (1 - cr / 100)) },
-      total:  { count: completedRides.length, earnings: Math.round(sumPrice(completedRides) * (1 - cr / 100)) },
+      today:  { count: todayRides.length,  earnings: Math.round(sumPrice(todayRides)  * (1 - effRate / 100)) },
+      week:   { count: weekRides.length,   earnings: Math.round(sumPrice(weekRides)   * (1 - effRate / 100)) },
+      month:  { count: monthRides.length,  earnings: Math.round(sumPrice(monthRides)  * (1 - effRate / 100)) },
+      total:  { count: completedRides.length, earnings: Math.round(sumPrice(completedRides) * (1 - effRate / 100)) },
     };
 
     console.log(`✅ [RIDES/HISTORY-DRIVER] ${driverRides.length} course(s), stats:`, stats);

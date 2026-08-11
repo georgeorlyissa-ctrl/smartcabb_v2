@@ -88,6 +88,8 @@ export function MapView(props: MapViewProps) {
     if (props.routeStart) osmMarkers.push(props.routeStart);
     if (props.routeEnd) osmMarkers.push(props.routeEnd);
     if (props.markers) osmMarkers.push(...props.markers);
+    // ✅ SUIVI TEMPS RÉEL — afficher aussi le véhicule en mode OSM
+    if (props.vehicleLocation) osmMarkers.push(props.vehicleLocation);
 
     return (
       <div className="relative w-full h-full">

@@ -474,14 +474,49 @@ export function GoogleMapView({
   }, [effectiveShowRoute, effectiveRouteStart, effectiveRouteEnd]);
 
   // ─── Marqueur véhicule ────────────────────────────────────────
+  const vehicleAnimRef = useRef<number | null>(null);
+
+  // Déplacement fluide du marqueur véhicule (lerp animé ~1.5s)
+  const animateVehicleTo = (marker: any, target: Location) => {
+    const start = marker.getPosition();
+    const startLat = start.lat();
+    const startLng = start.lng();
+    const duration = 1500;
+    const startTime = performance.now();
+
+    if (vehicleAnimRef.current) cancelAnimationFrame(vehicleAnimRef.current);
+
+    const step = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      // Easing easeInOutQuad
+      const eased = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      marker.setPosition({
+        lat: startLat + (target.lat - startLat) * eased,
+        lng: startLng + (target.lng - startLng) * eased,
+      });
+      if (progress < 1) {
+        vehicleAnimRef.current = requestAnimationFrame(step);
+      } else {
+        vehicleAnimRef.current = null;
+      }
+    };
+    vehicleAnimRef.current = requestAnimationFrame(step);
+  };
+
   useEffect(() => {
     if (!mapInstanceRef.current || !vehicleLocation) {
       if (vehicleMarkerRef.current) { vehicleMarkerRef.current.setMap(null); vehicleMarkerRef.current = null; }
       return;
     }
     if (vehicleMarkerRef.current) {
-      vehicleMarkerRef.current.setPosition(vehicleLocation);
-      mapInstanceRef.current.panTo(vehicleLocation);
+      // ✅ SUIVI TEMPS RÉEL — déplacement fluide (lerp animé) au lieu d'un saut brusque
+      animateVehicleTo(vehicleMarkerRef.current, vehicleLocation);
+      // Suivre le véhicule tant que l'utilisateur n'a pas déplacé la carte
+      if (!userInteracted) {
+        mapInstanceRef.current.panTo(vehicleLocation);
+      }
     } else {
       const carIcon = {
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="20" fill="#10B981" stroke="white" stroke-width="3"/><text x="24" y="30" font-size="20" text-anchor="middle" fill="white">🚗</text></svg>`),
@@ -494,7 +529,7 @@ export function GoogleMapView({
       });
       mapInstanceRef.current.panTo(vehicleLocation);
     }
-  }, [vehicleLocation]);
+  }, [vehicleLocation, userInteracted]);
 
   // ─── Contrôles zoom ───────────────────────────────────────────
   const handleZoomIn = () => { if (mapInstanceRef.current) mapInstanceRef.current.setZoom((mapInstanceRef.current.getZoom() || zoom) + 1); };

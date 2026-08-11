@@ -24,6 +24,7 @@ import {
   Download
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
+import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 import type { Vehicle } from '../../lib/supabase';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
@@ -102,11 +103,12 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
 
   const exportDriversData = () => {
     const csvData = [
-      ['Nom', 'Email', 'Téléphone', 'Véhicule', 'Immatriculation', 'Statut', 'Note', 'Courses totales', 'Gains totaux (CDF)', 'Date inscription'],
+      ['Nom', 'Email', 'Téléphone', 'Catégorie', 'Véhicule', 'Immatriculation', 'Statut', 'Note', 'Courses totales', 'Gains totaux (CDF)', 'Date inscription'],
       ...filteredDrivers.map(driver => [
         driver.full_name || '',
         driver.email || '',
         driver.phone || '',
+        getVehicleDisplayName({ category: driver.vehicle_category || driver.vehicle?.category }),
         `${driver.vehicle_color} ${driver.vehicle_make} ${driver.vehicle_model}`,
         driver.vehicle_plate || '',
         driver.status === 'approved' ? 'Approuvé' : driver.status === 'pending' ? 'En attente' : 'Rejeté',
@@ -519,6 +521,13 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                               En ligne
                             </Badge>
                           )}
+                          {/* ✅ Catégorie de véhicule (produit SmartCabb) */}
+                          <Badge
+                            className="bg-cyan-100 text-cyan-800 text-xs"
+                            title={`Catégorie brute : ${driver.vehicle_category || driver.vehicle?.category || 'aucune'}`}
+                          >
+                            {getVehicleDisplayName({ category: driver.vehicle_category || driver.vehicle?.category })}
+                          </Badge>
                         </div>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">

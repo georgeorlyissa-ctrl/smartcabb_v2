@@ -188,6 +188,16 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
         if (updateAdminSettings) {
           updateAdminSettings(newSettings);
         }
+
+        // ✅ Forcer la mise à jour du cache local immédiatement pour que les calculs
+        // (getCommissionRate, calculateDriverEarnings...) soient instantanés sur ce même appareil
+        try {
+          const cachePayload = JSON.stringify({ ...newSettings, lastUpdated: new Date().toISOString() });
+          localStorage.setItem('smartcabb_config_cache', cachePayload);
+          localStorage.setItem('smartcab_system_settings', cachePayload);
+          window.dispatchEvent(new CustomEvent('smartcabb:config-updated', { detail: newSettings }));
+        } catch (_) {}
+
         toast.success('✅ Paramètres enregistrés dans la base de données !');
         console.log('✅ Paramètres admin sauvegardés dans le backend');
       } else {

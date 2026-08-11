@@ -142,6 +142,14 @@ export function RideInProgressScreen() {
           updateRide(updatedRide.id, updatedRide);
         }
 
+        // ✅ SUIVI TEMPS RÉEL — position réelle du chauffeur (via GET /rides/:id enrichi)
+        if (updatedRide?.driverLocation?.lat && updatedRide?.driverLocation?.lng) {
+          setDriverLocation({
+            lat: updatedRide.driverLocation.lat,
+            lng: updatedRide.driverLocation.lng,
+          });
+        }
+
         if (updatedRide?.billingElapsedTime !== undefined && updatedRide.billingElapsedTime > 0) {
           setBillingElapsedTime(updatedRide.billingElapsedTime);
           if (!billingActive) setBillingActive(true);
@@ -308,23 +316,6 @@ export function RideInProgressScreen() {
     return () => clearInterval(interval);
   }, [currentRide, timeOfDay, billingActive, rideCompleted]);
 
-  // ─── SIMULATION DÉPLACEMENT CONDUCTEUR ───────────────────────
-  useEffect(() => {
-    if (!currentRide || !currentRide.destination?.lat || !currentRide.destination?.lng) return;
-    const interval = setInterval(() => {
-      setDriverLocation(prev => {
-        const latDiff = currentRide.destination.lat - prev.lat;
-        const lngDiff = currentRide.destination.lng - prev.lng;
-        const speed = 0.0001;
-        return {
-          lat: prev.lat + latDiff * speed,
-          lng: prev.lng + lngDiff * speed,
-        };
-      });
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [currentRide?.destination?.lat, currentRide?.destination?.lng]);
-
   // ─── CALCUL FACTURATION PROPORTIONNELLE ────────────────────────
   const calculateBillingCost = (totalSeconds: number): { costCDF: number; costUSD: number } => {
     if (totalSeconds <= 0) return { costCDF: 0, costUSD: 0 };
@@ -468,22 +459,6 @@ export function RideInProgressScreen() {
     }
   };
 
-  // Driver simulé pour la carte
-  const simulatedDriver = currentRide ? {
-    id: currentRide.driverId || 'driver-1',
-    name: currentRide.driverName || 'Chauffeur',
-    location: driverLocation,
-    isOnline: true,
-    isAvailable: false,
-    documentsVerified: true,
-    vehicleType: currentRide.vehicleType || currentRide.vehicleCategory || 'standard',
-    vehiclePlate: currentRide.vehiclePlate || 'CD-XXX-XXX',
-    rating: 4.8,
-    totalRides: 0,
-    phoneNumber: '',
-    currentRideId: currentRide.id
-  } : null;
-
   return (
     <div className="h-screen w-full flex flex-col bg-gray-900 relative overflow-hidden">
 
@@ -491,7 +466,7 @@ export function RideInProgressScreen() {
       <div className="absolute inset-0 z-0">
         <MapView
           center={driverLocation}
-          drivers={simulatedDriver ? [simulatedDriver] : []}
+          vehicleLocation={driverLocation}
           zoom={14}
           className="w-full h-full"
           showUserLocation={false}

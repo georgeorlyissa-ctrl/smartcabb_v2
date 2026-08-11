@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from '../../lib/motion';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
@@ -133,6 +133,10 @@ export function DriverDashboardNew() {
   const { state, setCurrentDriver, setCurrentScreen, setCurrentRide } = useAppState();
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [isOnline, setIsOnline] = useState(false);
+
+  // Ref pour suivre la course active sans redémarrer le tracker GPS (pas de dépendance sur state.currentRide)
+  const activeRideRef = useRef<any>(null);
+  activeRideRef.current = state.currentRide;
   const [driver, setDriver] = useState<Driver | null>(null);
   const [pendingRideRequest, setPendingRideRequest] = useState<RideRequest | null>(null);
   const [showWalletManager, setShowWalletManager] = useState(false);
@@ -452,9 +456,24 @@ export function DriverDashboardNew() {
 
         const now = Date.now();
         const lastUpdate = parseInt(sessionStorage.getItem('lastLocationUpdate') || '0');
-        if (now - lastUpdate > 30000) {
+        const lastSentPos = JSON.parse(sessionStorage.getItem('lastSentLocation') || 'null');
+
+        // Course active = le passager suit le véhicule → envoi fréquent (~5s)
+        const activeRide = activeRideRef.current;
+        const hasActiveRide = !!activeRide && ['accepted', 'in_progress'].includes(activeRide.status);
+
+        // Déplacement significatif (> ~15m) pour éviter les envois inutiles
+        const movedEnough = lastSentPos
+          ? (Math.abs(location.lat - lastSentPos.lat) > 0.00015 || Math.abs(location.lng - lastSentPos.lng) > 0.00015)
+          : true;
+
+        const throttleMs = hasActiveRide ? 5000 : 30000;
+        const shouldSend = (now - lastUpdate > throttleMs) && (movedEnough || hasActiveRide);
+
+        if (shouldSend) {
           updateDriverLocation(driver.id, location);
           sessionStorage.setItem('lastLocationUpdate', now.toString());
+          sessionStorage.setItem('lastSentLocation', JSON.stringify(location));
         }
       },
       onError: (error) => {

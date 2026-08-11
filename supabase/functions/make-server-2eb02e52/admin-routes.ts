@@ -1314,6 +1314,45 @@ app.post("/delete-all-users", async (c) => {
   }
 });
 
+// ─── DELETE /rides/:rideId — Supprimer une course (nettoyage admin) ───────────
+app.delete("/rides/:rideId", async (c) => {
+  try {
+    const rideId = c.req.param("rideId");
+    if (!rideId) return c.json({ success: false, error: "ID course manquant" }, 400);
+
+    const ride = await kvGet(`ride:${rideId}`);
+    if (!ride) return c.json({ success: false, error: "Course non trouvée" }, 404);
+
+    await kvDel(`ride:${rideId}`);
+    await kvDel(`matching:${rideId}`);
+    console.log(`🧹 [ADMIN/RIDES-DELETE] Course ${rideId} supprimée`);
+
+    return c.json({ success: true, message: "Course supprimée" });
+  } catch (error) {
+    console.error("❌ [ADMIN/RIDES-DELETE] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
+// ─── DELETE /drivers/:driverId — Supprimer un conducteur (nettoyage admin) ─────
+app.delete("/drivers/:driverId", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    if (!driverId) return c.json({ success: false, error: "ID conducteur manquant" }, 400);
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    await kvDel(`driver:${driverId}`);
+    console.log(`🧹 [ADMIN/DRIVERS-DELETE] Conducteur ${driverId} supprimé`);
+
+    return c.json({ success: true, message: "Conducteur supprimé" });
+  } catch (error) {
+    console.error("❌ [ADMIN/DRIVERS-DELETE] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 // ─── POST /drivers/:driverId/set-online-status — Forcer en ligne / hors ligne ─
 app.post("/drivers/:driverId/set-online-status", async (c) => {
   try {

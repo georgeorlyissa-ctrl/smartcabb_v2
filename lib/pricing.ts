@@ -103,8 +103,14 @@ export function getCommissionRate(): number {
       const config = JSON.parse(configStr);
       if (typeof config.commissionRate === 'number') return config.commissionRate;
     }
+    // ✅ Fallback : lire la 2e clé de cache (certains écrans écrivent smartcab_system_settings)
+    const settingsStr = localStorage.getItem('smartcab_system_settings');
+    if (settingsStr) {
+      const settings = JSON.parse(settingsStr);
+      if (typeof settings.commissionRate === 'number') return settings.commissionRate;
+    }
   } catch (e) { console.warn('⚠️ Erreur lecture commissionRate:', e); }
-  return getPostpaidInterestRate();
+  return 10; // ✅ Défaut aligné sur la config backend (DEFAULT_CONFIG)
 }
 
 /**

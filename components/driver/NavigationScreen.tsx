@@ -3,6 +3,7 @@ import { useAppState } from '../../hooks/useAppState';
 import { Button } from '../ui/button';
 import { MapView } from '../MapView';
 import { RideCompletionSummaryDialog } from '../RideCompletionSummaryDialog';
+import { PreciseGPSTracker } from '../../lib/precise-gps';
 
 import { VEHICLE_PRICING, getExchangeRate, getCommissionRate, calculateCommission, calculateDriverEarnings, type VehicleCategory } from '../../lib/pricing';
 
@@ -125,6 +126,49 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
   }, [phase, rideStartedAt]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
+
+  // ── 📍 GPS — Envoyer la position du chauffeur pendant la course ───────────
+  useEffect(() => {
+    if (!driver?.id) return;
+
+    console.log('📍 [NAVIGATION] Démarrage GPS tracking pendant la course...');
+    const gps = new PreciseGPSTracker();
+    let lastSent = 0;
+    let lastPos: { lat: number; lng: number } | null = null;
+
+    gps.start({
+      onPositionUpdate: (position) => {
+        const location = { lat: position.lat, lng: position.lng };
+        const now = Date.now();
+
+        // Déplacement significatif (> ~15m) et throttle 5s
+        const movedEnough = lastPos
+          ? (Math.abs(location.lat - lastPos.lat) > 0.00015 || Math.abs(location.lng - lastPos.lng) > 0.00015)
+          : true;
+
+        if ((now - lastSent > 5000) && (movedEnough || !lastPos)) {
+          lastSent = now;
+          lastPos = location;
+          fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${driver.id}/location`,
+            {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ latitude: location.lat, longitude: location.lng })
+            }
+          ).catch((e) => console.error('❌ Erreur envoi position (navigation):', e));
+        }
+      },
+      onError: (error) => {
+        console.error('❌ Erreur GPS (navigation):', error);
+      }
+    });
+
+    return () => {
+      console.log('🛑 [NAVIGATION] Arrêt GPS tracking');
+      gps.stop();
+    };
+  }, [driver?.id]);
 
   const handleArriveAtPickup = async () => {
     setPhase('waiting');
