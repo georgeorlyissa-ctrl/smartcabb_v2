@@ -326,7 +326,7 @@ export function RideInProgressScreen() {
     // ✅ FACTURATION À LA DISTANCE (type Yango) — SmartCabb Standard sans Clim
     const distancePricing = categoryConfig?.pricing?.course_distance;
     if (distancePricing?.available) {
-      const distKm = currentRide?.pickup
+      const distKm = currentRide?.pickup?.lat && driverLocation?.lat
         ? calculateDistanceHaversine(
             currentRide.pickup.lat, currentRide.pickup.lng,
             driverLocation.lat, driverLocation.lng

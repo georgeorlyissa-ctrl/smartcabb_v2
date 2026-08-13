@@ -59,10 +59,10 @@ export function LiveRideTracking({
   const [isLoading, setIsLoading] = useState(true);
 
   // Normaliser les coordonnées (support lat/lng ET latitude/longitude)
-  const normalizeLocation = (loc: Location): { lat: number; lng: number; address?: string } => ({
-    lat: loc.lat || loc.latitude || 0,
-    lng: loc.lng || loc.longitude || 0,
-    address: loc.address
+  const normalizeLocation = (loc: Location | undefined): { lat: number; lng: number; address?: string } => ({
+    lat: loc?.lat || loc?.latitude || 0,
+    lng: loc?.lng || loc?.longitude || 0,
+    address: loc?.address
   });
 
   const normalizedPickup = normalizeLocation(pickup);

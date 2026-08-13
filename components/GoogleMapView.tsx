@@ -479,6 +479,7 @@ export function GoogleMapView({
   // Déplacement fluide du marqueur véhicule (lerp animé ~1.5s)
   const animateVehicleTo = (marker: any, target: Location) => {
     const start = marker.getPosition();
+    if (!start) return;
     const startLat = start.lat();
     const startLng = start.lng();
     const duration = 1500;
