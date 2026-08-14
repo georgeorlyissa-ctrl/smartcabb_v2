@@ -24,6 +24,7 @@ import driverRoutes from "./driver-routes.ts";
 import configRoutes from "./config-routes.ts";
 import passengerRoutes from "./passenger-routes.ts";
 import contactRoutes from "./contact-routes.ts";
+import appVersionRoutes from "./app-version-routes.ts";
 
 const app = new Hono();
 
@@ -102,6 +103,8 @@ app.route("/make-server-2eb02e52/config", configRoutes);
 app.route("/make-server-2eb02e52/passengers", passengerRoutes);
 // ✅ Route formulaire de contact site vitrine
 app.route("/make-server-2eb02e52/contact", contactRoutes);
+// ✅ Route version app (auto-update APK)
+app.route("/make-server-2eb02e52/app", appVersionRoutes);
 
 // Route 404
 app.notFound((c) => {
