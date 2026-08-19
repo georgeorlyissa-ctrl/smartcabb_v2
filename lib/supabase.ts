@@ -105,7 +105,7 @@ export const supabase = {
     
     resetPasswordForEmail: async (email: string, options?: { redirectTo?: string }) => {
       const body: Record<string, string> = { email };
-      if (options?.redirectTo) body.redirectTo = options.redirectTo;
+      if (options?.redirectTo) body.redirect_to = options.redirectTo;
       
       const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
         method: 'POST',
