@@ -52,6 +52,7 @@ const DEFAULT_CONFIG = {
   flutterwaveEnabled:     true,
   smsEnabled:             true,
   smsProvider:            "africas_talking",
+  otpRequired:            false,
   notificationsEnabled:   true,
   appVersion:             "1.0.0",
   maintenanceMode:        false,

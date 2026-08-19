@@ -6,6 +6,7 @@
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { isOTPRequired, verifyOTPToken } from "./otp-core.ts";
 
 const app = new Hono();
 
@@ -515,6 +516,16 @@ app.post("/signup", async (c) => {
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!normalizedPhone) {
       return c.json({ success: false, error: "Numéro de téléphone invalide. Format attendu : +243XXXXXXXXX" }, 400);
+    }
+
+    // 🔐 Vérification OTP du numéro (requise seulement si activée dans la config admin)
+    const otpRequired = await isOTPRequired();
+    if (otpRequired) {
+      const otpCheck = await verifyOTPToken(normalizedPhone, "registration", body.otpToken);
+      if (!otpCheck.ok) {
+        console.warn("⚠️ [DRIVERS/SIGNUP] OTP non vérifié:", otpCheck.error);
+        return c.json({ success: false, error: otpCheck.error }, 400);
+      }
     }
 
     const phoneDigits = normalizedPhone.replace(/\D/g, "");

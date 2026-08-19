@@ -7,6 +7,7 @@
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { isOTPRequired, verifyOTPToken } from "./otp-core.ts";
 
 const app = new Hono();
 
@@ -95,6 +96,18 @@ app.post("/signup", async (c) => {
 
     const normalizedEmail = normalizeEmail(finalEmail);
     const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
+
+    // 🔐 Vérification OTP du numéro (requise seulement si activée dans la config admin)
+    if (normalizedPhone) {
+      const otpRequired = await isOTPRequired();
+      if (otpRequired) {
+        const otpCheck = await verifyOTPToken(normalizedPhone, "registration", body.otpToken);
+        if (!otpCheck.ok) {
+          console.warn("⚠️ [AUTH/SIGNUP] OTP non vérifié:", otpCheck.error);
+          return c.json({ success: false, error: otpCheck.error }, 400);
+        }
+      }
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,

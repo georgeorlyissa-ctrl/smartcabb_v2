@@ -25,6 +25,8 @@ import configRoutes from "./config-routes.ts";
 import passengerRoutes from "./passenger-routes.ts";
 import contactRoutes from "./contact-routes.ts";
 import appVersionRoutes from "./app-version-routes.ts";
+import otpRoutes from "./otp-routes.ts";
+import smsRoutes from "./sms-routes.ts";
 
 const app = new Hono();
 
@@ -105,6 +107,10 @@ app.route("/make-server-2eb02e52/passengers", passengerRoutes);
 app.route("/make-server-2eb02e52/contact", contactRoutes);
 // ✅ Route version app (auto-update APK)
 app.route("/make-server-2eb02e52/app", appVersionRoutes);
+// ✅ Route OTP (vérification de numéro)
+app.route("/make-server-2eb02e52/otp", otpRoutes);
+// ✅ Route SMS (envoi, config, solde)
+app.route("/make-server-2eb02e52/sms", smsRoutes);
 
 // Route 404
 app.notFound((c) => {
