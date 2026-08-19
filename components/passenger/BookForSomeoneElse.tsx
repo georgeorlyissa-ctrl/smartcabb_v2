@@ -45,6 +45,10 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
   /**
    * Valider le numéro de téléphone RDC
    */
+  /**
+   * Valider le numéro de téléphone RDC
+   */
+  
   const validatePhone = (phone: string): boolean => {
     // Format accepté : +243XXXXXXXXX (12 chiffres) ou 0XXXXXXXXX (10 chiffres)
     const phoneRegex = /^(\+243|0)[0-9]{9}$/;
