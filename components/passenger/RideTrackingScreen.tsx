@@ -8,6 +8,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { toast } from '../../lib/toast';
 import { Phone, MessageCircle, Share2, AlertTriangle, MapPin, Clock } from '../icons/RideIcons';
+import { calculateRideMeterCost } from '../../lib/pricing';
 
 interface Location {
   lat: number;
@@ -19,6 +20,7 @@ export function RideTrackingScreen() {
   const { state, setCurrentScreen } = useAppState();
   const [driverLocation, setDriverLocation] = useState<Location | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [currentCost, setCurrentCost] = useState(0);
   const [showSOSDialog, setShowSOSDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const currentRide = state.currentRide;
@@ -32,13 +34,14 @@ export function RideTrackingScreen() {
       const now = Date.now();
       const elapsed = Math.floor((now - startTime) / 1000); // en secondes
       setElapsedTime(elapsed);
+      setCurrentCost(calculateRideMeterCost(currentRide, elapsed));
     };
 
     updateTimer(); // Mise à jour immédiate
     const timer = setInterval(updateTimer, 1000); // Mise à jour chaque seconde
 
     return () => clearInterval(timer);
-  }, [currentRide?.startedAt]);
+  }, [currentRide?.startedAt, currentRide?.vehicleCategory, currentRide?.vehicleType]);
 
   // Formater le temps en HH:MM:SS ou MM:SS
   const formatTime = (seconds: number): string => {
@@ -54,7 +57,7 @@ export function RideTrackingScreen() {
 
   // 🔗 Partager l'itinéraire
   const handleShareTrip = async () => {
-    const shareText = `🚕 Je suis en course SmartCabb\n\n📍 Départ: ${currentRide.pickup?.address || 'Position de départ'}\n📍 Arrivée: ${currentRide.destination?.address || 'Destination'}\n👤 Conducteur: ${currentRide.driver?.name || 'N/A'}\n🚗 Véhicule: ${currentRide.driver?.vehicle?.make} ${currentRide.driver?.vehicle?.model || ''}\n⏱️ Temps écoulé: ${formatTime(elapsedTime)}\n💰 Prix: ${currentRide.estimatedPrice?.toLocaleString() || 'N/A'} CDF\n\nSuivez ma course en temps réel: https://smartcabb.com/track/${currentRide?.id}`;
+    const shareText = `🚕 Je suis en course SmartCabb\n\n📍 Départ: ${currentRide.pickup?.address || 'Position de départ'}\n📍 Arrivée: ${currentRide.destination?.address || 'Destination'}\n👤 Conducteur: ${currentRide.driver?.name || 'N/A'}\n🚗 Véhicule: ${currentRide.driver?.vehicle?.make} ${currentRide.driver?.vehicle?.model || ''}\n⏱️ Temps écoulé: ${formatTime(elapsedTime)}\n💰 Prix: ${(currentCost || currentRide.estimatedPrice)?.toLocaleString() || 'N/A'} CDF\n\nSuivez ma course en temps réel: https://smartcabb.com/track/${currentRide?.id}`;
 
     if (navigator.share) {
       try {
@@ -235,7 +238,7 @@ export function RideTrackingScreen() {
       const message = `Voici les détails de ma course avec ${currentRide.driver?.name} :
 Départ : ${currentRide.pickup?.address}
 Destination : ${currentRide.destination?.address}
-Prix estimé : ${currentRide.estimatedPrice?.toLocaleString() || 'N/A'} CDF
+Prix : ${(currentCost || currentRide.estimatedPrice)?.toLocaleString() || 'N/A'} CDF
 Contact : ${currentRide.driver?.phone}`;
       window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
     }
@@ -359,9 +362,9 @@ Contact : ${currentRide.driver?.phone}`;
             {/* Prix */}
             <div className="pt-4 border-t">
               <div className="flex justify-between items-center mb-4">
-                <span className="text-gray-600">Prix de la course</span>
+                <span className="text-gray-600">Coût actuel</span>
                 <span className="text-2xl font-bold text-green-600">
-                  {currentRide.estimatedPrice?.toLocaleString() || 'N/A'} CDF
+                  {(currentCost || currentRide.estimatedPrice)?.toLocaleString() || 'N/A'} CDF
                 </span>
               </div>
               
@@ -460,7 +463,7 @@ Contact : ${currentRide.driver?.phone}`;
               {currentRide.startedAt && (
                 <p><strong>⏱️ Temps:</strong> {formatTime(elapsedTime)}</p>
               )}
-              <p><strong>💰 Prix:</strong> {currentRide.estimatedPrice?.toLocaleString() || 'N/A'} CDF</p>
+              <p><strong>💰 Prix:</strong> {(currentCost || currentRide.estimatedPrice)?.toLocaleString() || 'N/A'} CDF</p>
             </div>
             <Button
               onClick={handleShareTrip}
