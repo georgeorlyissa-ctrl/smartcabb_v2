@@ -351,4 +351,103 @@ app.post("/delete-user-by-phone", async (c) => {
   }
 });
 
+// ─── POST /check-phone-exists ─────────────────────────────────────────────────
+
+app.post("/check-phone-exists", async (c) => {
+  try {
+    const { phoneNumber } = await c.req.json();
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    if (!normalizedPhone) {
+      return c.json({ success: false, exists: false, error: "Format de numéro invalide" }, 400);
+    }
+
+    const phoneDigits = normalizedPhone.replace(/\D/g, "");
+    const generatedEmail = `u${phoneDigits}@smartcabb.app`;
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: { users } } = await supabase.auth.admin.listUsers();
+
+    const targetUser = users?.find((u) => {
+      if (u.email?.toLowerCase() === generatedEmail.toLowerCase()) return true;
+      const userPhone = u.user_metadata?.phone || (u as any).phone;
+      return userPhone && normalizePhoneNumber(userPhone) === normalizedPhone;
+    });
+
+    return c.json({ success: true, exists: !!targetUser, userId: targetUser?.id || null });
+  } catch (error) {
+    console.error("❌ [AUTH/CHECK-PHONE-EXISTS] Erreur:", error);
+    return c.json({ success: false, exists: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /reset-password-phone ───────────────────────────────────────────────
+
+app.post("/reset-password-phone", async (c) => {
+  try {
+    const { phoneNumber, otpToken, newPassword } = await c.req.json();
+
+    if (!newPassword || newPassword.length < 6) {
+      return c.json({ success: false, error: "Le mot de passe doit contenir au moins 6 caractères" }, 400);
+    }
+
+    const normalizedPhone = normalizePhoneNumber(phoneNumber);
+    if (!normalizedPhone) {
+      return c.json({ success: false, error: "Format de numéro invalide" }, 400);
+    }
+
+    // 🔐 Vérifier le jeton OTP (purpose reset-password, consommé après usage)
+    const otpCheck = await verifyOTPToken(normalizedPhone, "reset-password", otpToken);
+    if (!otpCheck.ok) {
+      console.warn("⚠️ [AUTH/RESET-PASSWORD] OTP non vérifié:", otpCheck.error);
+      return c.json({ success: false, error: otpCheck.error }, 400);
+    }
+
+    const phoneDigits = normalizedPhone.replace(/\D/g, "");
+    const generatedEmail = `u${phoneDigits}@smartcabb.app`;
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: { users } } = await supabase.auth.admin.listUsers();
+
+    const targetUser = users?.find((u) => {
+      if (u.email?.toLowerCase() === generatedEmail.toLowerCase()) return true;
+      const userPhone = u.user_metadata?.phone || (u as any).phone;
+      return userPhone && normalizePhoneNumber(userPhone) === normalizedPhone;
+    });
+
+    if (!targetUser) {
+      return c.json({
+        success: false,
+        error: "Aucun compte trouvé avec ce numéro de téléphone. Créez d'abord un compte.",
+        notFound: true,
+      }, 404);
+    }
+
+    const { error: updateError } = await supabase.auth.admin.updateUserById(targetUser.id, {
+      password: newPassword,
+    });
+
+    if (updateError) {
+      console.error("❌ [AUTH/RESET-PASSWORD] Erreur mise à jour:", updateError.message);
+      return c.json({ success: false, error: `Erreur lors de la mise à jour: ${updateError.message}` }, 400);
+    }
+
+    console.log("✅ [AUTH/RESET-PASSWORD] Mot de passe réinitialisé pour", normalizedPhone);
+    return c.json({ success: true, message: "Mot de passe réinitialisé avec succès" });
+  } catch (error) {
+    console.error("❌ [AUTH/RESET-PASSWORD] Erreur inattendue:", error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur lors de la réinitialisation",
+    }, 500);
+  }
+});
+
 export default app;

@@ -4,7 +4,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { toast } from '../../lib/toast';
 import { useNavigate } from '../../lib/simple-router';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { resetPassword } from '../../lib/auth-service';
 
 // Icônes inline
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -51,22 +51,7 @@ export function AdminForgotPasswordScreen() {
     try {
       console.log('📧 Envoi de la demande de réinitialisation pour:', email);
 
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/auth/forgot-password`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            identifier: email,
-            userType: 'admin'
-          })
-        }
-      );
-
-      const result = await response.json();
+      const result = await resetPassword(email);
 
       if (!result.success) {
         console.error('❌ Erreur:', result.error);

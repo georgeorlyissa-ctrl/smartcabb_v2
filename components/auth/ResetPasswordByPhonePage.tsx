@@ -7,6 +7,7 @@ import { toast } from '../../lib/toast';
 import { useNavigate } from '../../lib/simple-router';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { supabase } from '../../lib/supabase';
+import { sendOTPCode, verifyOTPCode } from '../../lib/otp-service';
 
 // Icônes inline (évite import lucide-react)
 const PhoneIcon = ({ className }: { className?: string }) => (
@@ -69,12 +70,12 @@ export function ResetPasswordByPhonePage() {
   const [step, setStep] = useState<'phone' | 'otp' | 'password' | 'success'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [otpToken, setOtpToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [userId, setUserId] = useState('');
   const navigate = useNavigate();
 
   // Étape 1 : Envoyer le code OTP
@@ -106,26 +107,11 @@ export function ResetPasswordByPhonePage() {
         normalizedPhone = '+243' + normalizedPhone;
       }
 
-      // Appeler l'API backend pour envoyer le code OTP
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/send-reset-otp`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`
-          },
-          body: JSON.stringify({
-            phoneNumber: normalizedPhone
-          })
-        }
-      );
-
-      const result = await response.json();
+      // Appeler le backend pour envoyer le code OTP (WhatsApp, fallback SMS)
+      const result = await sendOTPCode(normalizedPhone, 'reset-password');
 
       if (result.success) {
         console.log('✅ Code OTP envoyé');
-        setUserId(result.userId);
         setPhoneNumber(normalizedPhone);
         setStep('otp');
         toast.success(`Code envoyé au ${normalizedPhone}`);
@@ -160,31 +146,17 @@ export function ResetPasswordByPhonePage() {
     try {
       console.log('🔍 Vérification du code OTP...');
 
-      // Vérifier le code OTP via l'API backend
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/verify-reset-otp`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`
-          },
-          body: JSON.stringify({
-            phoneNumber,
-            otpCode,
-            userId
-          })
-        }
-      );
+      // Vérifier le code OTP via le backend
+      const result = await verifyOTPCode(phoneNumber, otpCode, 'reset-password');
 
-      const result = await response.json();
-
-      if (result.success) {
+      if (result.success && result.token) {
         console.log('✅ Code OTP valide');
+        setOtpToken(result.token);
         setStep('password');
         toast.success('Code vérifié ! Choisissez un nouveau mot de passe');
       } else {
         toast.error(result.error || 'Code invalide ou expiré');
+        setOtpCode('');
       }
 
     } catch (error: any) {
@@ -219,9 +191,14 @@ export function ResetPasswordByPhonePage() {
     try {
       console.log('🔄 Mise à jour du mot de passe...');
 
-      // Mettre à jour le mot de passe via l'API backend
+      if (!otpToken) {
+        toast.error('Session expirée. Recommencez le processus.');
+        return;
+      }
+
+      // Mettre à jour le mot de passe via le backend (jeton OTP requis)
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reset-password-by-phone`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/auth/reset-password-phone`,
         {
           method: 'POST',
           headers: {
@@ -229,9 +206,8 @@ export function ResetPasswordByPhonePage() {
             'Authorization': `Bearer ${publicAnonKey}`
           },
           body: JSON.stringify({
-            userId,
             phoneNumber,
-            otpCode,
+            otpToken,
             newPassword
           })
         }

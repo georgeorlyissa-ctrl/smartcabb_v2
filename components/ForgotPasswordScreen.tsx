@@ -6,6 +6,8 @@ import { ArrowLeft, Mail, CheckCircle, Phone } from '../lib/icons'; // ✅ FIX: 
 import { toast } from '../lib/toast';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { useAppState } from '../hooks/useAppState';
+import { sendOTPCode } from '../lib/otp-service';
+import { resetPassword } from '../lib/auth-service';
 
 interface ForgotPasswordScreenProps {
   onBack: () => void;
@@ -85,42 +87,17 @@ export function ForgotPasswordScreen({ onBack, userType = 'passenger' }: ForgotP
           return;
         }
 
-        // ✅ ÉTAPE 2 : Le compte existe, générer et envoyer le code OTP
+        // ✅ ÉTAPE 2 : Le compte existe, envoyer le code OTP via le backend (WhatsApp/SMS)
         console.log('✅ Compte existant trouvé, envoi du code OTP...');
-        
-        // Générer un code OTP à 6 chiffres
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        const message = `SmartCabb : Votre code de reinitialisation est ${otpCode}. Utilisez ce code pour reinitialiser votre mot de passe. Ne partagez jamais ce code avec qui que ce soit.`;
 
-        console.log('🔐 Code OTP généré:', otpCode);
+        const otpResult = await sendOTPCode(normalizedPhone, 'reset-password');
+        console.log('📱 Résultat envoi OTP:', otpResult);
 
-        // Envoyer le SMS via l'endpoint /sms/send
-        const smsResponse = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/sms/send`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${publicAnonKey}`
-            },
-            body: JSON.stringify({ 
-              phoneNumber: normalizedPhone,
-              message: message,
-              type: 'otp_code'
-            })
-          }
-        );
-
-        const smsResult = await smsResponse.json();
-        console.log('📱 Résultat SMS:', smsResult);
-
-        if (smsResult.success) {
-          console.log('✅ SMS envoyé avec succès');
+        if (otpResult.success) {
+          console.log('✅ Code OTP envoyé avec succès');
           
-          // Stocker le numéro et le code OTP pour la prochaine étape
+          // Stocker le numéro pour l'écran de vérification
           localStorage.setItem('reset_phone', normalizedPhone);
-          localStorage.setItem('reset_otp_code', otpCode);
-          localStorage.setItem('reset_otp_timestamp', Date.now().toString());
           
           toast.success(`Code envoyé au ${normalizedPhone}`);
           
@@ -130,30 +107,15 @@ export function ForgotPasswordScreen({ onBack, userType = 'passenger' }: ForgotP
                           'reset-password-otp';
           setCurrentScreen(otpScreen);
         } else {
-          console.error('❌ Erreur envoi SMS:', smsResult);
-          const errorMsg = typeof smsResult.error === 'string' 
-            ? smsResult.error 
-            : smsResult.error?.message || 'Erreur lors de l\'envoi du SMS';
-          toast.error(errorMsg);
+          console.error('❌ Erreur envoi OTP:', otpResult);
+          toast.error(otpResult.error || 'Erreur lors de l\'envoi du code');
         }
 
       } else {
-        // Réinitialisation par email
+        // Réinitialisation par email (email de récupération Supabase)
         console.log('📧 Réinitialisation par email pour:', identifierStr);
 
-        const response = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/auth/forgot-password`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${publicAnonKey}`
-            },
-            body: JSON.stringify({ email: identifierStr })
-          }
-        );
-
-        const result = await response.json();
+        const result = await resetPassword(identifierStr);
 
         if (result.success) {
           console.log('✅ Email de réinitialisation envoyé');

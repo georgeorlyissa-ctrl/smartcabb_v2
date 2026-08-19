@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { ArrowLeft, MessageSquare, Lock, CheckCircle, Eye, EyeOff } from '../lib/icons';
 import { toast } from '../lib/toast';
+import { sendOTPCode, verifyOTPCode } from '../lib/otp-service';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 
 interface ResetPasswordOTPScreenProps {
@@ -17,20 +18,47 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
   
   const [step, setStep] = useState<'otp' | 'password' | 'success'>('otp');
   const [otpCode, setOtpCode] = useState('');
+  const [otpToken, setOtpToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [userId, setUserId] = useState('');
   const [resendCountdown, setResendCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
-  const [debugCode, setDebugCode] = useState<string | null>(null);
+
+  const handleSendOTP = async (phoneOverride?: string, silent = false) => {
+    const phone = phoneOverride || phoneNumber;
+    if (!phone) return;
+
+    setLoading(true);
+    try {
+      const result = await sendOTPCode(phone, 'reset-password');
+      if (result.success) {
+        if (!silent) toast.success('Code envoyé (WhatsApp ou SMS)');
+        setResendCountdown(60);
+        setCanResend(false);
+        setOtpCode('');
+      } else {
+        if (result.retryAfterSeconds) {
+          setResendCountdown(result.retryAfterSeconds);
+          setCanResend(false);
+          if (!silent) toast.info(`Un code a déjà été envoyé. Réessayez dans ${result.retryAfterSeconds}s`);
+        } else {
+          toast.error(result.error || 'Erreur lors de l\'envoi du code');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur envoi OTP:', error);
+      if (!silent) toast.error('Erreur lors de l\'envoi du code');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const phone = localStorage.getItem('reset_phone');
-    const storedOtpCode = localStorage.getItem('reset_otp_code');
     
     if (!phone) {
       toast.error('Session expirée. Recommencez le processus.');
@@ -39,10 +67,8 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
     }
     
     setPhoneNumber(phone);
-    
-    if (storedOtpCode) {
-      console.log('🔧 CODE OTP DISPONIBLE:', storedOtpCode);
-    }
+    handleSendOTP(phone, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onBack]);
 
   useEffect(() => {
@@ -65,33 +91,16 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
     setLoading(true);
 
     try {
-      const storedOtpCode = localStorage.getItem('reset_otp_code');
-      const storedTimestamp = localStorage.getItem('reset_otp_timestamp');
-      
-      if (!storedOtpCode || !storedTimestamp) {
-        toast.error('Code expiré. Recommencez le processus.');
-        onBack();
-        return;
-      }
+      const result = await verifyOTPCode(phoneNumber, otpCode, 'reset-password');
 
-      const now = Date.now();
-      const timestamp = parseInt(storedTimestamp);
-      const tenMinutes = 10 * 60 * 1000;
-      
-      if (now - timestamp > tenMinutes) {
-        toast.error('Code expiré. Veuillez recommencer.');
-        localStorage.removeItem('reset_otp_code');
-        localStorage.removeItem('reset_otp_timestamp');
-        onBack();
-        return;
-      }
-
-      if (otpCode === storedOtpCode) {
+      if (result.success && result.token) {
         console.log('✅ Code OTP valide');
+        setOtpToken(result.token);
         setStep('password');
         toast.success('Code vérifié ! Choisissez un nouveau mot de passe');
       } else {
-        toast.error('Code invalide. Veuillez réessayer.');
+        toast.error(result.error || 'Code invalide. Veuillez réessayer.');
+        setOtpCode('');
       }
 
     } catch (error: any) {
@@ -130,9 +139,15 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
     setLoading(true);
 
     try {
+      if (!otpToken) {
+        toast.error('Session expirée. Recommencez le processus.');
+        onBack();
+        return;
+      }
+
       const url = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/auth/reset-password-phone`;
       console.log('📤 URL:', url);
-      console.log('📤 Body:', { phoneNumber, newPassword: '***' });
+      console.log('📤 Body:', { phoneNumber, newPassword: '***', hasOtpToken: !!otpToken });
 
       const response = await fetch(url, {
         method: 'POST',
@@ -142,6 +157,7 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
         },
         body: JSON.stringify({
           phoneNumber: phoneNumber,
+          otpToken: otpToken,
           newPassword: newPassword
         })
       });
@@ -162,8 +178,6 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
           setTimeout(() => {
             if (confirm('Aucun compte trouvé avec ce numéro. Voulez-vous créer un compte ?')) {
               localStorage.removeItem('reset_phone');
-              localStorage.removeItem('reset_otp_code');
-              localStorage.removeItem('reset_otp_timestamp');
               onBack();
             }
           }, 2000);
@@ -186,8 +200,6 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
         setStep('success');
         
         localStorage.removeItem('reset_phone');
-        localStorage.removeItem('reset_otp_code');
-        localStorage.removeItem('reset_otp_timestamp');
 
         if (onSuccess) {
           setTimeout(() => {
@@ -216,51 +228,7 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
   };
 
   const handleResendOTP = async () => {
-    setLoading(true);
-
-    try {
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const message = `SmartCabb : Votre code de reinitialisation est ${otpCode}. Utilisez ce code pour reinitialiser votre mot de passe. Ne partagez jamais ce code avec qui que ce soit.`;
-
-      console.log('🔐 Nouveau code OTP généré:', otpCode);
-
-      const smsResponse = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/sms/send`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`
-          },
-          body: JSON.stringify({ 
-            phoneNumber: phoneNumber,
-            message: message,
-            type: 'otp_code'
-          })
-        }
-      );
-
-      const smsResult = await smsResponse.json();
-      console.log('📱 Résultat SMS renvoi:', smsResult);
-
-      if (smsResult.success) {
-        localStorage.setItem('reset_otp_code', otpCode);
-        localStorage.setItem('reset_otp_timestamp', Date.now().toString());
-        
-        setOtpCode('');
-        toast.success('Nouveau code envoyé par SMS');
-        setResendCountdown(60);
-        setCanResend(false);
-      } else {
-        toast.error('Erreur lors du renvoi du code');
-      }
-
-    } catch (error) {
-      console.error('❌ Erreur renvoi OTP:', error);
-      toast.error('Erreur lors du renvoi du code');
-    } finally {
-      setLoading(false);
-    }
+    await handleSendOTP();
   };
 
   const colors = {
@@ -387,41 +355,9 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <p className="text-sm text-blue-800">
-                Le code est valide pendant 13 minutes
+                Le code est valide pendant 10 minutes. Vérifiez vos messages WhatsApp ou SMS.
               </p>
             </div>
-
-            {debugCode && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4"
-              >
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center">
-                      <span className="text-xl">🔧</span>
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-yellow-900 mb-2">MODE DEBUG</h3>
-                    <p className="text-sm text-yellow-800 mb-3">
-                      Les credentials SMS (Africa's Talking) ne sont pas configurés. 
-                      Utilisez le code ci-dessous :
-                    </p>
-                    <div className="bg-white border-2 border-yellow-400 rounded-lg p-3 text-center">
-                      <p className="text-xs text-yellow-700 mb-1">Code OTP :</p>
-                      <p className="text-3xl font-mono font-bold text-yellow-900 tracking-wider">
-                        {debugCode}
-                      </p>
-                    </div>
-                    <p className="text-xs text-yellow-700 mt-2">
-                      💡 Pour activer les SMS réels, configurez les secrets Supabase
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
           </motion.div>
         </div>
 
