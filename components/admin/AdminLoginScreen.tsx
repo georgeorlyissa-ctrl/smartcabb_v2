@@ -232,9 +232,8 @@ export function AdminLoginScreen() {
       } else {
         console.log('🔐 [2FA] 2FA désactivé, connexion directe');
         completeAdminLogin(adminUser, adminName);
+        console.log('✅ Redirection effectuée vers admin-dashboard');
       }
-
-      console.log('✅ Redirection effectuée vers admin-dashboard');
 
     } catch (error) {
       console.error('❌ Erreur:', error);
