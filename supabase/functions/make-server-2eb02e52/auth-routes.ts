@@ -84,6 +84,18 @@ app.post("/signup", async (c) => {
     if (!password) return c.json({ success: false, error: "Mot de passe requis" }, 400);
     if (!email && !phone) return c.json({ success: false, error: "Email ou téléphone requis" }, 400);
 
+    // 🔒 Création de compte ADMIN : le secret propriétaire est obligatoire
+    if (role === "admin") {
+      const expectedSecret = Deno.env.get("ADMIN_CREATION_SECRET");
+      const providedSecret = body.adminSecret || c.req.header("x-admin-secret");
+      if (!expectedSecret || providedSecret !== expectedSecret) {
+        return c.json({
+          success: false,
+          error: "Code de création admin requis ou invalide",
+        }, 403);
+      }
+    }
+
     let finalEmail = email;
     if (!email && phone) {
       const phoneDigits = phone.replace(/\D/g, "");

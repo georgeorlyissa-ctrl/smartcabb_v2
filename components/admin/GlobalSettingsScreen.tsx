@@ -476,6 +476,17 @@ export function GlobalSettingsScreen() {
                     onCheckedChange={(checked) => handleChange('maintenanceMode', checked)}
                   />
                 </div>
+
+                <div className="flex items-center justify-between border-t pt-4">
+                  <div>
+                    <Label>Authentification à deux facteurs (2FA)</Label>
+                    <p className="text-xs text-gray-500">Code de vérification par email à chaque connexion admin</p>
+                  </div>
+                  <Switch
+                    checked={localConfig.admin2faRequired}
+                    onCheckedChange={(checked) => handleChange('admin2faRequired', checked)}
+                  />
+                </div>
               </div>
             </Card>
           </motion.div>

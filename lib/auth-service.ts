@@ -44,6 +44,7 @@ export interface CreateAdminData {
   email: string;
   password: string;
   fullName: string;
+  adminSecret?: string;
 }
 
 /**
@@ -673,7 +674,7 @@ export async function getSession(): Promise<AuthResult> {
  */
 export async function createAdmin(adminData: CreateAdminData): Promise<AuthResult> {
   try {
-    const { email, password, fullName } = adminData;
+    const { email, password, fullName, adminSecret } = adminData;
     
     // Validation
     if (!email || !isValidEmail(email)) {
@@ -690,6 +691,13 @@ export async function createAdmin(adminData: CreateAdminData): Promise<AuthResul
       };
     }
     
+    if (!adminSecret) {
+      return {
+        success: false,
+        error: 'Le code de création admin est requis'
+      };
+    }
+    
     // ✅ NOUVELLE ROUTE : Purge automatique + Création
     // Cette route supprime définitivement l'ancien compte s'il existe
     // et crée un nouveau compte admin avec le même email
@@ -703,7 +711,7 @@ export async function createAdmin(adminData: CreateAdminData): Promise<AuthResul
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${publicAnonKey}`
         },
-        body: JSON.stringify({ email, password, fullName })
+        body: JSON.stringify({ email, password, fullName, adminSecret })
       }
     );
     

@@ -76,12 +76,18 @@ export function AdminRegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [adminSecret, setAdminSecret] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
     // Validation
     if (!fullName || !email || !password || !confirmPassword) {
       toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    if (!adminSecret) {
+      toast.error('Le code de création admin est requis (réservé au propriétaire)');
       return;
     }
 
@@ -109,7 +115,8 @@ export function AdminRegisterScreen() {
           email,
           password,
           full_name: fullName,
-          role: 'admin'
+          role: 'admin',
+          adminSecret
         })
       });
 
@@ -252,6 +259,23 @@ export function AdminRegisterScreen() {
                 {showConfirmPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
               </button>
             </div>
+          </div>
+
+          {/* Code de création admin */}
+          <div>
+            <Label htmlFor="adminSecret">Code de création admin</Label>
+            <div className="relative mt-2">
+              <ShieldIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Input
+                id="adminSecret"
+                type="password"
+                placeholder="Code réservé au propriétaire"
+                value={adminSecret}
+                onChange={(e) => setAdminSecret(e.target.value)}
+                className="pl-10 h-12 bg-gray-50 border-gray-200 rounded-xl"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">🔒 Requis pour créer un compte admin</p>
           </div>
 
           <Button

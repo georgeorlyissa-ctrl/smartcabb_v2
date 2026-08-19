@@ -38,6 +38,10 @@ export interface GlobalConfig {
   smsProvider: string;
   notificationsEnabled: boolean;
   
+  // Sécurité
+  otpRequired: boolean;
+  admin2faRequired: boolean;
+  
   // Système
   appVersion: string;
   maintenanceMode: boolean;
@@ -62,6 +66,8 @@ export const DEFAULT_CONFIG: GlobalConfig = {
   smsEnabled: true,
   smsProvider: 'africas_talking',
   notificationsEnabled: true,
+  otpRequired: false,
+  admin2faRequired: true,
   appVersion: '1.0.0',
   maintenanceMode: false,
   lastUpdated: new Date().toISOString()

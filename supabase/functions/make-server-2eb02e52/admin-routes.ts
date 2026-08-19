@@ -7,8 +7,23 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification } from "./firebase-admin.ts";
+import {
+  getAdmin2FAEmail,
+  isAdmin2FARequired,
+  sendEmailOTP,
+  verifyEmailOTP,
+} from "./admin-2fa-core.ts";
 
 const app = new Hono();
+
+// ─── Sécurité : secret de création admin ──────────────────────────────────────
+
+function hasValidAdminSecret(c: any): boolean {
+  const expected = Deno.env.get("ADMIN_CREATION_SECRET");
+  if (!expected) return false;
+  const header = c.req.header("x-admin-secret") || "";
+  return header === expected;
+}
 
 // ─── Table KV ────────────────────────────────────────────────────────────────
 const KV_TABLE = "kv_store_2eb02e52";
@@ -58,6 +73,11 @@ async function kvDel(key: string): Promise<void> {
 
 app.post("/reset-admin-account", async (c) => {
   try {
+    // 🔒 Protégé par le secret de création admin (seul le propriétaire peut recréer le compte)
+    if (!hasValidAdminSecret(c)) {
+      return c.json({ success: false, error: "Code de création admin requis ou invalide" }, 403);
+    }
+
     console.log("🆘 RÉINITIALISATION DU COMPTE ADMIN...");
 
     const adminEmail = "contact@smartcabb.com";
@@ -119,6 +139,100 @@ app.post("/reset-admin-account", async (c) => {
   } catch (error) {
     console.error("❌ Erreur réinitialisation admin:", error);
     return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /2fa/send — Envoyer le code 2FA par email ──────────────────────────
+
+app.post("/2fa/send", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { accessToken } = body;
+
+    if (!accessToken) return c.json({ success: false, error: "Session requise" }, 401);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+    if (userError || !userData?.user) {
+      return c.json({ success: false, error: "Session invalide ou expirée" }, 401);
+    }
+
+    const adminUser = userData.user;
+    if ((adminUser.user_metadata?.role || "passenger") !== "admin") {
+      return c.json({ success: false, error: "Compte non autorisé" }, 403);
+    }
+
+    const required = await isAdmin2FARequired();
+    if (!required) {
+      return c.json({ success: true, disabled: true, message: "2FA désactivé" });
+    }
+
+    const targetEmail = getAdmin2FAEmail() || adminUser.email;
+    if (!targetEmail) {
+      return c.json({ success: false, error: "Email 2FA non configuré (ADMIN_2FA_EMAIL)" }, 500);
+    }
+
+    const result = await sendEmailOTP(targetEmail, "login");
+    if (!result.ok) {
+      return c.json({
+        success: false,
+        error: result.error,
+        retryAfterSeconds: result.retryAfterSeconds,
+      }, result.retryAfterSeconds ? 429 : 500);
+    }
+
+    console.log(`✅ [2FA] Code envoyé pour l'admin ${adminUser.email}`);
+    return c.json({ success: true, channel: result.channel, message: "Code envoyé par email" });
+  } catch (error) {
+    console.error("❌ [2FA/SEND] Erreur:", error);
+    return c.json({ success: false, error: "Erreur lors de l'envoi du code" }, 500);
+  }
+});
+
+// ─── POST /2fa/verify — Vérifier le code 2FA ─────────────────────────────────
+
+app.post("/2fa/verify", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const { accessToken, code } = body;
+
+    if (!accessToken) return c.json({ success: false, error: "Session requise" }, 401);
+    if (!code) return c.json({ success: false, error: "Code requis" }, 400);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(accessToken);
+    if (userError || !userData?.user) {
+      return c.json({ success: false, error: "Session invalide ou expirée" }, 401);
+    }
+
+    const adminUser = userData.user;
+    if ((adminUser.user_metadata?.role || "passenger") !== "admin") {
+      return c.json({ success: false, error: "Compte non autorisé" }, 403);
+    }
+
+    const targetEmail = getAdmin2FAEmail() || adminUser.email;
+    if (!targetEmail) {
+      return c.json({ success: false, error: "Email 2FA non configuré (ADMIN_2FA_EMAIL)" }, 500);
+    }
+
+    const result = await verifyEmailOTP(targetEmail, "login", code);
+    if (!result.ok) {
+      return c.json({ success: false, error: result.error }, 400);
+    }
+
+    console.log(`✅ [2FA] Connexion admin vérifiée: ${adminUser.email}`);
+    return c.json({ success: true, token: result.token });
+  } catch (error) {
+    console.error("❌ [2FA/VERIFY] Erreur:", error);
+    return c.json({ success: false, error: "Erreur lors de la vérification" }, 500);
   }
 });
 

@@ -123,7 +123,17 @@ app.post("/purge-user-by-email", async (c) => {
 // l'ancien compte si l'email existe déjà
 app.post("/create-admin-with-purge", async (c) => {
   try {
-    const { email, password, fullName } = await c.req.json();
+    const body = await c.req.json();
+    const { email, password, fullName, adminSecret } = body;
+    
+    // 🔒 Protégé par le secret de création admin (seul le propriétaire peut créer des admins)
+    const expectedSecret = Deno.env.get("ADMIN_CREATION_SECRET");
+    if (!expectedSecret || adminSecret !== expectedSecret) {
+      return c.json({
+        success: false,
+        error: "Code de création admin requis ou invalide"
+      }, 403);
+    }
     
     if (!email || !password || !fullName) {
       return c.json({ 

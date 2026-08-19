@@ -19,7 +19,8 @@ export function QuickAdminSignup() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    fullName: ''
+    fullName: '',
+    adminSecret: ''
   });
 
   // 🔍 Debug: Vérifier que le composant se charge bien
@@ -29,6 +30,11 @@ export function QuickAdminSignup() {
   const handleSignup = async () => {
     if (!formData.email || !formData.password || !formData.fullName) {
       toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    if (!formData.adminSecret) {
+      toast.error('Le code de création admin est requis (réservé au propriétaire)');
       return;
     }
 
@@ -46,7 +52,8 @@ export function QuickAdminSignup() {
       const result = await createAdmin({
         email: formData.email,
         password: formData.password,
-        fullName: formData.fullName
+        fullName: formData.fullName,
+        adminSecret: formData.adminSecret
       });
 
       if (!result.success) {
@@ -132,6 +139,22 @@ export function QuickAdminSignup() {
             />
             <p className="text-xs text-gray-500 mt-1">
               Minimum 6 caractères
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="adminSecret">Code de création admin</Label>
+            <Input
+              id="adminSecret"
+              type="password"
+              placeholder="Code réservé au propriétaire"
+              value={formData.adminSecret}
+              onChange={(e) => setFormData({ ...formData, adminSecret: e.target.value })}
+              className="mt-2 h-12"
+              disabled={loading}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              🔒 Requis pour créer un compte admin (fourni par le propriétaire)
             </p>
           </div>
 

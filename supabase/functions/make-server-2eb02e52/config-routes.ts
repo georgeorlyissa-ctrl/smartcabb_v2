@@ -53,6 +53,7 @@ const DEFAULT_CONFIG = {
   smsEnabled:             true,
   smsProvider:            "africas_talking",
   otpRequired:            false,
+  admin2faRequired:       true,
   notificationsEnabled:   true,
   appVersion:             "1.0.0",
   maintenanceMode:        false,
@@ -78,7 +79,14 @@ app.get("/get", async (c) => {
         }
       }
       console.log("✅ [CONFIG/GET] Config chargée depuis le KV");
-      return c.json({ success: true, config: stored });
+
+      // Compléter les clés manquantes avec les valeurs par défaut (rétrocompatibilité)
+      const completed: Record<string, any> = { ...DEFAULT_CONFIG, ...stored };
+      if (Object.keys(completed).length !== Object.keys(stored).length) {
+        await kvSet(CONFIG_KEY, completed);
+        console.log("🧹 [CONFIG/GET] Config complétée avec les valeurs par défaut");
+      }
+      return c.json({ success: true, config: completed });
     }
 
     // Première utilisation : sauvegarder les valeurs par défaut

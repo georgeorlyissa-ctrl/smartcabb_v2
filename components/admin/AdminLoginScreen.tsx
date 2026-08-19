@@ -1,12 +1,14 @@
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { useNavigate } from '../../lib/simple-router';
 import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import * as authService from '../../lib/auth-service'; // ✅ Import de toutes les exports nommées
+import { sendAdmin2FA, verifyAdmin2FA } from '../../lib/admin-2fa-service';
+import { fetchGlobalConfig } from '../../lib/config-sync';
 
 // Icônes inline (évite import lib/icons qui n'existe plus)
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -46,6 +48,102 @@ export function AdminLoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showSyncLink, setShowSyncLink] = useState(false);
+
+  // 🔐 Étape 2FA
+  const [twoFaStep, setTwoFaStep] = useState<'none' | 'verify'>('none');
+  const [accessToken, setAccessToken] = useState('');
+  const [pendingAdminUser, setPendingAdminUser] = useState<any>(null);
+  const [otpCode, setOtpCode] = useState('');
+  const [resendCountdown, setResendCountdown] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+
+  useEffect(() => {
+    if (resendCountdown > 0 && twoFaStep === 'verify') {
+      const timer = setTimeout(() => setResendCountdown(resendCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (resendCountdown === 0) {
+      setCanResend(true);
+    }
+  }, [resendCountdown, twoFaStep]);
+
+  const completeAdminLogin = (adminUser: any, name: string) => {
+    setCurrentUser(adminUser);
+    setIsAdmin(true);
+    setCurrentView('admin');
+    toast.success(`Bienvenue ${name} ! 👋`);
+    setCurrentScreen('admin-dashboard');
+  };
+
+  const handleSend2FA = async (token?: string, adminUser?: any, name?: string) => {
+    const useToken = token || accessToken;
+    const useUser = adminUser || pendingAdminUser;
+    if (!useToken) return;
+
+    setLoading(true);
+    try {
+      const result = await sendAdmin2FA(useToken);
+
+      if (result.disabled) {
+        // 2FA désactivé côté serveur → connexion directe
+        completeAdminLogin(useUser, name || useUser?.name?.split(' ')[0] || 'Admin');
+        return;
+      }
+
+      if (result.success) {
+        toast.success('Code de vérification envoyé par email');
+        setOtpCode('');
+        setResendCountdown(60);
+        setCanResend(false);
+        setTwoFaStep('verify');
+      } else {
+        if (result.retryAfterSeconds) {
+          setResendCountdown(result.retryAfterSeconds);
+          setCanResend(false);
+          toast.info(`Un code a déjà été envoyé. Réessayez dans ${result.retryAfterSeconds}s`);
+        } else {
+          toast.error(result.error || 'Erreur lors de l\'envoi du code');
+        }
+      }
+    } catch (error) {
+      console.error('❌ [2FA] Erreur envoi:', error);
+      toast.error('Erreur lors de l\'envoi du code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      toast.error('Veuillez entrer le code à 6 chiffres');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await verifyAdmin2FA(accessToken, otpCode);
+
+      if (result.success) {
+        console.log('✅ [2FA] Connexion admin validée');
+        localStorage.setItem('smartcab_admin_2fa_token', result.token || '');
+        completeAdminLogin(pendingAdminUser, pendingAdminUser?.name?.split(' ')[0] || 'Admin');
+      } else {
+        toast.error(result.error || 'Code incorrect. Veuillez réessayer.');
+        setOtpCode('');
+      }
+    } catch (error) {
+      console.error('❌ [2FA] Erreur vérification:', error);
+      toast.error('Erreur lors de la vérification du code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel2FA = () => {
+    setTwoFaStep('none');
+    setAccessToken('');
+    setPendingAdminUser(null);
+    setOtpCode('');
+  };
 
   // ❌ SUPPRIMÉ : Pas de vérification automatique de session
   // L'admin DOIT toujours saisir son mot de passe pour se connecter (sécurité)
@@ -144,20 +242,23 @@ export function AdminLoginScreen() {
         role: 'admin'
       };
 
-      // Mettre à jour les états
-      setCurrentUser(adminUser);
-      setIsAdmin(true);
-      setCurrentView('admin');
-      
-      console.log('✅ États admin définis, redirection...');
-      
-      // Message de succès personnalisé
       const adminName = result.profile.full_name?.split(' ')[0] || email.split('@')[0];
-      toast.success(`Bienvenue ${adminName} ! 👋`);
-      
-      // Redirection directe vers le dashboard admin
-      setCurrentScreen('admin-dashboard');
-      
+
+      // 🔐 ÉTAPE 2FA : mot de passe correct → envoyer le code de vérification par email
+      const config = await fetchGlobalConfig();
+      const twoFaRequired = config?.admin2faRequired !== false;
+
+      setAccessToken(result.accessToken || '');
+      setPendingAdminUser({ ...adminUser, name: adminName });
+
+      if (twoFaRequired) {
+        console.log('🔐 [2FA] 2FA activé, envoi du code de vérification...');
+        await handleSend2FA(result.accessToken || '', { ...adminUser, name: adminName }, adminName);
+      } else {
+        console.log('🔐 [2FA] 2FA désactivé, connexion directe');
+        completeAdminLogin(adminUser, adminName);
+      }
+
       console.log('✅ Redirection effectuée vers admin-dashboard');
 
     } catch (error) {
@@ -173,6 +274,75 @@ export function AdminLoginScreen() {
     e.stopPropagation();
     handleLogin();
   };
+
+  if (twoFaStep === 'verify') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+          {/* Header */}
+          <div className="text-center mb-8 relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCancel2FA}
+              className="absolute -top-2 -left-2 w-10 h-10"
+            >
+              <ArrowLeftIcon className="w-5 h-5" />
+            </Button>
+            
+            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldIcon className="w-8 h-8 text-purple-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Vérification en 2 étapes</h1>
+            <p className="text-gray-600">Un code de sécurité a été envoyé par email</p>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="otp">Code de sécurité</Label>
+              <div className="mt-2">
+                <Input
+                  id="otp"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="123456"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="px-4 h-12 text-center text-2xl tracking-widest"
+                  disabled={loading}
+                  maxLength={6}
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleVerify2FA()}
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Code valide pendant 10 minutes. Vérifiez votre boîte email (et les spams).
+              </p>
+            </div>
+
+            <Button
+              onClick={handleVerify2FA}
+              disabled={loading || otpCode.length !== 6}
+              className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-lg"
+            >
+              {loading ? 'Vérification...' : 'Valider et se connecter'}
+            </Button>
+
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={handleSend2FA}
+                disabled={loading || !canResend}
+                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+              >
+                {canResend ? 'Renvoyer le code' : `Renvoyer dans ${resendCountdown}s`}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 flex items-center justify-center p-4">
