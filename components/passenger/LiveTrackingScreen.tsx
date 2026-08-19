@@ -5,11 +5,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { LiveRideTracking } from '../LiveRideTracking';
 import { useState, useEffect } from 'react';
 import { useAppState } from '../../hooks/useAppState';
+import { calculateRideMeterCost } from '../../lib/pricing';
 
 export function LiveTrackingScreen() {
   const { state, setCurrentScreen, updateRide } = useAppState();
   const currentRide = state.currentRide;
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [currentCost, setCurrentCost] = useState(0);
   const [showSOSDialog, setShowSOSDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [waitingForFinalData, setWaitingForFinalData] = useState(false); // 🆕 Indicateur d'attente
@@ -38,14 +40,16 @@ export function LiveTrackingScreen() {
       const now = Date.now();
       // Soustraire le temps total de pause
       const elapsed = Math.floor((now - startTime) / 1000) - totalPauseDuration;
-      setElapsedTime(elapsed > 0 ? elapsed : 0);
+      const safeElapsed = elapsed > 0 ? elapsed : 0;
+      setElapsedTime(safeElapsed);
+      setCurrentCost(calculateRideMeterCost(currentRide, safeElapsed));
     };
 
     updateTimer(); // Mise à jour immédiate
     const timer = setInterval(updateTimer, 1000); // Mise à jour chaque seconde
 
     return () => clearInterval(timer);
-  }, [currentRide?.billingStartTime, currentRide?.isPaused, currentRide?.totalPauseDuration]);
+  }, [currentRide?.billingStartTime, currentRide?.isPaused, currentRide?.totalPauseDuration, currentRide?.vehicleCategory, currentRide?.vehicleType]);
 
   // Formater le temps en HH:MM:SS ou MM:SS
   const formatTime = (seconds: number): string => {
@@ -294,9 +298,9 @@ export function LiveTrackingScreen() {
         {/* Prix et Durée estimée */}
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div className="text-center">
-            <p className="text-xs text-gray-600 mb-1">Prix estimé</p>
+            <p className="text-xs text-gray-600 mb-1">Coût actuel</p>
             <p className="text-lg font-bold text-gray-900">
-              {currentRide.estimatedPrice?.toLocaleString()} CDF
+              {(currentCost || currentRide.estimatedPrice)?.toLocaleString()} CDF
             </p>
           </div>
           <div className="text-center">

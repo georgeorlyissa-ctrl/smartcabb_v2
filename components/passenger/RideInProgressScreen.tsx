@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
-import { convertUSDtoCDF, convertCDFtoUSD, getExchangeRate, type VehicleCategory } from '../../lib/pricing';
+import { convertUSDtoCDF, convertCDFtoUSD, getExchangeRate, calculateRideMeterCost } from '../../lib/pricing';
 
 // ─── Icônes SVG inline ────────────────────────────────────────
 const MapPin = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -54,8 +54,6 @@ const Timer = ({ className = "w-5 h-5" }: { className?: string }) => (
   </svg>
 );
 
-import { PRICING_CONFIG } from '../../lib/pricing-data';
-import { calculateDistanceHaversine } from '../../lib/distance-calculator';
 import { RatingDialog } from './RatingDialog';
 import { MapView } from '../MapView';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -316,48 +314,19 @@ export function RideInProgressScreen() {
     return () => clearInterval(interval);
   }, [currentRide, timeOfDay, billingActive, rideCompleted]);
 
-  // ─── CALCUL FACTURATION PROPORTIONNELLE ────────────────────────
+  // ─── CALCUL FACTURATION TEMPS RÉEL ─────────────────────────
   const calculateBillingCost = (totalSeconds: number): { costCDF: number; costUSD: number } => {
     if (totalSeconds <= 0) return { costCDF: 0, costUSD: 0 };
-
-    const category: VehicleCategory = (currentRide?.vehicleType || currentRide?.vehicleCategory || 'smart_standard') as VehicleCategory;
-    const categoryConfig = PRICING_CONFIG[category];
-
-    // ✅ FACTURATION À LA DISTANCE (type Yango) — SmartCabb Standard sans Clim
-    const distancePricing = categoryConfig?.pricing?.course_distance;
-    if (distancePricing?.available) {
-      const distKm = currentRide?.pickup?.lat && driverLocation?.lat
-        ? calculateDistanceHaversine(
-            currentRide.pickup.lat, currentRide.pickup.lng,
-            driverLocation.lat, driverLocation.lng
-          )
-        : 0;
-      const minutes = totalSeconds / 60;
-      let costCDF = distancePricing.baseFare + distancePricing.perKm * distKm + distancePricing.perMinute * minutes;
-      if (costCDF < distancePricing.minimum) costCDF = distancePricing.minimum;
-      costCDF = Math.ceil(costCDF / distancePricing.rounding) * distancePricing.rounding;
-      return {
-        costCDF: costCDF || 0,
-        costUSD: parseFloat((costCDF / (getExchangeRate() || 2500)).toFixed(2))
-      };
-    }
-
-    const baseHourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 7;
-
-    // Prix proportionnel au temps réel (minimum 15 min = 0.25h)
-    const hours = Math.max(0.25, totalSeconds / 3600);
-    const costUSD = baseHourlyRateUSD * hours;
-    const costCDF = Math.round(costUSD * getExchangeRate());
-
+    const costCDF = calculateRideMeterCost(currentRide, totalSeconds);
     return {
       costCDF: costCDF || 0,
-      costUSD: parseFloat((costUSD || 0).toFixed(2))
+      costUSD: parseFloat(((costCDF || 0) / (getExchangeRate() || 2500)).toFixed(2))
     };
   };
 
   const calculateRealTimeCost = (totalSeconds: number): { costCDF: number; costUSD: number } => {
     if (!currentRide || totalSeconds <= 0) return { costCDF: 0, costUSD: 0 };
-    // Prix proportionnel au temps réel écoulé depuis le démarrage (minimum 15 min)
+    // Heures pleines + zones, cohérent avec l'estimation et le prix final
     return calculateBillingCost(totalSeconds);
   };
 
@@ -393,14 +362,10 @@ export function RideInProgressScreen() {
     return `${mins}min ${secs}s`;
   };
 
-  const category = (currentRide.vehicleType || currentRide.vehicleCategory || 'smart_standard') as VehicleCategory;
-  const categoryConfig = PRICING_CONFIG[category];
-  const hourlyRateUSD = categoryConfig?.pricing?.course_heure?.[timeOfDay]?.usd || 7;
-
   // ─── PARTAGE COURSE ──────────────────────────────────────────
   const handleShareRide = async () => {
     // ✅ TRADUIT
-    const shareText = `🚗 ${t('ride_in_progress')} SmartCabb\n📍 ${t('pickup_location')}: ${currentRide.pickup.address}\n🎯 ${t('destination')}: ${currentRide.destination.address}\n💰 ${t('price')}: ${currentRide.estimatedPrice?.toLocaleString()} ${t('cdf')}\n⏱️ ${t('waiting_time')}: ${formatTime(elapsedTime)}`;
+    const shareText = `🚗 ${t('ride_in_progress')} SmartCabb\n📍 ${t('pickup_location')}: ${currentRide.pickup.address}\n🎯 ${t('destination')}: ${currentRide.destination.address}\n💰 ${t('price')}: ${(currentCost || currentRide.estimatedPrice || 0).toLocaleString()} ${t('cdf')}\n⏱️ ${t('waiting_time')}: ${formatTime(elapsedTime)}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
     toast.success('🚀 WhatsApp ouvert !');
@@ -624,7 +589,7 @@ export function RideInProgressScreen() {
                       {/* ✅ TRADUIT */}
                       <p className="text-xs text-white/80">{t('price')}</p>
                       <p className="text-xl font-bold">
-                        {(currentRide.estimatedPrice || calculateBillingCost(billingElapsedTime).costCDF).toLocaleString()} {t('cdf')}
+                        {(calculateBillingCost(billingElapsedTime).costCDF || currentRide.estimatedPrice || 0).toLocaleString()} {t('cdf')}
                       </p>
                     </div>
                   </div>
@@ -652,10 +617,10 @@ export function RideInProgressScreen() {
                       {/* ✅ TRADUIT */}
                       <p className="text-xs text-white/80">{t('price')}</p>
                       <p className="text-3xl font-bold">
-                      {(currentRide.estimatedPrice || (currentCost > 0 ? currentCost : calculateBillingCost(elapsedTime).costCDF)).toLocaleString()} {t('cdf')}
+                      {(currentCost || currentRide.estimatedPrice || 0).toLocaleString()} {t('cdf')}
                       </p>
                       <p className="text-xs text-white/70">
-                        ≈ {((currentRide.estimatedPrice || (currentCost > 0 ? currentCost : calculateBillingCost(elapsedTime).costCDF)) / (getExchangeRate() || 2500)).toFixed(2)} USD
+                        ≈ {((currentCost || currentRide.estimatedPrice || 0) / (getExchangeRate() || 2500)).toFixed(2)} USD
                       </p>
                     </div>
                   </div>

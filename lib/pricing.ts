@@ -36,6 +36,9 @@ export {
   formatPriceCDF
 };
 
+// Import zones (autonome, sans dépendances)
+import { classifyRideZone } from './zones-data';
+
 /**
  * Récupère le taux de conversion depuis les paramètres système
  * IMPORTANT: Cette fonction lit d'abord depuis le backend, puis le localStorage en fallback
@@ -204,6 +207,61 @@ export function calculateHourlyPrice(
 export function calculatePriceCDF(priceUSD: number, exchangeRate?: number): number {
   const rate = exchangeRate || getExchangeRate();
   return Math.round(priceUSD * rate);
+}
+
+/**
+ * ⏱️ COMPTEUR TEMPS RÉEL PENDANT LA COURSE
+ * Logique identique à l'estimation (EstimateScreen) pour rester cohérent avec le prix final :
+ * - Catégories horaires : heures pleines facturées (min 1h, arrondi à l'heure supérieure)
+ *   × tarif horaire jour/nuit × taux de change
+ * - Zone B (traversée A↔B) : 1ère heure facturée double (une seule fois par course)
+ * - Zone C : forfait journée obligatoire → prix fixe (estimation)
+ * - smart_standard_no_clim (facturation distance) et smart_business (forfait jour) :
+ *   pas de tarif horaire → prix fixe (estimation)
+ */
+export interface MeterRide {
+  vehicleCategory?: string | null;
+  vehicleType?: string | null;
+  pickup?: { lat?: number; lng?: number } | null;
+  destination?: { lat?: number; lng?: number } | null;
+  estimatedPrice?: number | null;
+}
+
+export function calculateRideMeterCost(
+  ride: MeterRide | null | undefined,
+  elapsedSeconds: number
+): number {
+  if (!ride || elapsedSeconds <= 0) return 0;
+
+  const catKey = (ride.vehicleCategory || ride.vehicleType || 'smart_standard') as VehicleCategory;
+  const catConfig = PRICING_CONFIG[catKey];
+  if (!catConfig) return ride.estimatedPrice || 0;
+
+  const rateUSD = catConfig.pricing.course_heure[isDayTime() ? 'jour' : 'nuit'].usd;
+  // no_clim / business : pas de tarif horaire → forfait fixe (estimation)
+  if (!rateUSD || rateUSD <= 0) return ride.estimatedPrice || 0;
+
+  // Zone C : forfait journée obligatoire → prix fixe
+  let zone: 'A' | 'B' | 'C' = 'A';
+  if (
+    ride.pickup?.lat != null && ride.pickup.lng != null &&
+    ride.destination?.lat != null && ride.destination.lng != null
+  ) {
+    try {
+      zone = classifyRideZone(
+        { lat: ride.pickup.lat, lng: ride.pickup.lng },
+        { lat: ride.destination.lat, lng: ride.destination.lng }
+      ).zone;
+    } catch { /* garder Zone A par défaut */ }
+  }
+  if (zone === 'C') return ride.estimatedPrice || 0;
+
+  // Heures pleines (min 1h) + Zone B : 1ère heure facturée double (une seule fois)
+  const billedHours = Math.max(1, Math.ceil(elapsedSeconds / 3600));
+  let priceUSD = billedHours * rateUSD;
+  if (zone === 'B') priceUSD += rateUSD;
+
+  return Math.round(priceUSD * getExchangeRate());
 }
 
 /**

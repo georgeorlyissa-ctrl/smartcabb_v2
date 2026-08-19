@@ -20,6 +20,7 @@ import { toast } from '../../lib/toast';
 import { Button } from '../ui/button';
 import { FreeWaitingToggle } from '../FreeWaitingToggle';
 import { motion, AnimatePresence } from '../../lib/motion';
+import { calculateRideMeterCost } from '../../lib/pricing';
 
 interface Location {
   lat: number;
@@ -33,6 +34,7 @@ export function ActiveRideNavigationScreen() {
   const { state, setCurrentScreen, updateRide } = useAppState();
   const currentRide = state.currentRide;
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [currentCost, setCurrentCost] = useState(0);
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   // 🆕 Confirmation paiement passager
@@ -143,13 +145,14 @@ export function ActiveRideNavigationScreen() {
       const now = Date.now();
       const elapsed = Math.floor((now - startTime) / 1000); // en secondes
       setElapsedTime(elapsed);
+      setCurrentCost(calculateRideMeterCost(currentRide, elapsed));
     };
 
     updateTimer();
     const timer = setInterval(updateTimer, 1000);
 
     return () => clearInterval(timer);
-  }, [currentRide.startedAt]);
+  }, [currentRide.startedAt, currentRide.vehicleCategory, currentRide.vehicleType]);
 
   // Formater le temps en HH:MM:SS ou MM:SS
   const formatTime = (seconds: number): string => {
@@ -183,6 +186,7 @@ export function ActiveRideNavigationScreen() {
           body: JSON.stringify({
             rideId: currentRide.id,
             driverId: state.userId,
+            actualCost: currentCost > 0 ? currentCost : currentRide.estimatedPrice,
             endLocation: currentLocation || destination
           })
         }
@@ -202,7 +206,7 @@ export function ActiveRideNavigationScreen() {
             ...currentRide,
             status: 'completed',
             completedAt: new Date().toISOString(),
-            finalPrice: data.ride?.finalPrice || currentRide.estimatedPrice,
+            finalPrice: data.ride?.finalPrice || (currentCost > 0 ? currentCost : currentRide.estimatedPrice),
             actualDistance: data.ride?.actualDistance,
             actualDuration: data.ride?.actualDuration
           });
@@ -272,9 +276,9 @@ export function ActiveRideNavigationScreen() {
         {/* Informations de la course */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-200">
-            <p className="text-xs text-blue-700 font-medium mb-1">Prix estimé</p>
+            <p className="text-xs text-blue-700 font-medium mb-1">Coût actuel</p>
             <p className="text-lg font-bold text-blue-900">
-              {currentRide.estimatedPrice?.toLocaleString()} <span className="text-sm">CDF</span>
+              {(currentCost || currentRide.estimatedPrice || 0).toLocaleString()} <span className="text-sm">CDF</span>
             </p>
           </div>
           <div className="bg-purple-50 rounded-xl p-3 text-center border border-purple-200">
