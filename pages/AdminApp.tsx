@@ -39,6 +39,7 @@ const RLSBlockingScreen = React.lazy(() => import('../components/RLSBlockingScre
 const RLSFixModal = React.lazy(() => import('../components/RLSFixModal').then(m => ({ default: m.RLSFixModal })));
 const AdminAccountSync = React.lazy(() => import('../components/admin/AdminAccountSync').then(m => ({ default: m.AdminAccountSync })));
 const AdminScheduledRidesScreen = React.lazy(() => import('../components/admin/AdminScheduledRidesScreen').then(m => ({ default: m.AdminScheduledRidesScreen })));
+const AdminDemandScreen = React.lazy(() => import('../components/admin/AdminDemandScreen').then(m => ({ default: m.AdminDemandScreen })));
 
 function AdminAppContent() {
   const { state, setCurrentScreen, setCurrentView, updateUser } = useAppState();
@@ -89,7 +90,7 @@ function AdminAppContent() {
       'analytics-dashboard', 'financial-reports', 'audit-logs', 'backup-and-recovery',
       'sms-settings', 'global-settings', 'admin-diagnostic', 'data-cleanup', 'pending-recharges', 'admin-users-management',
       'admin-sync', 'admin-account-sync', 'cancellations', 'admin-users-diagnostic',
-    'admin-scheduled-rides'
+    'admin-scheduled-rides', 'admin-demand'
     ];
     
     // ✅ FIX: Si l'admin est connecté et a un écran admin valide, ne rien changer
@@ -137,7 +138,7 @@ function AdminAppContent() {
     'analytics-dashboard', 'financial-reports', 'audit-logs', 'backup-and-recovery',
     'sms-settings', 'global-settings', 'admin-diagnostic', 'data-cleanup', 'pending-recharges', 'admin-users-management',
     'admin-sync', 'admin-account-sync', 'cancellations', 'admin-users-diagnostic',
-    'admin-scheduled-rides'
+    'admin-scheduled-rides', 'admin-demand'
   ];
   
   // ✅ FALLBACK AMÉLIORÉ : Vérifier si l'écran est dans la liste des écrans admin valides
@@ -204,6 +205,7 @@ function AdminAppContent() {
         {screenToShow === 'admin-sync' && <AdminAccountSync />}
         {screenToShow === 'cancellations' && <CancellationsScreen />}
         {screenToShow === 'admin-scheduled-rides' && <AdminScheduledRidesScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
+        {screenToShow === 'admin-demand' && <AdminDemandScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
       </div>
     </>
   );

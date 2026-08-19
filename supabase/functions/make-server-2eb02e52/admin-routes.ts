@@ -873,6 +873,72 @@ app.get("/live-feed", async (c) => {
   }
 });
 
+// ─── GET /demand-stats — Zones et heures de forte demande ─────────────────────
+app.get("/demand-stats", async (c) => {
+  try {
+    const days = Math.min(parseInt(c.req.query("days") || "30"), 90);
+    const cutoff = Date.now() - days * 86400000;
+
+    const allRides = await kvGetByPrefix("ride:");
+    const zones = new Map<string, { label: string; count: number }>();
+    const hourly = Array.from({ length: 24 }, () => 0);
+    let total = 0;
+    let completed = 0;
+    let cancelled = 0;
+    let active = 0;
+
+    for (const r of allRides) {
+      const tsRaw = r.createdAt || r.created_at;
+      const ts = tsRaw ? new Date(tsRaw).getTime() : 0;
+      if (!ts || ts < cutoff) continue;
+
+      total++;
+      const status = r.status || "unknown";
+      if (status === "completed" || status === "rated") completed++;
+      else if (status === "cancelled") cancelled++;
+      else if (["searching", "accepted", "arrived", "in_progress", "started"].includes(status)) active++;
+
+      const h = new Date(ts).getHours();
+      hourly[h] = (hourly[h] || 0) + 1;
+
+      const place = extractPlace(r.pickup || r.pickupLocation);
+      if (place && place !== "—") {
+        const key = place.trim().toLowerCase();
+        if (!zones.has(key)) zones.set(key, { label: place.trim(), count: 0 });
+        zones.get(key)!.count++;
+      }
+    }
+
+    const topZones = [...zones.values()]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12)
+      .map((z, i) => ({ rank: i + 1, label: z.label, count: z.count }));
+
+    let peakHour = -1;
+    let peakCount = 0;
+    for (let i = 0; i < 24; i++) {
+      if (hourly[i] > peakCount) { peakCount = hourly[i]; peakHour = i; }
+    }
+
+    const hourlyList = hourly.map((count, hour) => ({ hour, count }));
+
+    return c.json({
+      success: true,
+      days,
+      total,
+      completed,
+      cancelled,
+      active,
+      topZones,
+      hourly: hourlyList,
+      peakHour: peakHour >= 0 ? { hour: peakHour, count: peakCount } : null,
+    });
+  } catch (error) {
+    console.error("❌ Erreur demand-stats:", error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
 // ─── GET /cancellations — Écran annulations admin ────────────────────────────
 app.get("/cancellations", async (c) => {
   try {

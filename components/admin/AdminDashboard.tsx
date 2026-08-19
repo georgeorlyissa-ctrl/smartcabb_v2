@@ -50,7 +50,8 @@ import {
   Receipt,
   Search,
   XCircle,
-  Calendar
+  Calendar,
+  Activity
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
 import { createAdminUser } from '../../lib/auth-service';
@@ -735,6 +736,15 @@ export function AdminDashboard() {
   ];
 
   const quickActions = [
+    {
+      id: 'action-demand',
+      title: 'Flux & demandes',
+      description: 'Activité en direct, zones et heures de forte demande',
+      icon: Activity,
+      action: () => setCurrentScreen('admin-demand'),
+      count: null,
+      color: 'from-violet-500 to-indigo-500'
+    },
     {
       id: 'action-pending-drivers',
       title: 'Candidatures en attente',
