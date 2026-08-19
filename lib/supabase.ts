@@ -116,9 +116,10 @@ export const supabase = {
         body: JSON.stringify(body),
       });
       
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: null, error };
+if (!response.ok) {
+        let error;
+        try { error = await response.json(); } catch { error = { message: `Erreur ${response.status}` }; }
+        return { data: { user: null }, error };
       }
       
       return { data: {}, error: null };

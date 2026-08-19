@@ -797,6 +797,15 @@ export async function resetPassword(identifier: string): Promise<{ success: bool
     
     if (error) {
       console.error('❌ Erreur réinitialisation mot de passe:', error);
+      const raw = (typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as any).message)
+        : String(error)).toLowerCase();
+      if (raw.includes('rate limit') || raw.includes('too many') || raw.includes('429')) {
+        return {
+          success: false,
+          error: 'Trop de demandes de réinitialisation. Attendez environ une heure avant de réessayer.'
+        };
+      }
       return {
         success: false,
         error: 'Erreur lors de l\'envoi. Vérifiez que ce compte existe.'
