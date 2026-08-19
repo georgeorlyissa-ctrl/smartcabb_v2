@@ -13,6 +13,7 @@ import { useAppState } from '../../hooks/useAppState';
 import { ArrowLeft, Lock, User, Car, Upload, FileCheck, AlertCircle, Camera } from '../../lib/icons';
 import { SmartCabbLogo } from '../SmartCabbLogo';
 import { signUpDriver } from '../../lib/auth-service-driver-signup';
+import { PhoneVerificationStep } from '../PhoneVerificationStep';
 import { sendSMS } from '../../lib/sms-service';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { useNavigate } from '../../lib/simple-router';
@@ -77,6 +78,7 @@ export function DriverRegistrationScreen() {
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
   const [isOtherMake, setIsOtherMake] = useState(false);
 
   // 🚫 SUPPRIMÉ : Un seul document obligatoire à télécharger : Permis de conduire
@@ -261,6 +263,11 @@ export function DriverRegistrationScreen() {
       return;
     }
 
+    // 🔐 Étape OTP : vérifier le numéro de téléphone avant l'inscription
+    setShowOtp(true);
+  };
+
+  const handleOtpVerified = async (otpToken: string) => {
     setLoading(true);
 
     try {
@@ -299,7 +306,8 @@ export function DriverRegistrationScreen() {
         vehiclePlate: formData.vehiclePlate,
         vehicleColor: formData.vehicleColor,
         vehicleCategory,
-        profilePhoto: profilePhotoPreview // 📸 Photo en Base64
+        profilePhoto: profilePhotoPreview, // 📸 Photo en Base64
+        otpToken: otpToken || undefined // 🔐 Jeton OTP (vérification du numéro)
       });
 
       if (result.success) {
@@ -378,8 +386,21 @@ export function DriverRegistrationScreen() {
         <div className="w-10" />
       </div>
 
-      {/* Form */}
+      {/* Form / OTP */}
       <div className="flex-1 px-6 py-4 overflow-y-auto">
+        {showOtp ? (
+          <div className="bg-white rounded-xl p-6">
+            <PhoneVerificationStep
+              phone={formData.phone}
+              purpose="registration"
+              onVerified={handleOtpVerified}
+              onBack={() => setShowOtp(false)}
+              title="Confirmez votre numéro"
+              accentClass="bg-blue-500 hover:bg-blue-600"
+            />
+          </div>
+        ) : (
+        <div className="space-y-4">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -789,6 +810,9 @@ export function DriverRegistrationScreen() {
           </div>
         </motion.div>
       </div>
+      )}
+
+      </div>
 
       {/* Terms and Conditions */}
       <motion.div
@@ -829,6 +853,7 @@ export function DriverRegistrationScreen() {
       </motion.div>
 
       {/* Actions */}
+      {!showOtp && (
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -860,6 +885,7 @@ export function DriverRegistrationScreen() {
           </button>
         </p>
       </motion.div>
+      )}
 
       {/* Terms Modal */}
       <PolicyModal

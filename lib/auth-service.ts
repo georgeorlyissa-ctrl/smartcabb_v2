@@ -29,6 +29,7 @@ export interface SignUpData {
   password: string;
   fullName: string;
   role: 'passenger' | 'driver';
+  otpToken?: string; // Jeton de vérification OTP du numéro (backend /otp/verify)
 }
 
 export interface AuthResult {
@@ -375,7 +376,7 @@ export async function signIn(credentials: LoginCredentials): Promise<AuthResult>
  */
 export async function signUp(userData: SignUpData): Promise<AuthResult> {
   try {
-    const { email, phone, password, fullName, role } = userData;
+    const { email, phone, password, fullName, role, otpToken } = userData;
     
     // Validation basique
     if (!password || password.length < 6) {
@@ -436,7 +437,8 @@ export async function signUp(userData: SignUpData): Promise<AuthResult> {
             password,
             full_name: fullName, // ✅ snake_case pour correspondre au backend
             name: fullName,      // ✅ compatibilité
-            role
+            role,
+            otpToken: otpToken || undefined, // 🔐 Jeton OTP (vérification du numéro)
           }),
         }
       );

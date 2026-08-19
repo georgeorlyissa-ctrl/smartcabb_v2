@@ -8,6 +8,7 @@ import { PhoneInput } from '../PhoneInput';
 import { PolicyModal } from '../PolicyModal';
 import { signUp } from '../../lib/auth-service';
 import { sendSMS } from '../../lib/sms-service';
+import { PhoneVerificationStep } from '../PhoneVerificationStep';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 // Icônes inline (évite import lib/icons qui n'existe plus)
@@ -37,6 +38,7 @@ export function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showOtp, setShowOtp] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -85,6 +87,13 @@ export function RegisterScreen() {
       return;
     }
 
+    // 🔐 Étape OTP : vérifier le numéro de téléphone avant l'inscription
+    setShowOtp(true);
+  };
+
+  const handleOtpVerified = async (otpToken: string) => {
+    setErrorMsg('');
+    setSuccessMsg('');
     setLoading(true);
     
     try {
@@ -121,7 +130,8 @@ export function RegisterScreen() {
         phone: formData.phone,
         password: formData.password,
         fullName: formData.name,
-        role: 'passenger'
+        role: 'passenger',
+        otpToken: otpToken || undefined
       });
       
       console.log('📊 Résultat inscription:', result);
@@ -220,8 +230,17 @@ export function RegisterScreen() {
         <div className="w-10 hide-in-apk" />
       </div>
 
-      {/* Form */}
+      {/* Form / OTP */}
       <div className="flex-1 px-6 py-8 overflow-y-auto">
+        {showOtp ? (
+          <PhoneVerificationStep
+            phone={formData.phone}
+            purpose="registration"
+            onVerified={handleOtpVerified}
+            onBack={() => setShowOtp(false)}
+            title="Confirmez votre numéro"
+          />
+        ) : (
         <div
           className="space-y-6"
         >
@@ -330,9 +349,11 @@ export function RegisterScreen() {
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Terms and Conditions */}
+      {!showOtp && (
       <div
         className="px-6"
       >
@@ -370,8 +391,10 @@ export function RegisterScreen() {
           </label>
         </div>
       </div>
+      )}
 
       {/* Actions */}
+      {!showOtp && (
       <div
         className="px-6 pb-8 space-y-4"
       >
@@ -393,6 +416,7 @@ export function RegisterScreen() {
           </button>
         </p>
       </div>
+      )}
 
       {/* Terms Modal */}
       <PolicyModal
