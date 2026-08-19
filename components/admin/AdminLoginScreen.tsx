@@ -47,7 +47,6 @@ export function AdminLoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showSyncLink, setShowSyncLink] = useState(false);
 
   // 🔐 Étape 2FA
   const [twoFaStep, setTwoFaStep] = useState<'none' | 'verify'>('none');
@@ -156,7 +155,6 @@ export function AdminLoginScreen() {
     }
 
     setLoading(true);
-    setShowSyncLink(false); // Réinitialiser
 
     try {
       console.log('👑 Connexion admin en mode standalone...', email);
@@ -184,30 +182,7 @@ export function AdminLoginScreen() {
         
         console.error('❌ Erreur authentification:', errorMsg);
         
-        // Si c'est une erreur d'identifiants invalides, proposer la synchronisation
-        if (errorMsg.includes('Invalid login credentials') ||
-            errorMsg.includes('Email ou mot de passe incorrect') ||
-            errorMsg.includes('incorrect')) {
-          toast.error(
-            '❌ Aucun compte admin trouvé\n\n' +
-            'Ces identifiants ne correspondent à aucun compte administrateur.\n\n' +
-            '🧪 Besoin de comptes de test ?\n' +
-            'Créez 3 utilisateurs de test en 1 clic !',
-            {
-              duration: 20000,
-              position: 'top-center',
-              action: {
-                label: '🧪 Créer comptes test',
-                onClick: () => {
-                  window.location.href = '/admin/create-test-users';
-                }
-              }
-            }
-          );
-          setShowSyncLink(true); // Afficher le lien de synchronisation
-        } else {
-          toast.error(errorMsg);
-        }
+        toast.error('Email ou mot de passe incorrect');
         
         setLoading(false);
         return;
@@ -507,20 +482,6 @@ export function AdminLoginScreen() {
               </button>
             </p>
           </div>
-
-          {showSyncLink && (
-            <div className="text-center mt-4">
-              <p className="text-gray-600">
-                Votre compte nécessite une synchronisation.{' '}
-                <button 
-                  onClick={() => setCurrentScreen('admin-account-sync')}
-                  className="text-purple-600 hover:text-purple-700 font-semibold"
-                >
-                  Synchroniser
-                </button>
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>
