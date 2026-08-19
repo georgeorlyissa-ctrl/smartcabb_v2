@@ -103,14 +103,17 @@ export const supabase = {
       return { data: { user: await response.json() }, error: null };
     },
     
-    resetPasswordForEmail: async (email: string) => {
+    resetPasswordForEmail: async (email: string, options?: { redirectTo?: string }) => {
+      const body: Record<string, string> = { email };
+      if (options?.redirectTo) body.redirectTo = options.redirectTo;
+      
       const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseAnonKey,
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(body),
       });
       
       if (!response.ok) {
