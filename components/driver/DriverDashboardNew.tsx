@@ -72,6 +72,9 @@ interface Driver {
   isApproved: boolean;
   rating: number;
   totalRides: number;
+  photo?: string | null;
+  photo_url?: string | null;
+  profile_photo?: string | null;
   vehicle?: {
     make?: string;
     model?: string;
@@ -571,8 +574,17 @@ export function DriverDashboardNew() {
       <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-4 py-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
-              <User className="w-6 h-6" />
+            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+              {(driver.photo || (driver as any).photo_url || (driver as any).profile_photo) ? (
+                <img
+                  src={driver.photo || (driver as any).photo_url || (driver as any).profile_photo}
+                  alt={driver.full_name || driver.name || 'Photo'}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                />
+              ) : (
+                <User className="w-6 h-6" />
+              )}
             </div>
             <div>
               <h1 className="text-lg font-bold">{driver.full_name || driver.name}</h1>
