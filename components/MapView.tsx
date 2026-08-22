@@ -121,6 +121,7 @@ export function MapView(props: MapViewProps) {
           markers={osmMarkers.length > 0 ? osmMarkers : undefined}
           zoom={props.zoom}
           className={props.className}
+          onMapClick={props.onMapClick}
         />
       </div>
     );

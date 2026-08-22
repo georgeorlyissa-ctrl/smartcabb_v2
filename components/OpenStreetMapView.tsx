@@ -13,6 +13,7 @@ interface OpenStreetMapViewProps {
   zoom?: number;
   className?: string;
   showAttribution?: boolean;
+  onMapClick?: (lat: number, lng: number) => void;
 }
 
 /**
@@ -23,7 +24,8 @@ export function OpenStreetMapView({
   markers = [],
   zoom = 14,
   className = "w-full h-full",
-  showAttribution = true
+  showAttribution = true,
+  onMapClick
 }: OpenStreetMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -73,6 +75,12 @@ export function OpenStreetMapView({
             const bounds = Leaflet.latLngBounds(allPoints.map(p => [p.lat, p.lng] as [number, number]));
             map.fitBounds(bounds.pad(0.35));
           } catch {}
+        }
+
+        if (onMapClick) {
+          map.on('click', (e: any) => {
+            if (e.latlng) onMapClick(e.latlng.lat, e.latlng.lng);
+          });
         }
 
         mapRef.current = map;
