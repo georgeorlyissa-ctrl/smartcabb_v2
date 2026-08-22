@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface Location {
   lat: number;
@@ -14,85 +14,100 @@ interface OpenStreetMapViewProps {
 }
 
 /**
- * Composant de carte OpenStreetMap réutilisable
- * Affiche une carte interactive OpenStreetMap avec des marqueurs
+ * Carte OpenStreetMap via Leaflet (sans iframe, compatible CSP)
  */
-export function OpenStreetMapView({ 
-  center, 
-  markers = [], 
+export function OpenStreetMapView({
+  center,
+  markers = [],
   zoom = 14,
   className = "w-full h-full",
   showAttribution = true
 }: OpenStreetMapViewProps) {
-  const [mapUrl, setMapUrl] = useState<string>('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
-    // Calculer la bounding box pour inclure tous les marqueurs
-    const allPoints = markers.length > 0 ? markers : (center ? [center] : []);
-    
-    if (allPoints.length === 0) {
-      // Carte par défaut de Kinshasa
-      setMapUrl('https://www.openstreetmap.org/export/embed.html?bbox=15.2136,-4.4276,15.4136,-4.2276&layer=mapnik');
-      return;
-    }
+    let cancelled = false;
 
-    const lats = allPoints.map(p => p.lat);
-    const lngs = allPoints.map(p => p.lng);
-    
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
+    const init = async () => {
+      const L: any = (window as any).L;
+      if (!L) {
+        await new Promise<void>((resolve, reject) => {
+          if (document.querySelector('script[data-leaflet-osm]')) { resolve(); return; }
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.setAttribute('data-leaflet-osm', '1');
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('leaflet load failed'));
+          document.head.appendChild(script);
+        });
+      }
+      if (cancelled || !containerRef.current || mapRef.current) return;
+      const Leaflet: any = (window as any).L;
+      if (!Leaflet) return;
 
-    // Ajouter une marge de 0.02 degrés autour de la bounding box
-    const margin = 0.02;
-    const bbox = `${minLng - margin},${minLat - margin},${maxLng + margin},${maxLat + margin}`;
+      const initialCenter = center || markers[0] || { lat: -4.3276, lng: 15.3136 };
+      const map = Leaflet.map(containerRef.current, {
+        zoomControl: false,
+        attributionControl: false,
+      }).setView([initialCenter.lat, initialCenter.lng], zoom);
 
-    // Ajouter les marqueurs à l'URL
-    const markerParams = allPoints.map(m => `&marker=${m.lat},${m.lng}`).join('');
-    
-    const url = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik${markerParams}`;
-    setMapUrl(url);
-  }, [center, markers, zoom]);
+      Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap',
+      }).addTo(map);
+
+      const allPoints: Location[] = [];
+      if (center) allPoints.push(center);
+      markers.forEach(m => allPoints.push(m));
+
+      // Marqueurs : premier = vert (pickup), autres = bleus
+      allPoints.forEach((p, idx) => {
+        const isPickup = idx === 0 && center && p.lat === center.lat && p.lng === center.lng;
+        const html = isPickup
+          ? '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>'
+          : '<div style="width:28px;height:28px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px">🚗</div>';
+        const icon = Leaflet.divIcon({
+          html,
+          className: '',
+          iconSize: isPickup ? [18, 18] : [28, 28],
+          iconAnchor: isPickup ? [9, 9] : [14, 14],
+        });
+        Leaflet.marker([p.lat, p.lng], { icon }).addTo(map);
+      });
+
+      if (allPoints.length > 1) {
+        try {
+          const bounds = Leaflet.latLngBounds(allPoints.map(p => [p.lat, p.lng] as [number, number]));
+          map.fitBounds(bounds.pad(0.35));
+        } catch {}
+      }
+
+      mapRef.current = map;
+      setTimeout(() => { try { map.invalidateSize(); } catch {} }, 200);
+    };
+
+    init();
+
+    return () => {
+      cancelled = true;
+      if (mapRef.current) {
+        try { mapRef.current.remove(); } catch {}
+        mapRef.current = null;
+      }
+    };
+  }, [center?.lat, center?.lng, JSON.stringify(markers), zoom]);
 
   return (
     <div className={`relative ${className}`}>
-      {mapUrl ? (
-        <>
-          <iframe
-            width="100%"
-            height="100%"
-            frameBorder="0"
-            scrolling="no"
-            marginHeight={0}
-            marginWidth={0}
-            src={mapUrl}
-            style={{ border: 0 }}
-            className="w-full h-full"
-            title="Carte OpenStreetMap"
-          />
-          
-          {showAttribution && (
-            <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs pointer-events-auto z-10 shadow-sm">
-              © <a 
-                href="https://www.openstreetmap.org/copyright" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline"
-              >
-                OpenStreetMap
-              </a>
-            </div>
-          )}
-        </>
-      ) : (
-        <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-          <div className="text-center text-gray-500">
-            <svg className="w-12 h-12 mx-auto mb-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-            </svg>
-            <p className="text-sm">Chargement de la carte...</p>
-          </div>
+      <div ref={containerRef} className="absolute inset-0" />
+      {showAttribution && (
+        <div className="absolute bottom-1 right-1 bg-white/90 px-1.5 py-0.5 rounded text-[10px] z-[400] pointer-events-auto">
+          © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">OpenStreetMap</a>
         </div>
       )}
     </div>
@@ -103,31 +118,5 @@ export function OpenStreetMapView({
  * Variante simplifiée pour une carte statique de Kinshasa
  */
 export function KinshasaMapView({ className = "w-full h-full" }: { className?: string }) {
-  return (
-    <div className={`relative ${className}`}>
-      <iframe
-        width="100%"
-        height="100%"
-        frameBorder="0"
-        scrolling="no"
-        marginHeight={0}
-        marginWidth={0}
-        src="https://www.openstreetmap.org/export/embed.html?bbox=15.2136,-4.4276,15.4136,-4.2276&layer=mapnik"
-        style={{ border: 0 }}
-        className="w-full h-full"
-        title="Carte de Kinshasa"
-      />
-      
-      <div className="absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs pointer-events-auto z-10 shadow-sm">
-        © <a 
-          href="https://www.openstreetmap.org/copyright" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline"
-        >
-          OpenStreetMap
-        </a>
-      </div>
-    </div>
-  );
+  return <OpenStreetMapView center={{ lat: -4.3276, lng: 15.3136 }} zoom={12} className={className} />;
 }
