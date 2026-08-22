@@ -311,7 +311,7 @@ export function SearchingDriversScreen() {
     phase === 'error' ? 'red' : phase === 'notifying' ? 'green' : 'cyan';
 
   return (
-    <div className="h-full w-full relative overflow-hidden bg-gray-900">
+    <div className="h-screen w-full relative overflow-hidden bg-gray-900 flex flex-col">
 
       {/* ══════════════════════════════════════════════════════════
           🗺️ CARTE PLEIN ÉCRAN — position des chauffeurs en ligne
