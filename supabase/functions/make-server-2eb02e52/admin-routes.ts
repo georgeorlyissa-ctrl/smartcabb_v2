@@ -1587,4 +1587,59 @@ app.post("/drivers/:driverId/set-online-status", async (c) => {
   }
 });
 
+// ─── GET /blocked-passengers — Liste des passagers bloqués ──────────────────
+app.get("/blocked-passengers", async (c) => {
+  try {
+    const blocks = await kvGetByPrefix("passenger_block:");
+    const now = Date.now();
+    const active: any[] = [];
+    for (const b of blocks) {
+      if (b.blockedUntil && new Date(b.blockedUntil).getTime() < now) {
+        await kvDel(`passenger_block:${b.passengerId}`);
+        continue;
+      }
+      // Enrichir avec profil si dispo
+      const profile = await kvGet(`profile:${b.passengerId}`);
+      active.push({
+        passengerId: b.passengerId,
+        name: profile?.full_name || profile?.name || b.passengerId.slice(0, 8),
+        phone: profile?.phone || "—",
+        blockedAt: b.blockedAt,
+        blockedUntil: b.blockedUntil,
+        reason: b.reason,
+        cancelCount: b.cancelCount || 3,
+        remainingHours: Math.max(0, Math.ceil((new Date(b.blockedUntil).getTime() - now) / 3600000)),
+      });
+    }
+    active.sort((a, b) => new Date(b.blockedAt).getTime() - new Date(a.blockedAt).getTime());
+    return c.json({ success: true, blocked: active, count: active.length });
+  } catch (error) {
+    console.error("❌ Erreur blocked-passengers:", error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
+// ─── POST /blocked-passengers/:id/unblock — Débloquer manuellement ──────────
+app.post("/blocked-passengers/:id/unblock", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const block = await kvGet(`passenger_block:${id}`);
+    if (!block) return c.json({ success: false, error: "Passager non bloqué" }, 404);
+    await kvDel(`passenger_block:${id}`);
+    // Log
+    try {
+      const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const today = new Date().toISOString().slice(0, 10);
+      await kvSet(`event:${today}:${eventId}`, {
+        id: eventId, type: "passenger_unblocked",
+        data: { passengerId: id }, actor: "admin", timestamp: new Date().toISOString(),
+      });
+    } catch {}
+    return c.json({ success: true, message: "Passager débloqué" });
+  } catch (error) {
+    console.error("❌ Erreur unblock:", error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
 export default app;

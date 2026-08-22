@@ -65,6 +65,57 @@ async function kvGetByPrefix(prefix: string): Promise<any[]> {
   try { const { data } = await kvClient().from(KV_TABLE).select("key, value").like("key", prefix + "%"); return data?.map((d: any) => d.value) ?? []; } catch { return []; }
 }
 
+// ─── Blocage passager après annulations successives ──────────────────────────
+const PASSENGER_BLOCK_PREFIX = "passenger_block:";
+const BLOCK_THRESHOLD = 3; // 3 annulations successives
+const BLOCK_DURATION_MS = 24 * 60 * 60 * 1000; // 24h
+
+async function getPassengerBlock(passengerId: string): Promise<any | null> {
+  const block = await kvGet(`${PASSENGER_BLOCK_PREFIX}${passengerId}`);
+  if (!block) return null;
+  if (block.blockedUntil && new Date(block.blockedUntil).getTime() < Date.now()) {
+    await kvDel(`${PASSENGER_BLOCK_PREFIX}${passengerId}`);
+    return null;
+  }
+  return block;
+}
+
+async function isPassengerBlocked(passengerId: string): Promise<{ blocked: boolean; blockedUntil?: string; reason?: string }> {
+  const block = await getPassengerBlock(passengerId);
+  if (!block) return { blocked: false };
+  return { blocked: true, blockedUntil: block.blockedUntil, reason: block.reason };
+}
+
+async function recordCancellationAndCheckBlock(passengerId: string): Promise<{ blocked: boolean; blockedUntil?: string }> {
+  const allRides = await kvGetByPrefix("ride:");
+  const passengerRides = allRides
+    .filter((r: any) => (r.passengerId || r.passenger_id) === passengerId)
+    .sort((a: any, b: any) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime());
+
+  let consecutiveCancelled = 0;
+  for (const r of passengerRides) {
+    if (r.status === 'cancelled' && r.cancelledBy === 'passenger') consecutiveCancelled++;
+    else if (r.status === 'completed' || r.status === 'rated') break;
+    else if (r.status === 'cancelled') break; // annulation driver interrompt la série
+    else break; // autre statut en cours interrompt
+    if (consecutiveCancelled >= BLOCK_THRESHOLD) break;
+  }
+
+  if (consecutiveCancelled >= BLOCK_THRESHOLD) {
+    const blockedUntil = new Date(Date.now() + BLOCK_DURATION_MS).toISOString();
+    await kvSet(`${PASSENGER_BLOCK_PREFIX}${passengerId}`, {
+      passengerId,
+      blockedAt: new Date().toISOString(),
+      blockedUntil,
+      reason: `${consecutiveCancelled} annulations successives`,
+      cancelCount: consecutiveCancelled,
+    });
+    await logAdminEvent('passenger_blocked', { passengerId, blockedUntil, cancelCount: consecutiveCancelled });
+    return { blocked: true, blockedUntil };
+  }
+  return { blocked: false };
+}
+
 // Compatibilité avec les anciens appels kv.*
 const kv = { get: kvGet, set: kvSet, del: kvDel, getByPrefix: kvGetByPrefix, delete: kvDel };
 
@@ -326,6 +377,19 @@ app.post("/create", async (c) => {
     const rideData = await c.req.json();
     console.log("📦 Données reçues:", JSON.stringify(rideData, null, 2));
     
+    const passengerIdForBlock = rideData.passengerId || rideData.passenger_id;
+    if (passengerIdForBlock) {
+      const block = await isPassengerBlocked(passengerIdForBlock);
+      if (block.blocked) {
+        return c.json({
+          success: false,
+          error: "COMPTE_BLOQUE",
+          message: `Votre compte est temporairement bloqué jusqu'au ${new Date(block.blockedUntil!).toLocaleString('fr-FR')} pour annulations répétées.`,
+          blockedUntil: block.blockedUntil,
+        }, 403);
+      }
+    }
+
     const rideId = crypto.randomUUID();
     
     // 🔧 MAPPING : vehicleType → vehicleCategory pour compatibilité
@@ -1084,6 +1148,14 @@ app.post("/cancel", async (c) => {
     ride.cancellationReason = reason;
     
     await kv.set(`ride:${rideId}`, ride);
+
+    // ─── Blocage automatique après 3 annulations successives ───────────────
+    if (cancelledBy === 'passenger' && ride.passengerId) {
+      const blockResult = await recordCancellationAndCheckBlock(ride.passengerId);
+      if (blockResult.blocked) {
+        console.log(`🔒 Passager ${ride.passengerId} bloqué jusqu'au ${blockResult.blockedUntil}`);
+      }
+    }
 
     // ─── Log événement annulation → panel admin ───────────────────────────
     await logAdminEvent('ride_cancelled', {

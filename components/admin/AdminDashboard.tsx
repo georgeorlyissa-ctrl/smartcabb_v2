@@ -746,6 +746,15 @@ export function AdminDashboard() {
       color: 'from-violet-500 to-indigo-500'
     },
     {
+      id: 'action-blocked-passengers',
+      title: 'Passagers bloqués',
+      description: 'Comptes bloqués après 3 annulations (24h)',
+      icon: Ban,
+      action: () => setCurrentScreen('admin-blocked-passengers'),
+      count: null,
+      color: 'from-red-500 to-orange-500'
+    },
+    {
       id: 'action-pending-drivers',
       title: 'Candidatures en attente',
       description: `${pendingDrivers.length} conducteur(s) à approuver`,

@@ -206,11 +206,20 @@ export function SearchingDriversScreen() {
 
         if (!response.ok) {
           const errText = await response.text();
+          try {
+            const errJson = JSON.parse(errText);
+            if (errJson.error === 'COMPTE_BLOQUE') {
+              throw new Error(errJson.message || 'Compte temporairement bloqué pour annulations répétées.');
+            }
+          } catch {}
           throw new Error(`Erreur ${response.status}: ${errText}`);
         }
 
         const result = await response.json();
         if (!result.success || !result.rideId) {
+          if ((result as any).error === 'COMPTE_BLOQUE') {
+            throw new Error((result as any).message || 'Compte temporairement bloqué.');
+          }
           throw new Error(result.error || 'Pas de rideId retourné');
         }
 
