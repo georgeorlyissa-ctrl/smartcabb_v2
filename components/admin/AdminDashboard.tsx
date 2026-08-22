@@ -16,7 +16,7 @@ import { AdminLiveFeed } from './AdminLiveFeed';
 import { AutoCleanupBanner } from './AutoCleanupBanner';
 import { AdminAnalyticsDashboard } from './AdminAnalyticsDashboard';
 import { CancellationsScreen } from './CancellationsScreen';
-import { SMSBalanceCard } from './SMSBalanceCard';
+
 import { NotificationTester } from './NotificationTester';
 import FCMTestPanel from './FCMTestPanel';
 import { SMSInsufficientBalanceBanner } from './SMSInsufficientBalanceBanner';
@@ -1268,17 +1268,6 @@ export function AdminDashboard() {
             >
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Analyse des performances</h2>
               <StatsCharts />
-            </motion.div>
-
-            {/* Balance SMS */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="mb-8"
-            >
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Balance SMS Africa's Talking</h2>
-              <SMSBalanceCard />
             </motion.div>
 
             {/* Stats Grid — Live Backend */}
