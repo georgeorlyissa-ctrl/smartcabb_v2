@@ -105,10 +105,10 @@ export function MapScreen() {
       watchId = navigator.geolocation.watchPosition(
         async (pos) => {
           const acc = pos.coords.accuracy;
-          if (acc < bestAccuracy && acc <= 150) {
+          if (acc < bestAccuracy) {
             bestAccuracy = acc;
             await handleSuccess(pos);
-            if (acc <= 30) {
+            if (acc <= 25) {
               if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
               if (watchTimeout) clearTimeout(watchTimeout);
             }
