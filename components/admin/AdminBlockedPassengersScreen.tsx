@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
-import { ArrowLeft, Ban, Clock, RefreshCw, ShieldCheck } from '../../lib/admin-icons';
+import { ArrowLeft, Ban, Clock, RefreshCw, Shield, CheckCircle } from '../../lib/admin-icons';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 
@@ -105,7 +105,7 @@ export function AdminBlockedPassengersScreen({ onBack }: { onBack: () => void })
           </div>
         ) : blocked.length === 0 ? (
           <Card className="p-10 text-center">
-            <ShieldCheck className="w-10 h-10 text-green-400 mx-auto mb-3" />
+            <Shield className="w-10 h-10 text-green-400 mx-auto mb-3" />
             <p className="font-medium text-gray-700">Aucun passager bloqué</p>
             <p className="text-xs text-gray-400 mt-1">Les comptes bloqués après 3 annulations successives apparaîtront ici</p>
           </Card>
@@ -129,7 +129,7 @@ export function AdminBlockedPassengersScreen({ onBack }: { onBack: () => void })
                     onClick={() => handleUnblock(b.passengerId)}
                     className="bg-green-600 hover:bg-green-700 text-white flex-shrink-0"
                   >
-                    <ShieldCheck className="w-4 h-4 mr-1" />
+                    <CheckCircle className="w-4 h-4 mr-1" />
                     Débloquer
                   </Button>
                 </div>
