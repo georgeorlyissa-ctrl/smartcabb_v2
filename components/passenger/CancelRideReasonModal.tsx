@@ -33,19 +33,19 @@ export function CancelRideReasonModal({
 
   // Liste des motifs prédéfinis
   const cancelReasons = [
-    { id: 1, text: '⏰ Attente trop longue', icon: '⏰' },
-    { id: 2, text: '🚗 Problème avec le véhicule', icon: '🚗' },
-    { id: 3, text: '💰 Prix trop élevé', icon: '💰' },
-    { id: 4, text: '📍 Mauvaise adresse de départ', icon: '📍' },
-    { id: 5, text: '🏠 Changement de plan', icon: '🏠' },
-    { id: 6, text: '👤 Conducteur non professionnel', icon: '👤' },
-    { id: 7, text: '📱 Problème de communication', icon: '📱' },
-    { id: 8, text: '✏️ Autre raison...', icon: '✏️' }
+    { id: 1, text: 'Attente trop longue', icon: '⏰' },
+    { id: 2, text: 'Problème avec le véhicule', icon: '🚗' },
+    { id: 3, text: 'Prix trop élevé', icon: '💰' },
+    { id: 4, text: 'Mauvaise adresse de départ', icon: '📍' },
+    { id: 5, text: 'Changement de plan', icon: '🏠' },
+    { id: 6, text: 'Conducteur non professionnel', icon: '👤' },
+    { id: 7, text: 'Problème de communication', icon: '📱' },
+    { id: 8, text: 'Autre raison...', icon: '✏️' }
   ];
 
   const handleConfirm = () => {
-    const finalReason = selectedReason === '✏️ Autre raison...' 
-      ? customReason 
+    const finalReason = selectedReason === 'Autre raison...'
+      ? customReason
       : selectedReason;
     
     console.log('🔍 Confirmation annulation:', {
@@ -152,7 +152,7 @@ export function CancelRideReasonModal({
         </div>
 
         {/* Custom reason input */}
-        {selectedReason === '✏️ Autre raison...' && (
+        {selectedReason === 'Autre raison...' && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -187,8 +187,8 @@ export function CancelRideReasonModal({
           <Button
             onClick={handleConfirm}
             disabled={
-              !selectedReason || 
-              (selectedReason === '✏️ Autre raison...' && !customReason.trim())
+              !selectedReason ||
+              (selectedReason === 'Autre raison...' && !customReason.trim())
             }
             variant="destructive"
             className="flex-1 h-12"
