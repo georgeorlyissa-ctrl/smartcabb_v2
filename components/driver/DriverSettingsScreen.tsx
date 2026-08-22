@@ -215,9 +215,21 @@ export function DriverSettingsScreen() {
         {/* Profil */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-              {state.currentDriver?.photo
-                ? <img src={state.currentDriver.photo} alt={state.currentDriver.name} className="w-full h-full object-cover" />
+            <div
+              className={`w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${(state.currentDriver as any)?.photo || (state.currentDriver as any)?.photo_url || (state.currentDriver as any)?.profile_photo ? 'cursor-pointer' : ''}`}
+              onClick={() => {
+                const src = (state.currentDriver as any)?.photo || (state.currentDriver as any)?.photo_url || (state.currentDriver as any)?.profile_photo;
+                if (src) {
+                  const overlay = document.createElement('div');
+                  overlay.className = 'fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4';
+                  overlay.innerHTML = `<img src="${src}" alt="Photo" class="max-w-[90vw] max-h-[90vh] rounded-2xl object-contain" /><button class="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-full"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+                  overlay.onclick = () => overlay.remove();
+                  document.body.appendChild(overlay);
+                }
+              }}
+            >
+              {(state.currentDriver as any)?.photo || (state.currentDriver as any)?.photo_url || (state.currentDriver as any)?.profile_photo
+                ? <img src={(state.currentDriver as any).photo || (state.currentDriver as any).photo_url || (state.currentDriver as any).profile_photo} alt={state.currentDriver.name} className="w-full h-full object-cover" />
                 : <UserIc className="w-7 h-7 text-blue-600" />}
             </div>
             <div className="flex-1 min-w-0">

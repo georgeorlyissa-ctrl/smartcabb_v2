@@ -144,6 +144,7 @@ export function DriverDashboardNew() {
   const [pendingRideRequest, setPendingRideRequest] = useState<RideRequest | null>(null);
   const [showWalletManager, setShowWalletManager] = useState(false);
   const [showFCMDiagnostic, setShowFCMDiagnostic] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   // ✅ refreshKey : incrémenté quand on revient sur driver-dashboard → recharge les données
   const [refreshKey, setRefreshKey] = useState(0);
   // ✅ États pour l'historique et les stats
@@ -574,7 +575,10 @@ export function DriverDashboardNew() {
       <div className="bg-gradient-to-r from-primary to-primary-dark text-white px-4 py-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div
+              className={`w-12 h-12 bg-white/20 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 ${(driver.photo || (driver as any).photo_url || (driver as any).profile_photo) ? 'cursor-pointer' : ''}`}
+              onClick={() => { if (driver.photo || (driver as any).photo_url || (driver as any).profile_photo) setShowPhotoModal(true); }}
+            >
               {(driver.photo || (driver as any).photo_url || (driver as any).profile_photo) ? (
                 <img
                   src={driver.photo || (driver as any).photo_url || (driver as any).profile_photo}
@@ -1055,6 +1059,15 @@ export function DriverDashboardNew() {
               />
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {showPhotoModal && driver && (driver.photo || (driver as any).photo_url || (driver as any).profile_photo) && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setShowPhotoModal(false)}>
+          <button onClick={() => setShowPhotoModal(false)} className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-full">
+            <XCircle className="w-6 h-6" />
+          </button>
+          <img src={driver.photo || (driver as any).photo_url || (driver as any).profile_photo} alt="Photo" className="max-w-[90vw] max-h-[90vh] rounded-2xl object-contain" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
 

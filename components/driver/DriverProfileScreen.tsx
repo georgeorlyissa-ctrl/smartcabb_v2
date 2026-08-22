@@ -44,6 +44,7 @@ export function DriverProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [postpaidPending, setPostpaidPending] = useState(0);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // 🔥 NOUVELLES DONNÉES DEPUIS LE BACKEND
@@ -432,7 +433,10 @@ export function DriverProfileScreen() {
         {/* Photo et stats */}
         <Card className="p-6 mb-6">
           <div className="flex items-center space-x-4 mb-4 min-w-0">
-            <div className="relative w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+            <div
+              className={`relative w-20 h-20 rounded-full overflow-hidden bg-gray-200 flex-shrink-0 ${state.currentDriver.photo ? 'cursor-pointer' : ''}`}
+              onClick={() => { if (state.currentDriver.photo) setShowPhotoModal(true); }}
+            >
               {state.currentDriver.photo ? (
                 <img 
                   src={state.currentDriver.photo} 
@@ -447,7 +451,7 @@ export function DriverProfileScreen() {
               
               {/* ✅ Bouton pour changer la photo */}
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
                 disabled={uploadingPhoto}
                 className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center"
               >
@@ -687,6 +691,27 @@ export function DriverProfileScreen() {
           </Card>
         )}
       </div>
+
+      {/* Agrandissement photo */}
+      {showPhotoModal && state.currentDriver.photo && (
+        <div
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowPhotoModal(false)}
+        >
+          <button
+            onClick={() => setShowPhotoModal(false)}
+            className="absolute top-4 right-4 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={state.currentDriver.photo}
+            alt="Photo de profil"
+            className="max-w-[90vw] max-h-[90vh] rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       {/* Actions */}
       {isEditing && (
