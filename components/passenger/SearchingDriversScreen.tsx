@@ -5,7 +5,6 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { formatCDF } from '../../lib/pricing';
-import { MapView } from '../MapView';
 
 // ─── Icônes inline ───────────────────────────────────────────
 const CarIcon = ({ className = 'w-6 h-6' }: { className?: string }) => (
@@ -310,25 +309,34 @@ export function SearchingDriversScreen() {
   const statusColor =
     phase === 'error' ? 'red' : phase === 'notifying' ? 'green' : 'cyan';
 
+  const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${pendingRide.pickup.lat},${pendingRide.pickup.lng}&zoom=14&size=800x600&markers=${pendingRide.pickup.lat},${pendingRide.pickup.lng},red-pushpin${mapDrivers.map(d => `%7C${d.location.lat},${d.location.lng},blue-pushpin`).join('')}`;
+
   return (
-    <div className="h-screen w-full relative overflow-hidden bg-gray-900 flex flex-col">
+    <div className="h-screen w-full relative overflow-hidden bg-gray-100 flex flex-col">
 
       {/* ══════════════════════════════════════════════════════════
-          🗺️ CARTE PLEIN ÉCRAN — position des chauffeurs en ligne
+          🗺️ CARTE PLEIN ÉCRAN — image statique OSM (toujours visible, même sans facturation Google)
           ══════════════════════════════════════════════════════════ */}
-      <div className="absolute inset-0 z-0">
-        <MapView
-          center={pendingRide.pickup}
-          markers={[pendingRide.pickup]}
-          drivers={mapDrivers}
-          zoom={15}
-          className="w-full h-full"
-          showUserLocation={false}
-          enableGeolocation={false}
-          showTraffic={false}
-          enableZoomControls={true}
-          disableAutoCenter={true}
+      <div className="absolute inset-0 z-0 bg-[#e5e7eb]">
+        <img
+          src={staticMapUrl}
+          alt="Carte des chauffeurs"
+          className="w-full h-full object-cover"
+          loading="eager"
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement;
+            target.style.display = 'none';
+            const fallback = target.nextElementSibling as HTMLElement;
+            if (fallback) fallback.style.display = 'flex';
+          }}
         />
+        <div className="hidden w-full h-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-6 text-center" style={{ display: 'none' }}>
+          <div>
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow">🗺️</div>
+            <p className="text-sm font-medium text-gray-700">Carte temporairement indisponible</p>
+            <p className="text-xs text-gray-500 mt-1">{pendingRide.pickup.address}</p>
+          </div>
+        </div>
       </div>
 
       {/* Léger voile sombre en haut/bas pour lisibilité du texte */}
