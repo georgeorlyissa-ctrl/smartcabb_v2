@@ -420,7 +420,7 @@ export function SearchingDriversScreen() {
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                   <p className="text-gray-700 text-sm font-medium">
                     {driversCount > 0
-                      ? `${driversCount} ${t('drivers')}${driversCount > 1 ? 's' : ''} ${t('go_online').toLowerCase()}`
+                      ? `${driversCount} ${t('drivers')} ${t('go_online').toLowerCase()}`
                       : t('loading') + '…'}
                   </p>
                 </div>

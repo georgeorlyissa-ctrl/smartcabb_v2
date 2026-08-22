@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface Location {
   lat: number;
@@ -32,24 +34,8 @@ export function OpenStreetMapView({
 
     const init = async () => {
       try {
-        const L: any = (window as any).L;
-        if (!L) {
-          await new Promise<void>((resolve, reject) => {
-            if (document.querySelector('script[data-leaflet-osm]')) { resolve(); return; }
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-            document.head.appendChild(link);
-            const script = document.createElement('script');
-            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-            script.setAttribute('data-leaflet-osm', '1');
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('leaflet load failed'));
-            document.head.appendChild(script);
-          });
-        }
         if (cancelled || !containerRef.current || mapRef.current) return;
-        const Leaflet: any = (window as any).L;
+        const Leaflet: any = L;
         if (!Leaflet) return;
 
         const initialCenter = center || markers[0] || { lat: -4.3276, lng: 15.3136 };
