@@ -51,7 +51,8 @@ import {
   Search,
   XCircle,
   Calendar,
-  Activity
+  Activity,
+  Ban
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
 import { createAdminUser } from '../../lib/auth-service';
