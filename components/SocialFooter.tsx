@@ -64,7 +64,7 @@ export function SocialFooter() {
               </a>
               
               <a 
-                href="https://instagram.com/smartcabb" 
+                href="https://www.instagram.com/smartcabb7?igsh=MW4yNGNyYzh0aDYwMA==" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="w-10 h-10 rounded-full bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#F77737] flex items-center justify-center hover:scale-110 transition-transform"

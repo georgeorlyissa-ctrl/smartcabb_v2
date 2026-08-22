@@ -48,7 +48,7 @@ export function ProfessionalFooter() {
                 </svg>
               </a>
               <a 
-                href="https://instagram.com/smartcabb" 
+                href="https://www.instagram.com/smartcabb7?igsh=MW4yNGNyYzh0aDYwMA==" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="w-11 h-11 bg-slate-800 hover:bg-pink-600 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
