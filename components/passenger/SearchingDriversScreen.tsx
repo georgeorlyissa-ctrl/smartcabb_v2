@@ -5,6 +5,140 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { formatCDF } from '../../lib/pricing';
+import { useOnlineDrivers, type OnlineDriver as LiveDriver } from '../../lib/use-online-drivers';
+
+// ─── Carte professionnelle des chauffeurs autour du point de prise en charge ──
+function SearchingMap({ pickup, drivers }: { pickup: { lat: number; lng: number }; drivers: LiveDriver[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
+
+  // Nettoyer anciens markers
+  const clearMarkers = () => {
+    markersRef.current.forEach((m: any) => { try { m.remove(); } catch {} });
+    markersRef.current = [];
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const init = async () => {
+      const L: any = (window as any).L;
+      if (!L) {
+        // Charger Leaflet si absent
+        await new Promise<void>((resolve, reject) => {
+          if (document.querySelector('script[data-leaflet]')) { resolve(); return; }
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+          document.head.appendChild(link);
+          const script = document.createElement('script');
+          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+          script.setAttribute('data-leaflet', '1');
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('leaflet load failed'));
+          document.head.appendChild(script);
+        });
+      }
+      if (cancelled || !containerRef.current) return;
+      const Leaflet: any = (window as any).L;
+      if (!Leaflet || mapRef.current) return;
+
+      const map = Leaflet.map(containerRef.current, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        tap: false,
+      }).setView([pickup.lat, pickup.lng], 14);
+
+      Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+      }).addTo(map);
+
+      // Marqueur prise en charge (vert)
+      const pickupIcon = Leaflet.divIcon({
+        html: '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>',
+        className: '',
+        iconSize: [18, 18],
+        iconAnchor: [9, 9],
+      });
+      Leaflet.marker([pickup.lat, pickup.lng], { icon: pickupIcon }).addTo(map);
+
+      mapRef.current = map;
+    };
+    init();
+    return () => { cancelled = true; };
+  }, [pickup.lat, pickup.lng]);
+
+  // Mettre à jour les chauffeurs
+  useEffect(() => {
+    const map = mapRef.current;
+    const L: any = (window as any).L;
+    if (!map || !L) return;
+    clearMarkers();
+
+    // Si aucun chauffeur avec position, générer des positions autour du pickup (comme Yango)
+    const displayDrivers: { lat: number; lng: number }[] = [];
+    if (drivers.length === 0) {
+      // Pas de données live : 5 positions simulées autour du pickup
+      const offsets = [
+        { dLat: 0.008, dLng: 0.006 },
+        { dLat: -0.007, dLng: 0.009 },
+        { dLat: 0.005, dLng: -0.008 },
+        { dLat: -0.006, dLng: -0.005 },
+        { dLat: 0.009, dLng: -0.003 },
+      ];
+      offsets.forEach(o => displayDrivers.push({ lat: pickup.lat + o.dLat, lng: pickup.lng + o.dLng }));
+    } else {
+      drivers.slice(0, 6).forEach(d => {
+        const lat = (d.location as any)?.lat ?? (d.location as any)?.latitude;
+        const lng = (d.location as any)?.lng ?? (d.location as any)?.longitude;
+        if (typeof lat === 'number' && typeof lng === 'number' && lat !== 0 && lng !== 0) {
+          displayDrivers.push({ lat, lng });
+        } else {
+          // fallback offset si pas de coords
+          const r = Math.random();
+          displayDrivers.push({ lat: pickup.lat + (r - 0.5) * 0.015, lng: pickup.lng + (r - 0.5) * 0.015 });
+        }
+      });
+    }
+
+    const carHtml = (angle: number) => `
+      <div style="width:36px;height:36px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.35);transform:rotate(${angle}deg)">
+        <span style="font-size:16px;transform:rotate(${-angle}deg)">🚗</span>
+      </div>`;
+
+    displayDrivers.forEach((pos, i) => {
+      const icon = L.divIcon({
+        html: carHtml((i * 67) % 360),
+        className: '',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+      });
+      const m = L.marker([pos.lat, pos.lng], { icon }).addTo(map);
+      markersRef.current.push(m);
+    });
+
+    // Ajuster la vue pour englober pickup + chauffeurs
+    try {
+      const bounds = L.latLngBounds([[pickup.lat, pickup.lng]]);
+      displayDrivers.forEach(p => bounds.extend([p.lat, p.lng]));
+      map.fitBounds(bounds.pad(0.35), { animate: true });
+    } catch {}
+  }, [drivers, pickup.lat, pickup.lng]);
+
+  useEffect(() => {
+    return () => {
+      clearMarkers();
+      if (mapRef.current) { try { mapRef.current.remove(); } catch {} mapRef.current = null; }
+    };
+  }, []);
+
+  return <div ref={containerRef} className="w-full h-full rounded-2xl overflow-hidden" style={{ minHeight: 220 }} />;
+}
 
 // ─── Icônes inline ───────────────────────────────────────────
 const CarIcon = ({ className = 'w-6 h-6' }: { className?: string }) => (
@@ -93,6 +227,9 @@ export function SearchingDriversScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [dots, setDots] = useState('');
+
+  // Chauffeurs en ligne avec position GPS (temps réel)
+  const { drivers: liveDrivers } = useOnlineDrivers(true);
 
   // Empêcher le double appel API
   const apiCalled = useRef(false);
@@ -323,35 +460,24 @@ export function SearchingDriversScreen() {
       {/* ── Corps principal ── */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 gap-6">
 
-        {/* Icône voiture animée */}
-        <motion.div
-          className="relative"
-          animate={phase === 'error' ? {} : { y: [-6, 6, -6] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-2xl ${
-            phase === 'error'
-              ? 'bg-red-500/20 border-2 border-red-400'
-              : phase === 'notifying'
-              ? 'bg-green-500/20 border-2 border-green-400'
-              : 'bg-cyan-500/20 border-2 border-cyan-400'
-          }`}>
-            <CarIcon className={`w-12 h-12 ${
-              phase === 'error' ? 'text-red-400'
-              : phase === 'notifying' ? 'text-green-400'
-              : 'text-cyan-400'
-            }`} />
+        {/* Carte pro Yango-style : chauffeurs autour du point de prise en charge */}
+        {phase === 'error' ? (
+          <motion.div className="relative">
+            <div className="w-24 h-24 rounded-full flex items-center justify-center shadow-2xl bg-red-500/20 border-2 border-red-400">
+              <CarIcon className="w-12 h-12 text-red-400" />
+            </div>
+          </motion.div>
+        ) : (
+          <div className="w-full max-w-[360px] h-[220px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-white">
+            {pendingRide ? (
+              <SearchingMap pickup={pendingRide.pickup} drivers={liveDrivers} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-blue-950">
+                <CarIcon className="w-12 h-12 text-cyan-400" />
+              </div>
+            )}
           </div>
-
-          {/* Ping externe */}
-          {phase !== 'error' && (
-            <motion.div
-              className="absolute inset-0 rounded-full border-2 border-cyan-400/40"
-              animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            />
-          )}
-        </motion.div>
+        )}
 
         {/* ── Texte principal — ✅ TOUT TRADUIT ── */}
         <AnimatePresence mode="wait">
