@@ -5,140 +5,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { formatCDF } from '../../lib/pricing';
-import { useOnlineDrivers, type OnlineDriver as LiveDriver } from '../../lib/use-online-drivers';
-
-// ─── Carte professionnelle des chauffeurs autour du point de prise en charge ──
-function SearchingMap({ pickup, drivers }: { pickup: { lat: number; lng: number }; drivers: LiveDriver[] }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-
-  // Nettoyer anciens markers
-  const clearMarkers = () => {
-    markersRef.current.forEach((m: any) => { try { m.remove(); } catch {} });
-    markersRef.current = [];
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    const init = async () => {
-      const L: any = (window as any).L;
-      if (!L) {
-        // Charger Leaflet si absent
-        await new Promise<void>((resolve, reject) => {
-          if (document.querySelector('script[data-leaflet]')) { resolve(); return; }
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          document.head.appendChild(link);
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-          script.setAttribute('data-leaflet', '1');
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('leaflet load failed'));
-          document.head.appendChild(script);
-        });
-      }
-      if (cancelled || !containerRef.current) return;
-      const Leaflet: any = (window as any).L;
-      if (!Leaflet || mapRef.current) return;
-
-      const map = Leaflet.map(containerRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-        dragging: false,
-        scrollWheelZoom: false,
-        doubleClickZoom: false,
-        boxZoom: false,
-        keyboard: false,
-        tap: false,
-      }).setView([pickup.lat, pickup.lng], 14);
-
-      Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-      }).addTo(map);
-
-      // Marqueur prise en charge (vert)
-      const pickupIcon = Leaflet.divIcon({
-        html: '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>',
-        className: '',
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
-      });
-      Leaflet.marker([pickup.lat, pickup.lng], { icon: pickupIcon }).addTo(map);
-
-      mapRef.current = map;
-    };
-    init();
-    return () => { cancelled = true; };
-  }, [pickup.lat, pickup.lng]);
-
-  // Mettre à jour les chauffeurs
-  useEffect(() => {
-    const map = mapRef.current;
-    const L: any = (window as any).L;
-    if (!map || !L) return;
-    clearMarkers();
-
-    // Si aucun chauffeur avec position, générer des positions autour du pickup (comme Yango)
-    const displayDrivers: { lat: number; lng: number }[] = [];
-    if (drivers.length === 0) {
-      // Pas de données live : 5 positions simulées autour du pickup
-      const offsets = [
-        { dLat: 0.008, dLng: 0.006 },
-        { dLat: -0.007, dLng: 0.009 },
-        { dLat: 0.005, dLng: -0.008 },
-        { dLat: -0.006, dLng: -0.005 },
-        { dLat: 0.009, dLng: -0.003 },
-      ];
-      offsets.forEach(o => displayDrivers.push({ lat: pickup.lat + o.dLat, lng: pickup.lng + o.dLng }));
-    } else {
-      drivers.slice(0, 6).forEach(d => {
-        const lat = (d.location as any)?.lat ?? (d.location as any)?.latitude;
-        const lng = (d.location as any)?.lng ?? (d.location as any)?.longitude;
-        if (typeof lat === 'number' && typeof lng === 'number' && lat !== 0 && lng !== 0) {
-          displayDrivers.push({ lat, lng });
-        } else {
-          // fallback offset si pas de coords
-          const r = Math.random();
-          displayDrivers.push({ lat: pickup.lat + (r - 0.5) * 0.015, lng: pickup.lng + (r - 0.5) * 0.015 });
-        }
-      });
-    }
-
-    const carHtml = (angle: number) => `
-      <div style="width:36px;height:36px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.35);transform:rotate(${angle}deg)">
-        <span style="font-size:16px;transform:rotate(${-angle}deg)">🚗</span>
-      </div>`;
-
-    displayDrivers.forEach((pos, i) => {
-      const icon = L.divIcon({
-        html: carHtml((i * 67) % 360),
-        className: '',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18],
-      });
-      const m = L.marker([pos.lat, pos.lng], { icon }).addTo(map);
-      markersRef.current.push(m);
-    });
-
-    // Ajuster la vue pour englober pickup + chauffeurs
-    try {
-      const bounds = L.latLngBounds([[pickup.lat, pickup.lng]]);
-      displayDrivers.forEach(p => bounds.extend([p.lat, p.lng]));
-      map.fitBounds(bounds.pad(0.35), { animate: true });
-    } catch {}
-  }, [drivers, pickup.lat, pickup.lng]);
-
-  useEffect(() => {
-    return () => {
-      clearMarkers();
-      if (mapRef.current) { try { mapRef.current.remove(); } catch {} mapRef.current = null; }
-    };
-  }, []);
-
-  return <div ref={containerRef} className="w-full h-full rounded-2xl overflow-hidden" style={{ minHeight: 220 }} />;
-}
+import { MapView } from '../MapView';
 
 // ─── Icônes inline ───────────────────────────────────────────
 const CarIcon = ({ className = 'w-6 h-6' }: { className?: string }) => (
@@ -164,28 +31,23 @@ const XIcon = ({ className = 'w-5 h-5' }: { className?: string }) => (
   </svg>
 );
 
-const StarIcon = ({ className = 'w-3 h-3' }: { className?: string }) => (
-  <svg className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-  </svg>
-);
-
-const UserIcon = ({ className = 'w-8 h-8' }: { className?: string }) => (
+const ChevronUpIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
   </svg>
 );
 
 // ─── Types ───────────────────────────────────────────────────
 interface OnlineDriver {
   id: string;
-  full_name?: string;
   name?: string;
+  full_name?: string;
   rating?: number;
-  total_rides?: number;
-  vehicleCategory?: string;
-  vehicle?: { make?: string; model?: string; color?: string; license_plate?: string };
+  totalRides?: number;
+  vehicleType?: string;
+  lat?: number;
+  lng?: number;
+  distanceKm?: number;
 }
 
 interface PendingRideData {
@@ -227,9 +89,7 @@ export function SearchingDriversScreen() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [dots, setDots] = useState('');
-
-  // Chauffeurs en ligne avec position GPS (temps réel)
-  const { drivers: liveDrivers } = useOnlineDrivers(true);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
 
   // Empêcher le double appel API
   const apiCalled = useRef(false);
@@ -260,9 +120,12 @@ export function SearchingDriversScreen() {
     }
   }, []);
 
-  // ─── Récupérer les chauffeurs disponibles ────────────────────
+  // ─── Récupérer les chauffeurs disponibles + leur position (polling) ──
   useEffect(() => {
     if (!pendingRide) return;
+    if (phase === 'error') return;
+
+    let cancelled = false;
 
     const fetchDrivers = async () => {
       try {
@@ -274,15 +137,19 @@ export function SearchingDriversScreen() {
               Authorization: `Bearer ${publicAnonKey}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ vehicleCategory: pendingRide.vehicleType }),
+            body: JSON.stringify({
+              vehicleCategory: pendingRide.vehicleType,
+              pickupLat: pendingRide.pickup.lat,
+              pickupLng: pendingRide.pickup.lng,
+            }),
           }
         );
-        if (res.ok) {
+        if (res.ok && !cancelled) {
           const data = await res.json();
           if (data.success) {
             setDriversCount(data.driversCount || 0);
-            if (data.drivers && Array.isArray(data.drivers)) {
-              setOnlineDrivers(data.drivers.slice(0, 4));
+            if (Array.isArray(data.drivers)) {
+              setOnlineDrivers(data.drivers);
             }
           }
         }
@@ -292,7 +159,14 @@ export function SearchingDriversScreen() {
     };
 
     fetchDrivers();
-  }, [pendingRide]);
+    // ✅ Rafraîchit les positions toutes les 4s pendant la recherche/notification
+    const interval = setInterval(fetchDrivers, 4000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [pendingRide, phase]);
 
   // ─── Après 2.5s → appeler l'API create-ride ─────────────────
   useEffect(() => {
@@ -418,257 +292,194 @@ export function SearchingDriversScreen() {
 
   if (!pendingRide) return null;
 
-  return (
-    <div className="h-full bg-gradient-to-br from-blue-950 via-blue-900 to-cyan-900 flex flex-col overflow-hidden relative">
+  // ─── Préparation des données pour la carte ────────────────────
+  const mapDrivers = onlineDrivers
+    .filter(d => typeof d.lat === 'number' && typeof d.lng === 'number')
+    .map(d => ({
+      id: d.id,
+      name: d.full_name || d.name || 'Chauffeur',
+      location: { lat: d.lat as number, lng: d.lng as number },
+      vehicleType: d.vehicleType,
+      rating: d.rating,
+    }));
 
-      {/* ── Arrière-plan animé ── */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute rounded-full border border-cyan-400/20"
-            style={{
-              width: 80 + i * 60,
-              height: 80 + i * 60,
-              top: '50%',
-              left: '50%',
-              x: '-50%',
-              y: '-50%',
-            }}
-            animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0.05, 0.3] }}
-            transition={{ duration: 3, delay: i * 0.4, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        ))}
+  const closestDriver = onlineDrivers
+    .filter(d => typeof d.distanceKm === 'number')
+    .sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0))[0];
+
+  const statusColor =
+    phase === 'error' ? 'red' : phase === 'notifying' ? 'green' : 'cyan';
+
+  return (
+    <div className="h-full w-full relative overflow-hidden bg-gray-900">
+
+      {/* ══════════════════════════════════════════════════════════
+          🗺️ CARTE PLEIN ÉCRAN — position des chauffeurs en ligne
+          ══════════════════════════════════════════════════════════ */}
+      <div className="absolute inset-0 z-0">
+        <MapView
+          center={pendingRide.pickup}
+          markers={[pendingRide.pickup]}
+          drivers={mapDrivers}
+          zoom={15}
+          className="w-full h-full"
+          showUserLocation={false}
+          enableGeolocation={false}
+          showTraffic={false}
+          enableZoomControls={true}
+          disableAutoCenter={true}
+        />
       </div>
 
+      {/* Léger voile sombre en haut/bas pour lisibilité du texte */}
+      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/50 to-transparent z-[5] pointer-events-none" />
+
       {/* ── Header ── */}
-      <div className="relative z-10 flex items-center justify-between p-4 pt-8">
+      <div className="relative z-20 flex items-center justify-between p-4 pt-8">
         <div className="w-10" />
         <div className="text-center">
-          <div className="w-2 h-2 bg-green-400 rounded-full mx-auto mb-1 animate-pulse" />
-          <p className="text-white/60 text-xs">SmartCabb</p>
+          <div className={`w-2 h-2 rounded-full mx-auto mb-1 animate-pulse ${
+            statusColor === 'red' ? 'bg-red-400' : statusColor === 'green' ? 'bg-green-400' : 'bg-cyan-400'
+          }`} />
+          <p className="text-white/80 text-xs drop-shadow">SmartCabb</p>
         </div>
         <button
           onClick={handleCancel}
           disabled={isCancelling}
-          className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20 transition-colors disabled:opacity-40"
+          className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center hover:bg-black/60 transition-colors disabled:opacity-40"
         >
           <XIcon className="w-5 h-5 text-white" />
         </button>
       </div>
 
-      {/* ── Corps principal ── */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 gap-6">
-
-        {/* Carte pro Yango-style : chauffeurs autour du point de prise en charge */}
-        {phase === 'error' ? (
-          <motion.div className="relative">
-            <div className="w-24 h-24 rounded-full flex items-center justify-center shadow-2xl bg-red-500/20 border-2 border-red-400">
-              <CarIcon className="w-12 h-12 text-red-400" />
-            </div>
-          </motion.div>
-        ) : (
-          <div className="w-full max-w-[360px] h-[220px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-white">
-            {pendingRide ? (
-              <SearchingMap pickup={pendingRide.pickup} drivers={liveDrivers} />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-blue-950">
-                <CarIcon className="w-12 h-12 text-cyan-400" />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Texte principal — ✅ TOUT TRADUIT ── */}
+      {/* ── Bandeau de statut flottant (compact, sous le header) ── */}
+      <div className="relative z-20 px-6 flex justify-center">
         <AnimatePresence mode="wait">
-          {phase === 'error' ? (
+          <motion.div
+            key={phase}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md shadow-lg ${
+              statusColor === 'red'
+                ? 'bg-red-500/90'
+                : statusColor === 'green'
+                ? 'bg-green-500/90'
+                : 'bg-cyan-500/90'
+            }`}
+          >
             <motion.div
-              key="error"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-center space-y-2"
+              animate={phase === 'error' ? {} : { rotate: [0, -8, 8, 0] }}
+              transition={{ duration: 1.4, repeat: Infinity }}
             >
-              {/* ✅ TRADUIT */}
-              <h2 className="text-xl font-bold text-white">{t('error')}</h2>
-              <p className="text-white/60 text-sm max-w-xs">{errorMsg}</p>
+              <CarIcon className="w-4 h-4 text-white" />
             </motion.div>
-
-          ) : phase === 'notifying' ? (
-            <motion.div
-              key="notifying"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-center space-y-2"
-            >
-              {/* ✅ TRADUIT : "Chauffeurs notifiés ✓" */}
-              <h2 className="text-xl font-bold text-white">{t('driver_found')} ✓</h2>
-              {/* ✅ TRADUIT : "En attente d'acceptation…" */}
-              <p className="text-white/60 text-sm">{t('driver_on_way')}…</p>
-            </motion.div>
-
-          ) : (
-            <motion.div
-              key="searching"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="text-center space-y-2"
-            >
-              {/* ✅ TRADUIT : "Recherche des chauffeurs en cours..." */}
-              <h2 className="text-xl font-bold text-white">
-                {t('searching_driver')}{dots}
-              </h2>
-              {/* ✅ TRADUIT : "Nous cherchons un ... près de vous" */}
-              <p className="text-white/60 text-sm">
-                {t('searching_desc')}{' '}
-                <span className="text-cyan-300 font-semibold">
-                  {VEHICLE_LABELS[pendingRide.vehicleType] || pendingRide.vehicleType}
-                </span>
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── Résumé trajet ── */}
-        <div className="w-full bg-white/10 backdrop-blur-sm rounded-2xl p-4 space-y-2 border border-white/10">
-          <div className="flex items-start gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-400 mt-1.5 flex-shrink-0" />
-            <p className="text-white/80 text-sm leading-tight">{pendingRide.pickup.address}</p>
-          </div>
-          <div className="ml-[3px] w-px h-4 bg-white/20" />
-          <div className="flex items-start gap-2">
-            <MapPinIcon className="w-3 h-3 text-red-400 mt-0.5 flex-shrink-0" />
-            <p className="text-white/80 text-sm leading-tight">{pendingRide.destination.address}</p>
-          </div>
-          <div className="border-t border-white/10 pt-2 flex items-center justify-between">
-            {/* ✅ TRADUIT */}
-            <span className="text-white/50 text-xs">{(pendingRide.distance || 0).toFixed(1)} {t('km')}</span>
-            <span className="text-cyan-300 text-sm font-bold">
-              {formatCDF(pendingRide.estimatedPrice)}
+            <span className="text-white text-xs font-semibold whitespace-nowrap">
+              {phase === 'error'
+                ? t('error')
+                : phase === 'notifying'
+                ? `${t('driver_found')} ✓`
+                : `${t('searching_driver')}${dots}`}
             </span>
-          </div>
-        </div>
-
-        {/* ── Chauffeurs en ligne ── */}
-        <AnimatePresence>
-          {driversCount > 0 && phase !== 'error' && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="w-full"
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                {/* ✅ TRADUIT */}
-                <p className="text-white/70 text-xs font-medium">
-                  {driversCount} {t('drivers')}{driversCount > 1 ? 's' : ''} {t('go_online').toLowerCase()}
-                </p>
-              </div>
-
-              {onlineDrivers.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {onlineDrivers.map((driver, idx) => (
-                    <motion.div
-                      key={driver.id || idx}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: idx * 0.1 }}
-                      className="bg-white/10 rounded-xl p-3 border border-white/10 flex items-center gap-2"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center flex-shrink-0">
-                        <UserIcon className="w-4 h-4 text-cyan-300" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-white text-xs font-medium truncate">
-                          {driver.full_name || driver.name || 'Chauffeur'}
-                        </p>
-                        <div className="flex items-center gap-1">
-                          <StarIcon className="w-2.5 h-2.5 text-yellow-400" />
-                          <span className="text-white/50 text-[10px]">
-                            {(driver.rating || 4.8).toFixed(1)}
-                          </span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ) : (
-                // Placeholders animés
-                <div className="grid grid-cols-4 gap-2">
-                  {[...Array(Math.min(driversCount, 4))].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.12 }}
-                      className="flex flex-col items-center gap-1"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-cyan-500/20 border-2 border-cyan-400/40 flex items-center justify-center">
-                        <UserIcon className="w-5 h-5 text-cyan-300" />
-                      </div>
-                      <div className="flex gap-0.5">
-                        {[0, 1, 2].map(s => (
-                          <motion.div
-                            key={s}
-                            className="w-1 h-1 rounded-full bg-cyan-400"
-                            animate={{ opacity: [0.3, 1, 0.3] }}
-                            transition={{ duration: 1, delay: s * 0.2, repeat: Infinity }}
-                          />
-                        ))}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {driversCount === 0 && phase === 'searching' && (
-            <motion.p
-              key="no-drivers"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-white/40 text-xs text-center"
-            >
-              {/* ✅ TRADUIT */}
-              {t('loading')}…
-            </motion.p>
-          )}
+          </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* ── Boutons bas — ✅ TOUT TRADUIT ── */}
-      <div className="relative z-10 p-6 space-y-3">
-        {phase === 'error' ? (
-          <>
-            <button
-              onClick={handleRetry}
-              className="w-full h-12 bg-cyan-500 hover:bg-cyan-400 text-white rounded-xl font-semibold text-sm transition-colors"
-            >
-              {/* ✅ TRADUIT : "Réessayer" */}
-              {t('continue')}
-            </button>
-            <button
-              onClick={handleCancel}
-              className="w-full h-12 bg-white/10 hover:bg-white/20 text-white rounded-xl font-medium text-sm transition-colors"
-            >
-              {/* ✅ TRADUIT : "Annuler" */}
-              {t('cancel')}
-            </button>
-          </>
-        ) : (
+      {/* Espace flexible pour laisser voir la carte */}
+      <div className="flex-1" />
+
+      {/* ══════════════════════════════════════════════════════════
+          🧾 BOTTOM SHEET — résumé trajet + chauffeurs + actions
+          ══════════════════════════════════════════════════════════ */}
+      <div className="absolute bottom-0 left-0 right-0 z-20">
+        <div className="bg-white/97 backdrop-blur-xl rounded-t-3xl shadow-2xl">
+
+          {/* Poignée */}
           <button
-            onClick={handleCancel}
-            disabled={isCancelling}
-            className="w-full h-12 bg-white/10 hover:bg-white/20 disabled:opacity-40 text-white rounded-xl font-medium text-sm transition-colors border border-white/10"
+            onClick={() => setSheetExpanded(v => !v)}
+            className="w-full flex flex-col items-center pt-2 pb-1"
           >
-            {/* ✅ TRADUIT : "Annuler la recherche" / "Annulation…" */}
-            {isCancelling ? `${t('cancel')}…` : t('cancel_search')}
+            <div className="w-10 h-1 bg-gray-300 rounded-full mb-1" />
+            <ChevronUpIcon className={`w-4 h-4 text-gray-400 transition-transform ${sheetExpanded ? 'rotate-180' : ''}`} />
           </button>
-        )}
+
+          <div className="px-5 pb-6 space-y-4">
+
+            {/* Message d'erreur */}
+            {phase === 'error' && (
+              <div className="text-center space-y-1 py-1">
+                <h2 className="text-base font-bold text-gray-900">{t('error')}</h2>
+                <p className="text-gray-500 text-sm">{errorMsg}</p>
+              </div>
+            )}
+
+            {/* Nombre de chauffeurs + le plus proche */}
+            {phase !== 'error' && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <p className="text-gray-700 text-sm font-medium">
+                    {driversCount > 0
+                      ? `${driversCount} ${t('drivers')}${driversCount > 1 ? 's' : ''} ${t('go_online').toLowerCase()}`
+                      : t('loading') + '…'}
+                  </p>
+                </div>
+                {closestDriver?.distanceKm !== undefined && (
+                  <span className="text-cyan-600 text-xs font-semibold bg-cyan-50 px-2 py-1 rounded-full">
+                    {closestDriver.distanceKm.toFixed(1)} {t('km')}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Résumé trajet */}
+            <div className="bg-gray-50 rounded-2xl p-4 space-y-2 border border-gray-100">
+              <div className="flex items-start gap-2">
+                <div className="w-2 h-2 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                <p className="text-gray-800 text-sm leading-tight">{pendingRide.pickup.address}</p>
+              </div>
+              <div className="ml-[3px] w-px h-4 bg-gray-200" />
+              <div className="flex items-start gap-2">
+                <MapPinIcon className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-gray-800 text-sm leading-tight">{pendingRide.destination.address}</p>
+              </div>
+              <div className="border-t border-gray-200 pt-2 flex items-center justify-between">
+                <span className="text-gray-500 text-xs">
+                  {(pendingRide.distance || 0).toFixed(1)} {t('km')} · {VEHICLE_LABELS[pendingRide.vehicleType] || pendingRide.vehicleType}
+                </span>
+                <span className="text-gray-900 text-sm font-bold">
+                  {formatCDF(pendingRide.estimatedPrice)}
+                </span>
+              </div>
+            </div>
+
+            {/* Boutons */}
+            {phase === 'error' ? (
+              <div className="space-y-2">
+                <button
+                  onClick={handleRetry}
+                  className="w-full h-12 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-semibold text-sm transition-colors"
+                >
+                  {t('continue')}
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="w-full h-12 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium text-sm transition-colors"
+                >
+                  {t('cancel')}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleCancel}
+                disabled={isCancelling}
+                className="w-full h-12 bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-gray-700 rounded-xl font-medium text-sm transition-colors"
+              >
+                {isCancelling ? `${t('cancel')}…` : t('cancel_search')}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
