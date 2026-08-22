@@ -52,14 +52,18 @@ export function MapView(props: MapViewProps) {
   const [useOpenStreetMap, setUseOpenStreetMap] = useState(false);
 
   useEffect(() => {
-    // Écouter les erreurs Google Maps globales (RefererNotAllowedMapError, etc.)
+    // Écouter les erreurs Google Maps globales (RefererNotAllowedMapError, BillingNotEnabled, etc.)
     const errorListener = (event: ErrorEvent | any) => {
       const errorMsg = event?.message || event?.error?.message || String(event);
       if (
         errorMsg.includes('RefererNotAllowedMapError') ||
         errorMsg.includes('ApiNotActivatedMapError') ||
         errorMsg.includes('InvalidKeyMapError') ||
-        errorMsg.includes('MissingKeyMapError')
+        errorMsg.includes('MissingKeyMapError') ||
+        errorMsg.includes('BillingNotEnabledMapError') ||
+        errorMsg.includes('BillingNotEnabled') ||
+        errorMsg.includes('This page can\'t load Google Maps correctly') ||
+        errorMsg.includes('You must enable Billing')
       ) {
         console.warn('⚠️ Erreur Google Maps globale détectée:', errorMsg);
         console.log('🔄 Basculement vers OpenStreetMap...');
@@ -67,8 +71,21 @@ export function MapView(props: MapViewProps) {
       }
     };
 
+    // Google Maps appelle window.gm_authFailure en cas de problème de clé/billing
+    const prevAuthFailure = (window as any).gm_authFailure;
+    (window as any).gm_authFailure = () => {
+      console.warn('⚠️ gm_authFailure détecté (clé/billing)');
+      setUseOpenStreetMap(true);
+      if (typeof prevAuthFailure === 'function') prevAuthFailure();
+    };
+
     window.addEventListener('error', errorListener);
-    return () => window.removeEventListener('error', errorListener);
+    return () => {
+      window.removeEventListener('error', errorListener);
+      if ((window as any).gm_authFailure && (window as any).gm_authFailure.toString().includes('setUseOpenStreetMap')) {
+        (window as any).gm_authFailure = prevAuthFailure;
+      }
+    };
   }, []);
 
   // ✅ Callback appelé par GoogleMapView quand il échoue
