@@ -46,7 +46,7 @@ export function OpenStreetMapView({
           attributionControl: false,
         }).setView([initialCenter.lat, initialCenter.lng], zoom);
 
-        Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        Leaflet.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '© OpenStreetMap',
         }).addTo(map);
@@ -119,8 +119,8 @@ export function OpenStreetMapView({
   }
 
   return (
-    <div className={`relative ${className}`}>
-      <div ref={containerRef} className="absolute inset-0" />
+    <div className={`relative ${className} bg-[#f3f4f6]`}>
+      <div ref={containerRef} className="absolute inset-0 bg-[#f3f4f6]" />
       {showAttribution && (
         <div className="absolute bottom-1 right-1 bg-white/90 px-1.5 py-0.5 rounded text-[10px] z-[400] pointer-events-auto">
           © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">OpenStreetMap</a>
