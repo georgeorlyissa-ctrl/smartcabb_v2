@@ -244,13 +244,22 @@ export function RatingScreen() {
               <div className="grid grid-cols-2 gap-2">
                 {QUICK_COMMENTS.map(q => {
                   const label = t(q.key);
+                  const isSelected = comment.split(',').map(s => s.trim()).includes(label);
                   return (
                     <button
                       key={q.key}
                       type="button"
-                      onClick={() => setComment(prev => prev === label ? '' : label)}
+                      onClick={() => {
+                        setComment(prev => {
+                          const parts = prev ? prev.split(',').map(s => s.trim()).filter(Boolean) : [];
+                          const idx = parts.indexOf(label);
+                          if (idx >= 0) parts.splice(idx, 1);
+                          else parts.push(label);
+                          return parts.join(', ');
+                        });
+                      }}
                       className={`text-left p-2.5 rounded-xl border text-xs font-medium transition-all ${
-                        comment === label
+                        isSelected
                           ? 'bg-green-50 border-green-400 text-green-800'
                           : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
                       }`}
