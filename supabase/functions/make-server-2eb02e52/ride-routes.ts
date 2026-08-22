@@ -381,10 +381,11 @@ app.post("/create", async (c) => {
     if (passengerIdForBlock) {
       const block = await isPassengerBlocked(passengerIdForBlock);
       if (block.blocked) {
+        const until = new Date(block.blockedUntil!).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         return c.json({
           success: false,
           error: "COMPTE_BLOQUE",
-          message: `Votre compte est temporairement bloqué jusqu'au ${new Date(block.blockedUntil!).toLocaleString('fr-FR')} pour annulations répétées.`,
+          message: `Votre compte a été temporairement suspendu suite à plusieurs annulations successives. Vous pourrez commander à nouveau après le ${until}. Merci de votre compréhension.`,
           blockedUntil: block.blockedUntil,
         }, 403);
       }

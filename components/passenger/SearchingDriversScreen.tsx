@@ -206,12 +206,14 @@ export function SearchingDriversScreen() {
 
         if (!response.ok) {
           const errText = await response.text();
+          let blockedMessage: string | null = null;
           try {
             const errJson = JSON.parse(errText);
             if (errJson.error === 'COMPTE_BLOQUE') {
-              throw new Error(errJson.message || 'Compte temporairement bloqué pour annulations répétées.');
+              blockedMessage = errJson.message || 'Votre compte a été temporairement suspendu suite à plusieurs annulations successives.';
             }
           } catch {}
+          if (blockedMessage) throw new Error(blockedMessage);
           throw new Error(`Erreur ${response.status}: ${errText}`);
         }
 
