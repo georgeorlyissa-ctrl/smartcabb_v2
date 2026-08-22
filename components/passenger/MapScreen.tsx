@@ -96,20 +96,52 @@ export function MapScreen() {
       }
     };
 
+    let watchId: number | null = null;
+    let watchTimeout: any = null;
+    let bestAccuracy = Infinity;
+
+    const startRefinementWatch = () => {
+      if (watchId !== null) return;
+      watchId = navigator.geolocation.watchPosition(
+        async (pos) => {
+          const acc = pos.coords.accuracy;
+          if (acc < bestAccuracy && acc <= 150) {
+            bestAccuracy = acc;
+            await handleSuccess(pos);
+            if (acc <= 30) {
+              if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+              if (watchTimeout) clearTimeout(watchTimeout);
+            }
+          }
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+      watchTimeout = setTimeout(() => {
+        if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+      }, 15000);
+    };
+
     if ('geolocation' in navigator) {
       setLoadingLocation(true);
-      // 1ère tentative : haute précision, pas de cache
       navigator.geolocation.getCurrentPosition(
-        handleSuccess,
+        async (pos) => {
+          bestAccuracy = pos.coords.accuracy;
+          await handleSuccess(pos);
+          if (pos.coords.accuracy > 40) startRefinementWatch();
+        },
         (err) => {
-          // 2ème tentative si échec : sans haute précision mais timeout plus long
           if (err.code !== 1) {
             console.log('🔄 Retry geolocation sans haute précision...');
-            navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
-              enableHighAccuracy: false,
-              timeout: 15000,
-              maximumAge: 0,
-            });
+            navigator.geolocation.getCurrentPosition(
+              async (pos) => {
+                bestAccuracy = pos.coords.accuracy;
+                await handleSuccess(pos);
+                if (pos.coords.accuracy > 40) startRefinementWatch();
+              },
+              handleError,
+              { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 }
+            );
           } else {
             handleError(err);
           }
@@ -124,6 +156,11 @@ export function MapScreen() {
         updateDestination({ lat: -4.3856, lng: 15.4446, address: "Aéroport International de N'djili, Kinshasa" });
       }
     }
+
+    return () => {
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (watchTimeout) clearTimeout(watchTimeout);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
