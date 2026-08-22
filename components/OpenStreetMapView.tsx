@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Location {
   lat: number;
@@ -25,73 +25,82 @@ export function OpenStreetMapView({
 }: OpenStreetMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     const init = async () => {
-      const L: any = (window as any).L;
-      if (!L) {
-        await new Promise<void>((resolve, reject) => {
-          if (document.querySelector('script[data-leaflet-osm]')) { resolve(); return; }
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-          document.head.appendChild(link);
-          const script = document.createElement('script');
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-          script.setAttribute('data-leaflet-osm', '1');
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('leaflet load failed'));
-          document.head.appendChild(script);
+      try {
+        const L: any = (window as any).L;
+        if (!L) {
+          await new Promise<void>((resolve, reject) => {
+            if (document.querySelector('script[data-leaflet-osm]')) { resolve(); return; }
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            document.head.appendChild(link);
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.setAttribute('data-leaflet-osm', '1');
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('leaflet load failed'));
+            document.head.appendChild(script);
+          });
+        }
+        if (cancelled || !containerRef.current || mapRef.current) return;
+        const Leaflet: any = (window as any).L;
+        if (!Leaflet) return;
+
+        const initialCenter = center || markers[0] || { lat: -4.3276, lng: 15.3136 };
+        const map = Leaflet.map(containerRef.current, {
+          zoomControl: false,
+          attributionControl: false,
+        }).setView([initialCenter.lat, initialCenter.lng], zoom);
+
+        Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap',
+        }).addTo(map);
+
+        const allPoints: Location[] = [];
+        if (center) allPoints.push(center);
+        markers.forEach(m => allPoints.push(m));
+
+        // Marqueurs : premier = vert (pickup), autres = bleus
+        allPoints.forEach((p, idx) => {
+          const isPickup = idx === 0 && center && p.lat === center.lat && p.lng === center.lng;
+          const html = isPickup
+            ? '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>'
+            : '<div style="width:28px;height:28px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px">🚗</div>';
+          const icon = Leaflet.divIcon({
+            html,
+            className: '',
+            iconSize: isPickup ? [18, 18] : [28, 28],
+            iconAnchor: isPickup ? [9, 9] : [14, 14],
+          });
+          Leaflet.marker([p.lat, p.lng], { icon }).addTo(map);
         });
+
+        if (allPoints.length > 1) {
+          try {
+            const bounds = Leaflet.latLngBounds(allPoints.map(p => [p.lat, p.lng] as [number, number]));
+            map.fitBounds(bounds.pad(0.35));
+          } catch {}
+        }
+
+        mapRef.current = map;
+        setTimeout(() => { try { map.invalidateSize(); } catch {} }, 200);
+      } catch (e) {
+        console.warn('⚠️ Erreur init Leaflet', e);
+        if (!cancelled) setLoadError(true);
       }
-      if (cancelled || !containerRef.current || mapRef.current) return;
-      const Leaflet: any = (window as any).L;
-      if (!Leaflet) return;
-
-      const initialCenter = center || markers[0] || { lat: -4.3276, lng: 15.3136 };
-      const map = Leaflet.map(containerRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-      }).setView([initialCenter.lat, initialCenter.lng], zoom);
-
-      Leaflet.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap',
-      }).addTo(map);
-
-      const allPoints: Location[] = [];
-      if (center) allPoints.push(center);
-      markers.forEach(m => allPoints.push(m));
-
-      // Marqueurs : premier = vert (pickup), autres = bleus
-      allPoints.forEach((p, idx) => {
-        const isPickup = idx === 0 && center && p.lat === center.lat && p.lng === center.lng;
-        const html = isPickup
-          ? '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>'
-          : '<div style="width:28px;height:28px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px">🚗</div>';
-        const icon = Leaflet.divIcon({
-          html,
-          className: '',
-          iconSize: isPickup ? [18, 18] : [28, 28],
-          iconAnchor: isPickup ? [9, 9] : [14, 14],
-        });
-        Leaflet.marker([p.lat, p.lng], { icon }).addTo(map);
-      });
-
-      if (allPoints.length > 1) {
-        try {
-          const bounds = Leaflet.latLngBounds(allPoints.map(p => [p.lat, p.lng] as [number, number]));
-          map.fitBounds(bounds.pad(0.35));
-        } catch {}
-      }
-
-      mapRef.current = map;
-      setTimeout(() => { try { map.invalidateSize(); } catch {} }, 200);
     };
 
-    init();
+    init().catch((e) => {
+      console.warn('⚠️ Leaflet init failed', e);
+      if (!cancelled) setLoadError(true);
+    });
 
     return () => {
       cancelled = true;
@@ -101,6 +110,19 @@ export function OpenStreetMapView({
       }
     };
   }, [center?.lat, center?.lng, JSON.stringify(markers), zoom]);
+
+  if (loadError) {
+    return (
+      <div className={`relative ${className} bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center`}>
+        <div className="text-center p-6">
+          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">🗺️</div>
+          <p className="text-sm font-medium text-gray-700">Carte temporairement indisponible</p>
+          <p className="text-xs text-gray-500 mt-1">Vérifiez votre connexion et réessayez</p>
+          {center && <p className="text-xs text-gray-400 mt-2">Départ : {center.lat.toFixed(4)}, {center.lng.toFixed(4)}</p>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`relative ${className}`}>
