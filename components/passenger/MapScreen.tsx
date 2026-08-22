@@ -53,40 +53,68 @@ export function MapScreen() {
   // ✅ FIX: useRef pour éviter la boucle infinie de destination
   const defaultDestinationSet = useRef(false);
 
+  // Précision GPS réelle (pour affichage ±XXm)
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+
   useEffect(() => {
     const shouldSetDefault = !defaultDestinationSet.current && !state.destination;
 
+    const handleSuccess = async (position: GeolocationPosition) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const accuracy = position.coords.accuracy;
+      setGpsAccuracy(Math.round(accuracy));
+      // Filtrer les positions trop imprécises (>150m) : relancer une tentative
+      if (accuracy > 150) {
+        console.warn(`⚠️ GPS peu précis (±${Math.round(accuracy)}m), nouvelle tentative...`);
+      }
+      setLoadingAddress(true);
+      const address = await reverseGeocode(lat, lng);
+      const location = { lat, lng, address };
+      setCurrentLocation(location);
+      setPickupLocation(location);
+      if (updatePickup) updatePickup(location);
+      setLoadingAddress(false);
+      setLoadingLocation(false);
+      if (shouldSetDefault && updateDestination) {
+        defaultDestinationSet.current = true;
+        updateDestination({ lat: -4.3856, lng: 15.4446, address: "Aéroport International de N'djili, Kinshasa" });
+      }
+    };
+
+    const handleError = (error: GeolocationPositionError) => {
+      if (error.code === 1) {
+        toast.info('📍 Sélectionnez votre position en touchant la carte', { duration: 5000 });
+      } else {
+        console.warn('⚠️ Geolocation error:', error.code, error.message);
+      }
+      setLoadingLocation(false);
+      if (shouldSetDefault && updatePickup && updateDestination) {
+        defaultDestinationSet.current = true;
+        updatePickup({ lat: -4.3276, lng: 15.3136, address: 'Centre-ville de Kinshasa' });
+        updateDestination({ lat: -4.3856, lng: 15.4446, address: "Aéroport International de N'djili, Kinshasa" });
+      }
+    };
+
     if ('geolocation' in navigator) {
       setLoadingLocation(true);
+      // 1ère tentative : haute précision, pas de cache
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setLoadingAddress(true);
-          const address = await reverseGeocode(lat, lng);
-          const location = { lat, lng, address };
-          setCurrentLocation(location);
-          setPickupLocation(location);
-          if (updatePickup) updatePickup(location);
-          setLoadingAddress(false);
-          setLoadingLocation(false);
-          if (shouldSetDefault && updateDestination) {
-            defaultDestinationSet.current = true;
-            updateDestination({ lat: -4.3856, lng: 15.4446, address: "Aéroport International de N'djili, Kinshasa" });
+        handleSuccess,
+        (err) => {
+          // 2ème tentative si échec : sans haute précision mais timeout plus long
+          if (err.code !== 1) {
+            console.log('🔄 Retry geolocation sans haute précision...');
+            navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
+              enableHighAccuracy: false,
+              timeout: 15000,
+              maximumAge: 0,
+            });
+          } else {
+            handleError(err);
           }
         },
-        (error) => {
-          if (error.code === 1) {
-            toast.info('📍 Sélectionnez votre position en touchant la carte', { duration: 5000 });
-          }
-          setLoadingLocation(false);
-          if (shouldSetDefault && updatePickup && updateDestination) {
-            defaultDestinationSet.current = true;
-            updatePickup({ lat: -4.3276, lng: 15.3136, address: 'Centre-ville de Kinshasa' });
-            updateDestination({ lat: -4.3856, lng: 15.4446, address: "Aéroport International de N'djili, Kinshasa" });
-          }
-        },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     } else {
       setLoadingLocation(false);
@@ -183,7 +211,7 @@ export function MapScreen() {
                   </span>
                 ) : displayAddress}
               </p>
-              {!loadingLocation && <p className="text-xs text-gray-400">±33m</p>}
+              {!loadingLocation && gpsAccuracy && <p className="text-xs text-gray-400">±{gpsAccuracy}m</p>}
             </div>
             {!loadingLocation && (
               <button
