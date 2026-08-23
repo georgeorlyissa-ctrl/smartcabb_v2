@@ -6,7 +6,7 @@ import { Card } from '../ui/card';
 import { Checkbox } from '../ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { PhoneInput } from '../PhoneInput';
-import { PolicyModal } from '../PolicyModal';
+import { UnifiedPolicyModal } from '../shared/UnifiedPolicyModal';
 import { motion } from '../../lib/motion';
 import { toast } from '../../lib/toast';
 import { useAppState } from '../../hooks/useAppState';
@@ -78,6 +78,7 @@ export function DriverRegistrationScreen() {
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [isOtherMake, setIsOtherMake] = useState(false);
 
@@ -842,7 +843,7 @@ export function DriverRegistrationScreen() {
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                setShowTermsModal(true);
+                setShowPrivacyModal(true);
               }}
               className="text-blue-500 hover:underline"
             >
@@ -887,11 +888,18 @@ export function DriverRegistrationScreen() {
       </motion.div>
       )}
 
-      {/* Terms Modal */}
-      <PolicyModal
+      {/* Terms & Privacy Modals */}
+      <UnifiedPolicyModal
         isOpen={showTermsModal}
         onAccept={() => setShowTermsModal(false)}
         showCloseButton={true}
+        mode="terms"
+      />
+      <UnifiedPolicyModal
+        isOpen={showPrivacyModal}
+        onAccept={() => setShowPrivacyModal(false)}
+        showCloseButton={true}
+        mode="privacy"
       />
     </motion.div>
   );

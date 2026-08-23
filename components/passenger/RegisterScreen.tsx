@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
 import { PhoneInput } from '../PhoneInput';
-import { PolicyModal } from '../PolicyModal';
+import { UnifiedPolicyModal } from '../shared/UnifiedPolicyModal';
 import { signUp } from '../../lib/auth-service';
 import { sendSMS } from '../../lib/sms-service';
 import { PhoneVerificationStep } from '../PhoneVerificationStep';
@@ -38,6 +38,7 @@ export function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showOtp, setShowOtp] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -381,7 +382,7 @@ export function RegisterScreen() {
               type="button"
               onClick={(e) => {
                 e.preventDefault();
-                setShowTermsModal(true);
+                setShowPrivacyModal(true);
               }}
               className="text-green-500 hover:underline"
             >
@@ -419,10 +420,17 @@ export function RegisterScreen() {
       )}
 
       {/* Terms Modal */}
-      <PolicyModal
+      <UnifiedPolicyModal
         isOpen={showTermsModal}
         onAccept={() => setShowTermsModal(false)}
         showCloseButton={true}
+        mode="terms"
+      />
+      <UnifiedPolicyModal
+        isOpen={showPrivacyModal}
+        onAccept={() => setShowPrivacyModal(false)}
+        showCloseButton={true}
+        mode="privacy"
       />
     </div>
   );
