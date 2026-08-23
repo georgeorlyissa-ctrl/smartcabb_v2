@@ -56,6 +56,8 @@ export function EstimateScreen() {
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [basePrice, setBasePrice] = useState(12500);
   const [estimatedDuration, setEstimatedDuration] = useState(15);
+  const [loyaltyData, setLoyaltyData] = useState<any>(null);
+  const [selectedLoyalty, setSelectedLoyalty] = useState<any>(null);
 
   // 🔒 Désactive le bouton après 1 clic (anti double-soumission)
   const [isBooking, setIsBooking] = useState(false);
@@ -90,6 +92,20 @@ export function EstimateScreen() {
       setCurrentScreen('map');
     }
   }, [pickup, destination, setCurrentScreen]);
+
+  useEffect(() => {
+    const fetchLoyalty = async () => {
+      if (!state.currentUser?.id) return;
+      try {
+        const resp = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/loyalty/${state.currentUser.id}`, {
+          headers: { 'Authorization': `Bearer ${publicAnonKey}` },
+        });
+        const j = await resp.json();
+        if (j.success) setLoyaltyData(j);
+      } catch {}
+    };
+    fetchLoyalty();
+  }, [state.currentUser?.id]);
 
   if (!pickup || !destination) return null;
 
@@ -326,6 +342,13 @@ export function EstimateScreen() {
       : Math.max(0, basePrice - appliedPromo.discount)
     : basePrice;
 
+  const loyaltyDiscount = selectedLoyalty ? (
+    selectedLoyalty.type === 'discount'
+      ? Math.min(Math.round(finalPrice * selectedLoyalty.discount), selectedLoyalty.cap)
+      : Math.min(finalPrice, selectedLoyalty.cap)
+  ) : 0;
+  const priceAfterLoyalty = Math.max(0, finalPrice - loyaltyDiscount);
+
   const selectedVehicleData = vehicles.find(v => v.id === selectedVehicle);
 
   const handleBookRide = async () => {
@@ -357,10 +380,31 @@ export function EstimateScreen() {
 
     console.log('🚗 EstimateScreen: Préparation course vers searching-drivers', {
       vehicleType: selectedVehicle,
-      finalPrice,
+      finalPrice: priceAfterLoyalty,
+      loyaltyDiscount,
       estimatedDuration,
       passengerCount,
     });
+
+    let loyaltyRedeemCode: string | null = null;
+    let priceToCharge = priceAfterLoyalty;
+    if (selectedLoyalty) {
+      try {
+        const resp = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/loyalty/redeem`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ passengerId: state.currentUser?.id, points: selectedLoyalty.points, category: selectedLoyalty.category }),
+        });
+        const j = await resp.json();
+        if (!j.success) throw new Error(j.error || 'Solde insuffisant');
+        loyaltyRedeemCode = j.redeemCode;
+        toast.success(`Remise fidélité appliquée : -${loyaltyDiscount.toLocaleString()} CDF (${j.label})`);
+      } catch (e: any) {
+        setIsBooking(false);
+        toast.error(e.message || 'Erreur fidélité');
+        return;
+      }
+    }
 
     const pendingRide = {
       passengerId: state.currentUser?.id || 'temp-user',
@@ -371,7 +415,10 @@ export function EstimateScreen() {
       pickupInstructions: state.pickupInstructions || '',
       vehicleType: selectedVehicle,
       vehicleLabel: selectedVehicleData.name,
-      estimatedPrice: finalPrice,
+      estimatedPrice: priceToCharge,
+      originalPrice: finalPrice,
+      loyaltyDiscount,
+      loyaltyRedeemCode,
       estimatedDuration,
       distance: distanceKm,
       passengerCount,
@@ -894,6 +941,36 @@ export function EstimateScreen() {
               />
             </div>
 
+            {/* Smart Rewards */}
+            {loyaltyData?.loyalty && (
+              <div className="px-4">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-amber-900">🎁 Smart Rewards — {loyaltyData.loyalty.balance.toLocaleString()} pts</p>
+                    <button onClick={() => setCurrentScreen('loyalty')} className="text-xs text-amber-700 underline">Voir</button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {loyaltyData.tiers.filter((t: any) => loyaltyData.loyalty.balance >= t.points).slice(0, 3).map((t: any) => (
+                      <button
+                        key={`${t.points}-${t.category || t.label}`}
+                        onClick={() => setSelectedLoyalty((prev: any) => prev?.points === t.points && prev?.category === t.category ? null : t)}
+                        className={`text-left p-2.5 rounded-lg border text-xs font-medium ${selectedLoyalty?.points === t.points && selectedLoyalty?.category === t.category ? 'bg-amber-500 text-white border-amber-600' : 'bg-white border-amber-200 text-gray-700'}`}
+                      >
+                        <span className="font-bold">{t.label}</span> — {t.points.toLocaleString()} pts {t.type === 'discount' ? `(-${t.discount*100}% cap ${t.cap})` : `(cap ${t.cap} CDF)`}
+                        {selectedLoyalty?.points === t.points && selectedLoyalty?.category === t.category && <span className="float-right">✓</span>}
+                      </button>
+                    ))}
+                    {loyaltyData.tiers.filter((t: any) => loyaltyData.loyalty.balance >= t.points).length === 0 && (
+                      <p className="text-xs text-gray-500">Continuez à rouler pour débloquer vos récompenses. Prochain palier à {loyaltyData.tiers.find((t: any) => t.points > loyaltyData.loyalty.balance)?.points || 0} pts.</p>
+                    )}
+                  </div>
+                  {selectedLoyalty && (
+                    <p className="text-xs text-green-700 mt-2 font-semibold">Remise : -{loyaltyDiscount.toLocaleString()} CDF sur cette course</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Commander pour quelqu'un d'autre */}
             <div className="px-4">
               <BookForSomeoneElse
@@ -919,10 +996,13 @@ export function EstimateScreen() {
             {/* ✅ TRADUIT */}
             <p className="text-xs text-muted-foreground">{t('price')}</p>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent">
+              <span className={`text-2xl font-bold bg-gradient-to-r from-secondary to-primary bg-clip-text text-transparent ${loyaltyDiscount > 0 ? 'line-through opacity-50 text-lg' : ''}`}>
                 {finalPrice.toLocaleString()}
               </span>
               <span className="text-sm font-medium text-muted-foreground">{t('cdf')}</span>
+              {loyaltyDiscount > 0 && (
+                <span className="text-2xl font-bold text-green-600 ml-2">{priceAfterLoyalty.toLocaleString()} {t('cdf')}</span>
+              )}
             </div>
             {!VEHICLE_PRICING[selectedVehicle as VehicleCategory]?.pricing?.course_distance?.available && rideZone.zone !== 'A' && (
               <p className={`text-[11px] font-medium mt-0.5 ${
@@ -936,6 +1016,11 @@ export function EstimateScreen() {
             {appliedPromo && (
               <p className="text-xs text-secondary font-medium">
                 Promo -{(basePrice - finalPrice).toLocaleString()} {t('cdf')}
+              </p>
+            )}
+            {loyaltyDiscount > 0 && (
+              <p className="text-xs text-amber-600 font-medium">
+                Fidélité -{loyaltyDiscount.toLocaleString()} {t('cdf')} ({selectedLoyalty.label})
               </p>
             )}
           </div>

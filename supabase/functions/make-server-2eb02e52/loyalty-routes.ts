@@ -205,16 +205,19 @@ app.post("/redeem", async (c) => {
     // Si free, vérifier la catégorie demandée correspond au palier
     let cap = 0;
     let label = "";
+    let discountRate: number | null = null;
     if (freeTier) {
       if (!category) return c.json({ success: false, error: "Catégorie requise pour une course gratuite" }, 400);
       const tier = FREE_TIERS[category];
       if (!tier || tier.points !== points) return c.json({ success: false, error: "Palier incompatible avec la catégorie" }, 400);
       cap = tier.cap;
       label = tier.label;
+      discountRate = null;
     } else {
       const d = DISCOUNT_TIERS.find(t => t.points === points)!;
       cap = d.cap;
       label = d.label;
+      discountRate = d.discount;
     }
 
     // Débiter
@@ -236,7 +239,7 @@ app.post("/redeem", async (c) => {
     // Générer un code de réduction à usage unique (pour le prochain ride)
     const redeemCode = `SMART-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
     await kvSet(`loyalty_redeem:${redeemCode}`, {
-      passengerId, points, category: category || null, cap, label, discount: discount || null,
+      passengerId, points, category: category || null, cap, label, discountRate,
       createdAt: new Date().toISOString(),
       used: false,
     });
@@ -257,12 +260,12 @@ app.post("/apply", async (c) => {
     if (!redeem || redeem.used) return c.json({ success: false, error: "Code invalide ou déjà utilisé" }, 400);
 
     let discountAmount = 0;
-    if (redeem.discount) {
-      // Remise -15% / -30%
+    if (redeem.discountRate) {
+      discountAmount = Math.min(Math.round(ridePrice * redeem.discountRate), redeem.cap);
+    } else if (redeem.points && DISCOUNT_TIERS.some(t => t.points === redeem.points)) {
       const tier = DISCOUNT_TIERS.find(t => t.points === redeem.points);
       if (tier) discountAmount = Math.min(Math.round(ridePrice * tier.discount), tier.cap);
     } else {
-      // Gratuite plafonnée
       discountAmount = Math.min(ridePrice, redeem.cap);
     }
 

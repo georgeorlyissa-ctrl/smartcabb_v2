@@ -393,6 +393,28 @@ app.post("/create", async (c) => {
     }
 
     const rideId = crypto.randomUUID();
+
+    // ─── Fidélité : appliquer remise si code fourni ─────────────────────
+    let loyaltyDiscount = 0;
+    let loyaltyLabel: string | null = null;
+    const loyaltyRedeemCode = rideData.loyaltyRedeemCode || rideData.loyaltyCode || null;
+    if (loyaltyRedeemCode) {
+      const redeem = await kvGet(`loyalty_redeem:${loyaltyRedeemCode}`);
+      if (!redeem || redeem.used || redeem.passengerId !== passengerIdForBlock) {
+        return c.json({ success: false, error: "Code fidélité invalide ou déjà utilisé" }, 400);
+      }
+      const originalPrice = Number(rideData.estimatedPrice) || 0;
+      if (redeem.discountRate) {
+        loyaltyDiscount = Math.min(Math.round(originalPrice * redeem.discountRate), redeem.cap);
+      } else {
+        loyaltyDiscount = Math.min(originalPrice, redeem.cap);
+      }
+      loyaltyLabel = redeem.label;
+      redeem.used = true;
+      redeem.usedAt = new Date().toISOString();
+      redeem.rideId = rideId;
+      await kvSet(`loyalty_redeem:${loyaltyRedeemCode}`, redeem);
+    }
     
     // 🔧 MAPPING : vehicleType → vehicleCategory pour compatibilité
     const vehicleCategory = rideData.vehicleCategory || rideData.vehicleType || rideData.vehicle_type;
@@ -408,7 +430,15 @@ app.post("/create", async (c) => {
       id: rideId,
       status: 'searching',
       vehicleCategory, // ✅ Champ normalisé pour le matching
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      ...(loyaltyDiscount > 0 ? {
+        originalPrice: rideData.estimatedPrice,
+        estimatedPrice: Math.max(0, Number(rideData.estimatedPrice) - loyaltyDiscount),
+        loyaltyDiscount,
+        loyaltyLabel,
+        paidWithPoints: true,
+        loyaltyRedeemCode,
+      } : {}),
     };
     
     await kv.set(`ride:${rideId}`, ride);
