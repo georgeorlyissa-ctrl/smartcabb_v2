@@ -475,6 +475,30 @@ export function ProfileScreen() {
           </button>
         </motion.div>
 
+        {/* Smart Rewards */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.07 }}
+        >
+          <button onClick={() => setCurrentScreen('loyalty')} className="w-full">
+            <Card className="p-4 md:p-5 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 hover:shadow-lg transition-all cursor-pointer">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow">
+                    <Gift className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-900">Smart Rewards</p>
+                    <p className="text-xs text-gray-600">Mes points et récompenses</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </Card>
+          </button>
+        </motion.div>
+
         {/* Informations personnelles */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -1,6 +1,7 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification } from "./firebase-admin.ts";
+import { creditLoyaltyForRide } from "./loyalty-routes.ts";
 
 const app = new Hono();
 
@@ -1435,6 +1436,14 @@ app.post("/complete", async (c) => {
         price:         ride.totalPrice || ride.estimatedPrice || 0,
         category:      ride.vehicleCategory || ride.vehicleType || 'unknown',
       });
+    }
+
+    // ─── Crédit fidélité ────────────────────────────────────────────────
+    if (!alreadyCompleted && actualCost) {
+      try {
+        const res = await creditLoyaltyForRide(ride, actualCost);
+        console.log(`🎁 Loyalty crédité: ${res.points} pts pour ${ride.passengerId}, solde ${res.balance}`);
+      } catch (e) { console.error("⚠️ Loyalty credit error:", e); }
     }
 
     console.log(`✅ Course ${rideId} terminée (alreadyCompleted=${alreadyCompleted})`);

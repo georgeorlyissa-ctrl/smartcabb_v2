@@ -31,6 +31,7 @@ import { PaymentSettingsScreen } from '../components/passenger/PaymentSettingsSc
 import { SupportScreen } from '../components/passenger/SupportScreen';
 import { MapScreenSimple } from '../components/passenger/MapScreenSimple';
 import { EstimateScreen } from '../components/passenger/EstimateScreen';
+import { LoyaltyScreen } from '../components/passenger/LoyaltyScreen';
 import { RideScreen } from '../components/passenger/RideScreen';
 import { DriverFoundScreen } from '../components/passenger/DriverFoundScreen';
 import { LiveTrackingMap } from '../components/passenger/LiveTrackingMap';
@@ -267,6 +268,12 @@ function PassengerAppContent() {
         return (
           <ErrorBoundary>
             <SupportScreen />
+          </ErrorBoundary>
+        );
+      case 'loyalty':
+        return (
+          <ErrorBoundary>
+            <LoyaltyScreen />
           </ErrorBoundary>
         );
       default:

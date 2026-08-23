@@ -27,6 +27,7 @@ import contactRoutes from "./contact-routes.ts";
 import appVersionRoutes from "./app-version-routes.ts";
 import otpRoutes from "./otp-routes.ts";
 import smsRoutes from "./sms-routes.ts";
+import loyaltyRoutes from "./loyalty-routes.ts";
 
 const app = new Hono();
 
@@ -111,6 +112,8 @@ app.route("/make-server-2eb02e52/app", appVersionRoutes);
 app.route("/make-server-2eb02e52/otp", otpRoutes);
 // ✅ Route SMS (envoi, config, solde)
 app.route("/make-server-2eb02e52/sms", smsRoutes);
+// ✅ Route fidélité
+app.route("/make-server-2eb02e52/loyalty", loyaltyRoutes);
 
 // Route 404
 app.notFound((c) => {
