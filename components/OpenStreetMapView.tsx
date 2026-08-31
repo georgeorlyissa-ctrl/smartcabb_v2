@@ -29,60 +29,29 @@ export function OpenStreetMapView({
 }: OpenStreetMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const [loadError, setLoadError] = useState(false);
 
+  // Init carte une seule fois
   useEffect(() => {
     let cancelled = false;
-
     const init = async () => {
       try {
         if (cancelled || !containerRef.current || mapRef.current) return;
-        const Leaflet: any = L;
+        const Leaflet: any = L as any;
         if (!Leaflet) return;
-
         const initialCenter = center || markers[0] || { lat: -4.3276, lng: 15.3136 };
         const map = Leaflet.map(containerRef.current, {
           zoomControl: false,
           attributionControl: false,
         }).setView([initialCenter.lat, initialCenter.lng], zoom);
-
         Leaflet.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '© OpenStreetMap',
         }).addTo(map);
-
-        const allPoints: Location[] = [];
-        if (center) allPoints.push(center);
-        markers.forEach(m => allPoints.push(m));
-
-        // Marqueurs : premier = vert (pickup), autres = bleus
-        allPoints.forEach((p, idx) => {
-          const isPickup = idx === 0 && center && p.lat === center.lat && p.lng === center.lng;
-          const html = isPickup
-            ? '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>'
-            : '<div style="width:28px;height:28px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px">🚗</div>';
-          const icon = Leaflet.divIcon({
-            html,
-            className: '',
-            iconSize: isPickup ? [18, 18] : [28, 28],
-            iconAnchor: isPickup ? [9, 9] : [14, 14],
-          });
-          Leaflet.marker([p.lat, p.lng], { icon }).addTo(map);
-        });
-
-        if (allPoints.length > 1) {
-          try {
-            const bounds = Leaflet.latLngBounds(allPoints.map(p => [p.lat, p.lng] as [number, number]));
-            map.fitBounds(bounds.pad(0.35));
-          } catch {}
-        }
-
         if (onMapClick) {
-          map.on('click', (e: any) => {
-            if (e.latlng) onMapClick(e.latlng.lat, e.latlng.lng);
-          });
+          map.on('click', (e: any) => { if (e.latlng) onMapClick(e.latlng.lat, e.latlng.lng); });
         }
-
         mapRef.current = map;
         setTimeout(() => { try { map.invalidateSize(); } catch {} }, 200);
       } catch (e) {
@@ -90,20 +59,44 @@ export function OpenStreetMapView({
         if (!cancelled) setLoadError(true);
       }
     };
-
     init().catch((e) => {
       console.warn('⚠️ Leaflet init failed', e);
       if (!cancelled) setLoadError(true);
     });
-
     return () => {
       cancelled = true;
-      if (mapRef.current) {
-        try { mapRef.current.remove(); } catch {}
-        mapRef.current = null;
-      }
+      if (mapRef.current) { try { mapRef.current.remove(); } catch {} mapRef.current = null; }
     };
-  }, [center?.lat, center?.lng, JSON.stringify(markers), zoom]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [center?.lat, center?.lng, zoom]);
+
+  // Marqueurs séparés — pas de recréation de carte
+  useEffect(() => {
+    const map = mapRef.current;
+    const Leaflet: any = (L as any);
+    if (!map || !Leaflet || loadError) return;
+    // Nettoyer anciens
+    markersRef.current.forEach((m: any) => { try { m.remove(); } catch {} });
+    markersRef.current = [];
+    const allPoints: Location[] = [];
+    if (center) allPoints.push(center);
+    markers.forEach(m => allPoints.push(m));
+    allPoints.forEach((p, idx) => {
+      const isPickup = idx === 0 && center && p.lat === center.lat && p.lng === center.lng;
+      const html = isPickup
+        ? '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>'
+        : '<div style="width:28px;height:28px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px">🚗</div>';
+      const icon = Leaflet.divIcon({ html, className: '', iconSize: isPickup ? [18, 18] : [28, 28], iconAnchor: isPickup ? [9, 9] : [14, 14] });
+      const m = Leaflet.marker([p.lat, p.lng], { icon }).addTo(map);
+      markersRef.current.push(m);
+    });
+    if (allPoints.length > 1) {
+      try {
+        const bounds = Leaflet.latLngBounds(allPoints.map(p => [p.lat, p.lng] as [number, number]));
+        map.fitBounds(bounds.pad(0.35));
+      } catch {}
+    }
+  }, [JSON.stringify(markers), center?.lat, center?.lng, loadError]);
 
   if (loadError) {
     return (
