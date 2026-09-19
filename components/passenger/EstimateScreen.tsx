@@ -223,7 +223,7 @@ export function EstimateScreen() {
       hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_business.pricing.location_jour.usd),
       rateText: `${VEHICLE_PRICING.smart_business.pricing.location_jour.usd}$/jour`,
       rateTextNight: null,
-      images: [businessVehicle1, businessVehicle2, businessVehicle3, businessVehicle4, businessVehicle5, businessVehicle6]
+      images: [businessVehicle1, businessVehicle2]
     }
   ];
 
