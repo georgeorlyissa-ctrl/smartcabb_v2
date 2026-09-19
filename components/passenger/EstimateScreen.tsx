@@ -527,7 +527,7 @@ export function EstimateScreen() {
         whileTap={{ scale: 0.97 }}
         role="button"
         tabIndex={0}
-        className={`relative ${fullWidth ? 'col-span-2' : ''} w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left cursor-pointer ${
+        className={`relative ${fullWidth ? 'col-span-2' : ''} w-full rounded-lg border transition-all duration-300 bg-white overflow-hidden text-left cursor-pointer ${
           isReservationOnly
             ? 'border-purple-200 hover:border-purple-400'
             : isSelected
@@ -550,7 +550,7 @@ export function EstimateScreen() {
           />
         )}
 
-        <div className="p-2 space-y-1">
+        <div className="p-1.5 space-y-1">
           <div>
             <h3 className={`text-xs font-bold leading-tight ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
               {vehicle.name}
@@ -656,7 +656,7 @@ export function EstimateScreen() {
                 if (isBooking) return;
                 handleBookRide();
               }}
-              className={`w-full h-10 rounded-lg font-bold text-sm flex items-center justify-center gap-1 transition-all ${
+              className={`w-full h-8 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all ${
                 isBooking
                   ? 'bg-gray-300 text-gray-500'
                   : 'bg-gradient-to-r from-secondary to-primary text-white shadow-md shadow-secondary/30'
@@ -859,22 +859,22 @@ export function EstimateScreen() {
 
             {/* Grille véhicules */}
             <div className="px-4">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-1.5">
                 {/* Carte principale SmartCabb Standard — pliable */}
                 <motion.button
                   key="standard-group"
                   onClick={() => setStandardExpanded(!standardExpanded)}
                   whileTap={{ scale: 0.97 }}
-                  className={`col-span-2 w-full rounded-xl border-2 transition-all duration-300 bg-white overflow-hidden text-left ${
+                  className={`col-span-2 w-full rounded-lg border transition-all duration-300 bg-white overflow-hidden text-left ${
                     isStandardSelected && standardExpanded
                       ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
                       : 'border-border hover:border-secondary/50 hover:shadow-md'
                   }`}
                 >
-                  <div className="p-3 flex items-center justify-between">
+                  <div className="p-2 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Car className="w-4 h-4 text-secondary" />
+                      <div className="w-7 h-7 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Car className="w-3.5 h-3.5 text-secondary" />
                       </div>
                       <div className="flex-1">
                         <h3 className="text-xs font-bold text-foreground">SmartCabb Standard</h3>

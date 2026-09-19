@@ -52,7 +52,7 @@ export function VehicleImageCarousel({
 
   if (images.length === 1) {
     return (
-      <div className="relative h-20 bg-gradient-to-br from-gray-50 to-white overflow-hidden rounded-t-xl">
+      <div className="relative h-16 bg-gradient-to-br from-gray-50 to-white overflow-hidden rounded-t-xl">
         <img src={images[0]} alt={alt} className="w-full h-full object-cover" loading="eager" />
         {isSelected && (
           <div className="absolute top-2 right-2 w-6 h-6 bg-secondary rounded-full flex items-center justify-center shadow-lg animate-scale-in">
@@ -65,7 +65,7 @@ export function VehicleImageCarousel({
 
   return (
     <div
-      className="relative h-20 bg-white overflow-hidden rounded-t-xl"
+      className="relative h-16 bg-white overflow-hidden rounded-t-xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
