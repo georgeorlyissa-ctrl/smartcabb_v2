@@ -857,9 +857,9 @@ export function EstimateScreen() {
               </motion.div>
             )}
 
-            {/* Grille véhicules */}
+            {/* Grille véhicules — VERTICAL pour test */}
             <div className="px-4">
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-1 gap-2">
                 {/* Carte principale SmartCabb Standard — pliable */}
                 <motion.button
                   key="standard-group"
