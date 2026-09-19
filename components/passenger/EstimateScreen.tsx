@@ -23,29 +23,27 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { classifyRideZone } from '../../lib/zones-data';
 
-// 🚗 CHEMINS DES IMAGES DE VÉHICULES
-const standardVehicle1 = '/vehicles/smartcabb_standard/Standard_1.png';
-const standardVehicle2 = '/vehicles/smartcabb_standard/Standard_2.png';
-const standardVehicle3 = '/vehicles/smartcabb_standard/Standard_3.png';
-const standardVehicle4 = '/vehicles/smartcabb_standard/Standard_4.png';
-const standardVehicle5 = '/vehicles/smartcabb_standard/Stadard_5.png';
-const standardVehicle6 = '/vehicles/smartcabb_standard/Standard_6.png';
+// 🚗 CHEMINS DES IMAGES DE VÉHICULES — new_vehicule du 26/08
+const standardVehicle1 = '/vehicles/smartcabb_standard/Standard_1.jpg';
+const standardVehicle2 = '/vehicles/smartcabb_standard/Standard_2.jpg';
+const standardVehicle3 = '/vehicles/smartcabb_standard/Standard_3.jpg';
+const standardVehicle4 = '/vehicles/smartcabb_standard/Standard_4.jpg';
+const standardVehicle5 = '/vehicles/smartcabb_standard/Standard_5.jpg';
+const standardVehicle6 = '/vehicles/smartcabb_standard/Standard_6.jpg';
 
-const confortVehicle1 = '/vehicles/smartcabb_confort/confort 1.png';
-const confortVehicle2 = '/vehicles/smartcabb_confort/Confort_2.png';
-const confortVehicle3 = '/vehicles/smartcabb_confort/Confort_3.png';
+const confortVehicle1 = '/vehicles/smartcabb_confort/Confort_1.jpg';
+const confortVehicle2 = '/vehicles/smartcabb_confort/Confort_2.jpg';
+const confortVehicle3 = '/vehicles/smartcabb_confort/Confort_3.jpg';
+const confortVehicle4 = '/vehicles/smartcabb_confort/Confort_4.jpg';
+const confortVehicle5 = '/vehicles/smartcabb_confort/Confort_5.jpg';
+const confortVehicle6 = '/vehicles/smartcabb_confort/Confort_6.jpg';
 
-const plusVehicle1 = '/vehicles/smartcabb_familiale/Familiale_1.png';
-const plusVehicle2 = '/vehicles/smartcabb_familiale/Familiale_2.png';
-const plusVehicle3 = '/vehicles/smartcabb_familiale/Familiale_3.png';
-const plusVehicle4 = '/vehicles/smartcabb_familiale/Familiale_4.png';
+const plusVehicle1 = '/vehicles/smartcabb_familiale/Familiale_1.jpg';
+const plusVehicle2 = '/vehicles/smartcabb_familiale/Familiale_2.jpg';
+const plusVehicle3 = '/vehicles/smartcabb_familiale/Familiale_3.jpg';
 
-const businessVehicle1 = '/vehicles/smartcabb_business/Bussiness_1.png';
-const businessVehicle2 = '/vehicles/smartcabb_business/Bussiness_2.png';
-const businessVehicle3 = '/vehicles/smartcabb_business/Bussiness_3.png';
-const businessVehicle4 = '/vehicles/smartcabb_business/Bussiness_4.png';
-const businessVehicle5 = '/vehicles/smartcabb_business/Bussiness_5.png';
-const businessVehicle6 = '/vehicles/smartcabb_business/Business_6.png';
+const businessVehicle1 = '/vehicles/smartcabb_business/Business_1.jpg';
+const businessVehicle2 = '/vehicles/smartcabb_business/Business_2.jpg';
 
 export function EstimateScreen() {
   const { t, language } = useTranslation();
@@ -197,7 +195,7 @@ export function EstimateScreen() {
       hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_confort.pricing.course_heure.jour.usd),
       rateText: `${VEHICLE_PRICING.smart_confort.pricing.course_heure.jour.usd}$/h`,
       rateTextNight: `${VEHICLE_PRICING.smart_confort.pricing.course_heure.nuit.usd}$/h`,
-      images: [confortVehicle1, confortVehicle2, confortVehicle3]
+      images: [confortVehicle1, confortVehicle2, confortVehicle3, confortVehicle4, confortVehicle5, confortVehicle6]
     },
     {
       id: 'smart_plus' as VehicleCategory,
@@ -211,7 +209,7 @@ export function EstimateScreen() {
       hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_plus.pricing.course_heure.jour.usd),
       rateText: `${VEHICLE_PRICING.smart_plus.pricing.course_heure.jour.usd}$/h`,
       rateTextNight: `${VEHICLE_PRICING.smart_plus.pricing.course_heure.nuit.usd}$/h`,
-      images: [plusVehicle1, plusVehicle2, plusVehicle3, plusVehicle4]
+      images: [plusVehicle1, plusVehicle2, plusVehicle3]
     },
     {
       id: 'smart_business' as VehicleCategory,
@@ -552,7 +550,7 @@ export function EstimateScreen() {
           />
         )}
 
-        <div className="p-2.5 space-y-1.5">
+        <div className="p-2 space-y-1">
           <div>
             <h3 className={`text-xs font-bold leading-tight ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
               {vehicle.name}
@@ -861,7 +859,7 @@ export function EstimateScreen() {
 
             {/* Grille véhicules */}
             <div className="px-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {/* Carte principale SmartCabb Standard — pliable */}
                 <motion.button
                   key="standard-group"

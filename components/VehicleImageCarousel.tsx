@@ -55,7 +55,7 @@ export function VehicleImageCarousel({
   // Si une seule image, affichage simple sans carousel
   if (images.length === 1) {
     return (
-      <div className="relative h-24 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+      <div className="relative h-20 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
         <img 
           src={images[0]} 
           alt={alt}
@@ -74,7 +74,7 @@ export function VehicleImageCarousel({
 
   return (
     <div
-      className="relative h-24 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden"
+      className="relative h-20 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
