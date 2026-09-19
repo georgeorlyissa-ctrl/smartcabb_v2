@@ -51,10 +51,12 @@ export function ServicesPage() {
       gradientFrom: 'from-cyan-500',
       gradientTo: 'to-blue-500',
       images: [
-        '/vehicles/smartcabb_standard/Standard_2.png',
-        '/vehicles/smartcabb_standard/Standard_3.png',
-        '/vehicles/smartcabb_standard/Stadard_5.png',
-        '/vehicles/smartcabb_standard/Standard_6.png',
+        '/vehicles/smartcabb_standard/Standard_1.jpg',
+        '/vehicles/smartcabb_standard/Standard_2.jpg',
+        '/vehicles/smartcabb_standard/Standard_3.jpg',
+        '/vehicles/smartcabb_standard/Standard_4.jpg',
+        '/vehicles/smartcabb_standard/Standard_5.jpg',
+        '/vehicles/smartcabb_standard/Standard_6.jpg',
       ],
       vehicules: 'Toyota IST, Suzuki Swift, Toyota Vitz, Toyota Blade, Toyota Ractis, Toyota Runx',
       featuresFR: [
@@ -86,9 +88,12 @@ export function ServicesPage() {
       gradientFrom: 'from-blue-500',
       gradientTo: 'to-indigo-500',
       images: [
-        '/vehicles/smartcabb_confort/confort 1.png',
-        '/vehicles/smartcabb_confort/Confort_2.png',
-        '/vehicles/smartcabb_confort/Confort_3.png',
+        '/vehicles/smartcabb_confort/Confort_1.jpg',
+        '/vehicles/smartcabb_confort/Confort_2.jpg',
+        '/vehicles/smartcabb_confort/Confort_3.jpg',
+        '/vehicles/smartcabb_confort/Confort_4.jpg',
+        '/vehicles/smartcabb_confort/Confort_5.jpg',
+        '/vehicles/smartcabb_confort/Confort_6.jpg',
       ],
       vehicules: 'Toyota Mark, Toyota Crown, Mercedes C-Class, Harrier, Toyota Vanguard, Nissan Juke',
       featuresFR: [
@@ -120,12 +125,8 @@ export function ServicesPage() {
       gradientFrom: 'from-orange-500',
       gradientTo: 'to-red-500',
       images: [
-        '/vehicles/smartcabb_business/Bussiness_1.png',
-        '/vehicles/smartcabb_business/Bussiness_2.png',
-        '/vehicles/smartcabb_business/Bussiness_3.jpg',
-        '/vehicles/smartcabb_business/Bussiness_4.png',
-        '/vehicles/smartcabb_business/Bussiness_5.jpg',
-        '/vehicles/smartcabb_business/Business_6.png',
+        '/vehicles/smartcabb_business/Business_1.jpg',
+        '/vehicles/smartcabb_business/Business_2.jpg',
       ],
       vehicules: 'Prado, Fortuner',
       featuresFR: [
@@ -157,9 +158,9 @@ export function ServicesPage() {
       gradientFrom: 'from-emerald-500',
       gradientTo: 'to-green-600',
       images: [
-        '/vehicles/smartcabb_familiale/Familiale_1.png',
-        '/vehicles/smartcabb_familiale/Familiale_2.png',
-        '/vehicles/smartcabb_familiale/Familiale_3.png',
+        '/vehicles/smartcabb_familiale/Familiale_1.jpg',
+        '/vehicles/smartcabb_familiale/Familiale_2.jpg',
+        '/vehicles/smartcabb_familiale/Familiale_3.jpg',
       ],
       vehicules: 'Noah, Alphard, Voxy',
       featuresFR: [
