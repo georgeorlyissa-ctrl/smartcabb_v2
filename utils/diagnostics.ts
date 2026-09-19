@@ -93,11 +93,13 @@ export function setupErrorInterceptors() {
       filename: event.filename,
       lineno: event.lineno,
       colno: event.colno,
-      error: event.error
+      error: event.error,
+      stack: event.error?.stack
     });
     
-    // Afficher une popup d'erreur
-    const errorMessage = `${event.message}\n\nFichier: ${event.filename}:${event.lineno}:${event.colno}`;
+    // Afficher une popup d'erreur avec stack si dispo (utile iOS)
+    const stack = event.error?.stack ? `\n\nStack:\n${String(event.error.stack).slice(0, 1200)}` : '';
+    const errorMessage = `${event.message}\n\nFichier: ${event.filename}:${event.lineno}:${event.colno}${stack}`;
     showErrorOverlay(errorMessage);
   });
   
@@ -112,12 +114,14 @@ export function setupErrorInterceptors() {
       return;
     }
 
+    const stack = (event.reason as any)?.stack ? `\n\nStack:\n${String((event.reason as any).stack).slice(0, 1200)}` : '';
     console.error('❌ PROMESSE NON GÉRÉE:', {
       reason: event.reason,
-      promise: event.promise
+      promise: event.promise,
+      stack: (event.reason as any)?.stack
     });
     
-    const errorMessage = `Promesse non gérée: ${event.reason}`;
+    const errorMessage = `Promesse non gérée: ${event.reason}${stack}`;
     showErrorOverlay(errorMessage);
   });
   

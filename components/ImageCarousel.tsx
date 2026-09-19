@@ -18,7 +18,8 @@ export function ImageCarousel({ images, serviceName }: ImageCarouselProps) {
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
-    setCurrentIndex(emblaApi.selectedScrollSnap());
+    const idx = emblaApi.selectedScrollSnap();
+    setCurrentIndex(prev => prev === idx ? prev : idx);
   }, [emblaApi]);
 
   useEffect(() => {
