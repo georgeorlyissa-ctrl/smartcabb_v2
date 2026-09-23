@@ -1,5 +1,5 @@
 /**
- * 🚀 SERVICE WORKER v517.36 - OFFLINE + DYNAMIC MODULES
+ * 🚀 SERVICE WORKER v517.37 - OFFLINE + DYNAMIC MODULES
  * 
  * STRATÉGIE OFFLINE-FIRST :
  * 1. Cache précaching (index.html + assets critiques)
@@ -9,12 +9,12 @@
  * 5. Page offline personnalisée
  */
 
-const CACHE_VERSION = 'smartcabb-v517-36-modules';
-const STATIC_CACHE = 'smartcabb-static-v517-36';
-const RUNTIME_CACHE = 'smartcabb-runtime-v517-36';
-const DYNAMIC_MODULES_CACHE = 'smartcabb-modules-v517-36';
+const CACHE_VERSION = 'smartcabb-v517-37-modules';
+const STATIC_CACHE = 'smartcabb-static-v517-37';
+const RUNTIME_CACHE = 'smartcabb-runtime-v517-37';
+const DYNAMIC_MODULES_CACHE = 'smartcabb-modules-v517-37';
 
-console.log('🚀 Service Worker v517.36 - OFFLINE + DYNAMIC MODULES');
+console.log('🚀 Service Worker v517.37 - OFFLINE + DYNAMIC MODULES');
 
 // Assets critiques à précacher
 const PRECACHE_URLS = [
@@ -25,7 +25,7 @@ const PRECACHE_URLS = [
 
 // Installation: Précacher les assets critiques
 self.addEventListener('install', (event) => {
-  console.log('✅ SW v517.36: Installing...');
+  console.log('✅ SW v517.37: Installing...');
   
   event.waitUntil(
     (async () => {
@@ -47,7 +47,7 @@ self.addEventListener('install', (event) => {
           })
         );
         
-        console.log('✅ SW v517.36: Précaching terminé');
+        console.log('✅ SW v517.37: Précaching terminé');
       } catch (error) {
         console.error('❌ Erreur installation SW:', error);
       }
@@ -60,7 +60,7 @@ self.addEventListener('install', (event) => {
 
 // Activation: Nettoyer les vieux caches
 self.addEventListener('activate', (event) => {
-  console.log('✅ SW v517.36: Activating...');
+  console.log('✅ SW v517.37: Activating...');
   
   event.waitUntil(
     (async () => {
@@ -82,7 +82,7 @@ self.addEventListener('activate', (event) => {
       
       // Prendre contrôle immédiatement
       await clients.claim();
-      console.log('✅ SW v517.36: Active and controlling all clients');
+      console.log('✅ SW v517.37: Active and controlling all clients');
     })()
   );
 });
@@ -143,42 +143,33 @@ function isAsset(url) {
 }
 
 // Gérer les requêtes de navigation (HTML)
+// ✅ Network-first : le HTML frais référence toujours le bon bundle JS.
+// Sinon l'iPhone reste bloqué sur un vieux index-*.js en cache.
 async function handleNavigationRequest(request) {
   try {
-    // Essayer le cache d'abord (offline-first)
-    const cached = await caches.match(request);
-    if (cached) {
-      console.log('📦 Navigation depuis cache:', request.url);
-      
-      // Mettre à jour en arrière-plan (stale-while-revalidate)
-      fetch(request).then(response => {
-        if (response.ok) {
-          caches.open(CACHE_VERSION).then(cache => {
-            cache.put(request, response);
-          });
-        }
-      }).catch(() => {});
-      
-      return cached;
-    }
-    
-    // Sinon, essayer le réseau
+    // Réseau d'abord
     const response = await fetch(request);
-    
+
     if (response.ok) {
-      // Mettre en cache pour la prochaine fois
+      // Mettre en cache pour le mode hors ligne
       const cache = await caches.open(CACHE_VERSION);
       cache.put(request, response.clone());
     }
-    
+
     return response;
   } catch (error) {
     console.warn('⚠️ Navigation hors ligne:', request.url);
-    
-    // Fallback: retourner index.html du cache
-    const cached = await caches.match('/index.html');
+
+    // Fallback: cache
+    const cached = await caches.match(request);
     if (cached) {
       return cached;
+    }
+
+    // Fallback: retourner index.html du cache
+    const cachedIndex = await caches.match('/index.html');
+    if (cachedIndex) {
+      return cachedIndex;
     }
     
     // Dernière option: page offline minimale
@@ -376,4 +367,4 @@ self.addEventListener('message', (event) => {
   }
 });
 
-console.log('✅ SW v517.36: Ready and offline-capable');
+console.log('✅ SW v517.37: Ready and offline-capable');

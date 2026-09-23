@@ -129,6 +129,30 @@ export function setupErrorInterceptors() {
 }
 
 /**
+ * Reset complet : vide les caches SW, désinscrit le SW, vide le storage.
+ * Utilisé par le bouton "Nettoyer et redémarrer" de l'overlay d'erreur.
+ */
+if (typeof window !== 'undefined') {
+  (window as any).__smartcabbHardReset = async () => {
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch {}
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+    } catch {}
+    try { localStorage.clear(); } catch {}
+    try { sessionStorage.clear(); } catch {}
+    window.location.href = '/';
+  };
+}
+
+/**
  * Affiche une overlay d'erreur pour l'utilisateur
  */
 function showErrorOverlay(message: string) {
@@ -164,7 +188,7 @@ function showErrorOverlay(message: string) {
       <button onclick="window.location.reload()" style="background: white; color: #dc2626; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; cursor: pointer; font-size: 1rem; font-weight: bold;">
         🔄 Recharger la page
       </button>
-      <button onclick="localStorage.clear(); window.location.href='/'" style="background: #f59e0b; color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; cursor: pointer; font-size: 1rem; font-weight: bold; margin-left: 0.5rem;">
+      <button onclick="window.__smartcabbHardReset()" style="background: #f59e0b; color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; cursor: pointer; font-size: 1rem; font-weight: bold; margin-left: 0.5rem;">
         🧹 Nettoyer et redémarrer
       </button>
     </div>

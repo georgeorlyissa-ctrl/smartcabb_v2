@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight } from '../lib/icons';
 
@@ -17,7 +17,8 @@ export function VehicleImageCarousel({
   autoPlay = true,
   interval = 3200
 }: VehicleImageCarouselProps) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
+  const options = useMemo(() => ({ loop: true as const }), []);
+  const [emblaRef, emblaApi] = useEmblaCarousel(options);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 

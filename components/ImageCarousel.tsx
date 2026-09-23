@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { SmartCabbLogo } from './SmartCabbLogo';
 
@@ -8,7 +8,8 @@ interface ImageCarouselProps {
 }
 
 export function ImageCarousel({ images, serviceName }: ImageCarouselProps) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start' });
+  const options = useMemo(() => ({ loop: true as const, align: 'start' as const }), []);
+  const [emblaRef, emblaApi] = useEmblaCarousel(options);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
