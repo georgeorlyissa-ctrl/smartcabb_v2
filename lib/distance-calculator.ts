@@ -80,9 +80,82 @@ async function calculateGoogleRoute(
 }
 
 /**
- * 🚗 CALCUL COMPLET DE L'ITINÉRAIRE AVEC GOOGLE MAPS
- * ✅ VERSION ASYNC - Utilise les vraies routes avec trafic
- * Retourne distance et durée formatées
+ * 🛣️ CALCUL D'ITINÉRAIRE AVEC OSRM (OpenStreetMap, gratuit sans clé)
+ * Même principe que Yango/Uber : distance sur le vrai réseau routier.
+ * Utilisé quand Google Directions est indisponible (ex: facturation).
+ */
+async function calculateOSRMRoute(
+  from: Location,
+  to: Location
+): Promise<{ distance: number; duration: number }> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const url =
+      `https://router.project-osrm.org/route/v1/driving/` +
+      `${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`;
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`OSRM HTTP ${response.status}`);
+    const data = await response.json();
+    const route = data?.routes?.[0];
+    if (!route || typeof route.distance !== 'number' || route.distance <= 0) {
+      throw new Error('OSRM: aucun itinéraire');
+    }
+    const distanceKm = route.distance / 1000;
+    const durationMin = (route.duration || 0) / 60;
+
+    // Garde-fou : la distance routière doit être cohérente avec le vol d'oiseau
+    const straight = calculateDistanceHaversine(from.lat, from.lng, to.lat, to.lng);
+    if (distanceKm < straight * 0.9 || distanceKm > Math.max(straight * 4, straight + 30)) {
+      throw new Error('OSRM: distance incohérente');
+    }
+
+    console.log(`✅ OSRM: ${distanceKm.toFixed(1)} km, ${Math.round(durationMin)} min`);
+    return { distance: distanceKm, duration: durationMin };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * 📐 FACTEUR DE DÉTOUR URBAIN CALIBRÉ (style Yango/Uber)
+ * Le rapport route / vol d'oiseau dépend de la distance : les trajets
+ * courts suivent presque la ligne droite, les longs contournent.
+ * (L'ancien facteur fixe ×1,9 surestimait les courtes distances.)
+ */
+function urbanDetourFactor(straightKm: number): number {
+  if (straightKm < 2) return 1.35;
+  if (straightKm < 5) return 1.5;
+  if (straightKm < 15) return 1.65;
+  return 1.8;
+}
+
+/** Formate distance + durée comme le reste du module */
+function formatRoute(distanceKm: number, durationMin: number): { distanceText: string; durationText: string } {
+  let distanceText: string;
+  if (distanceKm < 1) {
+    distanceText = `${Math.round(distanceKm * 1000)} m`;
+  } else if (distanceKm < 10) {
+    distanceText = `${distanceKm.toFixed(1)} km`;
+  } else {
+    distanceText = `${Math.round(distanceKm)} km`;
+  }
+  let durationText: string;
+  if (durationMin < 60) {
+    durationText = `${durationMin} min`;
+  } else {
+    const hours = Math.floor(durationMin / 60);
+    const mins = Math.round(durationMin % 60);
+    durationText = mins === 0 ? `${hours}h` : `${hours}h${mins.toString().padStart(2, '0')}`;
+  }
+  return { distanceText, durationText };
+}
+/**
+ * 🚗 CALCUL COMPLET DE L'ITINÉRAIRE (style Yango/Uber)
+ * 1. Google Directions (vraies routes + trafic)
+ * 2. OSRM routier gratuit (vrai réseau OSM, sans clé)
+ * 3. Fallback vol d'oiseau × facteur calibré par distance
+ * ✅ VERSION ASYNC - Retourne distance et durée formatées
  */
 export async function calculateRoute(
   fromLat: number,
@@ -133,14 +206,37 @@ export async function calculateRoute(
     };
     
   } catch (error) {
-    console.warn('⚠️ Google Directions échoué, utilisation fallback intelligent:', error);
-    
-    // 🔙 FALLBACK INTELLIGENT : Distance à vol d'oiseau × facteur de détour urbain
+    console.warn('⚠️ Google Directions échoué, essai OSRM routier:', error);
+
+    try {
+      const osrmRoute = await calculateOSRMRoute(
+        { lat: fromLat, lng: fromLng },
+        { lat: toLat, lng: toLng }
+      );
+
+      // Durée : OSRM si cohérente, sinon vitesse réelle Kinshasa
+      let duration = osrmRoute.duration;
+      if (!duration || duration <= 0) {
+        duration = calculateDuration(osrmRoute.distance);
+      }
+
+      console.log(`✅ OSRM: ${osrmRoute.distance.toFixed(1)}km en ${Math.round(duration)}min (réseau routier)`);
+
+      return {
+        distance: osrmRoute.distance,
+        duration: Math.round(duration),
+        ...formatRoute(osrmRoute.distance, Math.round(duration)),
+      };
+    } catch (osrmError) {
+      console.warn('⚠️ OSRM échoué, utilisation fallback calibré:', osrmError);
+    }
+
+    // 🔙 FALLBACK : Distance à vol d'oiseau × facteur calibré par distance
     const distanceStraightLine = calculateDistanceHaversine(fromLat, fromLng, toLat, toLng);
-    
-    // 🎯 AMÉLIORATION : En ville, la distance réelle sur routes = 1.8-2.0x la distance à vol d'oiseau
-    // Exemple : 3 km à vol d'oiseau → 5.4-6.0 km réels (comme Google Maps qui montre 5.7 km)
-    const urbanDetourFactor = 1.9; // Facteur moyen pour Kinshasa
+
+    // 🎯 Facteur variable selon la distance (au lieu de l'ancien ×1,9 fixe
+    // qui surestimait les trajets courts)
+    const urbanDetourFactor = urbanDetourFactor(distanceStraightLine);
     const estimatedRealDistance = distanceStraightLine * urbanDetourFactor;
     
     // 🎯 Calculer la durée avec la vitesse réelle de Kinshasa (comme Google Maps)
