@@ -89,8 +89,7 @@ export function DriverRegistrationScreen() {
   const physicalDocuments = [
     'Permis de conduire',
     'Volet jaune ou carte rose',
-    'Attestation d\'assurance',
-    'Carte grise du véhicule'
+    'Attestation d\'assurance'
   ];
 
   // 🎨 Couleurs prédéfinies pour le véhicule
