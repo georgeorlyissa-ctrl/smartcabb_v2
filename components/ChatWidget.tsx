@@ -23,6 +23,7 @@ const QUICK_REPLIES: Record<string, { fr: QuickReply[]; en: QuickReply[] }> = {
       { label: 'Zones', value: 'Où êtes-vous disponible ?' },
       { label: 'Application', value: 'Comment télécharger l\'app ?' },
       { label: 'Paiement', value: 'Comment payer ?' },
+      { label: 'Fidélité', value: 'Points fidélité' },
       { label: 'Contact', value: 'Contact support' },
     ],
     en: [
@@ -31,6 +32,7 @@ const QUICK_REPLIES: Record<string, { fr: QuickReply[]; en: QuickReply[] }> = {
       { label: 'Areas', value: 'Where are you available?' },
       { label: 'App', value: 'How to download the app?' },
       { label: 'Payment', value: 'How to pay?' },
+      { label: 'Rewards', value: 'Loyalty points' },
       { label: 'Contact', value: 'Contact support' },
     ],
   },
@@ -190,7 +192,7 @@ The average wait time in Kinshasa is around 5 to 15 minutes, and can go up to 20
   },
 
   reclamation: {
-    keywords: ['réclamation', 'reclamation', 'plainte', 'complain', 'probleme', 'problem', 'problème', 'insatisfait', 'objet perdu', 'perdu', 'lost', 'found'],
+    keywords: ['réclamation', 'reclamation', 'plainte', 'complain', 'probleme', 'problem', 'problème', 'insatisfait', 'objet perdu', 'perdu', 'lost', 'found', 'oublié', 'oublie', 'oubli', 'retrouvé', 'retrouver'],
     fr: `Pour toute réclamation, écrivez-nous à admin@smartcabb.com ou appelez le +243 960 624 008.
 
 Si vous avez perdu un objet, contactez-nous rapidement en précisant la date et l'heure de votre course, nous nous chargeons de joindre le chauffeur. En général, votre demande sera traitée en 24 à 48 heures et vous recevrez une réponse par SMS ou par email.`,
@@ -219,8 +221,111 @@ Elle est entretenue et renouvelée régulièrement, et nous comptons des centain
 It's regularly maintained and renewed, and we have hundreds of partner drivers in Kinshasa, with capacity that scales with demand. For more details, feel free to call us at +243 960 624 008.`
   },
 
-  salutation: {
-    keywords: ['bonjour', 'salut', 'hello', 'hi', 'hey', 'bonsoir', 'bonne nuit', 'bon matin', 'good morning', 'good evening', 'comment tu vas', 'comment allez vous', 'comment ça va', 'ça va', 'how are you', 'comment vas tu', 'quoi de neuf', 'what\'s up', 'wesh', 'cc', 'salutations'],
+  fidelite: {
+    keywords: ['fidélité', 'fidelite', 'fidélisation', 'points', 'récompense', 'recompense', 'récompenses', 'gratuit', 'gratuite', 'reward', 'rewards', 'loyalty', 'smart rewards', 'cadeau'],
+    fr: `Avec Smart Rewards, chaque course terminée vous fait gagner des points : un dixième du prix payé, multiplié selon la catégorie, avec un bonus la nuit entre 21h et 6h. Votre première course rapporte +1000 points bonus.
+
+À 7500 points, vous débloquez une course Standard gratuite (plafonnée). D'autres paliers existent : -15% à 3000 pts, -30% à 6000 pts, puis des gratuites Confort, Plus et Business.
+
+Retrouvez votre solde dans Profil, rubrique Smart Rewards, et utilisez vos points au moment du paiement. Les points expirent après 12 mois d'inactivité.`,
+    en: `With Smart Rewards, every completed ride earns you points: one tenth of the fare, multiplied by category, with a night bonus between 9pm and 6am. Your first ride earns a +1000 point bonus.
+
+At 7,500 points, you unlock a free Standard ride (capped). Other tiers exist: -15% at 3,000 pts, -30% at 6,000 pts, then free Confort, Plus and Business rides.
+
+Find your balance in Profile, Smart Rewards section, and use your points at payment time. Points expire after 12 months of inactivity.`
+  },
+
+  compte: {
+    keywords: ['compte', 'créer un compte', 'creer un compte', 'mot de passe', 'password', 'oublié', 'oublie', 'code de vérification', 'verification', 'otp', 'connexion', 'connecter', 'login', 'inscription passager'],
+    fr: `Pour créer votre compte passager, ouvrez smartcabb.com, choisissez Passager et suivez l'inscription, avec un code de vérification envoyé sur votre téléphone. Mot de passe oublié ? Utilisez « Mot de passe oublié » sur l'écran de connexion, vous recevrez un lien par email. En cas de blocage, appelez le +243 960 624 008.`,
+    en: `To create your passenger account, open smartcabb.com, choose Passenger and follow the signup, with a verification code sent to your phone. Forgot your password? Use "Forgot password" on the login screen, you'll receive a link by email. If you're stuck, call +243 960 624 008.`
+  },
+
+  estimation: {
+    keywords: ['estimation', 'estimer', 'devis', 'combien coûte', 'combien coute', 'quote', 'estimate', 'prix d\'une course'],
+    fr: `Avant de commander, l'application affiche une estimation du prix en temps réel selon votre départ, votre destination et la catégorie choisie. Indiquez vos adresses sur smartcabb.com et comparez les catégories avant de confirmer, sans engagement.`,
+    en: `Before booking, the app shows a real-time price estimate based on your pickup, destination and chosen category. Enter your addresses on smartcabb.com and compare categories before confirming, with no commitment.`
+  },
+
+  suivi: {
+    keywords: ['suivi', 'suivre', 'où est', 'ou est', 'mon chauffeur', 'arrive', 'arrivée', 'tracking', 'track', 'localiser', 'position du chauffeur'],
+    fr: `Dès qu'un chauffeur accepte votre course, vous le suivez en temps réel sur la carte : sa position, son arrivée et le trajet. Vous pouvez aussi partager votre trajet avec un proche. Si le chauffeur tarde, appelez le +243 960 624 008.`,
+    en: `As soon as a driver accepts your ride, you can track them in real time on the map: their location, arrival and trip. You can also share your trip with someone you trust. If the driver is late, call +243 960 624 008.`
+  },
+
+  notation: {
+    keywords: ['note', 'noter', 'notation', 'étoiles', 'etoiles', 'évaluation', 'evaluation', 'avis', 'rating', 'rate', 'commentaire chauffeur'],
+    fr: `Après chaque course, notez votre chauffeur de 1 à 5 étoiles et laissez un commentaire rapide ou libre. Vos notes améliorent la qualité du service et comptent dans l'évaluation des chauffeurs.`,
+    en: `After each ride, rate your driver from 1 to 5 stars and leave a quick or free comment. Your ratings improve service quality and count toward driver evaluations.`
+  },
+
+  reservation_avancee: {
+    keywords: ['réserver à l\'avance', 'reserver à l\'avance', 'réservation à l\'avance', 'programmer', 'planifier', 'à l\'avance', 'schedule', 'scheduled', 'advance', 'later', 'plus tard'],
+    fr: `Vous pouvez programmer une course à l'avance depuis l'application : départ, destination, date et heure, et un chauffeur vous sera attribué. Idéal pour l'aéroport ou un rendez-vous. Pour une demande spéciale, appelez le +243 960 624 008.`,
+    en: `You can schedule a ride in advance from the app: pickup, destination, date and time, and a driver will be assigned to you. Ideal for the airport or an appointment. For special requests, call +243 960 624 008.`
+  },
+
+  commander_autre: {
+    keywords: ['pour quelqu\'un', 'quelqu\'un d\'autre', 'autre personne', 'commander pour', 'someone else', 'another person', 'for someone'],
+    fr: `Vous pouvez commander une course pour quelqu'un d'autre depuis l'application : indiquez son nom et son numéro au moment de la réservation, et il sera pris en charge comme vous.`,
+    en: `You can book a ride for someone else from the app: enter their name and number when booking, and they'll be picked up just like you.`
+  },
+
+  portefeuille: {
+    keywords: ['portefeuille', 'wallet', 'solde', 'balance', 'recharger', 'recharge', 'crédit', 'credit', 'argent'],
+    fr: `Retrouvez votre solde, vos recharges et votre historique dans Profil, rubrique Portefeuille. En cas d'écart sur votre solde, appelez le +243 960 624 008 ou écrivez à admin@smartcabb.com.`,
+    en: `Find your balance, top-ups and history in Profile, Wallet section. If anything looks off, call +243 960 624 008 or write to admin@smartcabb.com.`
+  },
+
+  promos: {
+    keywords: ['promo', 'promotion', 'code promo', 'coupon', 'réduction', 'reduction', 'remise', 'discount', 'offre', 'offres', 'deal'],
+    fr: `Les codes promo se saisissent au moment de la commande, avant de confirmer : la remise s'applique immédiatement au prix estimé. Cumulez aussi des points Smart Rewards à chaque course. Les offres en cours sont annoncées dans l'application.`,
+    en: `Promo codes are entered when ordering, before confirming: the discount applies immediately to the estimated price. Also earn Smart Rewards points on every ride. Current offers are announced in the app.`
+  },
+
+  aeroport: {
+    keywords: ['aéroport', 'aeroport', 'airport', 'ndjili', 'avion', 'vol', 'flight'],
+    fr: `Nous desservons l'aéroport international de N'djili depuis toute la ville de Kinshasa, 24h/24. Programmez votre transfert à l'avance dans l'application pour être tranquille, ou appelez le +243 960 624 008 pour une prise en charge immédiate.`,
+    en: `We serve N'djili international airport from all over Kinshasa, 24/7. Schedule your transfer in advance in the app for peace of mind, or call +243 960 624 008 for an immediate pickup.`
+  },
+
+  entreprise: {
+    keywords: ['entreprise', 'société', 'societe', 'professionnel', 'business', 'collaborateur', 'employé', 'corporate', 'company'],
+    fr: `Pour les besoins professionnels (déplacements d'équipe, collaborateurs, événements), contactez-nous au +243 960 624 008 ou à admin@smartcabb.com : nous étudions chaque demande et proposons une solution adaptée.`,
+    en: `For business needs (team travel, staff, events), contact us at +243 960 624 008 or admin@smartcabb.com: we review each request and offer a tailored solution.`
+  },
+
+  whatsapp: {
+    keywords: ['whatsapp', 'message whatsapp'],
+    fr: `Vous pouvez aussi nous écrire sur WhatsApp au +243 960 624 008, ou nous appeler au même numéro. Email : admin@smartcabb.com.`,
+    en: `You can also message us on WhatsApp at +243 960 624 008, or call us on the same number. Email: admin@smartcabb.com.`
+  },
+
+  compte_bloque: {
+    keywords: ['bloqué', 'bloque', 'blocage', 'compte bloqué', 'suspendu', 'suspension', 'banni', 'annulations répétées'],
+    fr: `Un compte peut être temporairement bloqué après 3 annulations successives, pour protéger les chauffeurs. Le blocage dure 24 heures puis se lève automatiquement. Pour contester ou être débloqué plus vite, appelez le +243 960 624 008. Évitez de commander si vous n'êtes pas sûr de voyager.`,
+    en: `An account can be temporarily blocked after 3 consecutive cancellations, to protect drivers. The block lasts 24 hours, then lifts automatically. To dispute it or be unblocked sooner, call +243 960 624 008. Avoid ordering if you're not sure you'll travel.`
+  },
+
+  langues: {
+    keywords: ['langue', 'language', 'français', 'francais', 'anglais', 'english', 'lingala', 'swahili'],
+    fr: `L'application est disponible en français et en anglais : changez de langue depuis les paramètres. Pour toute autre langue, contactez-nous au +243 960 624 008.`,
+    en: `The app is available in French and English: switch language from the settings. For anything else, contact us at +243 960 624 008.`
+  },
+
+  enfants: {
+    keywords: ['enfant', 'enfants', 'bébé', 'bebe', 'siège enfant', 'kids', 'child', 'children', 'baby'],
+    fr: `Les enfants sont les bienvenus à bord. Nous n'avons pas de sièges enfants à bord par défaut : pour un bébé ou un long trajet, appelez le +243 960 624 008 afin qu'on organise un véhicule adapté.`,
+    en: `Children are welcome on board. We don't carry child seats by default: for a baby or a long trip, call +243 960 624 008 so we can arrange a suitable vehicle.`
+  },
+
+  mobilite: {
+    keywords: ['handicap', 'fauteuil', 'mobilité réduite', 'pmr', 'disabled', 'wheelchair', 'mobilité'],
+    fr: `Pour un passager à mobilité réduite ou en fauteuil, appelez le +243 960 624 008 avant de commander : nous vous attribuerons un véhicule adapté, de préférence un SmartCabb Plus spacieux.`,
+    en: `For a passenger with reduced mobility or in a wheelchair, call +243 960 624 008 before booking: we'll assign a suitable vehicle, preferably a spacious SmartCabb Plus.`
+  },
+
+  salutation: {    keywords: ['bonjour', 'salut', 'hello', 'hi', 'hey', 'bonsoir', 'bonne nuit', 'bon matin', 'good morning', 'good evening', 'comment tu vas', 'comment allez vous', 'comment ça va', 'ça va', 'how are you', 'comment vas tu', 'quoi de neuf', 'what\'s up', 'wesh', 'cc', 'salutations'],
     fr: `Bonjour, je vais très bien, merci ! Et vous ?
 
 Je suis l'assistant SmartCabb et je peux vous renseigner sur nos tarifs, sur la manière de devenir chauffeur partenaire, sur nos zones de service, sur l'application ou sur les moyens de paiement. Comment puis-je vous aider ?`,
