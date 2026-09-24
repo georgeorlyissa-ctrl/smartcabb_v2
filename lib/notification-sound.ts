@@ -460,5 +460,11 @@ export function playPassengerArrivedSound(): void {
   try { navigator.vibrate([180, 90, 300]); } catch {}
 }
 
+/** 🗣️ Annonce vocale d'arrivée — sonnerie + voix "Votre conducteur est arrivé" */
+export function announcePassengerArrived(): void {
+  playPassengerArrivedSound();
+  void speakMessage('Votre conducteur est arrivé.');
+}
+
 // Alias rétro-compatibilité
 export { playRideNotification as playRideNotificationSound };

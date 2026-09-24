@@ -3,7 +3,7 @@ import { useAppState } from './useAppState';
 import { calculateDistanceHaversine } from '../lib/distance-calculator';
 import {
   playPassengerApproachSound,
-  playPassengerArrivedSound,
+  announcePassengerArrived,
 } from '../lib/notification-sound';
 import { toast } from '../lib/toast';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
@@ -56,8 +56,12 @@ export function usePassengerArrivalAlerts() {
     if (!rideId || !status || arrivedRef.current) return;
     if (status === 'arrived') {
       arrivedRef.current = true;
-      playPassengerArrivedSound();
-      console.log('🔔 [Alerts] Statut "arrived" → son arrivée');
+      announcePassengerArrived();
+      toast.success('Votre conducteur est arrivé', {
+        description: 'Il vous attend au point de prise en charge.',
+        duration: 6000,
+      });
+      console.log('🔔 [Alerts] Statut "arrived" → voix + son arrivée');
     }
   }, [rideId, status]);
 
@@ -80,8 +84,12 @@ export function usePassengerArrivalAlerts() {
 
         if (!arrivedRef.current && distKm < ARRIVED_KM) {
           arrivedRef.current = true;
-          playPassengerArrivedSound();
-          console.log(`🚗 [Alerts] Chauffeur < ${ARRIVED_KM} km (${distKm.toFixed(2)}) → son arrivée`);
+          announcePassengerArrived();
+          toast.success('Votre conducteur est arrivé', {
+            description: 'Il vous attend au point de prise en charge.',
+            duration: 6000,
+          });
+          console.log(`🚗 [Alerts] Chauffeur < ${ARRIVED_KM} km (${distKm.toFixed(2)}) → voix + son arrivée`);
           return;
         }
         if (!approachedRef.current && distKm < APPROACH_KM) {
