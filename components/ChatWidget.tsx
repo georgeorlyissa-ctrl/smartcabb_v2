@@ -53,6 +53,10 @@ const QUICK_REPLIES: Record<string, { fr: QuickReply[]; en: QuickReply[] }> = {
 };
 
 const SMARTCABB_KNOWLEDGE = {
+// ── Base de connaissances ÉVOLUTIVE ─────────────────────────────
+// Pour enrichir le bot : ajouter une entrée { keywords, fr, en }.
+// Toute question sans réponse précise retombe sur le support réel
+// (SUPPORT_PHONE / SUPPORT_EMAIL) dans le fallback de handleSend.
   prix: {
     keywords: ['prix', 'tarif', 'coût', 'combien', 'coute', 'payer', 'montant', 'price', 'cost', 'fare', 'facturation', 'minimum', 'smartcabb standard', 'smartcabb confort', 'smartcabb plus', 'smartcabb business', 'course standard', 'course confort', 'course plus', 'course business'],
     fr: `Nos tarifs sont calculés selon la catégorie de véhicule, à l'heure ou à la journée.
@@ -252,6 +256,10 @@ See you soon on smartcabb.com!`
   }
 };
 
+// ── Contact du service client RÉEL (fallback quand aucune info précise) ──
+const SUPPORT_PHONE = '+243 960 624 008';
+const SUPPORT_EMAIL = 'admin@smartcabb.com';
+
 // Score de pertinence pour chaque catégorie
 function scoreMessage(message: string): { category: string; score: number }[] {
   if (typeof message !== 'string' || !message) return [];
@@ -394,15 +402,15 @@ How can I help you today?`;
           const isReclamation = lower.includes('perdu') || lower.includes('plainte');
           addMessage(
             isReclamation
-              ? (lang === 'fr' ? `Pour cela, contactez directement notre support au +243 960 624 008 ou par email à admin@smartcabb.com.` : `For that, please contact our support directly at +243 960 624 008 or by email at admin@smartcabb.com.`)
-              : (lang === 'fr' ? `Je n'ai pas trouvé de réponse précise à votre question. Je peux vous renseigner sur nos tarifs, sur la manière de devenir chauffeur, sur nos zones de service, sur l'application, sur les paiements, ou vous mettre en contact avec notre équipe.` : `I couldn't find a precise answer to your question. I can help with pricing, becoming a driver, our service areas, the app, payments, or put you in touch with our team.`),
+              ? (lang === 'fr' ? `Pour cela, contactez directement notre support au ${SUPPORT_PHONE} ou par email à ${SUPPORT_EMAIL}.` : `For that, please contact our support directly at ${SUPPORT_PHONE} or by email at ${SUPPORT_EMAIL}.`)
+              : (lang === 'fr' ? `Je n'ai pas d'information précise sur ce point. Pour une réponse fiable, contactez notre service client au ${SUPPORT_PHONE} ou par email à ${SUPPORT_EMAIL}. Je peux aussi vous renseigner sur nos tarifs, le recrutement chauffeur, les zones, l'application ou les paiements.` : `I don't have precise information on that. For a reliable answer, please contact our customer service at ${SUPPORT_PHONE} or by email at ${SUPPORT_EMAIL}. I can also help with pricing, becoming a driver, our service areas, the app, or payments.`),
             'bot',
             QUICK_REPLIES.welcome[lang]
           );
         }
       } catch (err) {
         console.error('ChatWidget error:', err);
-        addMessage('Vous pouvez contacter le +243 960 624 008 pour obtenir de l\'aide.', 'bot');
+        addMessage(`Vous pouvez contacter le ${SUPPORT_PHONE} ou ${SUPPORT_EMAIL} pour obtenir de l'aide.`, 'bot');
       }
 
       setIsTyping(false);
