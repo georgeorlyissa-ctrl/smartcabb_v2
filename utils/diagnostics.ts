@@ -70,6 +70,9 @@ export function setupErrorInterceptors() {
     'ResizeObserver loop limit exceeded',
     'Non-Error exception captured',
     'Non-Error promise rejection captured',
+    'was released because another request stole it', // Race bénigne supabase-js sur le verrou du token (multi-onglets)
+    'lock:sb-',                                      // Verrou d'auth supabase (transitoire, auto-réparé)
+    'Acquiring lock',                                // Compétition de verrous auth, sans impact
     'chrome-extension://',
     'moz-extension://',
     'webkit-masked-url',
