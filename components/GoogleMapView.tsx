@@ -170,7 +170,13 @@ export function GoogleMapView({
     const initMap = async () => {
       try {
         console.log('🗺️ Chargement de Google Maps...');
-        await loadGoogleMapsScript();
+        // Timeout 12s : si le script reste bloqué, basculer sur OSM
+        await Promise.race([
+          loadGoogleMapsScript(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout chargement Google Maps (12s)')), 12000)
+          ),
+        ]);
 
         if (!mounted || !mapRef.current) return;
 

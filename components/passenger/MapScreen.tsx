@@ -43,7 +43,17 @@ export function MapScreen() {
   };
 
   const [currentLocation, setCurrentLocation] = useState<Location>({ lat: -4.3276, lng: 15.3136, address: 'Kinshasa, RDC' });
-  const [pickupLocation, setPickupLocation] = useState<Location | null>(null);
+  // Centre carte stabilisé : le GPS bouge à chaque tick, on ne recentre
+  // la carte que si > ~55 m pour éviter sa réinitialisation en boucle
+  const mapCenterRef = useRef<Location | null>(null);
+  const [mapCenter, setMapCenter] = useState<Location>({ lat: -4.3276, lng: 15.3136, address: 'Kinshasa, RDC' });
+  useEffect(() => {
+    const prev = mapCenterRef.current;
+    if (!prev || Math.abs(prev.lat - currentLocation.lat) > 0.0005 || Math.abs(prev.lng - currentLocation.lng) > 0.0005) {
+      mapCenterRef.current = currentLocation;
+      setMapCenter(currentLocation);
+    }
+  }, [currentLocation]);  const [pickupLocation, setPickupLocation] = useState<Location | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [loadingAddress, setLoadingAddress] = useState(false);
   const [isSelectingOnMap, setIsSelectingOnMap] = useState(false);
@@ -267,9 +277,9 @@ export function MapScreen() {
       </div>
 
       {/* ========== CARTE ========== */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative bg-gray-100" style={{ minHeight: 280 }}>
         <MapView
-          center={currentLocation}
+          center={mapCenter}
           zoom={15}
           className="w-full h-full"
           showUserLocation={true}
