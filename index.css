@@ -8227,3 +8227,20 @@ input[type="email"], input[type="password"], input[type="text"], input[type="tel
 .cap-apk .hide-in-apk {
   display: none !important;
 }
+
+/* 📱 Responsive global (tous téléphones) : hauteur dynamique qui suit la
+   barre du navigateur + respect de la zone safe (encoche, barre système) */
+.h-app {
+  height: 100vh;
+  height: 100dvh;
+}
+.min-h-app {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
