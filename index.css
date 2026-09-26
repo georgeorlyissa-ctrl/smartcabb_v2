@@ -8228,6 +8228,14 @@ input[type="email"], input[type="password"], input[type="text"], input[type="tel
   display: none !important;
 }
 
+/* 📱 Tous téléphones : le dernier élément des écrans plein hauteur
+   remonte toujours au-dessus de la barre système (0 sur desktop) */
+.min-h-screen > *:last-child,
+.h-app > *:last-child,
+.min-h-app > *:last-child {
+  margin-bottom: max(0px, env(safe-area-inset-bottom, 0px));
+}
+
 /* 📱 Responsive global (tous téléphones) : hauteur dynamique qui suit la
    barre du navigateur + respect de la zone safe (encoche, barre système) */
 .h-app {
