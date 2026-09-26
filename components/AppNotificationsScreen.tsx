@@ -88,7 +88,11 @@ export function NotificationBell({
     <button
       onClick={onOpen}
       className={`relative w-9 h-9 rounded-full flex items-center justify-center transition-colors flex-shrink-0 ${
-        dark ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+        unread > 0
+          ? 'bg-red-50 text-red-600 hover:bg-red-100'
+          : dark
+            ? 'bg-white/20 hover:bg-white/30 text-white'
+            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
       }`}
       aria-label="Notifications"
     >
