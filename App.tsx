@@ -74,6 +74,7 @@ const TermsPage = lazyWithRetry(() => import('./pages/TermsPage').then(m => ({ d
 const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
 const LegalPage = lazyWithRetry(() => import('./pages/LegalPage').then(m => ({ default: m.LegalPage })));
 const AccountDeletionPage = lazyWithRetry(() => import('./pages/AccountDeletionPage').then(m => ({ default: m.AccountDeletionPage })));
+const TrackRidePage = lazyWithRetry(() => import('./pages/TrackRidePage').then(m => ({ default: m.TrackRidePage })));
 const PassengerApp = lazyWithRetry(() => import('./pages/PassengerApp').then(m => ({ default: m.PassengerApp })));
 const DriverApp = lazyWithRetry(() => import('./pages/DriverApp').then(m => ({ default: m.DriverApp })));
 const AdminApp = lazyWithRetry(() => import('./pages/AdminApp').then(m => ({ default: m.AdminApp })));
@@ -471,6 +472,9 @@ function App() {
                   <Route path="/passenger" element={<Navigate to="/app" replace />} />
                   <Route path="/passager" element={<Navigate to="/app" replace />} />
                   <Route path="/conducteur" element={<Navigate to="/driver" replace />} />
+                  
+                  {/* Suivi public d'une course partagée (sans compte) */}
+                  <Route path="/track/:rideId" element={<TrackRidePage />} />
                   
                   {/* Application SmartCabb */}
                   <Route path="/app/*" element={<AppRouter />} />

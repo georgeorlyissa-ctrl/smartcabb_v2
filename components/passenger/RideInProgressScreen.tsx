@@ -362,13 +362,21 @@ export function RideInProgressScreen() {
     return `${mins}min ${secs}s`;
   };
 
-  // ─── PARTAGE COURSE ──────────────────────────────────────────
+  // ─── PARTAGE COURSE (style Yango : détails + lien suivi + lien appli) ──
   const handleShareRide = async () => {
-    // ✅ TRADUIT
-    const shareText = `🚗 ${t('ride_in_progress')} SmartCabb\n📍 ${t('pickup_location')}: ${currentRide.pickup.address}\n🎯 ${t('destination')}: ${currentRide.destination.address}\n💰 ${t('price')}: ${(currentCost || currentRide.estimatedPrice || 0).toLocaleString()} ${t('cdf')}\n⏱️ ${t('waiting_time')}: ${formatTime(elapsedTime)}`;
+    const firstName = state.currentUser?.name?.split(' ')[0] || 'Je';
+    const price = (currentCost || currentRide.estimatedPrice || 0).toLocaleString();
+    const trackUrl = `https://smartcabb.com/track/${currentRide.id}`;
+    const appUrl = 'https://play.google.com/store/apps/details?id=com.smartcabb.app';
+    const driverLine = currentRide.driverName ? `\nChauffeur : ${currentRide.driverName}` : '';
+    const shareText =
+      `Détails de ma course SmartCabb\n` +
+      `${firstName} voyage de ${currentRide.pickup.address} vers ${currentRide.destination.address} (${price} CDF)${driverLine}\n` +
+      `\nSuivez ma course en direct :\n${trackUrl}\n` +
+      `Télécharger SmartCabb : ${appUrl}`;
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
     window.open(whatsappUrl, '_blank');
-    toast.success('🚀 WhatsApp ouvert !');
+    toast.success('WhatsApp ouvert, le message est prêt à envoyer');
   };
 
   // ─── ANNULATION COURSE ───────────────────────────────────────
