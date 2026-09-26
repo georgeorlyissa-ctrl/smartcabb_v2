@@ -249,7 +249,7 @@ Contact : ${currentRide.driver?.phone}`;
   };
 
   return (
-    <div className="h-app flex flex-col bg-gray-50">
+    <div className="h-[100dvh] flex flex-col bg-gray-50">
       {/* Carte en plein écran avec Google Maps */}
       <div className="flex-1 relative">
         <MapView

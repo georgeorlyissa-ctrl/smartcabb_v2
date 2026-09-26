@@ -425,7 +425,7 @@ export function RideInProgressScreen() {
   };
 
   return (
-    <div className="h-app w-full flex flex-col bg-gray-900 relative overflow-hidden">
+    <div className="h-[100dvh] w-full flex flex-col bg-gray-900 relative overflow-hidden">
 
       {/* 🗺️ CARTE EN PLEIN ÉCRAN */}
       <div className="absolute inset-0 z-0">

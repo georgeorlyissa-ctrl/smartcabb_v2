@@ -323,7 +323,7 @@ export function SearchingDriversScreen() {
   const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${pendingRide.pickup.lat},${pendingRide.pickup.lng}&zoom=14&size=800x600&markers=${pendingRide.pickup.lat},${pendingRide.pickup.lng},red-pushpin${mapDrivers.map(d => `%7C${d.location.lat},${d.location.lng},blue-pushpin`).join('')}`;
 
   return (
-    <div className="h-app w-full relative overflow-hidden bg-gray-100 flex flex-col">
+    <div className="h-[100dvh] w-full relative overflow-hidden bg-gray-100 flex flex-col">
 
       {/* ══════════════════════════════════════════════════════════
           🗺️ CARTE PLEIN ÉCRAN — image statique OSM (toujours visible, même sans facturation Google)
@@ -410,7 +410,7 @@ export function SearchingDriversScreen() {
       {/* ══════════════════════════════════════════════════════════
           🧾 BOTTOM SHEET — résumé trajet + chauffeurs + actions
           ══════════════════════════════════════════════════════════ */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 pb-safe">
+      <div className="absolute bottom-0 left-0 right-0 z-20 pb-[env(safe-area-inset-bottom)]">
         <div className="bg-white/97 backdrop-blur-xl rounded-t-3xl shadow-2xl">
 
           {/* Poignée */}

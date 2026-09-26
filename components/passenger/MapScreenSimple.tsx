@@ -39,7 +39,7 @@ export function MapScreenSimple() {
   }, []);
 
   return (
-    <div className="h-app w-full flex flex-col bg-gray-50">
+    <div className="h-[100dvh] w-full flex flex-col bg-gray-50">
       {/* Header */}
       <div className="bg-primary text-white p-4 shadow-lg z-50">
         <h1 className="text-xl font-bold">🗺️ Test de Carte</h1>
