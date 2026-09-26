@@ -52,7 +52,8 @@ import {
   XCircle,
   Calendar,
   Activity,
-  Ban
+  Ban,
+  Megaphone
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
 import { createAdminUser } from '../../lib/auth-service';
@@ -745,6 +746,15 @@ export function AdminDashboard() {
       action: () => setCurrentScreen('admin-demand'),
       count: null,
       color: 'from-violet-500 to-indigo-500'
+    },
+    {
+      id: 'action-broadcast',
+      title: 'Diffuser un message',
+      description: 'Bonus, news, infos vers les apps',
+      icon: Megaphone,
+      action: () => setCurrentScreen('admin-broadcast'),
+      count: null,
+      color: 'from-violet-500 to-purple-500'
     },
     {
       id: 'action-blocked-passengers',

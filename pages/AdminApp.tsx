@@ -41,6 +41,7 @@ const AdminAccountSync = React.lazy(() => import('../components/admin/AdminAccou
 const AdminScheduledRidesScreen = React.lazy(() => import('../components/admin/AdminScheduledRidesScreen').then(m => ({ default: m.AdminScheduledRidesScreen })));
 const AdminDemandScreen = React.lazy(() => import('../components/admin/AdminDemandScreen').then(m => ({ default: m.AdminDemandScreen })));
 const AdminBlockedPassengersScreen = React.lazy(() => import('../components/admin/AdminBlockedPassengersScreen').then(m => ({ default: m.AdminBlockedPassengersScreen })));
+const AdminBroadcastScreen = React.lazy(() => import('../components/admin/AdminBroadcastScreen').then(m => ({ default: m.AdminBroadcastScreen })));
 
 function AdminAppContent() {
   const { state, setCurrentScreen, setCurrentView, updateUser } = useAppState();
@@ -91,7 +92,7 @@ function AdminAppContent() {
       'analytics-dashboard', 'financial-reports', 'audit-logs', 'backup-and-recovery',
       'sms-settings', 'global-settings', 'admin-diagnostic', 'data-cleanup', 'pending-recharges', 'admin-users-management',
       'admin-sync', 'admin-account-sync', 'cancellations', 'admin-users-diagnostic',
-    'admin-scheduled-rides', 'admin-demand', 'admin-blocked-passengers'
+    'admin-scheduled-rides', 'admin-demand', 'admin-blocked-passengers', 'admin-broadcast'
     ];
     
     // ✅ FIX: Si l'admin est connecté et a un écran admin valide, ne rien changer
@@ -139,7 +140,7 @@ function AdminAppContent() {
     'analytics-dashboard', 'financial-reports', 'audit-logs', 'backup-and-recovery',
     'sms-settings', 'global-settings', 'admin-diagnostic', 'data-cleanup', 'pending-recharges', 'admin-users-management',
     'admin-sync', 'admin-account-sync', 'cancellations', 'admin-users-diagnostic',
-    'admin-scheduled-rides', 'admin-demand', 'admin-blocked-passengers'
+    'admin-scheduled-rides', 'admin-demand', 'admin-blocked-passengers', 'admin-broadcast'
   ];
   
   // ✅ FALLBACK AMÉLIORÉ : Vérifier si l'écran est dans la liste des écrans admin valides
@@ -208,6 +209,7 @@ function AdminAppContent() {
         {screenToShow === 'admin-scheduled-rides' && <AdminScheduledRidesScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
         {screenToShow === 'admin-demand' && <AdminDemandScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
         {screenToShow === 'admin-blocked-passengers' && <AdminBlockedPassengersScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
+        {screenToShow === 'admin-broadcast' && <AdminBroadcastScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
       </div>
     </>
   );

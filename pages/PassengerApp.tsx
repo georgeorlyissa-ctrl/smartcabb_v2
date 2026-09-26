@@ -39,6 +39,7 @@ import { RideTrackingScreen } from '../components/passenger/RideTrackingScreen';
 import { LiveTrackingScreen } from '../components/passenger/LiveTrackingScreen';
 import { SearchingDriversScreen } from '../components/passenger/SearchingDriversScreen';
 import { ScheduledRides } from '../components/passenger/ScheduledRides';
+import { AppNotificationsScreen } from '../components/AppNotificationsScreen';
 import { usePassengerArrivalAlerts } from '../hooks/usePassengerArrivalAlerts';
 import { preloadVoices } from '../lib/notification-sound';
 
@@ -269,6 +270,16 @@ function PassengerAppContent() {
         return (
           <ErrorBoundary>
             <SupportScreen />
+          </ErrorBoundary>
+        );
+      case 'notifications':
+        return (
+          <ErrorBoundary>
+            <AppNotificationsScreen
+              target="passengers"
+              title="Notifications"
+              onBack={() => setCurrentScreen('map')}
+            />
           </ErrorBoundary>
         );
       case 'loyalty':

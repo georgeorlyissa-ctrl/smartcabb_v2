@@ -484,4 +484,112 @@ app.get("/status", async (c) => {
   }
 });
 
+/**
+ * 📢 Diffusion admin vers les apps (bonus, news, infos)
+ * POST /fcm/broadcast { title, message, target: 'drivers' | 'passengers' | 'all' }
+ * Stocke en boîte de réception (KV notif:) + push FCM aux tokens connus.
+ */
+app.post("/broadcast", async (c) => {
+  try {
+    const { title, message, target } = await c.req.json();
+
+    if (!title || !message) {
+      return c.json({ success: false, error: "title et message requis" }, 400);
+    }
+    if (!['drivers', 'passengers', 'all'].includes(target)) {
+      return c.json({ success: false, error: "target doit être drivers, passengers ou all" }, 400);
+    }
+
+    const now = new Date().toISOString();
+    const notifId = `notif:${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    // 1. Stocker pour la boîte de réception des apps
+    await kv.set(notifId, { id: notifId, title, message, target, createdAt: now });
+
+    // 2. Collecter les tokens FCM de la cible
+    const tokens: string[] = [];
+    if (target === 'drivers' || target === 'all') {
+      const drivers = await kv.getByPrefix('driver:');
+      for (const d of drivers) {
+        if (d?.fcmToken) tokens.push(d.fcmToken);
+      }
+    }
+    if (target === 'passengers' || target === 'all') {
+      const passengers = await kv.getByPrefix('passenger:');
+      for (const p of passengers) {
+        if (p?.fcmToken) tokens.push(p.fcmToken);
+      }
+    }
+    const uniqueTokens = [...new Set(tokens)];
+
+    // 3. Push FCM (best effort, sans bloquer)
+    let sent = 0;
+    let failed = 0;
+    if (isFirebaseAdminConfigured() && uniqueTokens.length > 0) {
+      const results = await Promise.allSettled(
+        uniqueTokens.map((token) =>
+          sendFCMNotification(token, {
+            title: `SmartCabb — ${title}`,
+            body: message,
+            data: { type: 'admin_broadcast', notifId, target },
+          })
+        )
+      );
+      for (const r of results) {
+        if (r.status === 'fulfilled' && (r.value as any)?.success) sent++;
+        else failed++;
+      }
+    }
+
+    // 4. Historique pour le panel admin
+    await kv.set(`broadcast:${notifId}`, {
+      id: notifId, title, message, target, createdAt: now,
+      tokens: uniqueTokens.length, sent, failed,
+    });
+
+    console.log(`📢 Broadcast "${title}" → ${target} : ${sent} envoyés, ${failed} échecs (${uniqueTokens.length} tokens)`);
+    return c.json({ success: true, id: notifId, tokens: uniqueTokens.length, sent, failed });
+  } catch (error) {
+    console.error("❌ Erreur broadcast:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
+/**
+ * 📥 Boîte de réception (apps driver/passager)
+ * GET /fcm/inbox?target=drivers|passengers — 30 derniers jours
+ */
+app.get("/inbox", async (c) => {
+  try {
+    const target = c.req.query("target") || "all";
+    const cutoff = Date.now() - 30 * 86400000;
+    const all = await kv.getByPrefix("notif:");
+    const list = all
+      .filter((n: any) => n?.createdAt && new Date(n.createdAt).getTime() >= cutoff)
+      .filter((n: any) => target === "all" || n.target === "all" || n.target === target)
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 50)
+      .map((n: any) => ({ id: n.id, title: n.title, message: n.message, createdAt: n.createdAt }));
+    return c.json({ success: true, notifications: list, count: list.length });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
+/**
+ * 📜 Historique des diffusions (panel admin)
+ * GET /fcm/broadcasts
+ */
+app.get("/broadcasts", async (c) => {
+  try {
+    const all = await kv.getByPrefix("broadcast:");
+    const list = all
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 50);
+    return c.json({ success: true, broadcasts: list, count: list.length });
+  } catch (error) {
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 export default app;

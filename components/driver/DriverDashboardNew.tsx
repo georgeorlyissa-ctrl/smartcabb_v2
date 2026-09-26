@@ -17,6 +17,7 @@ import { PreciseGPSTracker, reverseGeocode } from '../../lib/precise-gps';
 import { registerDriverFCMToken } from '../../lib/driver-fcm';
 import { stopAllNotifications } from '../../lib/notification-sound';
 import { preloadVoices } from '../../lib/notification-sound';
+import { NotificationBell } from '../AppNotificationsScreen';
 
 function isDriverFCMTokenRegistered(driverId: string): boolean {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return false;
@@ -596,6 +597,8 @@ export function DriverDashboardNew() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* 🔔 Notifications admin */}
+            <NotificationBell target="drivers" dark onOpen={() => setCurrentScreen('driver-notifications')} />
             {/* 🌙 Dark mode toggle */}
             <button
               onClick={toggleDark}
