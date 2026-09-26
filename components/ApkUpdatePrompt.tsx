@@ -23,6 +23,36 @@ interface AppVersionConfig {
 }
 
 const DISMISS_KEY = 'sc_apk_update_dismissed';
+const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
+
+function parseVer(v: string): number[] {
+  return String(v).split('.').map(n => parseInt(n, 10) || 0);
+}
+
+// Vrai seulement si la version distante est PLUS RÉCENTE que l'installée
+function isRemoteNewer(remote: string, installed: string | null): boolean {
+  if (!installed) return false; // version inconnue → ne pas harceler
+  const r = parseVer(remote);
+  const l = parseVer(installed);
+  for (let i = 0; i < Math.max(r.length, l.length); i++) {
+    const a = r[i] || 0;
+    const b = l[i] || 0;
+    if (a > b) return true;
+    if (a < b) return false;
+  }
+  return false;
+}
+
+function isSnoozed(version: string): boolean {
+  try {
+    const raw = localStorage.getItem(DISMISS_KEY);
+    if (!raw) return false;
+    const { version: v, until } = JSON.parse(raw);
+    return v === version && Date.now() < until;
+  } catch {
+    return false;
+  }
+}
 
 export function ApkUpdatePrompt() {
   const [config, setConfig] = useState<AppVersionConfig | null>(null);
@@ -43,7 +73,10 @@ export function ApkUpdatePrompt() {
       try {
         const info = await App.getInfo();
         if (cancelled) return;
-        setInstalledVersion(info.versionName || null);
+        // Capacitor expose `version` (ex: "1.1"), pas `versionName`
+        const installed: string | null =
+          (info as any).version || (info as any).versionName || null;
+        setInstalledVersion(installed);
 
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/app/version`,
@@ -53,16 +86,11 @@ export function ApkUpdatePrompt() {
         const data = await response.json();
         if (cancelled || !data?.success || !data?.apkUrl || !data?.version) return;
 
-        // Version locale identique → à jour
-        if (info.versionName === data.version) return;
+        // Version installée à jour ou plus récente → à jour
+        if (!isRemoteNewer(data.version, installed)) return;
 
-        // Déjà refusé dans cette session (sauf mise à jour forcée)
-        if (!data.force) {
-          try {
-            const dismissed = sessionStorage.getItem(DISMISS_KEY);
-            if (dismissed === data.version) return;
-          } catch {}
-        }
+        // Déjà refusé récemment (sauf mise à jour forcée) → snooze 7 jours
+        if (!data.force && isSnoozed(data.version)) return;
 
         setConfig(data);
       } catch (error) {
@@ -83,7 +111,9 @@ export function ApkUpdatePrompt() {
   };
 
   const handleLater = () => {
-    try { sessionStorage.setItem(DISMISS_KEY, config.version); } catch {}
+    try {
+      localStorage.setItem(DISMISS_KEY, JSON.stringify({ version: config.version, until: Date.now() + SNOOZE_MS }));
+    } catch {}
     setConfig(null);
   };
 
