@@ -5,7 +5,6 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from '../lib/simple-router';
 import { MapView } from '../components/MapView';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 
@@ -54,9 +53,10 @@ function statusText(status: string): string {
 }
 
 export function TrackRidePage() {
-  const params = useParams();
+  // rideId via /track/:id (routeur wildcard) ou ?rideId=
+  const pathRideId = window.location.pathname.split('/track/')[1]?.split('/')[0]?.split('?')[0] || null;
   const queryRideId = new URLSearchParams(window.location.search).get('rideId');
-  const rideId = (params as any)?.rideId || queryRideId;
+  const rideId = pathRideId || queryRideId;
 
   const [ride, setRide] = useState<TrackedRide | null>(null);
   const [error, setError] = useState(false);

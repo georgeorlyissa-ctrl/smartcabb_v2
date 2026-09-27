@@ -474,7 +474,7 @@ function App() {
                   <Route path="/conducteur" element={<Navigate to="/driver" replace />} />
                   
                   {/* Suivi public d'une course partagée (sans compte) */}
-                  <Route path="/track/:rideId" element={<TrackRidePage />} />
+                  <Route path="/track/*" element={<TrackRidePage />} />
                   
                   {/* Application SmartCabb */}
                   <Route path="/app/*" element={<AppRouter />} />
