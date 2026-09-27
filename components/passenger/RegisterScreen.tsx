@@ -10,6 +10,7 @@ import { signUp } from '../../lib/auth-service';
 import { sendSMS } from '../../lib/sms-service';
 import { PhoneVerificationStep } from '../PhoneVerificationStep';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { fetchGlobalConfig } from '../../lib/config-sync';
 
 // Icônes inline (évite import lib/icons qui n'existe plus)
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -89,6 +90,14 @@ export function RegisterScreen() {
     }
 
     // 🔐 Étape OTP : vérifier le numéro de téléphone avant l'inscription
+    // Phase de test : si l'OTP est désactivé côté config, inscription directe
+    try {
+      const cfg = await fetchGlobalConfig();
+      if (cfg && cfg.otpRequired !== true) {
+        await handleOtpVerified('');
+        return;
+      }
+    } catch {}
     setShowOtp(true);
   };
 

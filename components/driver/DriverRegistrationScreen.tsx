@@ -16,6 +16,7 @@ import { signUpDriver } from '../../lib/auth-service-driver-signup';
 import { PhoneVerificationStep } from '../PhoneVerificationStep';
 import { sendSMS } from '../../lib/sms-service';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { fetchGlobalConfig } from '../../lib/config-sync';
 import { useNavigate } from '../../lib/simple-router';
 
 // Congolese names for realistic data
@@ -264,6 +265,14 @@ export function DriverRegistrationScreen() {
     }
 
     // 🔐 Étape OTP : vérifier le numéro de téléphone avant l'inscription
+    // Phase de test : si l'OTP est désactivé côté config, inscription directe
+    try {
+      const cfg = await fetchGlobalConfig();
+      if (cfg && cfg.otpRequired !== true) {
+        await handleOtpVerified('');
+        return;
+      }
+    } catch {}
     setShowOtp(true);
   };
 
