@@ -403,8 +403,41 @@ export function preloadVoices(): void {
   });
 }
 
+/**
+ * 🔓 Déverrouillage audio mobile — À appeler au montage de l'app.
+ * Sur téléphone, l'AudioContext et le TTS restent bloqués tant qu'aucun
+ * geste utilisateur n'a eu lieu : on les (ré)active au premier toucher/clic,
+ * sinon les sons d'arrivée restent muets alors qu'ils marchent sur PC.
+ */
+let _audioUnlockListenerAdded = false;
+
+export function unlockMobileAudio(): void {
+  if (typeof window === 'undefined') return;
+  const unlock = () => {
+    try {
+      warmUpAudioContext();
+      const ctx = getAudioContext();
+      if (ctx && ctx.state === 'suspended') {
+        void ctx.resume().catch(() => {});
+      }
+      if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.getVoices(); } catch {}
+      }
+    } catch {}
+  };
+  try {
+    if (!_audioUnlockListenerAdded) {
+      _audioUnlockListenerAdded = true;
+      window.addEventListener('touchend', unlock, { passive: true } as any);
+      window.addEventListener('click', unlock);
+    }
+    unlock();
+  } catch {}
+}
+
 /** Test complet */
 export async function testNotification(): Promise<void> {
+
   playRideNotification({
     passengerName:     'Jean Mukendi',
     pickup:            'Avenue Kasavubu, Kinshasa',

@@ -41,7 +41,7 @@ import { SearchingDriversScreen } from '../components/passenger/SearchingDrivers
 import { ScheduledRides } from '../components/passenger/ScheduledRides';
 import { AppNotificationsScreen } from '../components/AppNotificationsScreen';
 import { usePassengerArrivalAlerts } from '../hooks/usePassengerArrivalAlerts';
-import { preloadVoices } from '../lib/notification-sound';
+import { preloadVoices, unlockMobileAudio } from '../lib/notification-sound';
 
 function PassengerAppContent() {
   const { state, setCurrentScreen, setCurrentView } = useAppState();
@@ -351,6 +351,7 @@ function PassengerAppContent() {
   // ✅ FCM : Initialiser les notifications push pour le passager
   useEffect(() => {
     preloadVoices(); // voix TTS prête pour l'annonce "conducteur arrivé"
+    unlockMobileAudio(); // déverrouille l'audio dès le premier toucher (sinon muet sur téléphone)
     if (!state.currentUser || !state.currentUser.id) return;
     if (state.currentView !== 'passenger') return;
 
