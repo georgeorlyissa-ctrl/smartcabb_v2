@@ -213,7 +213,7 @@ export function DriverDetailModal({
         model: vehicleData.model,
         license_plate: vehicleData.license_plate,
         color: vehicleData.color,
-        category: vehicleData.category as 'smart_standard' | 'smart_confort' | 'smart_plus',
+        category: vehicleData.category as 'smart_standard' | 'smart_standard_clim' | 'smart_standard_no_clim' | 'smart_confort' | 'smart_plus' | 'smart_business',
       });
 
       if (updated) {
@@ -978,10 +978,12 @@ export function DriverDetailModal({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="smart_standard">SmartCabb Standard (7$/h jour - 10$/h nuit)</SelectItem>
-                          <SelectItem value="smart_confort">SmartCabb Confort (15$/h jour - 17$/h nuit)</SelectItem>
-                          <SelectItem value="smart_plus">SmartCabb Plus (15$/h jour - 20$/h nuit)</SelectItem>
-                          <SelectItem value="smart_business">SmartCabb Business (160$/jour location)</SelectItem>
+                          <SelectItem value="smart_standard">SmartCabb Standard</SelectItem>
+                          <SelectItem value="smart_standard_clim">SmartCabb Standard avec Clim</SelectItem>
+                          <SelectItem value="smart_standard_no_clim">SmartCabb Standard sans Clim</SelectItem>
+                          <SelectItem value="smart_confort">SmartCabb Confort</SelectItem>
+                          <SelectItem value="smart_plus">SmartCabb Plus / Familiale</SelectItem>
+                          <SelectItem value="smart_business">SmartCabb Business</SelectItem>
                         </SelectContent>
                       </Select>
                     ) : (

@@ -160,6 +160,10 @@ export const vehicleService = {
         vehicle_plate: updates.license_plate,
         vehicle_color: updates.color,
         vehicle_category: updates.category,
+        // Mêmes champs plats lus par le matching des courses
+        vehicleCategory: updates.category,
+        vehicle_type: updates.category,
+        vehicleType: updates.category,
         vehicle: updates,
       }),
     });
