@@ -55,10 +55,20 @@ async function kvSet(key: string, value: any): Promise<void> {
 
 async function kvGetByPrefix(prefix: string): Promise<any[]> {
   try {
-    const { data, error } = await kvClient()
-      .from(KV_TABLE).select("key, value").like("key", prefix + "%");
-    if (error) { console.error("KV getByPrefix error:", prefix, error.message); return []; }
-    return data?.map((d: any) => d.value) ?? [];
+    // Paginer (Supabase limite à 1000 lignes par défaut) pour ne rater aucune course
+    const all: any[] = [];
+    const size = 1000;
+    let from = 0;
+    while (true) {
+      const { data, error } = await kvClient()
+        .from(KV_TABLE).select("key, value").like("key", prefix + "%").range(from, from + size - 1);
+      if (error) { console.error("KV getByPrefix error:", prefix, error.message); break; }
+      if (!data || data.length === 0) break;
+      all.push(...data.map((d: any) => d.value));
+      if (data.length < size) break;
+      from += size;
+    }
+    return all;
   } catch (e) { console.error("KV getByPrefix exception:", e); return []; }
 }
 
@@ -1050,6 +1060,8 @@ app.get("/users/all", async (c) => {
     // Indexer les gains par conducteur
     const earningsByDriver = new Map<string, number>();
     const tripsByDriver = new Map<string, number>();
+    // Toutes courses du conducteur (comme l'historique de l'app driver)
+    const allTripsByDriver = new Map<string, number>();
     for (const ride of completedRides) {
       const driverId = ride.driverId || ride.driver_id;
       if (driverId) {
@@ -1057,6 +1069,12 @@ app.get("/users/all", async (c) => {
         const num = typeof amount === "string" ? parseFloat(amount) || 0 : Number(amount) || 0;
         earningsByDriver.set(driverId, (earningsByDriver.get(driverId) || 0) + num);
         tripsByDriver.set(driverId, (tripsByDriver.get(driverId) || 0) + 1);
+      }
+    }
+    for (const ride of allRides) {
+      const driverId = ride.driverId || ride.driver_id;
+      if (driverId) {
+        allTripsByDriver.set(driverId, (allTripsByDriver.get(driverId) || 0) + 1);
       }
     }
 
@@ -1088,7 +1106,7 @@ app.get("/users/all", async (c) => {
           || (driverKV?.vehicle ? `${driverKV.vehicle.make || ""} ${driverKV.vehicle.model || ""}`.trim() : "-"),
         status: profile.status || driverKV?.status || (profile.role === "driver" ? "pending" : "Actif"),
         rating: driverKV?.rating || profile.rating || 0,
-        totalTrips: tripsByDriver.get(profile.id) || driverKV?.total_rides || driverKV?.totalRides || profile.total_trips || profile.total_rides || 0,
+        totalTrips: allTripsByDriver.get(profile.id) || tripsByDriver.get(profile.id) || driverKV?.total_rides || driverKV?.totalRides || profile.total_trips || profile.total_rides || 0,
         totalEarnings: computedEarnings > 0 ? computedEarnings : storedEarnings,
         createdAt: profile.created_at || new Date().toISOString(),
         lastLoginAt: profile.last_login_at || null,
