@@ -781,7 +781,7 @@ export function AdminDashboard() {
       description: 'Voir et gérer tous les chauffeurs',
       icon: Car,
       action: () => setCurrentScreen('drivers-list'),
-      count: drivers.length
+      count: liveStats?.totalDrivers ?? drivers.length
     },
     {
       id: 'action-clients',
@@ -789,7 +789,7 @@ export function AdminDashboard() {
       description: 'Base de données clients',
       icon: Users,
       action: () => setCurrentScreen('clients-list'),
-      count: passengers.length
+      count: liveStats?.totalPassengers ?? passengers.length
     },
     {
       id: 'action-users-management',
