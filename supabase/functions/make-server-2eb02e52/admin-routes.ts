@@ -1660,4 +1660,49 @@ app.post("/blocked-passengers/:id/unblock", async (c) => {
   }
 });
 
+// ─── POST /cleanup-unknown-profiles — Supprimer les profils inconnus ─────
+// Supprime les profils sans nom/email/téléphone ET sans aucune course.
+// Protégé par le secret admin (header x-admin-secret).
+app.post("/cleanup-unknown-profiles", async (c) => {
+  try {
+    if (!hasValidAdminSecret(c)) {
+      return c.json({ success: false, error: "Non autorisé" }, 403);
+    }
+
+    const profiles = await kvGetByPrefix("profile:");
+    const rides = await kvGetByPrefix("ride:");
+    const activeIds = new Set<string>();
+    for (const r of rides) {
+      if (r.passengerId || r.passenger_id) activeIds.add(r.passengerId || r.passenger_id);
+      if (r.driverId || r.driver_id) activeIds.add(r.driverId || r.driver_id);
+    }
+
+    const isBlank = (v: any) =>
+      !v || (typeof v === "string" && (
+        v.trim() === "" || v === "Nom inconnu" || v === "Non renseigné"
+      ));
+
+    const deleted: string[] = [];
+    for (const p of profiles) {
+      const id = p.id;
+      if (!id) continue;
+      const unknown =
+        isBlank(p.full_name) && isBlank(p.name) &&
+        isBlank(p.email) && isBlank(p.phone);
+      if (!unknown) continue;
+      if (activeIds.has(id)) continue; // sécurité : présent dans une course
+      await kvDel(`profile:${id}`);
+      await kvDel(`driver:${id}`);
+      await kvDel(`passenger:${id}`);
+      deleted.push(id);
+    }
+
+    console.log(`🧹 cleanup-unknown-profiles: ${deleted.length} supprimé(s)`);
+    return c.json({ success: true, deleted, count: deleted.length });
+  } catch (error) {
+    console.error("❌ Erreur cleanup-unknown-profiles:", error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
 export default app;
