@@ -7,25 +7,20 @@ import {
   MapPin,
   Edit2,
   Save,
-  X,
   ChevronRight,
   Wallet,
   History,
   HelpCircle,
   LogOut,
-  MessageCircle,
-  Star,
-  TrendingUp,
-  Award,
-  Gift,
   Shield,
   Settings,
-  Bell,
   ArrowLeft,
   Calendar,
   Smartphone,
   CreditCard,
-  Banknote
+  Banknote,
+  Gift,
+  Info,
 } from '../../lib/icons';
 import { toast } from '../../lib/toast';
 import { supabase } from '../../lib/supabase';
@@ -39,18 +34,20 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Label } from '../ui/label';
 import { Input } from '../ui/input';
+import { FavoriteLocations } from './FavoriteLocations';
 
 export function ProfileScreen() {
   const { setCurrentScreen, state, passengers, setCurrentUser, setCurrentView } = useAppState();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showAddresses, setShowAddresses] = useState(false);
   const [editData, setEditData] = useState({
     name: state.currentUser?.name || '',
     email: state.currentUser?.email || '',
     phone: state.currentUser?.phone || '',
     address: ''
   });
-  
+
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   // 🆕 États pour les statistiques
@@ -58,16 +55,20 @@ export function ProfileScreen() {
     totalRides: 0,
     loading: true
   });
-  
+
   // 💰 ÉTAT POUR LE SOLDE EN TEMPS RÉEL
   const [walletBalance, setWalletBalance] = useState(state.currentUser?.walletBalance || 0);
   const [loadingBalance, setLoadingBalance] = useState(true);
-  
+
+  // ⭐ Annulations + points fidélité
+  const [cancelCount, setCancelCount] = useState(0);
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+
   // 💰 CHARGER LE SOLDE EN TEMPS RÉEL AU CHARGEMENT
   useEffect(() => {
     const fetchWalletBalance = async () => {
       if (!state.currentUser?.id) return;
-      
+
       try {
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${state.currentUser.id}/balance`,
@@ -78,11 +79,11 @@ export function ProfileScreen() {
             }
           }
         );
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log('💰 Solde passager chargé:', data);
-          
+
           if (data.success && data.balance !== undefined) {
             setWalletBalance(data.balance);
             // Mettre à jour aussi dans le state global
@@ -98,19 +99,19 @@ export function ProfileScreen() {
         setLoadingBalance(false);
       }
     };
-    
+
     fetchWalletBalance();
-    
+
     // Rafraîchir toutes les 10 secondes
     const interval = setInterval(fetchWalletBalance, 10000);
     return () => clearInterval(interval);
   }, [state.currentUser?.id]);
-  
+
   // 🆕 CHARGER LES STATISTIQUES DEPUIS LE BACKEND
   useEffect(() => {
     const fetchRideStats = async () => {
       if (!state.currentUser?.id) return;
-      
+
       try {
         // 🆕 v517.91: Utiliser la nouvelle route /passengers/:id/stats
         console.log('📊 🔥 APPEL /passengers/:id/stats avec ID:', state.currentUser.id);
@@ -123,13 +124,13 @@ export function ProfileScreen() {
             }
           }
         );
-        
+
         console.log('📊 🔥 Réponse /passengers/:id/stats:', response.status, response.ok);
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log('📊 v517.91 - Stats passager reçues:', data);
-          
+
           if (data.success && data.stats) {
             setRideStats({
               totalRides: data.stats.totalRides || 0,
@@ -150,13 +151,42 @@ export function ProfileScreen() {
         setRideStats({ totalRides: 0, loading: false });
       }
     };
-    
+
     fetchRideStats();
+  }, [state.currentUser?.id]);
+
+  // 🆕 Annulations + points fidélité
+  useEffect(() => {
+    const fetchExtras = async () => {
+      if (!state.currentUser?.id) return;
+      try {
+        const h = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/history/${state.currentUser.id}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        if (h.ok) {
+          const data = await h.json();
+          const rides = data.rides || [];
+          setCancelCount(rides.filter((r: any) => r.status === 'cancelled' && (r.cancelledBy === 'passenger' || !r.cancelledBy)).length);
+        }
+      } catch {}
+      try {
+        const l = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/loyalty/${state.currentUser.id}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        if (l.ok) {
+          const data = await l.json();
+          if (data.success) setLoyaltyBalance(data.loyalty?.balance || 0);
+        }
+      } catch {}
+    };
+    fetchExtras();
   }, [state.currentUser?.id]);
 
   // Get passenger data - Utiliser useEffect pour mettre à jour quand state.currentUser change
   const passengerData = state.currentUser;
-  
+
   // 🔄 Mettre à jour editData quand state.currentUser change
   useEffect(() => {
     if (state.currentUser) {
@@ -168,7 +198,7 @@ export function ProfileScreen() {
       });
     }
   }, [state.currentUser]);
-  
+
   // 🐛 DEBUG: Afficher les données wallet dans la console
   console.log('💰 ProfileScreen - Wallet Debug:', {
     hasUser: !!state.currentUser,
@@ -218,7 +248,7 @@ export function ProfileScreen() {
     }
 
     setIsSaving(true);
-    
+
     // 🔥 DEBUG: Afficher ce qui va être envoyé
     console.log('🔥🔥🔥 ========== SAUVEGARDE PROFIL ==========');
     console.log('📤 Données à envoyer:', {
@@ -234,7 +264,7 @@ export function ProfileScreen() {
       currentPhone: state.currentUser.phone,
       currentAddress: state.currentUser.address
     });
-    
+
     // ✅ OPTIMISTIC UPDATE: Mettre à jour immédiatement l'interface
     const previousUser = { ...state.currentUser };
     const updatedUser = {
@@ -244,11 +274,11 @@ export function ProfileScreen() {
       phone: editData.phone,
       address: editData.address
     };
-    
+
     // Mettre à jour le state immédiatement pour une réactivité instantanée
     setCurrentUser(updatedUser);
     setIsEditing(false);
-    
+
     try {
       console.log('💾 [PROFILE SAVE] Début de la sauvegarde...', {
         userId: state.currentUser.id,
@@ -258,11 +288,11 @@ export function ProfileScreen() {
         newPhone: editData.phone,
         newAddress: editData.address
       });
-      
+
       // 🔥 NOUVELLE MÉTHODE: Sauvegarder directement dans le backend KV store
       const url = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/update/${state.currentUser.id}`;
       console.log('📡 URL:', url);
-      
+
       const response = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -292,11 +322,11 @@ export function ProfileScreen() {
       const result = await response.json();
       console.log('✅ [PROFILE SAVE] Backend mis à jour:', result);
       console.log('🔥🔥🔥 ========== FIN SAUVEGARDE (SUCCÈS) ==========');
-      
+
       // 🔄 Mettre à jour localStorage
       const userKey = `smartcabb_user_${state.currentUser.id}`;
       const savedData = localStorage.getItem(userKey);
-      
+
       if (savedData) {
         const existingData = JSON.parse(savedData);
         const updatedData = {
@@ -309,7 +339,7 @@ export function ProfileScreen() {
         localStorage.setItem(userKey, JSON.stringify(updatedData));
         console.log('✅ localStorage mis à jour:', updatedData);
       }
-      
+
       toast.success('Profil mis à jour avec succès ✅');
 
       // 📱 Envoyer SMS de confirmation (sans bloquer si échec)
@@ -343,154 +373,229 @@ export function ProfileScreen() {
     }
   };
 
+  const quickActions = [
+    { icon: History, label: 'Historique', screen: 'ride-history' },
+    { icon: HelpCircle, label: 'Assistance', screen: 'support' },
+    { icon: Wallet, label: 'Portefeuille', screen: 'wallet' },
+    { icon: Settings, label: 'Paramètres', screen: 'settings' },
+  ];
+
+  const menuRows = [
+    {
+      icon: Gift,
+      iconBg: 'bg-amber-100',
+      iconColor: 'text-amber-600',
+      title: 'Smart Rewards',
+      subtitle: loyaltyBalance > 0 ? `${loyaltyBalance.toLocaleString('fr-FR')} points` : 'Mes points et récompenses',
+      screen: 'loyalty',
+    },
+    {
+      icon: Banknote,
+      iconBg: 'bg-green-100',
+      iconColor: 'text-green-600',
+      title: 'Réductions',
+      subtitle: 'Saisir un code promotionnel',
+      screen: 'promo-code',
+    },
+    {
+      icon: CreditCard,
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      title: 'Modes de paiement',
+      subtitle: getPaymentMethodLabel(passengerData?.favoritePaymentMethod),
+      screen: 'payment-method',
+    },
+    {
+      icon: Shield,
+      iconBg: 'bg-purple-100',
+      iconColor: 'text-purple-600',
+      title: 'Sécurité',
+      subtitle: 'Confidentialité et protection',
+      screen: 'privacy-settings',
+    },
+    {
+      icon: Info,
+      iconBg: 'bg-gray-100',
+      iconColor: 'text-gray-600',
+      title: 'Informations',
+      subtitle: 'Aide et contact SmartCabb',
+      screen: 'support',
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-border">
+      <div className="bg-white shadow-sm border-b border-gray-100">
         <div className="flex items-center justify-between p-4">
-          <div className="flex items-center space-x-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentScreen('map')}
-              className="p-2 hover:bg-muted"
-            >
-              <ArrowLeft className="w-5 h-5 text-primary" />
-            </Button>
-            <div>
-              <h1 className="text-primary">Mon Profil</h1>
-              <p className="text-sm text-muted-foreground">Informations personnelles</p>
-            </div>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentScreen('map')}
+            className="p-2 hover:bg-gray-100"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </Button>
+          <h1 className="text-base font-bold text-gray-900">Mon Profil</h1>
           <Button
             variant="outline"
             size="sm"
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
             disabled={isSaving}
-            className="border-secondary text-secondary hover:bg-secondary/10"
+            className="border-amber-300 text-amber-600 hover:bg-amber-50 text-xs"
           >
-            {isSaving ? (
-              <>
-                <Save className="w-4 h-4 mr-2 animate-spin" />
-                Sauvegarde...
-              </>
-            ) : isEditing ? (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Sauvegarder
-              </>
-            ) : (
-              <>
-                <Edit2 className="w-4 h-4 mr-2" />
-                Modifier
-              </>
-            )}
+            {isSaving ? 'Sauvegarde...' : isEditing ? 'Sauver' : 'Modifier'}
           </Button>
+        </div>
+
+        {/* Identité */}
+        <div className="flex flex-col items-center pb-5 px-4">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg mb-2">
+            <span className="text-white text-2xl font-bold">
+              {(passengerData?.name || 'S').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+            </span>
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 flex items-center gap-1.5">
+            {passengerData?.name || 'Passager'}
+            <Shield className="w-4 h-4 text-cyan-600" />
+          </h2>
+          <p className="text-sm text-gray-500">{passengerData?.phone || ''}</p>
+
+          {/* Actions rapides */}
+          <div className="grid grid-cols-4 gap-2 w-full mt-4">
+            {quickActions.map((a) => (
+              <button
+                key={a.label}
+                onClick={() => setCurrentScreen(a.screen)}
+                className="flex flex-col items-center gap-1.5 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                <span className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center">
+                  <a.icon className="w-5 h-5 text-gray-700" />
+                </span>
+                <span className="text-[11px] text-gray-700 font-medium">{a.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
-        {/* Photo de profil et informations principales */}
+      <div className="p-4 space-y-4">
+        {/* Statistiques */}
+        <Card className="p-4">
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-xl font-bold text-gray-900">
+                {rideStats.loading ? '...' : rideStats.totalRides}
+              </p>
+              <p className="text-[11px] text-gray-500">Courses</p>
+            </div>
+            <div>
+              <p className={`text-xl font-bold ${cancelCount >= 2 ? 'text-orange-600' : 'text-gray-900'}`}>
+                {cancelCount}
+              </p>
+              <p className="text-[11px] text-gray-500">Annulations</p>
+            </div>
+            <div>
+              <p className="text-xl font-bold text-amber-600">
+                {loyaltyBalance.toLocaleString('fr-FR')}
+              </p>
+              <p className="text-[11px] text-gray-500">Points</p>
+            </div>
+          </div>
+          {cancelCount > 0 && (
+            <p className="text-[11px] text-orange-600 text-center mt-2">
+              3 annulations successives = compte bloqué 24h
+            </p>
+          )}
+        </Card>
+
+        {/* Menu façon Yango */}
+        <Card className="p-2">
+          {menuRows.map((row, i) => (
+            <button
+              key={row.title}
+              onClick={() => setCurrentScreen(row.screen)}
+              className={`w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left ${i < menuRows.length - 1 ? 'border-b border-gray-50' : ''}`}
+            >
+              <span className={`w-9 h-9 rounded-full ${row.iconBg} flex items-center justify-center flex-shrink-0`}>
+                <row.icon className={`w-4 h-4 ${row.iconColor}`} />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold text-gray-900">{row.title}</span>
+                <span className="block text-xs text-gray-400 truncate">{row.subtitle}</span>
+              </span>
+              <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+            </button>
+          ))}
+
+          {/* Adresses */}
+          <div className="border-b border-gray-50">
+            <button
+              onClick={() => setShowAddresses((v) => !v)}
+              className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+            >
+              <span className="w-9 h-9 rounded-full bg-cyan-100 flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-4 h-4 text-cyan-600" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold text-gray-900">Mes adresses</span>
+                <span className="block text-xs text-gray-400 truncate">Domicile, travail, favoris</span>
+              </span>
+              <ChevronRight className={`w-4 h-4 text-gray-300 flex-shrink-0 transition-transform ${showAddresses ? 'rotate-90' : ''}`} />
+            </button>
+            {showAddresses && (
+              <div className="px-3 pb-3">
+                <FavoriteLocations
+                  onSelectLocation={() => {}}
+                  currentLocation={null}
+                  className=""
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Déconnexion */}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-red-50 transition-colors text-left"
+          >
+            <span className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <LogOut className="w-4 h-4 text-red-600" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-red-600">Se déconnecter</span>
+            </span>
+          </button>
+        </Card>
+
+        {/* Portefeuille */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-        >
-          <Card className="p-4 md:p-6 bg-white/60 backdrop-blur-sm border-border shadow-lg">
-            <div className="flex items-center space-x-4 mb-6 min-w-0">
-              <div className="relative flex-shrink-0">
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center shadow-lg">
-                  <User className="w-8 h-8 md:w-10 md:h-10 text-white" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 md:w-7 md:h-7 bg-secondary rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                  <Shield className="w-3 h-3 md:w-4 md:h-4 text-white" />
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg md:text-xl text-primary truncate">{passengerData?.name}</h2>
-                <p className="text-sm text-muted-foreground truncate">Client SmartCabb</p>
-                <div className="flex items-center space-x-2 mt-2 overflow-x-auto">
-                  <div className="flex items-center px-2 py-1 bg-secondary/10 rounded-full flex-shrink-0">
-                    <Shield className="w-3.5 h-3.5 text-secondary mr-1" />
-                    <span className="text-xs text-secondary font-medium">Compte vérifié</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Statistiques */}
-            <div className="grid grid-cols-2 gap-3 md:gap-4">
-              <div className="bg-gradient-to-br from-secondary/10 to-secondary/5 p-3 md:p-4 rounded-2xl text-center border border-secondary/20 shadow-sm">
-                <p className="text-xl md:text-2xl font-bold text-secondary">
-                  {rideStats.loading ? '...' : rideStats.totalRides}
-                </p>
-                <p className="text-xs md:text-sm text-secondary/80">Courses réalisées</p>
-              </div>
-              <div className="bg-gradient-to-br from-primary/10 to-primary/5 p-3 md:p-4 rounded-2xl text-center border border-primary/20 shadow-sm">
-                <p className="text-xl md:text-2xl font-bold text-primary">
-                  {passengerData?.registeredAt 
-                    ? new Date(passengerData.registeredAt).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
-                    : new Date(passengerData?.created_at || Date.now()).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
-                  }
-                </p>
-                <p className="text-xs md:text-sm text-primary/80">Membre depuis</p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Portefeuille - Wallet Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
         >
           <button
             onClick={() => setCurrentScreen('wallet')}
             className="w-full"
           >
-            <Card className="p-4 md:p-6 bg-gradient-to-br from-secondary/5 to-primary/5 border-secondary/20 hover:shadow-lg transition-all cursor-pointer">
+            <Card className="p-4 bg-gradient-to-br from-cyan-50 to-blue-50 border-cyan-100 hover:shadow-lg transition-all cursor-pointer">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 md:gap-4">
-                  <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-secondary to-primary rounded-2xl flex items-center justify-center shadow-lg">
-                    <Wallet className="w-6 h-6 md:w-7 md:h-7 text-white" />
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Wallet className="w-6 h-6 text-white" />
                   </div>
                   <div className="text-left">
-                    <p className="text-xs md:text-sm text-muted-foreground mb-1">Mon Portefeuille</p>
-                    <p className="text-xl md:text-2xl font-bold text-primary">
+                    <p className="text-xs text-gray-500 mb-1">Mon Portefeuille</p>
+                    <p className="text-xl font-bold text-gray-900">
                       {formatCDF(walletBalance)}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       ≈ {((walletBalance) / getExchangeRate()).toFixed(2)}$ USD
                     </p>
                     {(walletBalance) >= getExchangeRate() * 20 && (
-                      <p className="text-xs text-secondary font-medium mt-1 flex items-center gap-1">
+                      <p className="text-xs text-green-600 font-medium mt-1 flex items-center gap-1">
                         🎁 Réduction de 5% active
                       </p>
                     )}
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />
-              </div>
-            </Card>
-          </button>
-        </motion.div>
-
-        {/* Smart Rewards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.07 }}
-        >
-          <button onClick={() => setCurrentScreen('loyalty')} className="w-full">
-            <Card className="p-4 md:p-5 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 hover:shadow-lg transition-all cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow">
-                    <Gift className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-900">Smart Rewards</p>
-                    <p className="text-xs text-gray-600">Mes points et récompenses</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
@@ -507,7 +612,7 @@ export function ProfileScreen() {
         >
           <Card className="p-4 md:p-6">
             <h3 className="text-base md:text-lg font-semibold mb-4">Informations personnelles</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <Label htmlFor="name">Nom complet</Label>
@@ -584,7 +689,7 @@ export function ProfileScreen() {
                 <div className="flex items-center space-x-3 mt-1 p-3 bg-gray-50 rounded-lg min-w-0">
                   <Calendar className="w-5 h-5 text-gray-500 flex-shrink-0" />
                   <span className="truncate">
-                    {passengerData?.registeredAt 
+                    {passengerData?.registeredAt
                       ? new Date(passengerData.registeredAt).toLocaleDateString('fr-FR', {
                           day: 'numeric',
                           month: 'long',
@@ -607,7 +712,7 @@ export function ProfileScreen() {
         >
           <Card className="p-6">
             <h3 className="text-lg font-semibold mb-4">Méthode de paiement préférée</h3>
-            
+
             <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
               {getPaymentMethodIcon(passengerData?.favoritePaymentMethod)}
               <div className="flex-1">
@@ -665,55 +770,6 @@ export function ProfileScreen() {
             </div>
           </DialogContent>
         </Dialog>
-
-        {/* Actions rapides */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Actions rapides</h3>
-            
-            <div className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setCurrentScreen('scheduled-rides')}
-              >
-                <Calendar className="w-5 h-5 mr-3" />
-                Mes reservations
-              </Button>
-
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setCurrentScreen('ride-history')}
-              >
-                <History className="w-5 h-5 mr-3" />
-                Voir l'historique des courses
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full justify-start"
-                onClick={() => setCurrentScreen('support')}
-              >
-                <HelpCircle className="w-5 h-5 mr-3" />
-                Contacter le support
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
-                onClick={handleLogout}
-              >
-                <LogOut className="w-5 h-5 mr-3" />
-                Se déconnecter
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
       </div>
     </div>
   );
