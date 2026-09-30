@@ -53,6 +53,12 @@ const AlertCircle = ({ className = "w-5 h-5" }: { className?: string }) => (
 const XCircle = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 );
+const SettingsIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+);
+const HelpIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+);
 const Clock = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
 );
@@ -910,6 +916,27 @@ export function DriverDashboardNew() {
 
         {activeTab === 'profile' && (
           <>
+            {/* ── Actions rapides ─────────────────────────────────────── */}
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { icon: Navigation, label: 'Courses', onClick: () => setActiveTab('rides') },
+                { icon: DollarSign, label: 'Gains', onClick: () => setActiveTab('earnings') },
+                { icon: Wallet, label: 'Portefeuille', onClick: () => setShowWalletManager(true) },
+                { icon: SettingsIcon, label: 'Réglages', onClick: () => setCurrentScreen('driver-settings') },
+              ].map((a) => (
+                <button
+                  key={a.label}
+                  onClick={a.onClick}
+                  className="flex flex-col items-center gap-1.5 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  <span className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center">
+                    <a.icon className="w-5 h-5 text-gray-700" />
+                  </span>
+                  <span className="text-[11px] text-gray-700 font-medium">{a.label}</span>
+                </button>
+              ))}
+            </div>
+
             {/* ── Note du conducteur ──────────────────────────────────── */}
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3">
@@ -974,7 +1001,62 @@ export function DriverDashboardNew() {
                     {driver.isApproved ? 'Approuvé' : 'En attente'}
                   </Badge>
                 </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="bg-green-50 rounded-xl p-3 text-center">
+                    <p className="text-xl font-bold text-green-700">
+                      {rideHistory.filter((r: any) => r.status === 'completed' || r.status === 'rated' || (r.status === 'cancelled' && !!r.startedAt)).length}
+                    </p>
+                    <p className="text-[11px] text-gray-500">Terminées</p>
+                  </div>
+                  <div className="bg-red-50 rounded-xl p-3 text-center">
+                    <p className="text-xl font-bold text-red-600">
+                      {rideHistory.filter((r: any) => r.status === 'cancelled' && !r.startedAt).length}
+                    </p>
+                    <p className="text-[11px] text-gray-500">Annulées</p>
+                  </div>
+                </div>
               </div>
+            </Card>
+            {/* ── Menu ────────────────────────────────────────────────── */}
+            <Card className="p-2">
+              <button
+                onClick={() => setCurrentScreen('driver-profile')}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left border-b border-gray-50"
+              >
+                <span className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <User className="w-4 h-4 text-blue-600" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-semibold text-gray-900">Mon véhicule</span>
+                  <span className="block text-xs text-gray-400 truncate">
+                    {driver.vehicle?.make || ''} {driver.vehicle?.model || ''} {driver.vehicle?.plate ? `· ${driver.vehicle.plate}` : ''}
+                  </span>
+                </span>
+              </button>
+              <button
+                onClick={() => setCurrentScreen('driver-notifications')}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left border-b border-gray-50"
+              >
+                <span className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-4 h-4 text-amber-600" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-semibold text-gray-900">Notifications</span>
+                  <span className="block text-xs text-gray-400 truncate">Annonces SmartCabb</span>
+                </span>
+              </button>
+              <a
+                href="tel:+243960624008"
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left"
+              >
+                <span className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                  <HelpIcon className="w-4 h-4 text-green-600" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-sm font-semibold text-gray-900">Assistance</span>
+                  <span className="block text-xs text-gray-400 truncate">+243 960 624 008</span>
+                </span>
+              </a>
             </Card>
             <Card className="p-4">
               <h3 className="font-semibold text-gray-900 mb-4">Paramètres</h3>
