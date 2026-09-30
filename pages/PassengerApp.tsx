@@ -404,7 +404,7 @@ function PassengerAppContent() {
       {showRLSModal && <RLSFixModal />}
 
       <div className="min-h-screen bg-gray-50">
-        <div className="min-h-screen max-w-2xl mx-auto bg-white shadow-sm">
+        <div className="min-h-screen max-w-2xl md:max-w-4xl mx-auto bg-white shadow-sm">
           <div className="transition-opacity duration-300" style={{ willChange: 'opacity' }}>
             {screenComponent}
           </div>
