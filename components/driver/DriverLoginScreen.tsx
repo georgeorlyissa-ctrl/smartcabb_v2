@@ -330,7 +330,7 @@ export function DriverLoginScreen() {
             </p>
           </div>
 
-          <div className="text-center hide-in-apk">
+          <div className="text-center">
             <button 
               type="button"
               onClick={() => setCurrentScreen('driver-welcome')}
