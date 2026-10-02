@@ -10,25 +10,10 @@ interface ImageCarouselProps {
 export function ImageCarousel({ images, serviceName }: ImageCarouselProps) {
   const options = useMemo(() => ({ loop: true as const, align: 'start' as const }), []);
   const [emblaRef, emblaApi] = useEmblaCarousel(options);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
   const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi]);
   const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi]);
-  const scrollTo = useCallback((i: number) => emblaApi && emblaApi.scrollTo(i), [emblaApi]);
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    const idx = emblaApi.selectedScrollSnap();
-    setCurrentIndex(prev => prev === idx ? prev : idx);
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    emblaApi.on('select', onSelect);
-    onSelect();
-    return () => { emblaApi.off('select', onSelect); };
-  }, [emblaApi, onSelect]);
 
   // Autoplay 3.5s, pause on hover
   useEffect(() => {
@@ -85,32 +70,11 @@ export function ImageCarousel({ images, serviceName }: ImageCarouselProps) {
         </>
       )}
 
-      {/* Dots */}
-      {images.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full">
-          {images.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => scrollTo(i)}
-              className={`rounded-full transition-all duration-300 ${i === currentIndex ? 'bg-white w-6 h-1.5' : 'bg-white/60 hover:bg-white/90 w-1.5 h-1.5'}`}
-              aria-label={`Aller à ${i + 1}`}
-            />
-          ))}
-        </div>
-      )}
-
       {/* Logo */}
       <div className="absolute bottom-4 left-4 flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/50">
         <SmartCabbLogo plain className="w-6 h-6" />
         <span className="text-xs font-bold text-gray-900 pr-1">{serviceName.includes(' ') ? serviceName.split(' ').slice(1).join(' ') : serviceName}</span>
       </div>
-
-      {/* Counter */}
-      {images.length > 1 && (
-        <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-xs font-semibold">
-          {currentIndex + 1} / {images.length}
-        </div>
-      )}
     </div>
   );
 }
