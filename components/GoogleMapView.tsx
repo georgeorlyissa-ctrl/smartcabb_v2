@@ -340,7 +340,7 @@ export function GoogleMapView({
         url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
           <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
             <circle cx="16" cy="16" r="14" fill="#10B981" stroke="white" stroke-width="2"/>
-            <text x="16" y="21" font-size="16" text-anchor="middle" fill="white">🚗</text>
+            <text x="16" y="21" font-size="16" text-anchor="middle" fill="white">🧍</text>
           </svg>
         `),
         scaledSize: new window.google.maps.Size(32, 32),
@@ -393,7 +393,7 @@ export function GoogleMapView({
 
       routeMarkersRef.current.start = new window.google.maps.Marker({
         position: start, map: mapInstanceRef.current,
-        icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="20" fill="#10B981" stroke="white" stroke-width="4"/><text x="24" y="30" font-size="20" text-anchor="middle" fill="white">🚗</text></svg>`), scaledSize: new window.google.maps.Size(48, 48), anchor: new window.google.maps.Point(24, 24) },
+        icon: { url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="20" fill="#10B981" stroke="white" stroke-width="4"/><text x="24" y="30" font-size="20" text-anchor="middle" fill="white">🧍</text></svg>`), scaledSize: new window.google.maps.Size(48, 48), anchor: new window.google.maps.Point(24, 24) },
         title: `Départ: ${start.address || 'Point de départ'}`, zIndex: 3000, optimized: false
       });
 
@@ -526,7 +526,7 @@ export function GoogleMapView({
       }
     } else {
       const carIcon = {
-        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="20" fill="#10B981" stroke="white" stroke-width="3"/><text x="24" y="30" font-size="20" text-anchor="middle" fill="white">🚗</text></svg>`),
+        url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg width="48" height="48" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><circle cx="24" cy="24" r="20" fill="#10B981" stroke="white" stroke-width="3"/><text x="24" y="30" font-size="20" text-anchor="middle" fill="white">🧍</text></svg>`),
         scaledSize: new window.google.maps.Size(48, 48),
         anchor: new window.google.maps.Point(24, 24)
       };
