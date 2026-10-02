@@ -19,7 +19,6 @@ export function VehicleImageCarousel({
 }: VehicleImageCarouselProps) {
   const options = useMemo(() => ({ loop: true as const }), []);
   const [emblaRef, emblaApi] = useEmblaCarousel(options);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
 
   const scrollPrev = useCallback((e?: React.MouseEvent) => {
@@ -30,19 +29,6 @@ export function VehicleImageCarousel({
     e?.stopPropagation();
     emblaApi && emblaApi.scrollNext();
   }, [emblaApi]);
-
-  const onSelect = useCallback(() => {
-    if (!emblaApi) return;
-    const idx = emblaApi.selectedScrollSnap();
-    setCurrentIndex(prev => prev === idx ? prev : idx);
-  }, [emblaApi]);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    emblaApi.on('select', onSelect);
-    onSelect();
-    return () => { emblaApi.off('select', onSelect); };
-  }, [emblaApi, onSelect]);
 
   useEffect(() => {
     if (!autoPlay || isHovered || images.length <= 1 || !emblaApi) return;
@@ -87,6 +73,7 @@ export function VehicleImageCarousel({
         </div>
       )}
 
+      {/* Flèches discrètes (desktop au survol) */}
       <button
         onClick={scrollPrev}
         className={`absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md border border-white/60 transition-all duration-200 z-10 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
@@ -101,21 +88,6 @@ export function VehicleImageCarousel({
       >
         <ChevronRight className="w-3.5 h-3.5 text-gray-700" />
       </button>
-
-      <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-black/30 backdrop-blur-md px-2 py-1 rounded-full">
-        {images.map((_, i) => (
-          <button
-            key={i}
-            onClick={(e) => { e.stopPropagation(); emblaApi && emblaApi.scrollTo(i); }}
-            className={`rounded-full transition-all duration-300 ${i === currentIndex ? 'bg-white w-3 h-1' : 'bg-white/60 w-1 h-1'}`}
-            aria-label={`Image ${i + 1}`}
-          />
-        ))}
-      </div>
-
-      <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/60 backdrop-blur-sm rounded text-[9px] text-white font-medium">
-        {currentIndex + 1}/{images.length}
-      </div>
     </div>
   );
 }
