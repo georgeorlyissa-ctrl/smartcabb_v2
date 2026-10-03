@@ -89,8 +89,14 @@ async function fetchVersion(): Promise<{ configVersion: number; lastUpdated: str
 export function useAdminConfig() {
   const [config, setConfig] = useState<AdminConfig>(readCache);
   const versionRef = useRef<number>((readCache() as any).configVersion ?? 0);
+  // Garde anti-réentrée : ce hook écoute 'smartcabb:config-updated' (pour les
+  // saves venant d'autres écrans) ET dispatche ce même event. Sans garde,
+  // applyConfig → dispatch → handleCustom → applyConfig… boucle infinie
+  // synchrone = RangeError: Maximum call stack size exceeded.
+  const dispatchingRef = useRef(false);
 
   const applyConfig = (newConfig: AdminConfig) => {
+    if (dispatchingRef.current) return; // écho de notre propre dispatch → stop
     setConfig(newConfig);
     versionRef.current = (newConfig as any).configVersion ?? versionRef.current;
     // Écrire dans les deux clés pour compat
@@ -100,8 +106,13 @@ export function useAdminConfig() {
       localStorage.setItem(LEGACY_KEY, payload);
       localStorage.setItem('smartcabb_exchange_rate', String(newConfig.exchangeRate));
     } catch (_) {}
-    window.dispatchEvent(new CustomEvent('smartcabb:config-updated', { detail: newConfig }));
-    window.dispatchEvent(new CustomEvent('exchange-rate-updated', { detail: { rate: newConfig.exchangeRate } }));
+    dispatchingRef.current = true;
+    try {
+      window.dispatchEvent(new CustomEvent('smartcabb:config-updated', { detail: newConfig }));
+      window.dispatchEvent(new CustomEvent('exchange-rate-updated', { detail: { rate: newConfig.exchangeRate } }));
+    } finally {
+      dispatchingRef.current = false;
+    }
   };
 
   // ─ Chargement initial depuis le serveur ───────────────────────────────────
