@@ -406,9 +406,7 @@ export function LandingPage() {
                   {t('hero.bookRide')}
                 </Link>
                 <a
-                  href={`https://wa.me/243960624008?text=${encodeURIComponent(language === 'fr' ? 'Bonjour SmartCabb, je souhaite réserver une course (Familiale / Business). Départ : ..., Destination : ..., Date et heure : ...' : 'Hello SmartCabb, I would like to book a ride (Familiale / Business). Pickup: ..., Destination: ..., Date and time: ...')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/app/passenger?screen=scheduled-rides"
                   className="btn-hero-secondary cta-attention"
                   title={language === 'fr' ? 'Réserver — Familiale & Business' : 'Book — Familiale & Business'}
                 >

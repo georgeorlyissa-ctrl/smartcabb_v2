@@ -315,6 +315,21 @@ function PassengerAppContent() {
       shouldUpdate = true;
     }
 
+    // ✅ Deep link : ?screen=scheduled-rides (bouton Réserver du site)
+    // Si connecté → y aller direct, sinon mémoriser pour après login
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const deepScreen = params.get('screen');
+      if (deepScreen === 'scheduled-rides') {
+        if (state.currentUser) {
+          setCurrentScreen('scheduled-rides');
+          window.history.replaceState({}, '', window.location.pathname);
+          return;
+        }
+        localStorage.setItem('sc_pending_screen', 'scheduled-rides');
+      }
+    } catch {}
+
     // ✅ Si l'utilisateur est connecté avec un écran valide, ne rien changer
     if (state.currentUser && currentScreen && !['landing', 'user-selection', 'login', 'register'].includes(currentScreen)) {
       console.log('✅ Passager connecté avec écran valide, on garde:', currentScreen);

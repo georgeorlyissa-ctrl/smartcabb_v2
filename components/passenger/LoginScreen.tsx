@@ -293,6 +293,16 @@ export function LoginScreen() {
       
       // Attendre un peu avant de naviguer
       setTimeout(() => {
+        // Deep link en attente (ex: bouton Réserver du site) ?
+        try {
+          const pending = localStorage.getItem('sc_pending_screen');
+          if (pending === 'scheduled-rides') {
+            localStorage.removeItem('sc_pending_screen');
+            setCurrentScreen('scheduled-rides');
+            console.log('✅ Redirection deep link vers scheduled-rides');
+            return;
+          }
+        } catch {}
         setCurrentScreen('map');
         console.log('✅ setCurrentScreen(map) appelé');
       }, 500);
@@ -438,7 +448,7 @@ export function LoginScreen() {
               </p>
             </div>
 
-            <div className="text-center">
+            <div className="text-center hide-in-apk">
               <button 
                 type="button"
                 onClick={() => {
