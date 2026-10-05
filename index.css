@@ -8236,6 +8236,20 @@ input[type="email"], input[type="password"], input[type="text"], input[type="tel
   margin-bottom: max(0px, env(safe-area-inset-bottom, 0px));
 }
 
+/* 🔤 Typographie standard des rangées de menu (passager + conducteur) */
+.row-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.35;
+}
+.row-subtitle {
+  font-size: 13px;
+  font-weight: 400;
+  color: #9ca3af;
+  line-height: 1.35;
+}
+
 /* 📱 Responsive global (tous téléphones) : hauteur dynamique qui suit la
    barre du navigateur + respect de la zone safe (encoche, barre système) */
 .h-app {

@@ -721,7 +721,7 @@ export function DriverDashboardNew() {
             <Card className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-semibold text-gray-900 text-sm">
-                  Mes Soldes <span className="text-xs text-gray-400 font-normal">(CDF)</span>
+                  Mes Soldes <span className="row-subtitle font-normal">(CDF)</span>
                 </h3>
                 <button
                   onClick={() => setShowBalance(!showBalance)}
@@ -1027,8 +1027,8 @@ export function DriverDashboardNew() {
                   <User className="w-4 h-4 text-blue-600" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-semibold text-gray-900">Mon véhicule</span>
-                  <span className="block text-xs text-gray-400 truncate">
+                  <span className="block row-title">Mon véhicule</span>
+                  <span className="block row-subtitle truncate">
                     {driver.vehicle?.make || ''} {driver.vehicle?.model || ''} {driver.vehicle?.plate ? `· ${driver.vehicle.plate}` : ''}
                   </span>
                 </span>
@@ -1041,8 +1041,8 @@ export function DriverDashboardNew() {
                   <Clock className="w-4 h-4 text-amber-600" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-semibold text-gray-900">Notifications</span>
-                  <span className="block text-xs text-gray-400 truncate">Annonces SmartCabb</span>
+                  <span className="block row-title">Notifications</span>
+                  <span className="block row-subtitle truncate">Annonces SmartCabb</span>
                 </span>
               </button>
               <a
@@ -1053,8 +1053,8 @@ export function DriverDashboardNew() {
                   <HelpIcon className="w-4 h-4 text-green-600" />
                 </span>
                 <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-semibold text-gray-900">Assistance</span>
-                  <span className="block text-xs text-gray-400 truncate">+243 960 624 008</span>
+                  <span className="block row-title">Assistance</span>
+                  <span className="block row-subtitle truncate">+243 960 624 008</span>
                 </span>
               </a>
             </Card>

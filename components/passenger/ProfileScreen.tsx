@@ -521,8 +521,8 @@ export function ProfileScreen() {
                 <row.icon className={`w-4 h-4 ${row.iconColor}`} />
               </span>
               <span className="flex-1 min-w-0">
-                <span className="block text-sm font-semibold text-gray-900">{row.title}</span>
-                <span className="block text-xs text-gray-400 truncate">{row.subtitle}</span>
+                <span className="block row-title">{row.title}</span>
+                <span className="block row-subtitle truncate">{row.subtitle}</span>
               </span>
               <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
             </button>
@@ -538,8 +538,8 @@ export function ProfileScreen() {
                 <MapPin className="w-4 h-4 text-cyan-600" />
               </span>
               <span className="flex-1 min-w-0">
-                <span className="block text-sm font-semibold text-gray-900">Mes adresses</span>
-                <span className="block text-xs text-gray-400 truncate">Domicile, travail, favoris</span>
+                <span className="block row-title">Mes adresses</span>
+                <span className="block row-subtitle truncate">Domicile, travail, favoris</span>
               </span>
               <ChevronRight className={`w-4 h-4 text-gray-300 flex-shrink-0 transition-transform ${showAddresses ? 'rotate-90' : ''}`} />
             </button>
