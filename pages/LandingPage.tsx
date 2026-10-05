@@ -14,6 +14,7 @@ function PlayStoreBadge({ lang }: { lang: 'fr' | 'en' }) {
       href="https://play.google.com/store/apps/details?id=com.smartcabb.app"
       target="_blank"
       rel="noopener noreferrer"
+      className="cta-attention"
       style={{
         display: 'inline-flex', alignItems: 'center', gap: '10px',
         padding: '11px 20px', background: '#222222', color: 'white',
@@ -254,6 +255,14 @@ export function LandingPage() {
         @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); } 50% { box-shadow: 0 0 0 16px rgba(255,255,255,0); } }
         .cta-glow { animation: pulseGlow 2.5s ease infinite; }
 
+        /* ── Attraction CTA (Commander, Réserver, Chauffeur, App) : pulsation douce + halo */
+        @keyframes ctaAttention {
+          0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(0,122,255,0.35), 0 0 0 0 rgba(0,122,255,0.45); }
+          50% { transform: scale(1.045); box-shadow: 0 8px 26px rgba(0,122,255,0.5), 0 0 0 14px rgba(0,122,255,0); }
+        }
+        .cta-attention { animation: ctaAttention 2.2s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) { .cta-attention, .cta-glow { animation: none; } }
+
         /* ── Particules hero ── */
         @keyframes floatP { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(180deg); } }
         .particle { position: absolute; border-radius: 50%; background: rgba(8,145,178,0.1); pointer-events: none; }
@@ -392,7 +401,7 @@ export function LandingPage() {
               {/* ✅ Boutons CTA — Commander / Devenir chauffeur / Play Store */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}
                 style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '48px', alignItems: 'center' }}>
-                <Link to="/app/passenger" className="btn-hero-primary cta-glow">
+                <Link to="/app/passenger" className="btn-hero-primary cta-attention">
                   <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                   {t('hero.bookRide')}
                 </Link>
@@ -400,12 +409,12 @@ export function LandingPage() {
                   href={`https://wa.me/243960624008?text=${encodeURIComponent(language === 'fr' ? 'Bonjour SmartCabb, je souhaite réserver une course (Familiale / Business). Départ : ..., Destination : ..., Date et heure : ...' : 'Hello SmartCabb, I would like to book a ride (Familiale / Business). Pickup: ..., Destination: ..., Date and time: ...')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-hero-secondary"
+                  className="btn-hero-secondary cta-attention"
                   title={language === 'fr' ? 'Réserver — Familiale & Business' : 'Book — Familiale & Business'}
                 >
                   📅 {language === 'fr' ? 'Réserver' : 'Book'}
                 </a>
-                <Link to="/app/driver/signup" className="btn-hero-secondary">
+                <Link to="/app/driver/signup" className="btn-hero-secondary cta-attention">
                   {t('hero.becomeDriver')}
                 </Link>
                 <PlayStoreBadge lang={language} />
