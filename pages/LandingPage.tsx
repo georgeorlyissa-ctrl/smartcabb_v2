@@ -396,6 +396,15 @@ export function LandingPage() {
                   <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                   {t('hero.bookRide')}
                 </Link>
+                <a
+                  href={`https://wa.me/243960624008?text=${encodeURIComponent(language === 'fr' ? 'Bonjour SmartCabb, je souhaite réserver une course (Familiale / Business). Départ : ..., Destination : ..., Date et heure : ...' : 'Hello SmartCabb, I would like to book a ride (Familiale / Business). Pickup: ..., Destination: ..., Date and time: ...')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-hero-secondary"
+                  title={language === 'fr' ? 'Réserver — Familiale & Business' : 'Book — Familiale & Business'}
+                >
+                  📅 {language === 'fr' ? 'Réserver' : 'Book'}
+                </a>
                 <Link to="/app/driver/signup" className="btn-hero-secondary">
                   {t('hero.becomeDriver')}
                 </Link>
