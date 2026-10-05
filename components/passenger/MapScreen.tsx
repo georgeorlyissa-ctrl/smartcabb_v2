@@ -335,6 +335,21 @@ export function MapScreen() {
             onChange={setSearchQuery}
           />
 
+          {/* Réservation mise en avant : Familiale & Business */}
+          <button
+            onClick={() => setCurrentScreen('scheduled-rides')}
+            className="w-full flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg active:scale-[0.99] transition-transform"
+          >
+            <span className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-xl">
+              📅
+            </span>
+            <span className="flex-1 text-left min-w-0">
+              <span className="block text-sm font-bold">Réserver une course</span>
+              <span className="block text-xs text-white/80 truncate">Familiale & Business — à l'avance</span>
+            </span>
+            <span className="text-white/80 text-lg flex-shrink-0">→</span>
+          </button>
+
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => {
