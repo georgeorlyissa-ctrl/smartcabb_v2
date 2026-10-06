@@ -291,6 +291,43 @@ app.post("/:id/wallet/recharge", async (c) => {
   }
 });
 
+// ─── POST /:id/wallet/debit — Débiter le portefeuille (ex: acompte réservation)
+app.post("/:id/wallet/debit", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { amount, reason } = await c.req.json();
+
+    if (typeof amount !== "number" || amount <= 0) {
+      return c.json({ success: false, error: "Montant invalide" }, 400);
+    }
+
+    let passenger = await kvGet(`passenger:${id}`);
+    if (!passenger) passenger = await kvGet(`profile:${id}`) || { id };
+
+    const currentBalance = passenger.walletBalance ?? passenger.balance ?? 0;
+    if (currentBalance < amount) {
+      return c.json({ success: false, error: "Solde insuffisant", balance: currentBalance }, 400);
+    }
+
+    const newBalance = currentBalance - amount;
+    const updatedPassenger = {
+      ...passenger,
+      walletBalance: newBalance,
+      balance: newBalance,
+      updated_at: new Date().toISOString(),
+    };
+
+    await kvSet(`passenger:${id}`, updatedPassenger);
+    await kvSet(`profile:${id}`, updatedPassenger);
+
+    console.log(`💸 [PASSENGERS/WALLET-DEBIT] ${id}: -${amount} CDF (${reason || "sans motif"}) → ${newBalance} CDF`);
+    return c.json({ success: true, walletBalance: newBalance, balance: newBalance });
+  } catch (error) {
+    console.error("❌ [PASSENGERS/WALLET-DEBIT] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
 // ─── GET /:id/stats — Statistiques d'un passager ─────────────────────────────
 app.get("/:id/stats", async (c) => {
   try {

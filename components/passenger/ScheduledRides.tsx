@@ -68,10 +68,19 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
   // Acompte 50% + CGU location (réservation ferme)
   const [cguAccepted, setCguAccepted] = useState(false);
+  const [depositMethod, setDepositMethod] = useState<'mobile_money' | 'card' | 'wallet' | 'cash'>('mobile_money');
   const [depositNetwork, setDepositNetwork] = useState(DEPOSIT_NETWORKS[0].id);
   const [depositPhone, setDepositPhone] = useState('');
   const [payingDeposit, setPayingDeposit] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const depositAmount = Math.round((newRide.estimated_price || 0) * 0.5);
+
+  const DEPOSIT_METHODS = [
+    { value: 'mobile_money' as const, icon: '📱', label: 'Mobile Money' },
+    { value: 'card' as const, icon: '💳', label: 'Carte bancaire' },
+    { value: 'wallet' as const, icon: '👛', label: 'Portefeuille' },
+    { value: 'cash' as const, icon: '💵', label: 'Espèces' },
+  ];
 
   // Motif de réservation (guide l'utilisateur, tarification inchangée)
   const [purpose, setPurpose] = useState<null | 'journee' | 'aeroport' | 'hors-ville'>(null);
@@ -156,9 +165,66 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       return;
     }
 
-    // Téléphone Mobile Money obligatoire pour l'acompte
+    // Espèces : pas d'encaissement à distance → réservation enregistrée, non ferme
+    if (depositMethod === 'cash') {
+      setIsLoading(true);
+      try {
+        const { error } = await supabase
+          .from('scheduled_rides')
+          .insert({
+            user_id: state.currentUser.id,
+            pickup_address: newRide.pickup_address,
+            pickup_lat: newRide.pickup_lat,
+            pickup_lng: newRide.pickup_lng,
+            dropoff_address: newRide.dropoff_address,
+            dropoff_lat: newRide.dropoff_lat,
+            dropoff_lng: newRide.dropoff_lng,
+            scheduled_date: newRide.scheduled_date,
+            scheduled_time: newRide.scheduled_time,
+            category: newRide.category,
+            estimated_price: newRide.estimated_price,
+            status: 'scheduled'
+          });
+        if (error) throw error;
+        toast.info(`Demande enregistrée : réglez l\u2019acompte de ${depositAmount.toLocaleString()} CDF en espèces pour confirmer la réservation`);
+        setCguAccepted(false);
+        await loadScheduledRides();
+        handleCloseDialog();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Erreur lors de la planification');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Portefeuille : débit direct du solde
+    if (depositMethod === 'wallet') {
+      setIsLoading(true);
+      try {
+        const resp = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${state.currentUser?.id}/wallet/debit`,
+          {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: depositAmount, reason: 'Acompte 50% réservation' }),
+          }
+        );
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+          throw new Error(data.error || 'Débit impossible');
+        }
+        await insertConfirmedRide();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Paiement par portefeuille impossible');
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Mobile Money / Carte : téléphone requis uniquement pour Mobile Money
     const phoneDigits = (depositPhone || '').replace(/\D/g, '');
-    if (phoneDigits.length < 9) {
+    if (depositMethod === 'mobile_money' && phoneDigits.length < 9) {
       toast.error('Numéro Mobile Money invalide pour payer l\u2019acompte');
       return;
     }
@@ -167,12 +233,12 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     setPayingDeposit(true);
 
     try {
-      // 1. Payer l'acompte de 50% via le moyen existant (Flutterwave / Mobile Money)
+      // 1. Payer l'acompte de 50% via le moyen existant (Flutterwave)
       const network = DEPOSIT_NETWORKS.find((n) => n.id === depositNetwork);
       const paymentData: PaymentInitData = {
         amount: depositAmount,
         currency: 'CDF',
-        method: 'mobile_money',
+        method: depositMethod === 'card' ? 'card' : 'mobile_money',
         customerEmail: state.currentUser?.email || 'passager@smartcabb.com',
         customerName: state.currentUser?.name || 'Passager',
         customerPhone: depositPhone,
@@ -242,29 +308,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       }
 
       // 3. Acompte reçu → réservation FERME
-      const { error } = await supabase
-        .from('scheduled_rides')
-        .insert({
-          user_id: state.currentUser.id,
-          pickup_address: newRide.pickup_address,
-          pickup_lat: newRide.pickup_lat,
-          pickup_lng: newRide.pickup_lng,
-          dropoff_address: newRide.dropoff_address,
-          dropoff_lat: newRide.dropoff_lat,
-          dropoff_lng: newRide.dropoff_lng,
-          scheduled_date: newRide.scheduled_date,
-          scheduled_time: newRide.scheduled_time,
-          category: newRide.category,
-          estimated_price: newRide.estimated_price,
-          status: 'confirmed'
-        });
-
-      if (error) throw error;
-
-      toast.success(`Réservation confirmée : acompte de ${depositAmount.toLocaleString()} CDF reçu (solde à régler : ${(newRide.estimated_price! - depositAmount).toLocaleString()} CDF)`);
-      setCguAccepted(false);
-      await loadScheduledRides();
-      handleCloseDialog();
+      await insertConfirmedRide();
     } catch (error) {
       console.error('Erreur:', error);
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la planification');
@@ -272,6 +316,32 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       setIsLoading(false);
       setPayingDeposit(false);
     }
+  };
+
+  const insertConfirmedRide = async () => {
+    const { error } = await supabase
+      .from('scheduled_rides')
+      .insert({
+        user_id: state.currentUser.id,
+        pickup_address: newRide.pickup_address,
+        pickup_lat: newRide.pickup_lat,
+        pickup_lng: newRide.pickup_lng,
+        dropoff_address: newRide.dropoff_address,
+        dropoff_lat: newRide.dropoff_lat,
+        dropoff_lng: newRide.dropoff_lng,
+        scheduled_date: newRide.scheduled_date,
+        scheduled_time: newRide.scheduled_time,
+        category: newRide.category,
+        estimated_price: newRide.estimated_price,
+        status: 'confirmed'
+      });
+
+    if (error) throw error;
+
+    toast.success(`Réservation confirmée : acompte de ${depositAmount.toLocaleString()} CDF reçu (solde à régler : ${(newRide.estimated_price! - depositAmount).toLocaleString()} CDF)`);
+    setCguAccepted(false);
+    await loadScheduledRides();
+    handleCloseDialog();
   };
 
   const handleCancelRide = async (id: string, scheduledDate: string, scheduledTime: string) => {
@@ -681,30 +751,73 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                 />
                 <span>J'ai lu et j'accepte les conditions générales de location du véhicule</span>
               </label>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-xs">Réseau Mobile Money</Label>
-                  <select
-                    value={depositNetwork}
-                    onChange={(e) => setDepositNetwork(e.target.value)}
-                    className="mt-1 w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                  >
-                    {DEPOSIT_NETWORKS.map((n) => (
-                      <option key={n.id} value={n.id}>{n.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-xs">Numéro payeur</Label>
-                  <Input
-                    value={depositPhone}
-                    onChange={(e) => setDepositPhone(e.target.value)}
-                    placeholder="0812345678"
-                    inputMode="tel"
-                    className="mt-1"
-                  />
+
+              {/* Moyen de paiement */}
+              <div>
+                <Label className="text-xs">Moyen de paiement de l'acompte</Label>
+                <div className="grid grid-cols-4 gap-1.5 mt-1.5">
+                  {DEPOSIT_METHODS.map((m) => (
+                    <button
+                      key={m.value}
+                      type="button"
+                      onClick={() => setDepositMethod(m.value)}
+                      className={`rounded-xl border-2 py-2 px-1 text-center transition-all ${
+                        depositMethod === m.value
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className="text-xl">{m.icon}</div>
+                      <div className={`text-[10px] font-semibold leading-tight mt-0.5 ${depositMethod === m.value ? 'text-green-700' : 'text-gray-600'}`}>
+                        {m.label}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {/* Réseaux : uniquement si Mobile Money */}
+              {depositMethod === 'mobile_money' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Réseau Mobile Money</Label>
+                    <select
+                      value={depositNetwork}
+                      onChange={(e) => setDepositNetwork(e.target.value)}
+                      className="mt-1 w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                    >
+                      {DEPOSIT_NETWORKS.map((n) => (
+                        <option key={n.id} value={n.id}>{n.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Numéro payeur</Label>
+                    <Input
+                      value={depositPhone}
+                      onChange={(e) => setDepositPhone(e.target.value)}
+                      placeholder="0812345678"
+                      inputMode="tel"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              )}
+              {depositMethod === 'card' && (
+                <p className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                  Paiement sécurisé par carte via la fenêtre Flutterwave.
+                </p>
+              )}
+              {depositMethod === 'wallet' && (
+                <p className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                  {depositAmount.toLocaleString()} CDF seront débités de votre portefeuille SmartCabb.
+                </p>
+              )}
+              {depositMethod === 'cash' && (
+                <p className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                  Réglez l'acompte en espèces pour confirmer : la réservation reste en attente jusque-là.
+                </p>
+              )}
             </div>
 
             {/* Boutons */}
@@ -721,7 +834,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
-                {payingDeposit ? 'Paiement de l\u2019acompte...' : isLoading ? 'Enregistrement...' : `Payer l\u2019acompte (${depositAmount.toLocaleString()} CDF)`}
+                {payingDeposit ? 'Paiement de l\u2019acompte...' : isLoading ? 'Enregistrement...' : depositMethod === 'cash' ? 'Enregistrer la demande' : `Payer l\u2019acompte (${depositAmount.toLocaleString()} CDF)`}
               </Button>
             </div>
           </div>
