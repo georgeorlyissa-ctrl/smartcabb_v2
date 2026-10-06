@@ -294,7 +294,7 @@ export function ProfileScreen() {
       console.log('📡 URL:', url);
 
       const response = await fetch(url, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Authorization': `Bearer ${publicAnonKey}`,
           'Content-Type': 'application/json'
