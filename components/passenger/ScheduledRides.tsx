@@ -10,8 +10,8 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
 import { toast } from '../../lib/toast';
+import { YangoStyleSearch } from './YangoStyleSearch';
 import { supabase } from '../../lib/supabase';
-import { GooglePlacesSearch } from './GooglePlacesSearch';
 
 interface ScheduledRide {
   id?: string;
@@ -349,37 +349,41 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
             {/* Départ */}
             <div>
               <Label>Point de départ</Label>
-              <GooglePlacesSearch
+              <div className="mt-1">
+              <YangoStyleSearch
                 placeholder="Adresse de départ..."
                 value={newRide.pickup_address}
-                onSelectPlace={(place) => {
+                onChange={(v) => setNewRide({ ...newRide, pickup_address: v })}
+                onSelect={(r) => {
                   setNewRide({
                     ...newRide,
-                    pickup_address: place.description,
-                    pickup_lat: place.lat,
-                    pickup_lng: place.lng
+                    pickup_address: r.description || r.name,
+                    pickup_lat: r.coordinates.lat,
+                    pickup_lng: r.coordinates.lng
                   });
                 }}
-                className="mt-1"
               />
+              </div>
             </div>
 
             {/* Destination */}
             <div>
               <Label>Destination</Label>
-              <GooglePlacesSearch
+              <div className="mt-1">
+              <YangoStyleSearch
                 placeholder="Adresse de destination..."
                 value={newRide.dropoff_address}
-                onSelectPlace={(place) => {
+                onChange={(v) => setNewRide({ ...newRide, dropoff_address: v })}
+                onSelect={(r) => {
                   setNewRide({
                     ...newRide,
-                    dropoff_address: place.description,
-                    dropoff_lat: place.lat,
-                    dropoff_lng: place.lng
+                    dropoff_address: r.description || r.name,
+                    dropoff_lat: r.coordinates.lat,
+                    dropoff_lng: r.coordinates.lng
                   });
                 }}
-                className="mt-1"
               />
+              </div>
             </div>
 
             {/* Date */}
