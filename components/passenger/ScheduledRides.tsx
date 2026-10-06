@@ -56,6 +56,38 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     status: 'scheduled'
   });
 
+  // Motif de réservation (guide l'utilisateur, tarification inchangée)
+  const [purpose, setPurpose] = useState<null | 'journee' | 'aeroport' | 'hors-ville'>(null);
+  const PURPOSES = [
+    {
+      value: 'journee' as const,
+      icon: '📅',
+      title: 'Location à la journée',
+      desc: 'Véhicule + chauffeur toute la journée',
+      hint: 'Idéal Business : votre chauffeur reste à disposition toute la journée.',
+      category: 'smart_business' as const,
+      price: 450000,
+    },
+    {
+      value: 'aeroport' as const,
+      icon: '✈️',
+      title: 'Aéroport',
+      desc: 'Transfert depuis ou vers N’djili',
+      hint: 'Prise en charge ou dépôt à l’aéroport de N’djili à l’heure choisie.',
+      category: 'smart_confort' as const,
+      price: 25000,
+    },
+    {
+      value: 'hors-ville' as const,
+      icon: '🛣️',
+      title: 'Hors ville',
+      desc: 'Déplacement en dehors de Kinshasa',
+      hint: 'Forfait journée appliqué (zone C), chauffeur dédié pour le trajet.',
+      category: 'smart_plus' as const,
+      price: 30000,
+    },
+  ];
+
   // Charger les courses planifiées
   useEffect(() => {
     loadScheduledRides();
@@ -346,6 +378,42 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {/* Motif de réservation */}
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Motif de réservation</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {PURPOSES.map((p) => {
+                  const selected = purpose === p.value;
+                  return (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => {
+                        setPurpose(p.value);
+                        setNewRide({ ...newRide, category: p.category, estimated_price: p.price });
+                      }}
+                      className={`rounded-xl border-2 p-2.5 text-left transition-all ${
+                        selected
+                          ? 'border-purple-500 bg-purple-50 shadow-md'
+                          : 'border-gray-200 hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="text-xl mb-1">{p.icon}</div>
+                      <div className={`text-xs font-bold leading-tight ${selected ? 'text-purple-700' : 'text-gray-800'}`}>
+                        {p.title}
+                      </div>
+                      <div className="text-[10px] text-gray-500 leading-tight mt-0.5">{p.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {purpose && (
+                <p className="text-xs text-purple-700 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2 mt-2">
+                  {PURPOSES.find((p) => p.value === purpose)?.hint}
+                </p>
+              )}
+            </div>
+
             {/* Départ */}
             <div>
               <Label>Point de départ</Label>
