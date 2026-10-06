@@ -256,7 +256,13 @@ export function SearchingDriversScreen() {
         console.error('❌ Erreur création course:', err);
         apiCalled.current = false;
         setPhase('error');
-        setErrorMsg(err.message || t('error'));
+        const raw = err.message || t('error');
+        // 500 transitoire → message humain au lieu du JSON brut
+        setErrorMsg(
+          /erreur 500/i.test(raw)
+            ? 'Service momentanément indisponible. Touchez Continuer pour réessayer.'
+            : raw
+        );
       }
     }, 2500);
 

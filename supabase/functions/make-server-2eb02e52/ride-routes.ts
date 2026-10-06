@@ -462,7 +462,7 @@ app.post("/create", async (c) => {
     });
   } catch (error) {
     console.error("❌ Erreur création course:", error);
-    return c.json({ success: false, error: "Erreur serveur" }, 500);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
   }
 });
 
