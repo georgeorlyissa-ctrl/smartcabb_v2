@@ -11,6 +11,16 @@ import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
 import { toast } from '../../lib/toast';
 import { YangoStyleSearch } from './YangoStyleSearch';
+import { paymentService } from '../../lib/payment-service';
+import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
+
+// Réseaux Mobile Money (mêmes moyens de paiement que dans l'application)
+const DEPOSIT_NETWORKS = [
+  { id: 'orange_money', name: 'Orange Money (*144#)' },
+  { id: 'mpesa', name: 'M-Pesa Vodacom (*150#)' },
+  { id: 'airtel_money', name: 'Airtel Money (*501#)' },
+  { id: 'afrimoney', name: 'Afrimoney (*555#)' },
+];
 import { supabase } from '../../lib/supabase';
 
 interface ScheduledRide {
@@ -55,6 +65,13 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     estimated_price: 30000,
     status: 'scheduled'
   });
+
+  // Acompte 50% + CGU location (réservation ferme)
+  const [cguAccepted, setCguAccepted] = useState(false);
+  const [depositNetwork, setDepositNetwork] = useState(DEPOSIT_NETWORKS[0].id);
+  const [depositPhone, setDepositPhone] = useState('');
+  const [payingDeposit, setPayingDeposit] = useState(false);
+  const depositAmount = Math.round((newRide.estimated_price || 0) * 0.5);
 
   // Motif de réservation (guide l'utilisateur, tarification inchangée)
   const [purpose, setPurpose] = useState<null | 'journee' | 'aeroport' | 'hors-ville'>(null);
@@ -101,7 +118,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         .from('scheduled_rides')
         .select('*')
         .eq('user_id', state.currentUser.id)
-        .eq('status', 'scheduled')
+        .in('status', ['scheduled', 'confirmed'])
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true });
 
@@ -133,9 +150,98 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       return;
     }
 
+    // CGU location obligatoires : la réservation n'est ferme qu'après acceptation
+    if (!cguAccepted) {
+      toast.error('Veuillez accepter les conditions générales de location du véhicule');
+      return;
+    }
+
+    // Téléphone Mobile Money obligatoire pour l'acompte
+    const phoneDigits = (depositPhone || '').replace(/\D/g, '');
+    if (phoneDigits.length < 9) {
+      toast.error('Numéro Mobile Money invalide pour payer l\u2019acompte');
+      return;
+    }
+
     setIsLoading(true);
+    setPayingDeposit(true);
 
     try {
+      // 1. Payer l'acompte de 50% via le moyen existant (Flutterwave / Mobile Money)
+      const network = DEPOSIT_NETWORKS.find((n) => n.id === depositNetwork);
+      const paymentData: PaymentInitData = {
+        amount: depositAmount,
+        currency: 'CDF',
+        method: 'mobile_money',
+        customerEmail: state.currentUser?.email || 'passager@smartcabb.com',
+        customerName: state.currentUser?.name || 'Passager',
+        customerPhone: depositPhone,
+        reference: `RES_DEPOSIT_${state.currentUser?.id}_${Date.now()}`,
+        description: `Acompte 50% réservation SmartCabb (${depositAmount.toLocaleString()} CDF via ${network?.name})`,
+        passengerId: state.currentUser?.id,
+        metadata: {
+          type: 'reservation_deposit',
+          network: depositNetwork,
+          networkName: network?.name,
+          scheduled_date: newRide.scheduled_date,
+          scheduled_time: newRide.scheduled_time,
+        }
+      };
+
+      const result = await paymentService.initPayment(paymentData);
+      if (!result.success || !result.paymentUrl) {
+        throw new Error(result.error || result.message || 'Paiement refusé');
+      }
+
+      const width = 500, height = 700;
+      const left = (window.screen.width - width) / 2;
+      const top = (window.screen.height - height) / 2;
+      const paymentWindow = window.open(
+        result.paymentUrl,
+        'SmartCabbDeposit',
+        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+      );
+      if (!paymentWindow) {
+        throw new Error('Fenêtre de paiement bloquée par le navigateur');
+      }
+
+      // 2. Attendre la confirmation du paiement (vérification toutes les 2s, 60s max)
+      const depositPaid = await new Promise<boolean>((resolve) => {
+        let attempts = 0;
+        const iv = setInterval(async () => {
+          attempts++;
+          try {
+            if (paymentWindow.closed) {
+              clearInterval(iv);
+              resolve(false);
+              return;
+            }
+            if (!result.transactionId) return;
+            const verification = await paymentService.verifyPayment(result.transactionId);
+            if (verification.isValid && (verification.status === 'successful' || verification.status === 'completed')) {
+              clearInterval(iv);
+              if (!paymentWindow.closed) paymentWindow.close();
+              resolve(true);
+            } else if (verification.status === 'failed') {
+              clearInterval(iv);
+              if (!paymentWindow.closed) paymentWindow.close();
+              resolve(false);
+            }
+          } catch {}
+          if (attempts >= 30) {
+            clearInterval(iv);
+            if (!paymentWindow.closed) paymentWindow.close();
+            resolve(false);
+          }
+        }, 2000);
+      });
+
+      if (!depositPaid) {
+        toast.error('Acompte non reçu : la réservation n\u2019est pas confirmée');
+        return;
+      }
+
+      // 3. Acompte reçu → réservation FERME
       const { error } = await supabase
         .from('scheduled_rides')
         .insert({
@@ -150,19 +256,21 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
           scheduled_time: newRide.scheduled_time,
           category: newRide.category,
           estimated_price: newRide.estimated_price,
-          status: 'scheduled'
+          status: 'confirmed'
         });
 
       if (error) throw error;
 
-      toast.success('Course planifiée avec succès');
+      toast.success(`Réservation confirmée : acompte de ${depositAmount.toLocaleString()} CDF reçu (solde à régler : ${(newRide.estimated_price! - depositAmount).toLocaleString()} CDF)`);
+      setCguAccepted(false);
       await loadScheduledRides();
       handleCloseDialog();
     } catch (error) {
       console.error('Erreur:', error);
-      toast.error('Erreur lors de la planification');
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la planification');
     } finally {
       setIsLoading(false);
+      setPayingDeposit(false);
     }
   };
 
@@ -296,6 +404,15 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                     <span className="text-sm font-medium">
                       {dateStr} à {timeStr}
                     </span>
+                    {ride.status === 'confirmed' ? (
+                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                        Confirmée (acompte reçu)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
+                        En attente
+                      </span>
+                    )}
                   </div>
 
                   {/* Catégorie avec badge prix */}
@@ -549,6 +666,47 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
               </p>
             </div>
 
+            {/* Acompte 50% + CGU location */}
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
+              <p className="text-xs text-gray-700">
+                La réservation devient <strong>ferme</strong> après versement d'un acompte de <strong>50%</strong>
+                (<strong>{depositAmount.toLocaleString()} CDF</strong>, solde de {(newRide.estimated_price! - depositAmount).toLocaleString()} CDF à régler) et acceptation des conditions de location.
+              </p>
+              <label className="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={cguAccepted}
+                  onChange={(e) => setCguAccepted(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-green-600"
+                />
+                <span>J'ai lu et j'accepte les conditions générales de location du véhicule</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Réseau Mobile Money</Label>
+                  <select
+                    value={depositNetwork}
+                    onChange={(e) => setDepositNetwork(e.target.value)}
+                    className="mt-1 w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                  >
+                    {DEPOSIT_NETWORKS.map((n) => (
+                      <option key={n.id} value={n.id}>{n.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs">Numéro payeur</Label>
+                  <Input
+                    value={depositPhone}
+                    onChange={(e) => setDepositPhone(e.target.value)}
+                    placeholder="0812345678"
+                    inputMode="tel"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Boutons */}
             <div className="flex gap-2 pt-4">
               <Button
@@ -563,7 +721,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
-                {isLoading ? 'Enregistrement...' : 'Planifier'}
+                {payingDeposit ? 'Paiement de l\u2019acompte...' : isLoading ? 'Enregistrement...' : `Payer l\u2019acompte (${depositAmount.toLocaleString()} CDF)`}
               </Button>
             </div>
           </div>
