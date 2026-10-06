@@ -410,7 +410,7 @@ export function LandingPage() {
                   className="btn-hero-secondary cta-attention"
                   title={language === 'fr' ? 'Réserver — Familiale & Business' : 'Book — Familiale & Business'}
                 >
-                  📅 {language === 'fr' ? 'Réserver' : 'Book'}
+                  📅 {language === 'fr' ? 'Réserver une course' : 'Book a ride'}
                 </a>
                 <Link to="/app/driver/signup" className="btn-hero-secondary cta-attention">
                   {t('hero.becomeDriver')}
