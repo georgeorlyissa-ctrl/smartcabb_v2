@@ -108,11 +108,16 @@ export function SeoHead() {
       rawPath.length > 1 && rawPath.endsWith('/') ? rawPath.slice(0, -1) : rawPath;
 
     const isPrivate =
-      path.startsWith('/app') ||
-      path.startsWith('/driver') ||
-      path.startsWith('/admin') ||
-      path.startsWith('/auth') ||
-      path.startsWith('/track') ||
+      path === '/app' ||
+      path.startsWith('/app/') ||
+      path === '/driver' ||
+      path.startsWith('/driver/') ||
+      path === '/admin' ||
+      path.startsWith('/admin/') ||
+      path === '/auth' ||
+      path.startsWith('/auth/') ||
+      path === '/track' ||
+      path.startsWith('/track/') ||
       path === '/account-deletion';
 
     const entry: SeoEntry | undefined = SEO_MAP[path];
