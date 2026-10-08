@@ -1,6 +1,6 @@
 import { Link } from '../lib/simple-router';
-import { SiteNavigation } from './SiteNavigation';
-import { ProfessionalFooter } from './ProfessionalFooter';
+import { SiteNavigation } from '../components/SiteNavigation';
+import { ProfessionalFooter } from '../components/ProfessionalFooter';
 
 /** Page 404 explicite (noindex via SeoHead) — évite le duplicate homepage en 200. */
 export function NotFoundPage() {
