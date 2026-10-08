@@ -110,6 +110,41 @@
   ],
   "redirects": [
     {
+      "source": "/passenger",
+      "destination": "/app",
+      "permanent": true
+    },
+    {
+      "source": "/passager",
+      "destination": "/app",
+      "permanent": true
+    },
+    {
+      "source": "/conducteur",
+      "destination": "/driver",
+      "permanent": true
+    },
+    {
+      "source": "/preview_page_v2.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/en",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/en/:path*",
+      "destination": "/",
+      "permanent": true
+    },
+    {
       "source": "/:path((?!_next|api|assets).*)",
       "has": [
         {
@@ -118,7 +153,7 @@
           "value": "http"
         }
       ],
-      "destination": "https://smartcabb.com/:path*",
+      "destination": "https://www.smartcabb.com/:path*",
       "permanent": true
     }
   ],

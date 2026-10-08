@@ -8,6 +8,7 @@ import { PWAInstallPrompt, OnlineStatusIndicator } from './components/PWAInstall
 import { ExchangeRateSync } from './components/ExchangeRateSync';
 import { ApkUpdatePrompt } from './components/ApkUpdatePrompt';
 import { PageTransition } from './components/PageTransition';
+import { SeoHead } from './components/SeoHead';
 import { AppProvider } from './hooks/useAppState';
 import { BackendSyncProvider } from './components/BackendSyncProvider';
 import { LanguageProvider } from './contexts/LanguageContext';
@@ -74,6 +75,7 @@ const TermsPage = lazyWithRetry(() => import('./pages/TermsPage').then(m => ({ d
 const PrivacyPage = lazyWithRetry(() => import('./pages/PrivacyPage').then(m => ({ default: m.PrivacyPage })));
 const LegalPage = lazyWithRetry(() => import('./pages/LegalPage').then(m => ({ default: m.LegalPage })));
 const AccountDeletionPage = lazyWithRetry(() => import('./pages/AccountDeletionPage').then(m => ({ default: m.AccountDeletionPage })));
+const NotFoundPage = lazyWithRetry(() => import('./pages/NotFoundPage').then(m => ({ default: m.NotFoundPage })));
 const TrackRidePage = lazyWithRetry(() => import('./pages/TrackRidePage').then(m => ({ default: m.TrackRidePage })));
 const PassengerApp = lazyWithRetry(() => import('./pages/PassengerApp').then(m => ({ default: m.PassengerApp })));
 const DriverApp = lazyWithRetry(() => import('./pages/DriverApp').then(m => ({ default: m.DriverApp })));
@@ -409,6 +411,7 @@ function App() {
         <AppProvider>
           <LanguageProvider>
             <DarkModeGuard />
+            <SeoHead />
             <div className="app-container">
               <OnlineStatusIndicator />
               <PWAInstallPrompt />
@@ -479,12 +482,13 @@ function App() {
                   {/* Application SmartCabb */}
                   <Route path="/app/*" element={<AppRouter />} />
                   
-                  {/* Anciennes pages */}
+                  {/* Anciennes pages (le redirect 301 serveur dans vercel.json gère le 1er chargement ;
+                      ces routes client prennent le relais en navigation interne SPA) */}
                   <Route path="/preview_page_v2.html" element={<Navigate to="/" replace />} />
                   <Route path="/index.html" element={<Navigate to="/" replace />} />
-                  
-                  {/* Catch-all */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
+
+                  {/* 404 explicite noindex — ne plus renvoyer la homepage en déguisé */}
+                  <Route path="*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
             </div>
