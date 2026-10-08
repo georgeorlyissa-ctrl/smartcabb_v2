@@ -66,7 +66,7 @@ export function LandingPage() {
   const { t, language } = useLanguage();
   const backgrounds = ['/photo2_smartcabb.jpeg', '/Images_2.jpeg', '/fille_smartcabb.jpg'];
 
-  const heroImages = ['/hero-smartcabb.jpg', '/fille_smartcabb.jpg'];
+  const heroImages = ['/photo_conducteur_smartcabb.jpeg', '/fille_smartcabb.jpg'];
   const vehicules = ['/Stadard_5.png', '/TOYOTA NOAH_2.png', '/Confort_4.png'];
 
   const paymentMethods = [
@@ -78,7 +78,7 @@ export function LandingPage() {
   ];
 
   useEffect(() => {
-    const preload = ['/hero-smartcabb.jpg', '/photo2_smartcabb.jpeg'];
+    const preload = ['/photo_conducteur_smartcabb.jpeg', '/photo2_smartcabb.jpeg'];
     preload.forEach(src => {
       const link = document.createElement('link');
       link.rel = 'preload'; link.as = 'image'; link.href = src;
@@ -435,7 +435,7 @@ export function LandingPage() {
             <div className="relative lg:hidden" style={{ marginBottom: '32px', borderRadius: '20px', overflow: 'hidden', height: '280px', boxShadow: '0 20px 56px rgba(0,0,0,0.14)' }}>
               {heroImages.map((img, i) =>
                 heroImg === i || heroImg === (i + 1) % heroImages.length ? (
-                  <img key={i} src={img} alt="SmartCabb" width={600} height={280}
+                  <img key={i} src={img} alt="Chauffeur SmartCabb à Kinshasa" width={600} height={280}
                     style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
                     onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }}
                   />
@@ -456,7 +456,7 @@ export function LandingPage() {
                 transition={{ duration: 0.8, delay: 0.25, ease }}>
                 {heroImages.map((img, i) =>
                   heroImg === i || heroImg === (i + 1) % heroImages.length ? (
-                    <img key={i} src={img} alt="SmartCabb" width={800} height={500}
+                      <img key={i} src={img} alt="Chauffeur SmartCabb à Kinshasa" width={800} height={500}
                       style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
                       onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }} />
                   ) : null
