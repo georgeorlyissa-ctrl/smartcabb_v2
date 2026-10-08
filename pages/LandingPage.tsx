@@ -66,7 +66,7 @@ export function LandingPage() {
   const { t, language } = useLanguage();
   const backgrounds = ['/photo2_smartcabb.jpeg', '/Images_2.jpeg', '/fille_smartcabb.jpg'];
 
-  const heroImages = ['/photo_conducteur_smartcabb.jpeg', '/fille_smartcabb.jpg'];
+  const heroImages = ['/photo_conducteur_smartcabb2026.jpeg', '/fille_smartcabb.jpg'];
   const vehicules = ['/Stadard_5.png', '/TOYOTA NOAH_2.png', '/Confort_4.png'];
 
   const paymentMethods = [
@@ -78,7 +78,7 @@ export function LandingPage() {
   ];
 
   useEffect(() => {
-    const preload = ['/photo_conducteur_smartcabb.jpeg', '/photo2_smartcabb.jpeg'];
+    const preload = ['/photo_conducteur_smartcabb2026.jpeg', '/photo2_smartcabb.jpeg'];
     preload.forEach(src => {
       const link = document.createElement('link');
       link.rel = 'preload'; link.as = 'image'; link.href = src;
