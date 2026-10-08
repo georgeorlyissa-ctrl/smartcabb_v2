@@ -217,7 +217,7 @@ export function DriverApproachingScreen() {
               variant="ghost"
               size="sm"
               onClick={() => setCurrentScreen('ride-in-progress')}
-              className="p-2 hover:bg-muted"
+              className="p-2 hover:bg-muted hide-in-apk"
             >
               <ArrowLeft className="w-5 h-5 text-primary" />
             </Button>

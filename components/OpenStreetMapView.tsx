@@ -85,7 +85,7 @@ export function OpenStreetMapView({
       const isPickup = idx === 0 && center && p.lat === center.lat && p.lng === center.lng;
       const html = isPickup
         ? '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>'
-          : '<div style="width:28px;height:28px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px">🧍</div>';
+        : '<div style="width:28px;height:28px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px">🚗</div>';
       const icon = Leaflet.divIcon({ html, className: '', iconSize: isPickup ? [18, 18] : [28, 28], iconAnchor: isPickup ? [9, 9] : [14, 14] });
       const m = Leaflet.marker([p.lat, p.lng], { icon }).addTo(map);
       markersRef.current.push(m);
