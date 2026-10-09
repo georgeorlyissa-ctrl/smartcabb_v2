@@ -15,6 +15,7 @@ import { paymentService } from '../../lib/payment-service';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
 import { convertUSDtoCDF, convertCDFtoUSD } from '../../lib/pricing';
 import { announceReservationReceived } from '../../lib/notification-sound';
+import { addLocalNotification } from '../AppNotificationsScreen';
 
 // Réseaux Mobile Money (mêmes moyens de paiement que dans l'application)
 const DEPOSIT_NETWORKS = [
@@ -134,7 +135,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   const isDevis = purpose === 'hors-ville';
   const currentTariffUSD = tariffUSDFor(purpose, newRide.category || 'smart_plus');
 
-  // ✅ Accusé de réception : son + voix 3 secondes après la réservation
+  // ✅ Accusé de réception : son + voix + entrée dans la cloche, 3 secondes après la réservation
   const scheduleReservationAck = () => {
     const d = newRide.scheduled_date && newRide.scheduled_time
       ? new Date(`${newRide.scheduled_date}T${newRide.scheduled_time}`)
@@ -144,8 +145,11 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       timeStr: newRide.scheduled_time || undefined,
       categoryLabel: getCategoryLabel(newRide.category || 'smart_plus').label,
     };
+    const when = details.dateStr && details.timeStr ? ` pour ${details.dateStr} à ${details.timeStr}` : '';
+    const message = `Votre réservation en ${details.categoryLabel}${when} est bien prise en compte. Merci de votre confiance.`;
     window.setTimeout(() => {
       try { announceReservationReceived(details); } catch (e) { console.warn('Ack réservation:', e); }
+      try { addLocalNotification('passengers', 'Réservation reçue ✅', message); } catch (e) { console.warn('Cloche réservation:', e); }
     }, 3000);
   };
 

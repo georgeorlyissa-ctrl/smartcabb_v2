@@ -34,6 +34,36 @@ function readKey(target: string): string {
   return `sc_notif_read_${target}`;
 }
 
+function localKey(target: string): string {
+  return `sc_notif_local_${target}`;
+}
+
+/** Notifications locales de l'appareil (ex: accusé de réception d'une réservation) */
+export function getLocalNotifications(target: string): AppNotification[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(localKey(target)) || '[]');
+    return Array.isArray(raw) ? raw : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Ajoute une notification locale visible dans la cloche + rafraîchit le badge */
+export function addLocalNotification(target: string, title: string, message: string): AppNotification {
+  const notif: AppNotification = {
+    id: `local_${Date.now()}`,
+    title,
+    message,
+    createdAt: new Date().toISOString(),
+  };
+  try {
+    const list = [notif, ...getLocalNotifications(target)].slice(0, 20);
+    localStorage.setItem(localKey(target), JSON.stringify(list));
+  } catch {}
+  try { window.dispatchEvent(new Event('sc:notif-updated')); } catch {}
+  return notif;
+}
+
 export function getReadIds(target: string): string[] {
   try {
     return JSON.parse(localStorage.getItem(readKey(target)) || '[]');
@@ -58,17 +88,24 @@ export function useUnreadNotifications(target: 'drivers' | 'passengers'): number
         headers: { 'Authorization': `Bearer ${publicAnonKey}` },
       });
       const data = await resp.json();
-      if (!data.success) return;
+      const serverIds: string[] = data.success
+        ? (data.notifications || []).map((n: AppNotification) => n.id)
+        : [];
+      const localIds = getLocalNotifications(target).map((n) => n.id);
       const read = new Set(getReadIds(target));
-      const ids: string[] = (data.notifications || []).map((n: AppNotification) => n.id);
-      setUnread(ids.filter((id) => !read.has(id)).length);
+      setUnread([...serverIds, ...localIds].filter((id) => !read.has(id)).length);
     } catch {}
   }, [target]);
 
   useEffect(() => {
     refresh();
     const iv = setInterval(refresh, 60000);
-    return () => clearInterval(iv);
+    const onLocal = () => refresh();
+    window.addEventListener('sc:notif-updated', onLocal);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener('sc:notif-updated', onLocal);
+    };
   }, [refresh]);
 
   return unread;
@@ -124,14 +161,16 @@ export function AppNotificationsScreen({
         headers: { 'Authorization': `Bearer ${publicAnonKey}` },
       });
       const data = await resp.json();
-      if (data.success) {
-        setItems(data.notifications || []);
-        markAllRead(
-          target,
-          (data.notifications || []).map((n: AppNotification) => n.id)
-        );
-      }
-    } catch {}
+      const server: AppNotification[] = data.success ? (data.notifications || []) : [];
+      const all = [...getLocalNotifications(target), ...server];
+      setItems(all);
+      markAllRead(
+        target,
+        all.map((n: AppNotification) => n.id)
+      );
+    } catch {
+      setItems(getLocalNotifications(target));
+    }
     finally {
       setLoading(false);
     }

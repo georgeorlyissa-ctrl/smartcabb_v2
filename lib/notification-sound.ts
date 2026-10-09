@@ -499,13 +499,15 @@ export function announcePassengerArrived(): void {
   void speakMessage('Votre conducteur est arrivé.');
 }
 
-/** ✅ Accusé de réception d'une réservation — son + voix + notification navigateur */
+/** ✅ Accusé de réception d'une réservation — son FORTE + voix + notification navigateur */
 export function announceReservationReceived(details?: {
   dateStr?: string;
   timeStr?: string;
   categoryLabel?: string;
 }): void {
-  playPassengerArrivedSound();
+  // Séquence dédiée plus forte et plus longue (volume 0.9, 4 notes)
+  playToneSequence([523.25, 659.25, 783.99, 1046.5], 0.3, 0.08, 0.9);
+  try { navigator.vibrate([250, 100, 250, 100, 400]); } catch {}
   const when = details?.dateStr && details?.timeStr
     ? ` pour ${details.dateStr} à ${details.timeStr}`
     : '';
