@@ -856,7 +856,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
               <p className="text-xs text-gray-700">
                 La réservation devient <strong>ferme</strong> après versement d'un acompte de <strong>50%</strong>
-                (<strong>${currentTariffUSD != null ? currentTariffUSD / 2 : depositAmount} ≈ {depositAmount.toLocaleString()} CDF</strong>, solde de {(newRide.estimated_price! - depositAmount).toLocaleString()} CDF à régler) et acceptation des conditions de location.
+                (<strong>${currentTariffUSD != null ? currentTariffUSD / 2 : depositAmount} ≈ {depositAmount.toLocaleString()} CDF</strong>, solde de {(newRide.estimated_price! - depositAmount).toLocaleString()} CDF à régler) et acceptation des <a href="/terms" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-blue-600 underline hover:text-blue-800">conditions de location</a>.
               </p>
               <label className="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
                 <input
@@ -865,8 +865,8 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                   onChange={(e) => setCguAccepted(e.target.checked)}
                   className="mt-0.5 w-4 h-4 accent-green-600"
                 />
-                <span>J'ai lu et j'accepte les conditions générales de location du véhicule</span>
-              </label>
+                <span>J'ai lu et j'accepte les <a href="/terms" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-blue-600 underline hover:text-blue-800">conditions générales de location du véhicule</a></span>
+                </label>
 
               {/* Moyen de paiement */}
               <div>
@@ -950,7 +950,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                     onChange={(e) => setCguAccepted(e.target.checked)}
                     className="mt-0.5 w-4 h-4 accent-green-600"
                   />
-                  <span>J'ai lu et j'accepte les conditions générales de location du véhicule</span>
+                  <span>J'ai lu et j'accepte les <a href="/terms" target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="text-blue-600 underline hover:text-blue-800">conditions générales de location du véhicule</a></span>
                 </label>
               </div>
             )}
