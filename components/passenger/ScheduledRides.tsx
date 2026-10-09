@@ -14,6 +14,7 @@ import { YangoStyleSearch } from './YangoStyleSearch';
 import { paymentService } from '../../lib/payment-service';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
 import { convertUSDtoCDF, convertCDFtoUSD } from '../../lib/pricing';
+import { announceReservationReceived } from '../../lib/notification-sound';
 
 // Réseaux Mobile Money (mêmes moyens de paiement que dans l'application)
 const DEPOSIT_NETWORKS = [
@@ -133,6 +134,21 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   const isDevis = purpose === 'hors-ville';
   const currentTariffUSD = tariffUSDFor(purpose, newRide.category || 'smart_plus');
 
+  // ✅ Accusé de réception : son + voix 3 secondes après la réservation
+  const scheduleReservationAck = () => {
+    const d = newRide.scheduled_date && newRide.scheduled_time
+      ? new Date(`${newRide.scheduled_date}T${newRide.scheduled_time}`)
+      : null;
+    const details = {
+      dateStr: d ? d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : undefined,
+      timeStr: newRide.scheduled_time || undefined,
+      categoryLabel: getCategoryLabel(newRide.category || 'smart_plus').label,
+    };
+    window.setTimeout(() => {
+      try { announceReservationReceived(details); } catch (e) { console.warn('Ack réservation:', e); }
+    }, 3000);
+  };
+
   // Charger les courses réservées
   useEffect(() => {
     loadScheduledRides();
@@ -212,6 +228,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         if (error) throw error;
         toast.info('Demande de devis envoyée : nous vous contacterons avec le tarif selon votre destination');
         setCguAccepted(false);
+        scheduleReservationAck();
         await loadScheduledRides();
         handleCloseDialog();
       } catch (error) {
@@ -245,6 +262,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         if (error) throw error;
         toast.info(`Demande enregistrée : réglez l\u2019acompte de ${depositAmount.toLocaleString()} CDF en espèces pour confirmer la réservation`);
         setCguAccepted(false);
+        scheduleReservationAck();
         await loadScheduledRides();
         handleCloseDialog();
       } catch (error) {
@@ -409,6 +427,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
     toast.success(`Réservation confirmée : acompte de ${depositAmount.toLocaleString()} CDF reçu (solde à régler : ${(newRide.estimated_price! - depositAmount).toLocaleString()} CDF)`);
     setCguAccepted(false);
+    scheduleReservationAck();
     await loadScheduledRides();
     handleCloseDialog();
   };

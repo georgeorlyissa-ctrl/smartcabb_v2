@@ -499,5 +499,24 @@ export function announcePassengerArrived(): void {
   void speakMessage('Votre conducteur est arrivé.');
 }
 
+/** ✅ Accusé de réception d'une réservation — son + voix + notification navigateur */
+export function announceReservationReceived(details?: {
+  dateStr?: string;
+  timeStr?: string;
+  categoryLabel?: string;
+}): void {
+  playPassengerArrivedSound();
+  const when = details?.dateStr && details?.timeStr
+    ? ` pour ${details.dateStr} à ${details.timeStr}`
+    : '';
+  const cat = details?.categoryLabel ? ` en ${details.categoryLabel}` : '';
+  void speakMessage(`SmartCabb a pris en compte votre réservation${cat}${when}. Merci de votre confiance.`);
+  showBrowserNotification(
+    'SmartCabb — Réservation reçue ✅',
+    `Votre réservation${cat}${when} est bien prise en compte.`,
+    { tag: 'smartcabb-reservation', renotify: true, data: details ?? {} }
+  );
+}
+
 // Alias rétro-compatibilité
 export { playRideNotification as playRideNotificationSound };
