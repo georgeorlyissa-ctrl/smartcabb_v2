@@ -69,6 +69,10 @@ export function AdminLoginScreen() {
     setCurrentUser(adminUser);
     setIsAdmin(true);
     setCurrentView('admin');
+    // ✅ Session admin DÉDIÉE — le slot partagé smartcab_current_user est écrasé
+    // par les connexions passager/conducteur (ex. "Jack", "Carmel") sur le même
+    // navigateur ; cette clé garde l'identité du seul admin.
+    try { localStorage.setItem('smartcab_current_admin', JSON.stringify(adminUser)); } catch {}
     toast.success(`Bienvenue ${name} ! 👋`);
     setCurrentScreen('admin-dashboard');
   };

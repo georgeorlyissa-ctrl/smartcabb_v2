@@ -140,8 +140,24 @@ export function AdminDashboard() {
     error 
   });
 
-  // Extraire le prénom de l'admin connecté
-  const adminFirstName = state.currentUser?.full_name?.split(' ')[0] || state.currentUser?.name?.split(' ')[0] || state.currentUser?.email?.split('@')[0] || 'Admin';
+  // Extraire le prénom de l'admin connecté — UNIQUEMENT depuis une session admin.
+  // state.currentUser est un slot PARTAGÉ (passager/conducteur/admin) : après un
+  // test passager ("Jack", "Carmel"...) sur le même navigateur, il contient le
+  // passager. On n'affiche donc jamais un profil non-admin ici.
+  const getAdminSession = (): any => {
+    const u: any = state.currentUser;
+    if (u && u.role === 'admin') return u;
+    try {
+      const raw = localStorage.getItem('smartcab_current_admin');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && (parsed.role === 'admin' || parsed.email)) return parsed;
+      }
+    } catch {}
+    return u && u.role === 'admin' ? u : null;
+  };
+  const adminSession = getAdminSession();
+  const adminFirstName = adminSession?.full_name?.split(' ')[0] || adminSession?.name?.split(' ')[0] || adminSession?.email?.split('@')[0] || 'Admin';
 
   // État pour le modal d'ajout d'admin
   const [showAddAdminModal, setShowAddAdminModal] = useState(false);
@@ -1132,6 +1148,8 @@ export function AdminDashboard() {
                   setCurrentUser(null);
                   setCurrentView(null);
                   setIsAdmin(false);
+                  // ✅ Effacer aussi la session admin dédiée
+                  try { localStorage.removeItem('smartcab_current_admin'); } catch {}
                   // Rediriger vers la page d'accueil (qui affiche maintenant le LandingScreen)
                   navigate('/');
                   toast.success('Déconnexion réussie');
