@@ -13,6 +13,7 @@ import { toast } from '../../lib/toast';
 import { YangoStyleSearch } from './YangoStyleSearch';
 import { paymentService } from '../../lib/payment-service';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
+import { convertUSDtoCDF, convertCDFtoUSD } from '../../lib/pricing';
 
 // Réseaux Mobile Money (mêmes moyens de paiement que dans l'application)
 const DEPOSIT_NETWORKS = [
@@ -62,7 +63,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     scheduled_date: '',
     scheduled_time: '',
     category: 'smart_plus',
-    estimated_price: 30000,
+    estimated_price: 0,
     status: 'scheduled'
   });
 
@@ -82,7 +83,14 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     { value: 'cash' as const, icon: '💵', label: 'Espèces' },
   ];
 
-  // Motif de réservation (guide l'utilisateur, tarification inchangée)
+  // Tarifs RÉSERVATION en USD (conversion auto en CDF via le taux de l'app)
+  const RESERVATION_TARIFFS_USD: Record<string, Record<string, number>> = {
+    aeroport: { smart_standard: 40, smart_confort: 50, smart_plus: 65, smart_business: 160 },
+    journee: { smart_standard: 60, smart_confort: 80, smart_plus: 100, smart_business: 160 },
+    // hors-ville : tarif sur devis → pas de prix fixe
+  };
+
+  // Motif de réservation : tarifs + conditions affichées au client
   const [purpose, setPurpose] = useState<null | 'journee' | 'aeroport' | 'hors-ville'>(null);
   const PURPOSES = [
     {
@@ -90,9 +98,9 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       icon: '📅',
       title: 'Location à la journée',
       desc: 'Véhicule + chauffeur toute la journée',
-      hint: 'Idéal Business : votre chauffeur reste à disposition toute la journée.',
+      hint: 'Votre chauffeur reste à disposition toute la journée.',
+      conditions: 'De 07h00 à 21h00. Heure supplémentaire après 21h00 : 10 $/h. Carburant à votre charge.',
       category: 'smart_business' as const,
-      price: 450000,
     },
     {
       value: 'aeroport' as const,
@@ -100,19 +108,30 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       title: 'Aéroport',
       desc: 'Transfert depuis ou vers N’djili',
       hint: 'Prise en charge ou dépôt à l’aéroport de N’djili à l’heure choisie.',
+      conditions: 'Prix fixe aller simple. Frais de stationnement à l’aéroport à votre charge.',
       category: 'smart_confort' as const,
-      price: 25000,
     },
     {
       value: 'hors-ville' as const,
       icon: '🛣️',
       title: 'Hors ville',
       desc: 'Déplacement en dehors de Kinshasa',
-      hint: 'Forfait journée appliqué (zone C), chauffeur dédié pour le trajet.',
+      hint: 'Déplacement hors Kinshasa : tarif établi sur devis selon votre destination.',
+      conditions: 'Tarif sur devis. À votre charge : carburant, péages, hébergement et restauration du chauffeur si besoin.',
       category: 'smart_plus' as const,
-      price: 30000,
     },
   ];
+
+  const tariffUSDFor = (p: string | null, category: string): number | null => {
+    if (!p || p === 'hors-ville') return null;
+    return RESERVATION_TARIFFS_USD[p]?.[category] ?? null;
+  };
+  const priceCDFFor = (p: string | null, category: string): number => {
+    const usd = tariffUSDFor(p, category);
+    return usd == null ? 0 : convertUSDtoCDF(usd);
+  };
+  const isDevis = purpose === 'hors-ville';
+  const currentTariffUSD = tariffUSDFor(purpose, newRide.category || 'smart_plus');
 
   // Charger les courses réservées
   useEffect(() => {
@@ -152,6 +171,11 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       return;
     }
 
+    if (!purpose) {
+      toast.error('Choisissez un motif de réservation (journée, aéroport ou hors ville)');
+      return;
+    }
+
     // Vérifier que la date est future
     const scheduledDateTime = new Date(`${newRide.scheduled_date}T${newRide.scheduled_time}`);
     if (scheduledDateTime < new Date()) {
@@ -162,6 +186,39 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     // CGU location obligatoires : la réservation n'est ferme qu'après acceptation
     if (!cguAccepted) {
       toast.error('Veuillez accepter les conditions générales de location du véhicule');
+      return;
+    }
+
+    // Hors ville : devis gratuit, sans acompte — simple demande envoyée
+    if (purpose === 'hors-ville') {
+      setIsLoading(true);
+      try {
+        const { error } = await supabase
+          .from('scheduled_rides')
+          .insert({
+            user_id: state.currentUser.id,
+            pickup_address: newRide.pickup_address,
+            pickup_lat: newRide.pickup_lat,
+            pickup_lng: newRide.pickup_lng,
+            dropoff_address: newRide.dropoff_address,
+            dropoff_lat: newRide.dropoff_lat,
+            dropoff_lng: newRide.dropoff_lng,
+            scheduled_date: newRide.scheduled_date,
+            scheduled_time: newRide.scheduled_time,
+            category: newRide.category,
+            estimated_price: 0,
+            status: 'scheduled'
+          });
+        if (error) throw error;
+        toast.info('Demande de devis envoyée : nous vous contacterons avec le tarif selon votre destination');
+        setCguAccepted(false);
+        await loadScheduledRides();
+        handleCloseDialog();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Erreur lors de la demande de devis');
+      } finally {
+        setIsLoading(false);
+      }
       return;
     }
 
@@ -386,6 +443,8 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
   const handleCloseDialog = () => {
     setShowAddDialog(false);
+    setPurpose(null);
+    setCguAccepted(false);
     setNewRide({
       pickup_address: '',
       pickup_lat: -4.3276,
@@ -396,7 +455,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       scheduled_date: '',
       scheduled_time: '',
       category: 'smart_plus',
-      estimated_price: 30000,
+      estimated_price: 0,
       status: 'scheduled'
     });
   };
@@ -525,9 +584,11 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-bold text-blue-900">
-                        ~{ride.estimated_price.toLocaleString()} CDF
+                        {ride.estimated_price > 0
+                          ? <>${convertCDFtoUSD(ride.estimated_price)} <span className="text-[11px] font-medium">≈ {ride.estimated_price.toLocaleString()} CDF</span></>
+                          : 'Sur devis'}
                       </p>
-                      <p className="text-[10px] text-blue-600">Prix estimé</p>
+                      <p className="text-[10px] text-blue-600">{ride.estimated_price > 0 ? 'Prix fixe' : 'Devis à venir'}</p>
                     </div>
                   </div>
 
@@ -602,7 +663,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                       type="button"
                       onClick={() => {
                         setPurpose(p.value);
-                        setNewRide({ ...newRide, category: p.category, estimated_price: p.price });
+                        setNewRide({ ...newRide, category: p.category, estimated_price: priceCDFFor(p.value, p.category) });
                       }}
                       className={`rounded-xl border-2 p-2.5 text-left transition-all ${
                         selected
@@ -619,11 +680,15 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                   );
                 })}
               </div>
-              {purpose && (
-                <p className="text-xs text-purple-700 bg-purple-50 border border-purple-100 rounded-lg px-3 py-2 mt-2">
-                  {PURPOSES.find((p) => p.value === purpose)?.hint}
-                </p>
-              )}
+              {purpose && (() => {
+                const selected = PURPOSES.find((p) => p.value === purpose);
+                return (
+                  <div className="bg-purple-50 border border-purple-100 rounded-lg px-3 py-2 mt-2 space-y-1">
+                    <p className="text-xs text-purple-700">{selected?.hint}</p>
+                    <p className="text-xs text-purple-900 font-medium">📌 Conditions : {selected?.conditions}</p>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Départ */}
@@ -696,20 +761,22 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
               <Label className="text-sm font-medium mb-2 block">Catégorie de véhicule</Label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: 'smart_standard', label: 'Standard', price: 20000, features: '3 places · Climatisation · GPS', capacity: 3 },
-                  { value: 'smart_confort', label: 'Confort', price: 25000, features: '3 places · Data · Clim Premium', capacity: 3 },
-                  { value: 'smart_plus', label: 'Plus (Familiale)', price: 30000, features: '6 places · Data · Grand espace', capacity: 6 },
-                  { value: 'smart_business', label: 'Business', price: 450000, features: 'VIP · Data · Rafraîchissements', capacity: 4 }
+                  { value: 'smart_standard', label: 'Standard', features: '3 places · Climatisation · GPS', capacity: 3 },
+                  { value: 'smart_confort', label: 'Confort', features: '3 places · Data · Clim Premium', capacity: 3 },
+                  { value: 'smart_plus', label: 'Plus (Familiale)', features: '6 places · Data · Grand espace', capacity: 6 },
+                  { value: 'smart_business', label: 'Business', features: 'VIP · Data · Rafraîchissements', capacity: 4 }
                 ].map((cat) => {
                   const isSelected = newRide.category === cat.value;
+                  const usd = tariffUSDFor(purpose, cat.value);
+                  const cdf = usd == null ? 0 : convertUSDtoCDF(usd);
                   return (
                     <button
                       key={cat.value}
                       type="button"
-                      onClick={() => setNewRide({ 
-                        ...newRide, 
+                      onClick={() => setNewRide({
+                        ...newRide,
                         category: cat.value as any,
-                        estimated_price: cat.price
+                        estimated_price: priceCDFFor(purpose, cat.value)
                       })}
                       className={`relative w-full rounded-xl border-2 transition-all duration-300 p-3 text-left ${
                         isSelected
@@ -735,10 +802,16 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                         </div>
                         <span className="text-[10px] text-muted-foreground">{cat.features}</span>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={`text-sm font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
-                            {cat.price.toLocaleString()}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">CDF</span>
+                          {usd == null ? (
+                            <span className="text-sm font-bold text-purple-700">Sur devis</span>
+                          ) : (
+                            <>
+                              <span className={`text-sm font-bold ${isSelected ? 'text-secondary' : 'text-primary'}`}>
+                                ${usd}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground">≈ {cdf.toLocaleString()} CDF</span>
+                            </>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                           <span>👤 {cat.capacity} places</span>
@@ -752,20 +825,38 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
             {/* Estimation */}
             <div className="bg-blue-50 rounded-lg p-3">
-              <p className="text-xs text-gray-600 mb-1">Prix estimé par palier</p>
-              <p className="text-lg text-blue-600">
-                ~{newRide.estimated_price?.toLocaleString()} CDF
+              <p className="text-xs text-gray-600 mb-1">
+                {isDevis ? 'Tarif du trajet' : 'Prix fixe du trajet'}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
-                Le prix final dépendra de la durée réelle du trajet
-              </p>
+              {isDevis ? (
+                <>
+                  <p className="text-lg font-bold text-purple-700">Sur devis</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Demande gratuite : nous vous contacterons avec le tarif selon votre destination.
+                  </p>
+                </>
+              ) : currentTariffUSD != null ? (
+                <>
+                  <p className="text-lg font-bold text-blue-600">
+                    ${currentTariffUSD} <span className="text-sm font-medium">≈ {(newRide.estimated_price || 0).toLocaleString()} CDF</span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Prix fixe, acompte de 50% à verser pour confirmer.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1">
+                  Choisissez un motif de réservation pour voir le tarif.
+                </p>
+              )}
             </div>
 
-            {/* Acompte 50% + CGU location */}
+            {/* Acompte 50% + CGU location (aéroport & journée uniquement) */}
+            {!isDevis && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-3">
               <p className="text-xs text-gray-700">
                 La réservation devient <strong>ferme</strong> après versement d'un acompte de <strong>50%</strong>
-                (<strong>{depositAmount.toLocaleString()} CDF</strong>, solde de {(newRide.estimated_price! - depositAmount).toLocaleString()} CDF à régler) et acceptation des conditions de location.
+                (<strong>${currentTariffUSD != null ? currentTariffUSD / 2 : depositAmount} ≈ {depositAmount.toLocaleString()} CDF</strong>, solde de {(newRide.estimated_price! - depositAmount).toLocaleString()} CDF à régler) et acceptation des conditions de location.
               </p>
               <label className="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
                 <input
@@ -844,6 +935,25 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                 </p>
               )}
             </div>
+            )}
+
+            {/* Devis hors Kinshasa : pas d'acompte, CGU + envoi */}
+            {isDevis && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 space-y-3">
+                <p className="text-xs text-gray-700">
+                  Demande <strong>gratuite et sans acompte</strong> : nous vous contacterons avec un devis selon votre destination.
+                </p>
+                <label className="flex items-start gap-2 text-xs text-gray-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={cguAccepted}
+                    onChange={(e) => setCguAccepted(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 accent-green-600"
+                  />
+                  <span>J'ai lu et j'accepte les conditions générales de location du véhicule</span>
+                </label>
+              </div>
+            )}
 
             {/* Boutons */}
             <div className="flex gap-2 pt-4">
@@ -859,7 +969,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                 disabled={isLoading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700"
               >
-                {payingDeposit ? 'Paiement de l\u2019acompte...' : isLoading ? 'Enregistrement...' : depositMethod === 'cash' ? 'Enregistrer la demande' : `Payer l\u2019acompte (${depositAmount.toLocaleString()} CDF)`}
+                {payingDeposit ? 'Paiement de l\u2019acompte...' : isLoading ? 'Enregistrement...' : isDevis ? 'Envoyer la demande de devis' : depositMethod === 'cash' ? 'Enregistrer la demande' : `Payer l\u2019acompte (${depositAmount.toLocaleString()} CDF)`}
               </Button>
             </div>
           </div>
@@ -921,9 +1031,11 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-blue-900">
-                      {detailsRide.estimated_price.toLocaleString()} CDF
+                      {detailsRide.estimated_price > 0
+                        ? <>${convertCDFtoUSD(detailsRide.estimated_price)} <span className="text-sm font-medium">≈ {detailsRide.estimated_price.toLocaleString()} CDF</span></>
+                        : 'Sur devis'}
                     </p>
-                    <p className="text-xs text-blue-600">Prix estimé</p>
+                    <p className="text-xs text-blue-600">{detailsRide.estimated_price > 0 ? 'Prix fixe' : 'Devis à venir'}</p>
                   </div>
                 </div>
               </div>
