@@ -3,6 +3,7 @@ import { useLocation, Routes, Route } from '../lib/simple-router';
 import { useAppState } from '../hooks/useAppState';
 import { AlertCircle } from '../lib/icons';
 import { AdminDiagnostic } from '../components/admin/AdminDiagnostic';
+import { AdminSessionTimeout } from '../components/admin/AdminSessionTimeout';
 import { UsersManagementScreen } from '../components/UsersManagementScreen';
 import { UsersDiagnosticScreen } from '../components/admin/UsersDiagnosticScreen';
 
@@ -154,6 +155,9 @@ function AdminAppContent() {
     <>
       {/* Diagnostic au chargement */}
       <AdminDiagnostic />
+
+      {/* ⏱️ Expiration auto après 30 min d'inactivité → retour au login */}
+      <AdminSessionTimeout />
       
       {/* RLS Fix Modal (non-blocking) */}
       {showRLSModal && <RLSFixModal />}
