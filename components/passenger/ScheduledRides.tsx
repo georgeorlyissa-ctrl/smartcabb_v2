@@ -212,7 +212,12 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         );
         const data = await resp.json();
         if (!resp.ok || !data.success) {
-          throw new Error(data.error || 'Débit impossible');
+          const msg = data.error || 'Débit impossible';
+          throw new Error(
+            /insuffisant/i.test(msg)
+              ? `Solde portefeuille insuffisant (${(data.balance ?? 0).toLocaleString()} CDF). Rechargez votre portefeuille ou choisissez Espèces.`
+              : msg
+          );
         }
         await insertConfirmedRide();
       } catch (error) {
@@ -256,7 +261,14 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
       const result = await paymentService.initPayment(paymentData);
       if (!result.success || !result.paymentUrl) {
-        throw new Error(result.error || result.message || 'Paiement refusé');
+        // Message technique brut (ex: SERVER_ERROR) → consigne claire côté client
+        const raw = `${result.message || ''} ${result.error || ''}`;
+        const gatewayDown = /SERVER_ERROR|NOT_CONFIGURED|INVALID_RESPONSE|INIT_ERROR|NETWORK_ERROR|Route not found|404|500/i.test(raw);
+        throw new Error(
+          gatewayDown
+            ? 'Paiement Mobile Money / Carte indisponible pour le moment. Choisissez Espèces ou Portefeuille, ou appelez le +243 960 624 008.'
+            : (result.message && !/^[A-Z_]+$/.test(result.message) ? result.message : 'Paiement refusé. Vérifiez le numéro et réessayez, ou choisissez Espèces.')
+        );
       }
 
       const width = 500, height = 700;
