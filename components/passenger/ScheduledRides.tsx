@@ -114,7 +114,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     },
   ];
 
-  // Charger les courses planifiées
+  // Charger les courses réservées
   useEffect(() => {
     loadScheduledRides();
   }, [state.currentUser]);
@@ -137,7 +137,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         setScheduledRides(data);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des courses planifiées:', error);
+      console.error('Erreur lors du chargement des courses réservées:', error);
     }
   };
 
@@ -191,7 +191,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         await loadScheduledRides();
         handleCloseDialog();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Erreur lors de la planification');
+        toast.error(error instanceof Error ? error.message : 'Erreur lors de la réservation');
       } finally {
         setIsLoading(false);
       }
@@ -311,7 +311,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       await insertConfirmedRide();
     } catch (error) {
       console.error('Erreur:', error);
-      toast.error(error instanceof Error ? error.message : 'Erreur lors de la planification');
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la réservation');
     } finally {
       setIsLoading(false);
       setPayingDeposit(false);
@@ -354,7 +354,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       return;
     }
 
-    if (!confirm('Annuler cette course planifiée ?')) return;
+    if (!confirm('Annuler cette course réservée ?')) return;
 
     try {
       const { error } = await supabase
@@ -430,7 +430,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h3 className="text-sm text-gray-900">Courses planifiées</h3>
+            <h3 className="text-sm text-gray-900">Courses réservées</h3>
             <p className="text-xs text-gray-500">
               {scheduledRides.length} course{scheduledRides.length > 1 ? 's' : ''} à venir
             </p>
@@ -442,16 +442,16 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
           className="bg-blue-600 hover:bg-blue-700"
         >
           <Plus className="w-4 h-4 mr-1" />
-          Planifier
+          Réserver une course
         </Button>
       </div>
 
-      {/* Liste des courses planifiées */}
+      {/* Liste des courses réservées */}
       {scheduledRides.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm">Aucune course planifiée</p>
-          <p className="text-xs mt-1">Planifiez vos courses à l'avance</p>
+          <p className="text-sm">Aucune course réservée</p>
+          <p className="text-xs mt-1">Réservez vos courses à l'avance</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -558,9 +558,9 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       <Dialog open={showAddDialog} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Planifier une course</DialogTitle>
+            <DialogTitle>Réserver une course</DialogTitle>
             <DialogDescription>
-              Programmez votre course à l'avance
+              Réservez votre course à l'avance
             </DialogDescription>
           </DialogHeader>
 
@@ -845,9 +845,9 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Details de la course</DialogTitle>
+            <DialogTitle>Détails de la course</DialogTitle>
             <DialogDescription>
-              Informations completes de la course planifiee
+              Informations complètes de la course réservée
             </DialogDescription>
           </DialogHeader>
           {detailsRide && (

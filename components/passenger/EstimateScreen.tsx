@@ -673,7 +673,7 @@ export function EstimateScreen() {
               ) : (
                 <>
                   🚗 {RESERVATION_ONLY.includes(vehicle.id)
-                    ? (language === 'en' ? '📅 Book (Reservation)' : '📅 Reserver (Programme)')
+                    ? (language === 'en' ? '📅 Book' : '📅 Réserver')
                     : t('confirm_booking')}
                 </>
               )}
@@ -1045,7 +1045,7 @@ export function EstimateScreen() {
               className="px-4 py-2.5 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-400 text-blue-600 font-medium text-sm shadow-md transition-all"
             >
               <Calendar className="w-4 h-4 mr-1.5" />
-              {language === 'en' ? 'Schedule' : 'Programmer'}
+              {language === 'en' ? 'Book' : 'Réserver'}
             </Button>
           </div>
         )}
@@ -1067,7 +1067,7 @@ export function EstimateScreen() {
               }[selectedVehicle] || 'SmartCabb'} — Réservation
             </DialogTitle>
             <DialogDescription>
-              Programmez votre course <strong>{{
+              Réservez votre course <strong>{{
                 smart_standard: 'Standard (3 places)',
                 smart_standard_clim: 'Standard Clim (3 places)',
                 smart_standard_no_clim: 'Standard sans Clim (3 places)',

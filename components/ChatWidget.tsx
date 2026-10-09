@@ -261,8 +261,8 @@ Find your balance in Profile, Smart Rewards section, and use your points at paym
 
   reservation_avancee: {
     keywords: ['réserver à l\'avance', 'reserver à l\'avance', 'réservation à l\'avance', 'programmer', 'planifier', 'à l\'avance', 'schedule', 'scheduled', 'advance', 'later', 'plus tard'],
-    fr: `Vous pouvez programmer une course à l'avance depuis l'application : départ, destination, date et heure, et un chauffeur vous sera attribué. Idéal pour l'aéroport ou un rendez-vous. Pour une demande spéciale, appelez le +243 960 624 008.`,
-    en: `You can schedule a ride in advance from the app: pickup, destination, date and time, and a driver will be assigned to you. Ideal for the airport or an appointment. For special requests, call +243 960 624 008.`
+    fr: `Vous pouvez réserver une course à l'avance depuis l'application : départ, destination, date et heure, et un chauffeur vous sera attribué. Idéal pour l'aéroport ou un rendez-vous. Pour une demande spéciale, appelez le +243 960 624 008.`,
+    en: `You can book a ride in advance from the app: pickup, destination, date and time, and a driver will be assigned to you. Ideal for the airport or an appointment. For special requests, call +243 960 624 008.`
   },
 
   commander_autre: {
@@ -285,8 +285,8 @@ Find your balance in Profile, Smart Rewards section, and use your points at paym
 
   aeroport: {
     keywords: ['aéroport', 'aeroport', 'airport', 'ndjili', 'avion', 'vol', 'flight'],
-    fr: `Nous desservons l'aéroport international de N'djili depuis toute la ville de Kinshasa, 24h/24. Programmez votre transfert à l'avance dans l'application pour être tranquille, ou appelez le +243 960 624 008 pour une prise en charge immédiate.`,
-    en: `We serve N'djili international airport from all over Kinshasa, 24/7. Schedule your transfer in advance in the app for peace of mind, or call +243 960 624 008 for an immediate pickup.`
+    fr: `Nous desservons l'aéroport international de N'djili depuis toute la ville de Kinshasa, 24h/24. Réservez votre transfert à l'avance dans l'application pour être tranquille, ou appelez le +243 960 624 008 pour une prise en charge immédiate.`,
+    en: `We serve N'djili international airport from all over Kinshasa, 24/7. Book your transfer in advance in the app for peace of mind, or call +243 960 624 008 for an immediate pickup.`
   },
 
   entreprise: {
