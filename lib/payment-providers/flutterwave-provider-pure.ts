@@ -120,7 +120,7 @@ export async function initPayment(data: PaymentInitData): Promise<PaymentResult>
     return {
       success: true,
       status: 'pending',
-      transactionId: result.data.id,
+      transactionId: result.data.id ?? result.data.tx_ref,
       message: 'Paiement initialisé',
       paymentUrl: result.data.link,
       amount: data.amount,
@@ -148,14 +148,17 @@ export async function initPayment(data: PaymentInitData): Promise<PaymentResult>
 
 /**
  * Vérifier le statut d'un paiement
+ * Retourne le format PaymentVerification (isValid + status normalisé)
  */
 export async function verifyPayment(transactionId: string): Promise<PaymentVerification> {
   try {
     if (!isConfigured()) {
       return {
-        verified: false,
+        isValid: false,
         status: 'failed',
-        message: 'Flutterwave non configuré',
+        amount: 0,
+        transactionId,
+        error: 'Flutterwave non configuré',
       };
     }
 
@@ -171,27 +174,30 @@ export async function verifyPayment(transactionId: string): Promise<PaymentVerif
     if (!response.ok) {
       const errorData = await response.json();
       return {
-        verified: false,
+        isValid: false,
         status: 'failed',
-        message: errorData.error || 'Erreur vérification',
+        amount: 0,
+        transactionId,
+        error: errorData.error || 'Erreur vérification',
       };
     }
 
     const result = await response.json();
+    const paid = result.status === 'successful' || result.status === 'completed';
     return {
-      verified: result.status === 'successful',
-      status: result.status,
-      message: result.message || 'Vérification effectuée',
-      amount: result.amount,
-      currency: result.currency,
-      metadata: result.data,
+      isValid: paid,
+      status: paid ? 'completed' : result.status === 'failed' ? 'failed' : 'pending',
+      amount: result.amount ?? 0,
+      transactionId,
     };
   } catch (error: any) {
     console.error('❌ Erreur vérification Flutterwave:', error);
     return {
-      verified: false,
+      isValid: false,
       status: 'failed',
-      message: error.message || 'Erreur vérification',
+      amount: 0,
+      transactionId,
+      error: error.message || 'Erreur vérification',
     };
   }
 }
