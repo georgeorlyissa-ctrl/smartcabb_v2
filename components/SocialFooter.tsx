@@ -32,7 +32,6 @@ export function SocialFooter() {
             <ul className="space-y-2 text-sm text-gray-400">
               <li><Link to="/app" className="hover:text-cyan-500 transition">App Passagers</Link></li>
               <li><Link to="/driver" className="hover:text-cyan-500 transition">App Conducteurs</Link></li>
-              <li><Link to="/admin" className="hover:text-cyan-500 transition">Panel Admin</Link></li>
             </ul>
           </div>
 
