@@ -421,6 +421,16 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     return categories[category] || categories.smart_standard;
   };
 
+  // 🚗 Miniature photo par catégorie (style Yango : petit format rond)
+  const CATEGORY_IMAGES: Record<string, string> = {
+    'smart_standard': '/vehicles/smartcabb_standard/Standard_1.jpg',
+    'smart_confort': '/vehicles/smartcabb_confort/Confort_1.jpg',
+    'smart_plus': '/vehicles/smartcabb_familiale/Familiale_1.jpg',
+    'smart_business': '/vehicles/smartcabb_business/Business_1.jpg'
+  };
+  const getCategoryImage = (category: string) =>
+    CATEGORY_IMAGES[category] || CATEGORY_IMAGES.smart_standard;
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       {/* En-tête */}
@@ -488,9 +498,12 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                   {/* Catégorie avec badge prix */}
                   <div className="flex items-center justify-between mb-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-2.5 border border-blue-200">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                        <span className="text-white text-sm">🚗</span>
-                      </div>
+                      <img
+                        src={getCategoryImage(ride.category)}
+                        alt={category.label}
+                        className="w-8 h-8 rounded-full object-cover border border-blue-200 shadow-sm"
+                        loading="lazy"
+                      />
                       <div>
                         <p className="text-xs font-bold text-blue-900">{category.label}</p>
                         <p className="text-[10px] text-blue-600">
@@ -877,9 +890,11 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-lg">🚗</span>
-                    </div>
+                    <img
+                      src={getCategoryImage(detailsRide.category)}
+                      alt={getCategoryLabel(detailsRide.category).label}
+                      className="w-10 h-10 rounded-full object-cover border border-blue-200 shadow-sm"
+                    />
                     <div>
                       <p className="text-sm font-bold text-blue-900">
                         {getCategoryLabel(detailsRide.category).label}
