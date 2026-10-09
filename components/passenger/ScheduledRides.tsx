@@ -135,7 +135,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   const isDevis = purpose === 'hors-ville';
   const currentTariffUSD = tariffUSDFor(purpose, newRide.category || 'smart_plus');
 
-  // ✅ Accusé de réception : son + voix + entrée dans la cloche, 3 secondes après la réservation
+  // ✅ Accusé de réception : cloche immédiate + son/voix 3 secondes après la réservation
   const scheduleReservationAck = () => {
     const d = newRide.scheduled_date && newRide.scheduled_time
       ? new Date(`${newRide.scheduled_date}T${newRide.scheduled_time}`)
@@ -147,9 +147,11 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     };
     const when = details.dateStr && details.timeStr ? ` pour ${details.dateStr} à ${details.timeStr}` : '';
     const message = `Votre réservation en ${details.categoryLabel}${when} est bien prise en compte. Merci de votre confiance.`;
+    // Cloche tout de suite (pastille rouge immédiate)
+    try { addLocalNotification('passengers', 'Réservation reçue ✅', message); } catch (e) { console.warn('Cloche réservation:', e); }
+    // Son + voix après 3 secondes
     window.setTimeout(() => {
       try { announceReservationReceived(details); } catch (e) { console.warn('Ack réservation:', e); }
-      try { addLocalNotification('passengers', 'Réservation reçue ✅', message); } catch (e) { console.warn('Cloche réservation:', e); }
     }, 3000);
   };
 
