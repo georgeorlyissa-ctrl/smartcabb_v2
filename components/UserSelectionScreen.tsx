@@ -1,4 +1,4 @@
-import { User, Car, Shield } from '../lib/icons';
+import { User, Car } from '../lib/icons';
 import { useNavigate } from '../lib/simple-router';
 import { useAppState } from '../hooks/useAppState';
 import { Button } from './ui/button';
@@ -25,12 +25,14 @@ export function UserSelectionScreen() {
     navigate('/app/driver');
   };
 
-  const handleAdminClick = () => {
-    console.log('👨‍💼 Navigation vers connexion admin');
-    setCurrentView('admin');
-    setCurrentScreen('admin-login');
-    navigate('/app/admin');
-  };
+  // 🔒 LIEN ADMIN MASQUÉ (sécurité) — l'accès se fait uniquement via l'URL directe.
+  // Pour réactiver : restaurer le bouton "Accès Admin" ci-dessous.
+  // const handleAdminClick = () => {
+  //   console.log('👨‍💼 Navigation vers connexion admin');
+  //   setCurrentView('admin');
+  //   setCurrentScreen('admin-login');
+  //   navigate('/app/admin');
+  // };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 flex flex-col items-center justify-center px-6 relative overflow-hidden">
@@ -48,7 +50,8 @@ export function UserSelectionScreen() {
         }} />
       </div>
 
-      {/* Bouton Admin en haut à droite — caché dans l'APK */}
+      {/* 🔒 Bouton Admin MASQUÉ (sécurité) — accès uniquement via URL directe */}
+      {/*
       <div className="absolute top-6 right-6 z-20 hide-in-apk">
         <button
           onClick={handleAdminClick}
@@ -58,6 +61,7 @@ export function UserSelectionScreen() {
           <Shield className="w-6 h-6 text-gray-900" />
         </button>
       </div>
+      */}
 
       {/* Contenu principal */}
       <div className="relative z-10 w-full max-w-4xl">
