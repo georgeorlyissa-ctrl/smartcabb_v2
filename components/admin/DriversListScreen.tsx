@@ -47,8 +47,8 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // 🟢 Course en direct par conducteur (statuts actifs)
-  const LIVE_STATUSES = ['pending', 'accepted', 'enroute', 'arrived', 'in_progress'];
+  // 🟢 Course en direct par conducteur (statuts réellement démarrés — pas 'pending')
+  const LIVE_STATUSES = ['accepted', 'enroute', 'arrived', 'in_progress'];
   const liveRideByDriver = new Map<string, any>();
   (rides || []).forEach((r: any) => {
     const did = r.driver_id || r.driverId;
@@ -86,7 +86,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
     const matchesFilter = filterStatus === 'all' ||
                          (filterStatus === 'live' && !!liveRide) ||
                          (filterStatus === 'online_free' && driver.is_available && !liveRide) ||
-                         (filterStatus === 'offline' && !driver.is_available) ||
+                         (filterStatus === 'offline' && !driver.is_available && !liveRide) ||
                          (filterStatus === 'pending' && !driver.isApproved); // ✅ FIX: isApproved === false = pending
     return matchesSearch && matchesFilter;
   });
@@ -95,7 +95,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
   const allDrivers = drivers || [];
   const liveCount = allDrivers.filter(d => getLiveRide(d.id)).length;
   const onlineFreeCount = allDrivers.filter(d => d.is_available && !getLiveRide(d.id)).length;
-  const offlineCount = allDrivers.filter(d => !d.is_available).length;
+  const offlineCount = allDrivers.filter(d => !d.is_available && !getLiveRide(d.id)).length;
   const pendingCount = allDrivers.filter(d => !d.isApproved).length;
 
   const handleOpenDriverDetails = async (driver: EnrichedDriver) => {
@@ -583,7 +583,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                               }
                             </span>
                           </div>
-                          {liveRide && (
+                          {liveRide && (liveRide.pickup_address || liveRide.pickup?.address || liveRide.dropoff_address || liveRide.destination?.address) && (
                             <div className="flex items-center space-x-2 col-span-1 md:col-span-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
                               <Car className="w-4 h-4 text-green-600 flex-shrink-0" />
                               <span className="text-green-800 font-medium">
