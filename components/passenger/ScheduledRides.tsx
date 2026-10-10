@@ -503,6 +503,32 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     });
   };
 
+  // Étape de la réservation côté passager (évolue à chaque étape du parcours)
+  const reservationStage = (ride: ScheduledRide): { label: string; classes: string } => {
+    if (ride.driver_status === 'accepted') {
+      return {
+        label: `🛡️ Chauffeur confirmé${ride.driver_name ? ` : ${ride.driver_name}` : ''}`,
+        classes: 'text-green-800 bg-green-100',
+      };
+    }
+    if (ride.driver_status === 'declined') {
+      return { label: '🔄 Nouveau chauffeur recherché', classes: 'text-red-700 bg-red-100' };
+    }
+    if (ride.driver_status === 'proposed') {
+      return {
+        label: `⏳ ${ride.driver_name || 'Chauffeur'} pressenti`,
+        classes: 'text-orange-800 bg-orange-100',
+      };
+    }
+    if (ride.status === 'confirmed') {
+      return { label: 'Confirmée (acompte reçu)', classes: 'text-green-700 bg-green-100' };
+    }
+    if ((ride.estimated_price || 0) === 0) {
+      return { label: 'Devis en cours', classes: 'text-purple-700 bg-purple-100' };
+    }
+    return { label: 'En attente d’acompte', classes: 'text-orange-700 bg-orange-100' };
+  };
+
   const formatDateTime = (date: string, time: string) => {
     const dateObj = new Date(`${date}T${time}`);
     const now = new Date();
@@ -598,25 +624,14 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                     <span className="text-sm font-medium">
                       {dateStr} à {timeStr}
                     </span>
-                    {ride.status === 'confirmed' ? (
-                      <span className="text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
-                        Confirmée (acompte reçu)
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-full">
-                        En attente
-                      </span>
-                    )}
-                    {ride.driver_status === 'accepted' && (
-                      <span className="text-[10px] font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
-                        🛡️ Chauffeur : {ride.driver_name || 'attribué'}
-                      </span>
-                    )}
-                    {ride.driver_status === 'proposed' && (
-                      <span className="text-[10px] font-bold text-orange-800 bg-orange-100 px-2 py-0.5 rounded-full">
-                        ⏳ {ride.driver_name || 'Chauffeur'} pressenti
-                      </span>
-                    )}
+                    {(() => {
+                      const stage = reservationStage(ride);
+                      return (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stage.classes}`}>
+                          {stage.label}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   {/* Catégorie avec badge prix */}
@@ -1040,11 +1055,19 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
           </DialogHeader>
           {detailsRide && (
             <div className="space-y-4 py-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 flex-wrap">
                 <Calendar className="w-4 h-4" />
                 {new Date(`${detailsRide.scheduled_date}T${detailsRide.scheduled_time}`).toLocaleDateString('fr-FR', {
                   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
                 })} a {detailsRide.scheduled_time}
+                {(() => {
+                  const stage = reservationStage(detailsRide);
+                  return (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stage.classes}`}>
+                      {stage.label}
+                    </span>
+                  );
+                })()}
               </div>
               <div className="space-y-2">
                 <div className="flex items-start gap-2">
