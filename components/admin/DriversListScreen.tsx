@@ -42,10 +42,21 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
   }, [drivers]);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'offline' | 'pending'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'live' | 'online_free' | 'offline' | 'pending'>('all');
   const [selectedDriver, setSelectedDriver] = useState<EnrichedDriver | null>(null);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // 🟢 Course en direct par conducteur (statuts actifs)
+  const LIVE_STATUSES = ['pending', 'accepted', 'enroute', 'arrived', 'in_progress'];
+  const liveRideByDriver = new Map<string, any>();
+  (rides || []).forEach((r: any) => {
+    const did = r.driver_id || r.driverId;
+    if (did && LIVE_STATUSES.includes(r.status) && !liveRideByDriver.has(did)) {
+      liveRideByDriver.set(did, r);
+    }
+  });
+  const getLiveRide = (driverId: string) => liveRideByDriver.get(driverId);
 
   // ✅ FIX CRITIQUE : Synchroniser selectedDriver avec les données fraîches après chaque refresh
   // Sans ça, la modale garde un snapshot figé → le badge En ligne/Hors ligne ne se met pas à jour
@@ -71,24 +82,21 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
   const filteredDrivers = (drivers || []).filter(driver => {
     const matchesSearch = (driver.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (driver.email || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || 
-                         (filterStatus === 'online' && driver.is_available) ||
+    const liveRide = getLiveRide(driver.id);
+    const matchesFilter = filterStatus === 'all' ||
+                         (filterStatus === 'live' && !!liveRide) ||
+                         (filterStatus === 'online_free' && driver.is_available && !liveRide) ||
                          (filterStatus === 'offline' && !driver.is_available) ||
                          (filterStatus === 'pending' && !driver.isApproved); // ✅ FIX: isApproved === false = pending
     return matchesSearch && matchesFilter;
   });
-  
-  // ✅ Calculer les statistiques basées sur le filtre actif
-  const stats = {
-    total: filterStatus === 'pending' 
-      ? filteredDrivers.length  // Si filtre "En attente", afficher le nombre filtré
-      : (drivers || []).length, // Sinon, afficher tous les conducteurs
-    totalRides: (drivers || []).reduce((total, driver) => total + (driver.total_rides || 0), 0),
-    activeDrivers: (drivers || []).filter(d => d.is_available).length,
-    averageRating: (drivers || []).length > 0 
-      ? ((drivers || []).reduce((sum, d) => sum + (d.rating || 0), 0) / (drivers || []).length).toFixed(1)
-      : '0.0'
-  };
+
+  // ✅ Statistiques par groupe d'activité
+  const allDrivers = drivers || [];
+  const liveCount = allDrivers.filter(d => getLiveRide(d.id)).length;
+  const onlineFreeCount = allDrivers.filter(d => d.is_available && !getLiveRide(d.id)).length;
+  const offlineCount = allDrivers.filter(d => !d.is_available).length;
+  const pendingCount = allDrivers.filter(d => !d.isApproved).length;
 
   const handleOpenDriverDetails = async (driver: EnrichedDriver) => {
     setSelectedDriver(driver);
@@ -367,34 +375,41 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                 />
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 flex-wrap gap-y-2">
                 <Button
                   onClick={() => setFilterStatus('all')}
                   variant={filterStatus === 'all' ? 'default' : 'outline'}
                   size="sm"
                 >
-                  Tous
+                  Tous ({allDrivers.length})
                 </Button>
                 <Button
-                  onClick={() => setFilterStatus('online')}
-                  variant={filterStatus === 'online' ? 'default' : 'outline'}
+                  onClick={() => setFilterStatus('live')}
+                  variant={filterStatus === 'live' ? 'default' : 'outline'}
                   size="sm"
                 >
-                  En ligne
+                  🟢 En course ({liveCount})
+                </Button>
+                <Button
+                  onClick={() => setFilterStatus('online_free')}
+                  variant={filterStatus === 'online_free' ? 'default' : 'outline'}
+                  size="sm"
+                >
+                  En ligne sans course ({onlineFreeCount})
                 </Button>
                 <Button
                   onClick={() => setFilterStatus('offline')}
                   variant={filterStatus === 'offline' ? 'default' : 'outline'}
                   size="sm"
                 >
-                  Hors ligne
+                  Hors ligne ({offlineCount})
                 </Button>
                 <Button
                   onClick={() => setFilterStatus('pending')}
                   variant={filterStatus === 'pending' ? 'default' : 'outline'}
                   size="sm"
                 >
-                  En attente
+                  En attente ({pendingCount})
                 </Button>
               </div>
             </div>
@@ -406,7 +421,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
+          className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6 mb-8"
         >
           <Card className="p-6">
             <div className="flex items-center space-x-3">
@@ -414,50 +429,56 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Total conducteurs</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-sm text-gray-600">Total inscrits</p>
+                <p className="text-2xl font-bold">{allDrivers.length}</p>
               </div>
             </div>
           </Card>
-          
+
           <Card className="p-6">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                 <Car className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Courses totales</p>
-                <p className="text-2xl font-bold">
-                  {stats.totalRides}
-                </p>
+                <p className="text-sm text-gray-600">🟢 En course</p>
+                <p className="text-2xl font-bold">{liveCount}</p>
               </div>
             </div>
           </Card>
-          
+
           <Card className="p-6">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-purple-600" />
+              <div className="w-12 h-12 bg-cyan-100 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-6 h-6 text-cyan-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Conducteurs actifs</p>
-                <p className="text-2xl font-bold">
-                  {stats.activeDrivers}
-                </p>
+                <p className="text-sm text-gray-600">En ligne sans course</p>
+                <p className="text-2xl font-bold">{onlineFreeCount}</p>
               </div>
             </div>
           </Card>
-          
+
+          <Card className="p-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-gray-500" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Hors ligne</p>
+                <p className="text-2xl font-bold">{offlineCount}</p>
+              </div>
+            </div>
+          </Card>
+
           <Card className="p-6">
             <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
                 <Star className="w-6 h-6 text-orange-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">Note moyenne</p>
-                <p className="text-2xl font-bold">
-                  {stats.averageRating}
-                </p>
+                <p className="text-sm text-gray-600">En attente</p>
+                <p className="text-2xl font-bold">{pendingCount}</p>
               </div>
             </div>
           </Card>
@@ -486,7 +507,9 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
               </p>
             </div>
           ) : (
-            filteredDrivers.map((driver, index) => (
+            filteredDrivers.map((driver, index) => {
+              const liveRide = getLiveRide(driver.id);
+              return (
               <motion.div
                 key={driver.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -516,9 +539,14 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                               ✕ {driver.status || 'Statut inconnu'} {/* 🔍 DEBUG : Afficher le vrai statut */}
                             </Badge>
                           )}
-                          {driver.is_available && (
+                          {driver.is_available && !liveRide && (
                             <Badge className="bg-blue-100 text-blue-800 text-xs">
                               En ligne
+                            </Badge>
+                          )}
+                          {liveRide && (
+                            <Badge className="bg-green-500 text-white text-xs animate-pulse">
+                              🟢 En course ({liveRide.status})
                             </Badge>
                           )}
                           {/* ✅ Catégorie de véhicule (produit SmartCabb) */}
@@ -555,6 +583,14 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                               }
                             </span>
                           </div>
+                          {liveRide && (
+                            <div className="flex items-center space-x-2 col-span-1 md:col-span-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                              <Car className="w-4 h-4 text-green-600 flex-shrink-0" />
+                              <span className="text-green-800 font-medium">
+                                Course en direct : {liveRide.pickup_address || liveRide.pickup?.address || '—'} → {liveRide.dropoff_address || liveRide.destination?.address || '—'}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -592,7 +628,8 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                   </div>
                 </Card>
               </motion.div>
-            ))
+              );
+            })
           )}
         </motion.div>
       </div>
