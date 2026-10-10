@@ -41,6 +41,9 @@ interface ScheduledRide {
   estimated_price: number;
   status: 'scheduled' | 'cancelled' | 'completed';
   created_at?: string;
+  driver_id?: string | null;
+  driver_name?: string | null;
+  driver_status?: string | null;
 }
 
 interface ScheduledRidesProps {
@@ -53,6 +56,21 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [detailsRide, setDetailsRide] = useState<ScheduledRide | null>(null);
+  const [driverInfo, setDriverInfo] = useState<any | null>(null);
+
+  // Fiche sécurité du chauffeur quand la réservation est acceptée
+  useEffect(() => {
+    setDriverInfo(null);
+    if (detailsRide?.driver_id && detailsRide?.driver_status === 'accepted') {
+      fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${detailsRide.driver_id}`,
+        { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+      )
+        .then((r) => r.json())
+        .then((j) => { if (j.success && j.driver) setDriverInfo(j.driver); })
+        .catch(() => {});
+    }
+  }, [detailsRide?.id]);
   const [isLoading, setIsLoading] = useState(false);
 
   const [newRide, setNewRide] = useState<Partial<ScheduledRide>>({
@@ -589,6 +607,16 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                         En attente
                       </span>
                     )}
+                    {ride.driver_status === 'accepted' && (
+                      <span className="text-[10px] font-bold text-green-800 bg-green-100 px-2 py-0.5 rounded-full">
+                        🛡️ Chauffeur : {ride.driver_name || 'attribué'}
+                      </span>
+                    )}
+                    {ride.driver_status === 'proposed' && (
+                      <span className="text-[10px] font-bold text-orange-800 bg-orange-100 px-2 py-0.5 rounded-full">
+                        ⏳ {ride.driver_name || 'Chauffeur'} pressenti
+                      </span>
+                    )}
                   </div>
 
                   {/* Catégorie avec badge prix */}
@@ -1064,6 +1092,44 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                   </div>
                 </div>
               </div>
+              {detailsRide.driver_status === 'accepted' && (
+                <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <p className="text-xs font-bold text-green-800 uppercase mb-2">🛡️ Votre chauffeur</p>
+                  <div className="flex items-center gap-3">
+                    {driverInfo?.photo || driverInfo?.photo_url ? (
+                      <img
+                        src={driverInfo.photo || driverInfo.photo_url}
+                        alt={detailsRide.driver_name || 'Chauffeur'}
+                        className="w-12 h-12 rounded-full object-cover border border-green-300"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">
+                        {(detailsRide.driver_name || 'S').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-gray-900">{detailsRide.driver_name || driverInfo?.full_name || 'Chauffeur SmartCabb'}</p>
+                      {(driverInfo?.phone || detailsRide.driver_name) && (
+                        <p className="text-xs text-gray-700">📞 {driverInfo?.phone || ''}</p>
+                      )}
+                      {driverInfo?.vehicle && (
+                        <p className="text-xs text-gray-700">
+                          🚗 {[driverInfo.vehicle.color, driverInfo.vehicle.make, driverInfo.vehicle.model].filter(Boolean).join(' ')}
+                          {(driverInfo.vehicle.license_plate || driverInfo.vehicle.plate) && (
+                            <> · Plaque <strong>{driverInfo.vehicle.license_plate || driverInfo.vehicle.plate}</strong></>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-green-700 mt-2">Vérifiez la plaque avant de monter. En cas de doute, appelez le +243 960 624 008.</p>
+                </div>
+              )}
+              {detailsRide.driver_status === 'proposed' && (
+                <div className="bg-orange-50 rounded-xl p-3 border border-orange-200">
+                  <p className="text-xs text-orange-800">⏳ Chauffeur proposé : {detailsRide.driver_name} — en attente de sa confirmation.</p>
+                </div>
+              )}
               {detailsRide.id && (
                 <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-2 text-center">
                   ID réservation: {detailsRide.id.substring(0, 8)}...

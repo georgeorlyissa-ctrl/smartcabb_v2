@@ -29,6 +29,7 @@ import otpRoutes from "./otp-routes.ts";
 import smsRoutes from "./sms-routes.ts";
 import loyaltyRoutes from "./loyalty-routes.ts";
 import paymentRoutes from "./payment-routes.ts";
+import reservationRoutes from "./reservation-routes.ts";
 
 const app = new Hono();
 
@@ -117,6 +118,8 @@ app.route("/make-server-2eb02e52/sms", smsRoutes);
 app.route("/make-server-2eb02e52/loyalty", loyaltyRoutes);
 // ✅ Route paiements (Flutterwave : acompte réservation, courses)
 app.route("/make-server-2eb02e52/payments", paymentRoutes);
+// ✅ Route réservations (notifications passager à l'acceptation conducteur)
+app.route("/make-server-2eb02e52/reservations", reservationRoutes);
 
 // Route 404
 app.notFound((c) => {

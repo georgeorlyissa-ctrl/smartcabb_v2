@@ -4,6 +4,7 @@ import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useAppState } from '../../hooks/useAppState';
 import { supabase } from '../../lib/supabase';
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 
 interface AssignedRide {
@@ -68,7 +69,31 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
         .update({ driver_status: next })
         .eq('id', ride.id);
       if (error) throw error;
-      toast.success(next === 'accepted' ? 'Course acceptée ✓' : 'Course refusée — l’admin sera prévenu');
+      if (next === 'accepted') {
+        toast.success('Course acceptée ✓ — passager notifié...');
+        // Notifie le passager (push + WhatsApp/SMS) avec tes coordonnées sécurité
+        try {
+          const resp = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reservations/${ride.id}/notify-accept`,
+            {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+            }
+          );
+          const j = await resp.json();
+          const ch = j.channels || {};
+          const sent: string[] = [];
+          if (ch.push?.sent) sent.push('push app');
+          if (ch.whatsapp?.sent) sent.push('WhatsApp');
+          if (ch.sms?.sent) sent.push('SMS');
+          if (sent.length > 0) toast.success(`Passager notifié (${sent.join(' + ')})`);
+          else toast.info('Passager : notification app à son ouverture (push/WhatsApp indisponibles pour l’instant)');
+        } catch (e) {
+          console.warn('Notify passager:', e);
+        }
+      } else {
+        toast.success('Course refusée — l’admin sera prévenu');
+      }
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erreur');
