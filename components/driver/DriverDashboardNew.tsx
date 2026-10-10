@@ -17,6 +17,7 @@ import { PreciseGPSTracker, reverseGeocode } from '../../lib/precise-gps';
 import { registerDriverFCMToken } from '../../lib/driver-fcm';
 import { stopAllNotifications } from '../../lib/notification-sound';
 import { preloadVoices } from '../../lib/notification-sound';
+import { supabase } from '../../lib/supabase';
 import { NotificationBell } from '../AppNotificationsScreen';
 
 function isDriverFCMTokenRegistered(driverId: string): boolean {
@@ -162,6 +163,28 @@ export function DriverDashboardNew() {
 
   // 👁️ Masquer/Afficher les soldes
   const [showBalance, setShowBalance] = useState(true);
+
+  // 📅 Réservations proposées en attente d'acceptation
+  const [pendingReservations, setPendingReservations] = useState(0);
+  useEffect(() => {
+    const did = state.currentDriver?.id || driver?.id;
+    if (!did) return;
+    let alive = true;
+    const load = async () => {
+      try {
+        const { count } = await supabase
+          .from('scheduled_rides')
+          .select('id', { count: 'exact', head: true })
+          .eq('driver_id', did)
+          .eq('driver_status', 'proposed')
+          .in('status', ['scheduled', 'confirmed']);
+        if (alive) setPendingReservations(count || 0);
+      } catch {}
+    };
+    load();
+    const iv = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(iv); };
+  }, [state.currentDriver?.id, (driver as any)?.id, refreshKey]);
 
   // ✅ Carrousel photos chauffeurs (bandeau gains)
   const [earningsImgIndex, setEarningsImgIndex] = useState(0);
@@ -1043,6 +1066,25 @@ export function DriverDashboardNew() {
                 <span className="flex-1 min-w-0">
                   <span className="block row-title">Notifications</span>
                   <span className="block row-subtitle truncate">Annonces SmartCabb</span>
+                </span>
+              </button>
+              <button
+                onClick={() => setCurrentScreen('driver-scheduled-rides')}
+                className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left border-b border-gray-50"
+              >
+                <span className="relative w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-4 h-4 text-purple-600" />
+                  {pendingReservations > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {pendingReservations > 9 ? '9+' : pendingReservations}
+                    </span>
+                  )}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block row-title">Mes réservations</span>
+                  <span className="block row-subtitle truncate">
+                    {pendingReservations > 0 ? `${pendingReservations} à confirmer` : 'Courses attribuées à l’avance'}
+                  </span>
                 </span>
               </button>
               <a

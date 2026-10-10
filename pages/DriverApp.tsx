@@ -20,6 +20,7 @@ import { RLSBlockingScreen } from '../components/RLSBlockingScreen';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { DriverDeploymentCheck } from '../components/driver/DriverDeploymentCheck';
+import { DriverScheduledRides } from '../components/driver/DriverScheduledRides';
 import { AppNotificationsScreen } from '../components/AppNotificationsScreen';
 import { useEffect } from 'react';
 
@@ -187,6 +188,9 @@ function DriverAppContent() {
             />
           )}
           {currentScreen === 'driver-deployment-check' && <DriverDeploymentCheck />}
+          {currentScreen === 'driver-scheduled-rides' && (
+            <DriverScheduledRides onBack={() => setCurrentScreen('driver-dashboard')} />
+          )}
           {currentScreen === 'driver-notifications' && (
             <AppNotificationsScreen
               target="drivers"

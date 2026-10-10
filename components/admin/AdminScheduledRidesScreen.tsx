@@ -6,6 +6,7 @@ import { Calendar, Clock, XCircle, ChevronLeft } from '../../lib/icons';
 import { useAppState } from '../../hooks/useAppState';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
+import { AssignDriverModal } from './AssignDriverModal';
 
 interface ScheduledRide {
   id: string;
@@ -18,6 +19,10 @@ interface ScheduledRide {
   estimated_price: number;
   status: string;
   created_at: string;
+  driver_id?: string | null;
+  driver_name?: string | null;
+  driver_status?: string | null;
+  assigned_at?: string | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -38,6 +43,7 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
   const [rides, setRides] = useState<ScheduledRide[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'scheduled' | 'cancelled' | 'completed'>('scheduled');
+  const [assignRide, setAssignRide] = useState<ScheduledRide | null>(null);
 
   useEffect(() => {
     loadRides();
@@ -147,6 +153,19 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                     <p className="text-sm font-medium">{ride.pickup_address}</p>
                     <p className="text-xs text-gray-400">vers {ride.dropoff_address}</p>
                     <p className="text-xs text-gray-400 mt-1">Client: {ride.user_id}</p>
+                    {ride.driver_id && (
+                      <p className="text-xs mt-1">
+                        {ride.driver_status === 'accepted' && (
+                          <span className="font-semibold text-green-700">✓ Acceptée par {ride.driver_name || 'conducteur'}</span>
+                        )}
+                        {ride.driver_status === 'proposed' && (
+                          <span className="font-semibold text-orange-600">⏳ Proposée à {ride.driver_name || 'conducteur'} (en attente)</span>
+                        )}
+                        {ride.driver_status === 'declined' && (
+                          <span className="font-semibold text-red-600">✕ Refusée par {ride.driver_name || 'conducteur'} — à ré-attribuer</span>
+                        )}
+                      </p>
+                    )}
                     <p className="text-sm font-semibold mt-1">{ride.estimated_price.toLocaleString()} CDF</p>
                     <p className="text-xs text-gray-400 mt-1">
                       Cree le {new Date(ride.created_at).toLocaleString('fr-FR')}
@@ -155,6 +174,9 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                   <div className="flex flex-col gap-2 ml-4">
                     {ride.status === 'scheduled' && (
                       <>
+                        <Button size="sm" onClick={() => setAssignRide(ride)} className="bg-blue-600 hover:bg-blue-700">
+                          🚖 {ride.driver_id ? 'Ré-attribuer' : 'Attribuer'}
+                        </Button>
                         <Button size="sm" variant="outline" onClick={() => handleCancel(ride.id)} className="text-red-600 border-red-200">
                           <XCircle className="w-4 h-4 mr-1" />
                           Annuler
@@ -170,6 +192,14 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
             );
           })}
         </div>
+      )}
+
+      {assignRide && (
+        <AssignDriverModal
+          ride={assignRide}
+          onClose={() => setAssignRide(null)}
+          onAssigned={() => { setAssignRide(null); loadRides(); }}
+        />
       )}
     </div>
   );
