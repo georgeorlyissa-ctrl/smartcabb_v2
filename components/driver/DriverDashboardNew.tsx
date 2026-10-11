@@ -164,7 +164,7 @@ export function DriverDashboardNew() {
   // 👁️ Masquer/Afficher les soldes
   const [showBalance, setShowBalance] = useState(true);
 
-  // 📅 Réservations proposées en attente d'acceptation
+  // 📅 Réservations proposées en attente d'acceptation (via backend : pas de session Auth côté conducteur)
   const [pendingReservations, setPendingReservations] = useState(0);
   useEffect(() => {
     const did = state.currentDriver?.id || driver?.id;
@@ -172,13 +172,14 @@ export function DriverDashboardNew() {
     let alive = true;
     const load = async () => {
       try {
-        const { count } = await supabase
-          .from('scheduled_rides')
-          .select('id', { count: 'exact', head: true })
-          .eq('driver_id', did)
-          .eq('driver_status', 'proposed')
-          .in('status', ['scheduled', 'confirmed']);
-        if (alive) setPendingReservations(count || 0);
+        const resp = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reservations/driver/${did}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        const j = await resp.json();
+        if (alive && j.success) {
+          setPendingReservations((j.rides || []).filter((r: any) => r.driver_status === 'proposed').length);
+        }
       } catch {}
     };
     load();

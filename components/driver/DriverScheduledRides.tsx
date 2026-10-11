@@ -3,7 +3,6 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useAppState } from '../../hooks/useAppState';
-import { supabase } from '../../lib/supabase';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 
@@ -38,16 +37,14 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
     if (!driverId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('scheduled_rides')
-        .select('*')
-        .eq('driver_id', driverId)
-        .in('status', ['scheduled', 'confirmed'])
-        .in('driver_status', ['proposed', 'accepted'])
-        .order('scheduled_date', { ascending: true })
-        .order('scheduled_time', { ascending: true });
-      if (error) throw error;
-      setRides(data || []);
+      // Via backend service-role : le login conducteur n'a pas de session Supabase Auth (RLS bloquerait)
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reservations/driver/${driverId}`,
+        { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+      );
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur chargement');
+      setRides(j.rides || []);
     } catch (e) {
       console.error('Réservations conducteur:', e);
     } finally {
@@ -64,11 +61,17 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
     if (!confirm(msg)) return;
     setActingId(ride.id);
     try {
-      const { error } = await supabase
-        .from('scheduled_rides')
-        .update({ driver_status: next })
-        .eq('id', ride.id);
-      if (error) throw error;
+      // Via backend (vérifie que la course lui est bien attribuée)
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reservations/${ride.id}/driver-status`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driverId, status: next }),
+        }
+      );
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
       if (next === 'accepted') {
         toast.success('Course acceptée ✓ — passager notifié...');
         // Notifie le passager (push + WhatsApp/SMS) avec tes coordonnées sécurité

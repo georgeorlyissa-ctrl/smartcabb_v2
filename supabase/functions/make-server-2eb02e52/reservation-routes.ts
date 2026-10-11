@@ -375,6 +375,56 @@ app.post("/:id/admin-status", async (c) => {
   }
 });
 
+// ─── GET /driver/:driverId — Réservations attribuées (service-role) ──────────
+app.get("/driver/:driverId", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const { data, error } = await sbAdmin()
+      .from("scheduled_rides")
+      .select("*")
+      .eq("driver_id", driverId)
+      .in("status", ["scheduled", "confirmed"])
+      .in("driver_status", ["proposed", "accepted"])
+      .order("scheduled_date", { ascending: true })
+      .order("scheduled_time", { ascending: true });
+    if (error) throw new Error(error.message);
+    return c.json({ success: true, rides: data || [] });
+  } catch (error) {
+    console.error("❌ [RESERVATIONS/DRIVER] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /:id/driver-status — Accepter / refuser (vérifie l'attribution) ─────
+app.post("/:id/driver-status", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { driverId, status } = await c.req.json();
+    if (!driverId || (status !== "accepted" && status !== "declined")) {
+      return c.json({ success: false, error: "Paramètres invalides" }, 400);
+    }
+    const { data: ride, error: rideErr } = await sbAdmin()
+      .from("scheduled_rides").select("id,driver_id,driver_status").eq("id", id).maybeSingle();
+    if (rideErr || !ride) {
+      return c.json({ success: false, error: "Réservation introuvable" }, 404);
+    }
+    if (ride.driver_id !== driverId) {
+      return c.json({ success: false, error: "Cette course ne vous est pas attribuée" }, 403);
+    }
+    if (ride.driver_status !== "proposed") {
+      return c.json({ success: false, error: "Réservation déjà traitée" }, 400);
+    }
+    const { error: updErr } = await sbAdmin()
+      .from("scheduled_rides").update({ driver_status: status }).eq("id", id);
+    if (updErr) throw new Error(updErr.message);
+    console.log(`📅 [RESERVATIONS/DRIVER-STATUS] ${id} → ${status} par ${driverId}`);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("❌ [RESERVATIONS/DRIVER-STATUS] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 // ─── POST /notify-created — Accusé de confirmation après enregistrement réel ─
 // À appeler UNIQUEMENT après insertion réussie en base (le message affirme
 // que la réservation est enregistrée). Persiste l'accusé pour la cloche.
