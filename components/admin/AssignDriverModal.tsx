@@ -93,38 +93,19 @@ export function AssignDriverModal({ ride, onClose, onAssigned }: AssignDriverMod
     if (!confirm(`Attribuer cette course à ${driver.full_name} le ${ride.scheduled_date} à ${ride.scheduled_time} ?`)) return;
     setAssigningId(driver.id);
     try {
-      const { error } = await supabase
-        .from('scheduled_rides')
-        .update({
-          driver_id: driver.id,
-          driver_name: driver.full_name,
-          driver_status: 'proposed',
-          assigned_at: new Date().toISOString(),
-        })
-        .eq('id', ride.id);
-      if (error) throw error;
-
-      // Push au conducteur (ne bloque pas l'attribution si indisponible)
-      let pushOk = false;
-      try {
-        const resp = await fetch(`${API}/fcm/send`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: driver.id,
-            title: 'Nouvelle réservation proposée 🚖',
-            body: `Course le ${ride.scheduled_date} à ${ride.scheduled_time} : ${ride.pickup_address} → ${ride.dropoff_address}. Ouvrez l'app pour accepter.`,
-            data: { type: 'reservation_assigned', reservationId: ride.id },
-          }),
-        });
-        const j = await resp.json();
-        pushOk = resp.ok && !!j.success;
-      } catch (e) {
-        console.warn('Push attribution:', e);
+      // Attribution côté serveur (contourne RLS) + push au conducteur
+      const resp = await fetch(`${API}/reservations/${ride.id}/assign`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverId: driver.id, driverName: driver.full_name }),
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) {
+        throw new Error(j.error || "Erreur lors de l'attribution");
       }
 
-      if (pushOk) toast.success(`Course proposée à ${driver.full_name} (push envoyé)`);
-      else toast.success(`Course proposée à ${driver.full_name} — prévenez-le par appel/WhatsApp (push indisponible)`);
+      if (j.push?.sent) toast.success(`Course proposée à ${driver.full_name} (push envoyé)`);
+      else toast.success(`Course proposée à ${driver.full_name} — prévenez-le par appel/WhatsApp (${j.push?.reason || 'push indisponible'})`);
       onAssigned();
     } catch (e) {
       console.error('Attribution:', e);

@@ -275,6 +275,65 @@ app.post("/:id/notify-accept", async (c) => {
   }
 });
 
+// ─── POST /:id/assign — Attribution manuelle par l'admin ─────────────────────
+// Écriture service-role (contourne RLS) + push au conducteur.
+// Body : { driverId, driverName }
+app.post("/:id/assign", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { driverId, driverName } = await c.req.json();
+    if (!driverId) return c.json({ success: false, error: "driverId requis" }, 400);
+
+    const { data: ride, error: rideErr } = await sbAdmin()
+      .from("scheduled_rides").select("*").eq("id", id).maybeSingle();
+    if (rideErr || !ride) {
+      return c.json({ success: false, error: "Réservation introuvable" }, 404);
+    }
+    if (ride.status !== "scheduled" && ride.status !== "confirmed") {
+      return c.json({ success: false, error: "Réservation déjà traitée ou annulée" }, 400);
+    }
+
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur introuvable" }, 404);
+    }
+    const name = driverName || driver.full_name || driver.name || "Conducteur";
+
+    const { error: updErr } = await sbAdmin()
+      .from("scheduled_rides")
+      .update({
+        driver_id: driverId,
+        driver_name: name,
+        driver_status: "proposed",
+        assigned_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+    if (updErr) throw new Error(updErr.message);
+
+    // Push au conducteur (gracieux si indisponible)
+    let push: { sent: boolean; reason?: string } = { sent: false, reason: "Push non configuré" };
+    if (isFirebaseAdminConfigured()) {
+      const token = await kvGet(`fcm_token_${driverId}`);
+      if (token) {
+        const r = await sendFCMNotification(token, {
+          title: "Nouvelle réservation proposée 🚖",
+          body: `Course le ${ride.scheduled_date} à ${(ride.scheduled_time || "").slice(0, 5)} : ${ride.pickup_address} → ${ride.dropoff_address}. Ouvrez l'app pour accepter.`,
+          data: { type: "reservation_assigned", reservationId: id },
+        });
+        push = r.success ? { sent: true } : { sent: false, reason: r.error };
+      } else {
+        push = { sent: false, reason: "App conducteur non connectée (token absent)" };
+      }
+    }
+
+    console.log(`📅 [RESERVATIONS/ASSIGN] ${id} → ${driverId} (push=${push.sent})`);
+    return c.json({ success: true, push });
+  } catch (error) {
+    console.error("❌ [RESERVATIONS/ASSIGN] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 // ─── POST /notify-created — Accusé de confirmation après enregistrement réel ─
 // À appeler UNIQUEMENT après insertion réussie en base (le message affirme
 // que la réservation est enregistrée). Persiste l'accusé pour la cloche.
