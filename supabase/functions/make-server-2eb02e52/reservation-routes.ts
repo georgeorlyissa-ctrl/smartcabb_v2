@@ -334,6 +334,47 @@ app.post("/:id/assign", async (c) => {
   }
 });
 
+// ─── GET /admin/all — Liste admin (service-role, indépendant de la session) ───
+app.get("/admin/all", async (c) => {
+  try {
+    const status = c.req.query("status") || "all";
+    const limit = Math.min(Number(c.req.query("limit")) || 500, 1000);
+    let q = sbAdmin()
+      .from("scheduled_rides")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .limit(limit);
+    if (status !== "all") q = q.eq("status", status);
+    const { data, error } = await q;
+    if (error) throw new Error(error.message);
+    return c.json({ success: true, rides: data || [] });
+  } catch (error) {
+    console.error("❌ [RESERVATIONS/ADMIN-ALL] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /:id/admin-status — Annuler / traiter côté admin (service-role) ─────
+app.post("/:id/admin-status", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { status } = await c.req.json();
+    if (status !== "cancelled" && status !== "completed") {
+      return c.json({ success: false, error: "Statut invalide" }, 400);
+    }
+    const { error } = await sbAdmin()
+      .from("scheduled_rides")
+      .update({ status })
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    console.log(`📅 [RESERVATIONS/ADMIN-STATUS] ${id} → ${status}`);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("❌ [RESERVATIONS/ADMIN-STATUS] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 // ─── POST /notify-created — Accusé de confirmation après enregistrement réel ─
 // À appeler UNIQUEMENT après insertion réussie en base (le message affirme
 // que la réservation est enregistrée). Persiste l'accusé pour la cloche.

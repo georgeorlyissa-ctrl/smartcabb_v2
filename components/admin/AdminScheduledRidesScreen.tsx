@@ -4,9 +4,11 @@ import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Calendar, Clock, XCircle, ChevronLeft } from '../../lib/icons';
 import { useAppState } from '../../hooks/useAppState';
-import { supabase } from '../../lib/supabase';
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { AssignDriverModal } from './AssignDriverModal';
+
+const API = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52`;
 
 interface ScheduledRide {
   id: string;
@@ -47,47 +49,51 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
 
   useEffect(() => {
     loadRides();
-  }, [filter]);
+  }, []);
 
+  // Chargement via backend service-role : marche même sans session Supabase
+  // (le timeout admin déconnecte le Auth, ce qui vidait la liste en direct PostgREST)
   const loadRides = async () => {
     setLoading(true);
     try {
-      // Ordre d'arrivée : la première réservation en haut
-      let query = supabase.from('scheduled_rides').select('*').order('created_at', { ascending: true });
-      if (filter !== 'all') query = query.eq('status', filter);
-      const { data, error } = await query;
-      if (error) throw error;
-      setRides(data || []);
+      const resp = await fetch(`${API}/reservations/admin/all?status=all&limit=500`, {
+        headers: { 'Authorization': `Bearer ${publicAnonKey}` },
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur chargement');
+      setRides(j.rides || []);
     } catch (err) {
       console.error('Erreur chargement reservations:', err);
-      toast.error('Erreur chargement');
+      toast.error('Erreur chargement — vérifiez votre connexion');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCancel = async (id: string) => {
-    if (!confirm('Annuler cette reservation ?')) return;
+  const setRideStatus = async (id: string, status: 'cancelled' | 'completed', okMsg: string) => {
     try {
-      const { error } = await supabase.from('scheduled_rides').update({ status: 'cancelled' }).eq('id', id);
-      if (error) throw error;
-      toast.success('Reservation annulee');
+      const resp = await fetch(`${API}/reservations/${id}/admin-status`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
+      toast.success(okMsg);
       loadRides();
     } catch (err) {
-      toast.error('Erreur annulation');
+      toast.error(err instanceof Error ? err.message : 'Erreur');
     }
+  };
+
+  const handleCancel = async (id: string) => {
+    if (!confirm('Annuler cette reservation ?')) return;
+    await setRideStatus(id, 'cancelled', 'Reservation annulee');
   };
 
   const handleManualProcess = async (ride: ScheduledRide) => {
     if (!confirm('Declencher le traitement maintenant pour cette reservation ?')) return;
-    try {
-      const { error } = await supabase.from('scheduled_rides').update({ status: 'completed' }).eq('id', ride.id);
-      if (error) throw error;
-      toast.success('Reservation marquee comme traitee');
-      loadRides();
-    } catch (err) {
-      toast.error('Erreur');
-    }
+    await setRideStatus(ride.id, 'completed', 'Reservation marquee comme traitee');
   };
 
   const filters = [
@@ -96,6 +102,9 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
     { value: 'cancelled' as const, label: 'Annulées', count: rides.filter(r => r.status === 'cancelled').length },
     { value: 'all' as const, label: 'Toutes', count: rides.length }
   ];
+
+  // Filtre côté client (la liste complète est chargée une fois)
+  const visibleRides = filter === 'all' ? rides : rides.filter((r) => r.status === filter);
 
   return (
     <div className="p-6">
@@ -121,14 +130,14 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
 
       {loading ? (
         <p className="text-gray-500">Chargement...</p>
-      ) : rides.length === 0 ? (
+      ) : visibleRides.length === 0 ? (
         <Card className="p-8 text-center text-gray-500">
           <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
           <p>Aucune reservation</p>
         </Card>
       ) : (
         <div className="space-y-3">
-          {rides.map(ride => {
+          {visibleRides.map(ride => {
             const catLabel = CATEGORY_LABELS[ride.category] || ride.category;
             const statusInfo = STATUS_LABELS[ride.status] || { label: ride.status, color: 'bg-gray-100 text-gray-800' };
             const scheduledAt = new Date(`${ride.scheduled_date}T${ride.scheduled_time}`);
