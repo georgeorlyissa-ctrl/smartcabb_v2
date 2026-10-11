@@ -91,6 +91,18 @@ export function getPassengerNotifUserId(): string | null {
   }
 }
 
+/** Id conducteur pour ses accusés serveur (cloche uniforme) */
+export function getDriverNotifUserId(): string | null {
+  try {
+    const raw = localStorage.getItem('smartcab_current_driver');
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return d?.id || null;
+  } catch {
+    return null;
+  }
+}
+
 export function getReadIds(target: string): string[] {
   try {
     return JSON.parse(localStorage.getItem(readKey(target)) || '[]');
@@ -127,7 +139,7 @@ export function useUnreadNotifications(target: 'drivers' | 'passengers'): number
       });
       const data = await resp.json();
       const broadcasts: AppNotification[] = data.success ? (data.notifications || []) : [];
-      const uid = target === 'passengers' ? getPassengerNotifUserId() : null;
+      const uid = target === 'passengers' ? getPassengerNotifUserId() : getDriverNotifUserId();
       const server: AppNotification[] = uid ? await fetchReservationNotifs(uid) : [];
       const locals = getLocalNotifications(target);
       const all = mergeNotifs(server, locals, broadcasts);
@@ -201,7 +213,7 @@ export function AppNotificationsScreen({
       });
       const data = await resp.json();
       const broadcasts: AppNotification[] = data.success ? (data.notifications || []) : [];
-      const uid = target === 'passengers' ? getPassengerNotifUserId() : null;
+      const uid = target === 'passengers' ? getPassengerNotifUserId() : getDriverNotifUserId();
       const server: AppNotification[] = uid ? await fetchReservationNotifs(uid) : [];
       const all = mergeNotifs(server, getLocalNotifications(target), broadcasts);
       setItems(all);

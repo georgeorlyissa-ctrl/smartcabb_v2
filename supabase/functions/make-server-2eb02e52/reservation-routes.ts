@@ -327,6 +327,18 @@ app.post("/:id/assign", async (c) => {
     }
 
     console.log(`📅 [RESERVATIONS/ASSIGN] ${id} → ${driverId} (push=${push.sent})`);
+
+    // Accusé persistant pour la cloche conducteur (uniforme tous appareils)
+    try {
+      await storeUserNotif(
+        driverId,
+        "📅 Réservation proposée",
+        `L'admin vous propose une course le ${fmtDateFR(ride.scheduled_date)} à ${fmtTimeFR(ride.scheduled_time)} : ${ride.pickup_address} → ${ride.dropoff_address}. Ouvrez Mes réservations pour accepter.`,
+        "proposed",
+        id
+      );
+    } catch (e) { console.warn("Store driver notif:", e); }
+
     return c.json({ success: true, push });
   } catch (error) {
     console.error("❌ [RESERVATIONS/ASSIGN] Erreur:", error);
