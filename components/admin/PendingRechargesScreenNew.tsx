@@ -131,8 +131,8 @@ export function PendingRechargesScreenNew() {
           },
           body: JSON.stringify({
             transactionId: transaction.id,
-            adminId: state.currentUser?.id,
-            adminName: state.currentUser?.full_name || state.currentUser?.name || 'Admin'
+            adminId: state.currentAdmin?.id,
+            adminName: state.currentAdmin?.name || 'Admin'
           })
         }
       );
@@ -174,8 +174,8 @@ export function PendingRechargesScreenNew() {
           },
           body: JSON.stringify({
             transactionId: selectedTransaction.id,
-            adminId: state.currentUser?.id,
-            adminName: state.currentUser?.full_name || state.currentUser?.name || 'Admin',
+            adminId: state.currentAdmin?.id,
+            adminName: state.currentAdmin?.name || 'Admin',
             reason: rejectionReason
           })
         }

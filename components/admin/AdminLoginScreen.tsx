@@ -41,7 +41,7 @@ const EyeOffIcon = ({ className }: { className?: string }) => (
 );
 
 export function AdminLoginScreen() {
-  const { setCurrentScreen, setCurrentView, setIsAdmin, setCurrentUser } = useAppState();
+  const { setCurrentScreen, setCurrentView, setIsAdmin, setCurrentAdmin } = useAppState();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,12 +66,10 @@ export function AdminLoginScreen() {
   }, [resendCountdown, twoFaStep]);
 
   const completeAdminLogin = (adminUser: any, name: string) => {
-    setCurrentUser(adminUser);
+    // 🔒 Slot admin DÉDIÉ — ne touche jamais au slot passager (currentUser)
+    setCurrentAdmin(adminUser);
     setIsAdmin(true);
     setCurrentView('admin');
-    // ✅ Session admin DÉDIÉE — le slot partagé smartcab_current_user est écrasé
-    // par les connexions passager/conducteur (ex. "Jack", "Carmel") sur le même
-    // navigateur ; cette clé garde l'identité du seul admin.
     try { localStorage.setItem('smartcab_current_admin', JSON.stringify(adminUser)); } catch {}
     toast.success(`Bienvenue ${name} ! 👋`);
     setCurrentScreen('admin-dashboard');

@@ -7,6 +7,7 @@ import { notifyConfirmationCode } from '../lib/sms-service';
 const initialState: AppState = {
   currentUser: null,
   currentDriver: null,
+  currentAdmin: null,
   currentRide: null,
   isAdmin: false,
   currentView: null,
@@ -27,6 +28,7 @@ interface AppContextType {
   setCurrentUser: (user: User | null) => void;
   updateUser?: (user: User | null) => void;
   setCurrentDriver: (driver: Driver | null) => void;
+  setCurrentAdmin: (admin: AppState['currentAdmin']) => void;
   setCurrentRide: (ride: Ride | null) => void;
   setCurrentView: (view: 'passenger' | 'driver' | 'admin' | null) => void;
   setCurrentScreen: (screen: string) => void;
@@ -69,6 +71,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let savedSettings = initialState.systemSettings;
     let savedUser = null;
     let savedDriver = null;
+    let savedAdmin = null;
     let savedRide = null;  // ✅ AJOUT
     let savedView = null;
     let savedScreen = '';
@@ -88,7 +91,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         const savedUserStr = localStorage.getItem('smartcab_current_user');
         if (savedUserStr) {
-          savedUser = JSON.parse(savedUserStr);
+          try {
+            const parsed = JSON.parse(savedUserStr);
+            // 🔒 Nettoyage : un compte admin n'a rien à faire dans le slot passager
+            if (parsed && parsed.role === 'admin') {
+              localStorage.removeItem('smartcab_current_user');
+            } else {
+              savedUser = parsed;
+            }
+          } catch {
+            savedUser = JSON.parse(savedUserStr);
+          }
+        }
+
+        const savedAdminStr = localStorage.getItem('smartcab_current_admin');
+        if (savedAdminStr) {
+          try { savedAdmin = JSON.parse(savedAdminStr); } catch {}
         }
         
         const savedDriverStr = localStorage.getItem('smartcab_current_driver');
@@ -149,6 +167,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       systemSettings: savedSettings,
       currentUser: savedUser,
       currentDriver: savedDriver,
+      currentAdmin: savedAdmin,
       currentRide: savedRide,  // ✅ AJOUT
       pickup: savedPickup,  // 🆕 AJOUT
       destination: savedDestination,  // 🆕 AJOUT
@@ -181,6 +200,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('smartcab_current_driver', JSON.stringify(state.currentDriver));
         } else {
           localStorage.removeItem('smartcab_current_driver');
+        }
+        if (state.currentAdmin) {
+          localStorage.setItem('smartcab_current_admin', JSON.stringify(state.currentAdmin));
+        } else {
+          localStorage.removeItem('smartcab_current_admin');
         }
         // ✅ AJOUT : Sauvegarder currentRide dans localStorage
         if (state.currentRide) {
@@ -225,6 +249,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setCurrentDriver = useCallback((driver: Driver | null) => {
     setState(prev => ({ ...prev, currentDriver: driver }));
+  }, []);
+
+  const setCurrentAdmin = useCallback((admin: AppState['currentAdmin']) => {
+    setState(prev => ({ ...prev, currentAdmin: admin }));
   }, []);
 
   const setCurrentRide = useCallback((ride: Ride | null) => {
@@ -397,6 +425,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCurrentUser,
     updateUser: setCurrentUser,
     setCurrentDriver,
+    setCurrentAdmin,
     setCurrentRide,
     setCurrentView,
     setCurrentScreen,
@@ -433,6 +462,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     // Les setters/callbacks sont stables (useCallback), pas besoin de les inclure
     setCurrentUser,
     setCurrentDriver,
+    setCurrentAdmin,
     setCurrentRide,
     setCurrentView,
     setCurrentScreen,

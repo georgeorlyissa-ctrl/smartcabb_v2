@@ -80,7 +80,7 @@ export function PaymentConfirmationScreen() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            driverId: state.currentUser?.id
+            driverId: state.currentDriver?.id || state.currentUser?.id
           })
         }
       );
@@ -93,8 +93,8 @@ export function PaymentConfirmationScreen() {
       
       // ✅ v518.1: Rafraîchir le solde du conducteur après la clôture de la course
       // Le backend a automatiquement déduit 15% du solde
-      if (state.currentUser?.id || state.currentDriver?.id) {
-        const driverId = state.currentUser?.id || state.currentDriver?.id;
+      if (state.currentDriver?.id || state.currentUser?.id) {
+        const driverId = state.currentDriver?.id || state.currentUser?.id;
         try {
           console.log('💰 Rafraîchissement du solde après clôture de course...');
           const balanceResponse = await fetch(

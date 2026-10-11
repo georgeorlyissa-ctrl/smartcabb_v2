@@ -106,7 +106,7 @@ export function ActiveRideScreen() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            driverId: state.currentUser?.id
+            driverId: state.currentDriver?.id || state.currentUser?.id
           })
         }
       );

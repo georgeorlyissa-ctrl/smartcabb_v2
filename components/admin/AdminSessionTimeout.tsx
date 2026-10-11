@@ -17,7 +17,7 @@ const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scr
  * Monté dans AdminAppContent (a accès au Router + AppProvider).
  */
 export function AdminSessionTimeout() {
-  const { state, setCurrentScreen, setIsAdmin } = useAppState();
+  const { state, setCurrentScreen, setIsAdmin, setCurrentAdmin } = useAppState();
   const navigate = useNavigate();
   const lastActivityRef = useRef<number>(Date.now());
   const warnedRef = useRef<boolean>(false);
@@ -58,6 +58,7 @@ export function AdminSessionTimeout() {
       try {
         localStorage.removeItem('smartcab_admin_2fa_token');
       } catch {}
+      setCurrentAdmin(null);
       setIsAdmin(false);
       setCurrentScreen('admin-login');
       navigate('/admin');

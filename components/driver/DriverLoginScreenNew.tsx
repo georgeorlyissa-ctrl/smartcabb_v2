@@ -10,7 +10,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 
 export function DriverLoginScreen() {
-  const { setCurrentScreen, setCurrentDriver, setCurrentUser } = useAppState();
+  const { setCurrentScreen, setCurrentDriver } = useAppState();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -136,12 +136,6 @@ export function DriverLoginScreen() {
       };
 
       setCurrentDriver(driver);
-      setCurrentUser({
-        id: driver.id,
-        email: driver.email,
-        role: 'driver',
-        full_name: driver.name
-      });
 
       toast.success(`Bienvenue ${driver.name}!`);
       setCurrentScreen('driver-dashboard');

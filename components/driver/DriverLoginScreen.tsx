@@ -9,7 +9,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 
 export function DriverLoginScreen() {
-  const { setCurrentScreen, setCurrentDriver, setCurrentUser } = useAppState();
+  const { setCurrentScreen, setCurrentDriver } = useAppState();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -199,14 +199,9 @@ export function DriverLoginScreen() {
           wallet_balance: driverData.wallet_balance || 0
         };
 
-        // Enregistrer dans l'état global
+        // Enregistrer dans l'état global — slot conducteur UNIQUEMENT
+        // (le slot passager currentUser n'est jamais touché par le login conducteur)
         setCurrentDriver(driver);
-        setCurrentUser({
-          id: driver.id,
-          email: driver.email,
-          role: 'driver',
-          full_name: driver.name
-        });
 
         toast.success(`Bienvenue ${driver.name}!`);
         setCurrentScreen('driver-dashboard');

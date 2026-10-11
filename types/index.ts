@@ -142,6 +142,8 @@ export interface MarketingCampaign {
 export interface AppState {
   currentUser: User | null;
   currentDriver: Driver | null;
+  // 🔒 Session admin DÉDIÉE — jamais partagée avec les slots passager/conducteur
+  currentAdmin: { id: string; name?: string; email?: string; phone?: string; role: string } | null;
   currentRide: Ride | null;
   isAdmin: boolean;
   currentView: 'passenger' | 'driver' | 'admin' | null; // ✅ Peut être null au démarrage

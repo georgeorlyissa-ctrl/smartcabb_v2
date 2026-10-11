@@ -61,7 +61,7 @@ import { createAdminUser } from '../../lib/auth-service';
 export function AdminDashboard() {
   console.log('🎯 AdminDashboard - RENDU DÉMARRE');
   
-  const { state, setCurrentScreen, setCurrentView, setIsAdmin, setCurrentUser } = useAppState();
+  const { state, setCurrentScreen, setCurrentView, setIsAdmin, setCurrentAdmin } = useAppState();
   const navigate = useNavigate();
 
   // 🌙 Dark mode — persisté dans localStorage
@@ -105,13 +105,13 @@ export function AdminDashboard() {
   useEffect(() => {
     // Petit délai pour laisser l'état se charger depuis localStorage
     const timer = setTimeout(() => {
-      console.log('🔐 Vérification authentification admin...', { 
-        isAdmin: state.isAdmin, 
-        hasUser: !!state.currentUser,
-        currentScreen: state.currentScreen 
+      console.log('🔐 Vérification authentification admin...', {
+        isAdmin: state.isAdmin,
+        hasUser: !!state.currentAdmin,
+        currentScreen: state.currentScreen
       });
-      
-      if (!state.isAdmin || !state.currentUser) {
+
+      if (!state.isAdmin || !state.currentAdmin) {
         console.log('❌ Accès non autorisé - Redirection vers login');
         setCurrentScreen('admin-login');
         toast.error('Veuillez vous connecter pour accéder au dashboard');
@@ -119,9 +119,9 @@ export function AdminDashboard() {
         console.log('✅ Authentification confirmée');
       }
     }, 100); // Petit délai de 100ms pour laisser l'état se charger
-    
+
     return () => clearTimeout(timer);
-  }, [state.isAdmin, state.currentUser, setCurrentScreen]); // ✅ FIX: Dépendances correctes
+  }, [state.isAdmin, state.currentAdmin, setCurrentScreen]); // ✅ FIX: Dépendances correctes
 
   const { 
     drivers, // EnrichedDriver[]
@@ -140,21 +140,19 @@ export function AdminDashboard() {
     error 
   });
 
-  // Extraire le prénom de l'admin connecté — UNIQUEMENT depuis une session admin.
-  // state.currentUser est un slot PARTAGÉ (passager/conducteur/admin) : après un
-  // test passager ("Jack", "Carmel"...) sur le même navigateur, il contient le
-  // passager. On n'affiche donc jamais un profil non-admin ici.
+  // Nom de l'admin connecté — UNIQUEMENT depuis le slot admin dédié.
+  // Ni le passager ni le conducteur ne peuvent apparaître ici.
   const getAdminSession = (): any => {
-    const u: any = state.currentUser;
-    if (u && u.role === 'admin') return u;
+    const a: any = state.currentAdmin;
+    if (a && a.role === 'admin') return a;
     try {
       const raw = localStorage.getItem('smartcab_current_admin');
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && (parsed.role === 'admin' || parsed.email)) return parsed;
+        if (parsed && parsed.role === 'admin') return parsed;
       }
     } catch {}
-    return u && u.role === 'admin' ? u : null;
+    return null;
   };
   const adminSession = getAdminSession();
   const adminFirstName = adminSession?.full_name?.split(' ')[0] || adminSession?.name?.split(' ')[0] || adminSession?.email?.split('@')[0] || 'Admin';
@@ -1145,7 +1143,7 @@ export function AdminDashboard() {
                     console.error('❌ Erreur destruction session:', error);
                   }
                   
-                  setCurrentUser(null);
+                  setCurrentAdmin(null);
                   setCurrentView(null);
                   setIsAdmin(false);
                   // ✅ Effacer aussi la session admin dédiée
