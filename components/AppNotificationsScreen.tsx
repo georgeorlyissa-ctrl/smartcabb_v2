@@ -49,19 +49,46 @@ export function getLocalNotifications(target: string): AppNotification[] {
 }
 
 /** Ajoute une notification locale visible dans la cloche + rafraîchit le badge */
-export function addLocalNotification(target: string, title: string, message: string): AppNotification {
+export function addLocalNotification(target: string, title: string, message: string, id?: string): AppNotification {
   const notif: AppNotification = {
-    id: `local_${Date.now()}`,
+    id: id || `local_${Date.now()}`,
     title,
     message,
     createdAt: new Date().toISOString(),
   };
   try {
-    const list = [notif, ...getLocalNotifications(target)].slice(0, 20);
+    const existing = getLocalNotifications(target);
+    if (existing.some((n) => n.id === notif.id)) return notif;
+    const list = [notif, ...existing].slice(0, 20);
     localStorage.setItem(localKey(target), JSON.stringify(list));
   } catch {}
   try { window.dispatchEvent(new Event('sc:notif-updated')); } catch {}
   return notif;
+}
+
+/** Accusés de réservation persistés côté serveur (uniformes sur tous les appareils) */
+export async function fetchReservationNotifs(userId: string): Promise<AppNotification[]> {
+  try {
+    const resp = await fetch(`${API}/reservations/mine/${encodeURIComponent(userId)}`, {
+      headers: { 'Authorization': `Bearer ${publicAnonKey}` },
+    });
+    const data = await resp.json();
+    return data.success ? (data.notifications || []) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Nécessite l'id passager : stocké à la connexion (voir LoginScreen) */
+export function getPassengerNotifUserId(): string | null {
+  try {
+    const raw = localStorage.getItem('smartcab_current_user');
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    return u?.id || null;
+  } catch {
+    return null;
+  }
 }
 
 export function getReadIds(target: string): string[] {
@@ -78,6 +105,17 @@ export function markAllRead(target: string, ids: string[]): void {
   } catch {}
 }
 
+/** Fusionne réservations (serveur), locales et annonces — sans doublons, triées */
+function mergeNotifs(server: AppNotification[], locals: AppNotification[], broadcasts: AppNotification[]): AppNotification[] {
+  const seen = new Set<string>();
+  const out: AppNotification[] = [];
+  for (const n of [...server, ...locals, ...broadcasts]) {
+    if (!n || !n.id || seen.has(n.id)) continue;
+    seen.add(n.id);
+    out.push(n);
+  }
+  return out.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
 /** Compte les non-lus pour la pastille de la cloche */
 export function useUnreadNotifications(target: 'drivers' | 'passengers'): number {
   const [unread, setUnread] = useState(0);
@@ -88,12 +126,13 @@ export function useUnreadNotifications(target: 'drivers' | 'passengers'): number
         headers: { 'Authorization': `Bearer ${publicAnonKey}` },
       });
       const data = await resp.json();
-      const serverIds: string[] = data.success
-        ? (data.notifications || []).map((n: AppNotification) => n.id)
-        : [];
-      const localIds = getLocalNotifications(target).map((n) => n.id);
+      const broadcasts: AppNotification[] = data.success ? (data.notifications || []) : [];
+      const uid = target === 'passengers' ? getPassengerNotifUserId() : null;
+      const server: AppNotification[] = uid ? await fetchReservationNotifs(uid) : [];
+      const locals = getLocalNotifications(target);
+      const all = mergeNotifs(server, locals, broadcasts);
       const read = new Set(getReadIds(target));
-      setUnread([...serverIds, ...localIds].filter((id) => !read.has(id)).length);
+      setUnread(all.filter((n) => !read.has(n.id)).length);
     } catch {}
   }, [target]);
 
@@ -161,8 +200,10 @@ export function AppNotificationsScreen({
         headers: { 'Authorization': `Bearer ${publicAnonKey}` },
       });
       const data = await resp.json();
-      const server: AppNotification[] = data.success ? (data.notifications || []) : [];
-      const all = [...getLocalNotifications(target), ...server];
+      const broadcasts: AppNotification[] = data.success ? (data.notifications || []) : [];
+      const uid = target === 'passengers' ? getPassengerNotifUserId() : null;
+      const server: AppNotification[] = uid ? await fetchReservationNotifs(uid) : [];
+      const all = mergeNotifs(server, getLocalNotifications(target), broadcasts);
       setItems(all);
       markAllRead(
         target,

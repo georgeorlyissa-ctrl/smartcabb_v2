@@ -153,7 +153,8 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   const isDevis = purpose === 'hors-ville';
   const currentTariffUSD = tariffUSDFor(purpose, newRide.category || 'smart_plus');
 
-  // ✅ Accusé de réception : cloche immédiate + son/voix 3 secondes après la réservation
+  // ✅ Accusé de réception : son/voix 3 secondes après la réservation.
+  // La cloche est alimentée par persistConfirmationAck (serveur, uniforme).
   const scheduleReservationAck = () => {
     const d = newRide.scheduled_date && newRide.scheduled_time
       ? new Date(`${newRide.scheduled_date}T${newRide.scheduled_time}`)
@@ -163,14 +164,36 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       timeStr: newRide.scheduled_time || undefined,
       categoryLabel: getCategoryLabel(newRide.category || 'smart_plus').label,
     };
-    const when = details.dateStr && details.timeStr ? ` pour ${details.dateStr} à ${details.timeStr}` : '';
-    const message = `Votre réservation en ${details.categoryLabel}${when} est bien prise en compte. Merci de votre confiance.`;
-    // Cloche tout de suite (pastille rouge immédiate)
-    try { addLocalNotification('passengers', 'Réservation reçue ✅', message); } catch (e) { console.warn('Cloche réservation:', e); }
     // Son + voix après 3 secondes
     window.setTimeout(() => {
       try { announceReservationReceived(details); } catch (e) { console.warn('Ack réservation:', e); }
     }, 3000);
+  };
+
+  // Persiste l'accusé côté serveur (cloche identique sur tous les appareils).
+  // À appeler UNIQUEMENT après insertion réussie en base.
+  const persistConfirmationAck = async (rideId: string) => {
+    try {
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reservations/notify-created`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rideId }),
+        }
+      );
+      const j = await resp.json();
+      if (j.success && j.notification) {
+        try { addLocalNotification('passengers', j.notification.title, j.notification.message, j.notification.id); } catch {}
+        return;
+      }
+      throw new Error('Accusé serveur indisponible');
+    } catch (e) {
+      console.warn('Accusé serveur:', e);
+      // Repli local (ancien texte court) pour ne jamais perdre l'accusé
+      const cat = getCategoryLabel(newRide.category || 'smart_plus').label;
+      try { addLocalNotification('passengers', 'Réservation reçue ✅', `Votre réservation en ${cat} est bien prise en compte. Merci de votre confiance.`); } catch {}
+    }
   };
 
   // Charger les courses réservées
@@ -248,11 +271,14 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
             category: newRide.category,
             estimated_price: 0,
             status: 'scheduled'
-          });
+          })
+          .select('id')
+          .single();
         if (error) throw error;
         toast.info('Demande de devis envoyée : nous vous contacterons avec le tarif selon votre destination');
         setCguAccepted(false);
         scheduleReservationAck();
+        if (data?.id) await persistConfirmationAck(data.id);
         await loadScheduledRides();
         handleCloseDialog();
       } catch (error) {
@@ -267,7 +293,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     if (depositMethod === 'cash') {
       setIsLoading(true);
       try {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('scheduled_rides')
           .insert({
             user_id: state.currentUser.id,
@@ -282,11 +308,14 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
             category: newRide.category,
             estimated_price: newRide.estimated_price,
             status: 'scheduled'
-          });
+          })
+          .select('id')
+          .single();
         if (error) throw error;
         toast.info(`Demande enregistrée : réglez l\u2019acompte de ${depositAmount.toLocaleString()} CDF en espèces pour confirmer la réservation`);
         setCguAccepted(false);
         scheduleReservationAck();
+        if (data?.id) await persistConfirmationAck(data.id);
         await loadScheduledRides();
         handleCloseDialog();
       } catch (error) {
@@ -430,7 +459,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   };
 
   const insertConfirmedRide = async () => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('scheduled_rides')
       .insert({
         user_id: state.currentUser.id,
@@ -445,13 +474,16 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         category: newRide.category,
         estimated_price: newRide.estimated_price,
         status: 'confirmed'
-      });
+      })
+      .select('id')
+      .single();
 
     if (error) throw error;
 
     toast.success(`Réservation confirmée : acompte de ${depositAmount.toLocaleString()} CDF reçu (solde à régler : ${(newRide.estimated_price! - depositAmount).toLocaleString()} CDF)`);
     setCguAccepted(false);
     scheduleReservationAck();
+    if (data?.id) await persistConfirmationAck(data.id);
     await loadScheduledRides();
     handleCloseDialog();
   };
