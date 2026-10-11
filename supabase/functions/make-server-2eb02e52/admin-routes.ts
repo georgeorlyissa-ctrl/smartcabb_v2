@@ -1351,6 +1351,53 @@ app.get("/drivers/diagnostic/:phone", async (c) => {
   }
 });
 
+// ─── DELETE /drivers/:driverId — Suppression d'un seul conducteur ────────────
+// Sécurité : refuse si le conducteur a des courses terminées (sauf force=true).
+app.delete("/drivers/:driverId", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const body = await c.req.json().catch(() => ({}));
+    const force = body.force === true;
+    console.log(`🗑️ [ADMIN/DELETE-DRIVER] ${driverId} (force=${force})`);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const { data: row } = await supabase
+      .from(KV_TABLE).select("value").eq("key", `driver:${driverId}`).maybeSingle();
+    const driver = row?.value;
+    if (!driver) {
+      return c.json({ success: false, error: "Conducteur introuvable" }, 404);
+    }
+
+    if (!force) {
+      const { data: rideRows } = await supabase
+        .from(KV_TABLE).select("value").like("key", "ride:%");
+      const doneCount = (rideRows || []).filter((r: any) =>
+        (r.value?.driverId === driverId || r.value?.driver_id === driverId) &&
+        (r.value?.status === "completed" || r.value?.status === "rated")
+      ).length;
+      if (doneCount > 0) {
+        return c.json({ success: false, error: `Conducteur avec ${doneCount} course(s) terminée(s) — utilisez force=true pour confirmer` }, 400);
+      }
+    }
+
+    try { await supabase.auth.admin.deleteUser(driverId); } catch (_) {}
+    await supabase.from(KV_TABLE).delete().eq("key", `driver:${driverId}`);
+    await supabase.from(KV_TABLE).delete().eq("key", `profile:${driverId}`);
+    await supabase.from(KV_TABLE).delete().eq("key", `fcm_token_${driverId}`);
+    await supabase.from(KV_TABLE).delete().eq("key", `fcm_user_${driverId}`);
+
+    console.log(`✅ Driver supprimé: ${driver.full_name || driver.name || driverId}`);
+    return c.json({ success: true, id: driverId });
+  } catch (error) {
+    console.error("❌ [ADMIN/DELETE-DRIVER] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 // ─── DELETE /delete-all-drivers — Suppression totale des conducteurs ──────────
 app.delete("/delete-all-drivers", async (c) => {
   try {
