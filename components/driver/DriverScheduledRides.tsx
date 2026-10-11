@@ -31,8 +31,10 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
   const { state, setCurrentScreen } = useAppState();
   const driverId = state.currentDriver?.id || (state.currentUser as any)?.id;
   const [rides, setRides] = useState<AssignedRide[]>([]);
+  const [historyRides, setHistoryRides] = useState<AssignedRide[]>([]);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
 
   const load = useCallback(async () => {
     if (!driverId) return;
@@ -46,6 +48,22 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
       const j = await resp.json();
       if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur chargement');
       setRides(j.rides || []);
+      // Historique : tout ce qui ne demande plus d'action
+      try {
+        const hr = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reservations/driver/${driverId}?history=1`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        const hj = await hr.json();
+        if (hr.ok && hj.success) {
+          setHistoryRides(
+            (hj.rides || []).filter(
+              (r: AssignedRide) =>
+                r.driver_status === 'declined' || r.status === 'completed' || r.status === 'cancelled'
+            )
+          );
+        }
+      } catch {}
       // Cloche informative : chaque proposition y laisse une trace (sans doublon)
       (j.rides || [])
         .filter((r: AssignedRide) => r.driver_status === 'proposed')
@@ -136,8 +154,53 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
         </div>
       </div>
 
+      {/* Onglets À venir / Passées */}
+      <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg mb-4">
+        {([
+          { value: 'upcoming' as const, label: `À venir (${rides.length})` },
+          { value: 'past' as const, label: `Passées (${historyRides.length})` },
+        ]).map((t) => (
+          <button
+            key={t.value}
+            onClick={() => setTab(t.value)}
+            className={`flex-1 py-2 px-2 rounded-md text-sm font-medium transition-colors ${
+              tab === t.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <p className="text-sm text-gray-500 text-center py-10">Chargement…</p>
+      ) : tab === 'past' ? (
+        historyRides.length === 0 ? (
+          <Card className="p-10 text-center">
+            <div className="text-4xl mb-3">📋</div>
+            <p className="font-medium text-gray-700">Aucune réservation passée</p>
+            <p className="text-xs text-gray-400 mt-1">Refusées, annulées et terminées apparaîtront ici</p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {historyRides.map((ride) => (
+              <Card key={ride.id} className="p-4 bg-gray-50">
+                <RideBody ride={ride} />
+                <div className="mt-2">
+                  {ride.driver_status === 'declined' && (
+                    <Badge className="bg-red-100 text-red-700 text-xs">✕ Refusée</Badge>
+                  )}
+                  {ride.status === 'completed' && (
+                    <Badge className="bg-gray-200 text-gray-700 text-xs">Terminée</Badge>
+                  )}
+                  {ride.status === 'cancelled' && (
+                    <Badge className="bg-red-100 text-red-600 text-xs">Annulée</Badge>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
       ) : rides.length === 0 ? (
         <Card className="p-10 text-center">
           <div className="text-4xl mb-3">📅</div>

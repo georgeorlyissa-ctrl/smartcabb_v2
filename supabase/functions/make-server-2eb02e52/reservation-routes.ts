@@ -388,17 +388,22 @@ app.post("/:id/admin-status", async (c) => {
 });
 
 // ─── GET /driver/:driverId — Réservations attribuées (service-role) ──────────
+// ?history=1 → tout l'historique (tous statuts, plus récentes d'abord)
 app.get("/driver/:driverId", async (c) => {
   try {
     const driverId = c.req.param("driverId");
-    const { data, error } = await sbAdmin()
-      .from("scheduled_rides")
-      .select("*")
-      .eq("driver_id", driverId)
-      .in("status", ["scheduled", "confirmed"])
-      .in("driver_status", ["proposed", "accepted"])
-      .order("scheduled_date", { ascending: true })
-      .order("scheduled_time", { ascending: true });
+    const history = c.req.query("history") === "1";
+    let q = sbAdmin().from("scheduled_rides").select("*").eq("driver_id", driverId);
+    if (history) {
+      q = q.order("scheduled_date", { ascending: false }).order("scheduled_time", { ascending: false }).limit(100);
+    } else {
+      q = q
+        .in("status", ["scheduled", "confirmed"])
+        .in("driver_status", ["proposed", "accepted"])
+        .order("scheduled_date", { ascending: true })
+        .order("scheduled_time", { ascending: true });
+    }
+    const { data, error } = await q;
     if (error) throw new Error(error.message);
     return c.json({ success: true, rides: data || [] });
   } catch (error) {

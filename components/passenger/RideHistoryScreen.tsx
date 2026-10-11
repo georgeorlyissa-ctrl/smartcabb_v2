@@ -16,12 +16,27 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { useAppState } from '../../hooks/useAppState';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { supabase } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
+
+type HistoryTab = 'all' | 'immediate' | 'reservation';
+
+const RESERVATION_STAGE: Record<string, { label: string; classes: string }> = {
+  accepted: { label: '🛡️ Chauffeur confirmé', classes: 'text-green-800 bg-green-100' },
+  declined: { label: '🔄 Nouveau chauffeur recherché', classes: 'text-red-700 bg-red-100' },
+  proposed: { label: '⏳ Chauffeur pressenti', classes: 'text-orange-800 bg-orange-100' },
+  confirmed: { label: 'Confirmée (acompte reçu)', classes: 'text-green-700 bg-green-100' },
+  scheduled: { label: 'Réservée', classes: 'text-blue-700 bg-blue-100' },
+  completed: { label: 'Terminée', classes: 'text-gray-700 bg-gray-200' },
+  cancelled: { label: 'Annulée', classes: 'text-red-600 bg-red-100' },
+};
 
 export function RideHistoryScreen() {
   const { setCurrentScreen, state } = useAppState();
   const [rides, setRides] = useState<any[]>([]);
+  const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<HistoryTab>('all');
 
   // 🆕 CHARGER L'HISTORIQUE DEPUIS LE BACKEND
   useEffect(() => {
@@ -68,6 +83,25 @@ export function RideHistoryScreen() {
     };
 
     fetchRideHistory();
+
+    // Réservations (tous statuts : à venir + passées)
+    const fetchReservations = async () => {
+      if (!state.currentUser?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('scheduled_rides')
+          .select('*')
+          .eq('user_id', state.currentUser.id)
+          .order('scheduled_date', { ascending: false })
+          .order('scheduled_time', { ascending: false })
+          .limit(100);
+        if (error) throw error;
+        setReservations(data || []);
+      } catch (error) {
+        console.error('❌ Erreur chargement réservations:', error);
+      }
+    };
+    fetchReservations();
   }, [state.currentUser?.id]);
 
   const getPaymentIcon = (method?: string) => {
@@ -131,6 +165,26 @@ export function RideHistoryScreen() {
     return 'Conducteur'; // Fallback, normalement pas utilisé car ride.driverName existe
   };
 
+  // Liste unifiée : immédiates + réservations, triées par date décroissante
+  const immediateItems = rides.map((r: any) => ({
+    ...r,
+    _type: 'immediate',
+    _ts: new Date(r.created_at || r.createdAt || 0).getTime(),
+  }));
+  const reservationItems = reservations.map((r: any) => ({
+    ...r,
+    _type: 'reservation',
+    _ts: new Date(`${r.scheduled_date}T${r.scheduled_time || '00:00'}`).getTime(),
+  }));
+  const allItems = [...immediateItems, ...reservationItems].sort((a, b) => b._ts - a._ts);
+  const visibleItems = tab === 'all' ? allItems : tab === 'immediate' ? immediateItems : reservationItems;
+
+  const tabs: { value: HistoryTab; label: string; count: number }[] = [
+    { value: 'all', label: 'Toutes', count: allItems.length },
+    { value: 'immediate', label: 'Immédiates', count: immediateItems.length },
+    { value: 'reservation', label: 'Réservations', count: reservationItems.length },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -148,13 +202,27 @@ export function RideHistoryScreen() {
             <div>
               <h1 className="text-xl">Historique des courses</h1>
               <p className="text-sm text-gray-600">
-                {rides.length} course(s) au total
-                {rides.filter(r => r.status === 'completed' || r.status === 'rated').length !== rides.length &&
-                  ` (${rides.filter(r => r.status === 'completed' || r.status === 'rated').length} terminées)`
-                }
+                {rides.length} immédiate(s) · {reservations.length} réservation(s)
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Onglets Toutes / Immédiates / Réservations */}
+      <div className="px-4 pt-4">
+        <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
+          {tabs.map((t) => (
+            <button
+              key={t.value}
+              onClick={() => setTab(t.value)}
+              className={`flex-1 py-2 px-2 rounded-md text-sm font-medium transition-colors ${
+                tab === t.value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {t.label} ({t.count})
+            </button>
+          ))}
         </div>
       </div>
 
@@ -172,7 +240,7 @@ export function RideHistoryScreen() {
             <p className="text-gray-600 mb-6">Veuillez patienter pendant que nous chargeons votre historique de courses</p>
           </motion.div>
         ) : (
-          rides.length === 0 ? (
+          visibleItems.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -188,7 +256,52 @@ export function RideHistoryScreen() {
               </Button>
             </motion.div>
           ) : (
-            rides.map((ride, index) => (
+            visibleItems.map((item: any, index) => {
+              // ── Carte réservation ──
+              if (item._type === 'reservation') {
+                const r = item;
+                const stage = r.driver_status && RESERVATION_STAGE[r.driver_status]
+                  ? RESERVATION_STAGE[r.driver_status]
+                  : RESERVATION_STAGE[r.status] || RESERVATION_STAGE.scheduled;
+                return (
+                  <motion.div
+                    key={`res-${r.id}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <Card className="p-4 border-purple-200">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                            📅 Réservation
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${stage.classes}`}>
+                            {stage.label}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-sm">
+                            {r.estimated_price > 0 ? `≈ ${Number(r.estimated_price).toLocaleString()} CDF` : 'Sur devis'}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-1">
+                        {new Date(`${r.scheduled_date}T${r.scheduled_time}`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })}
+                        {' '}à {(r.scheduled_time || '').slice(0, 5)}
+                      </p>
+                      <p className="text-sm font-medium">📍 {r.pickup_address}</p>
+                      <p className="text-sm text-gray-600">→ {r.dropoff_address}</p>
+                      {r.driver_name && (
+                        <p className="text-xs text-gray-600 mt-1">🛡️ Chauffeur : {r.driver_name}</p>
+                      )}
+                    </Card>
+                  </motion.div>
+                );
+              }
+              // ── Carte course immédiate (inchangée) ──
+              const ride = item;
+              return (
               <motion.div
                 key={ride.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -296,7 +409,8 @@ export function RideHistoryScreen() {
                   </div>
                 </Card>
               </motion.div>
-            ))
+              );
+            })
           )
         )}
       </div>
