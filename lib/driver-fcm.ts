@@ -211,6 +211,12 @@ export async function listenToFCMMessages(
         window.dispatchEvent(new CustomEvent('fcm-new-ride-request', { detail: data }));
       }
 
+      // Réservation attribuée par l'admin → alerter le dashboard conducteur
+      if (data.type === 'reservation_assigned' && data.reservationId) {
+        console.log('📅 Réservation attribuée FCM - dispatch fcm-reservation-assigned');
+        window.dispatchEvent(new CustomEvent('fcm-reservation-assigned', { detail: data }));
+      }
+
       // Notification navigateur via Service Worker (compatible mobile)
       if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(registration => {

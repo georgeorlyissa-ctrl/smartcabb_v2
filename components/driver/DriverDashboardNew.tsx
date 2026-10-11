@@ -395,6 +395,14 @@ export function DriverDashboardNew() {
     };
     window.addEventListener('fcm-ride-dismissed', handleRideDismissed);
 
+    // 📅 Réservation attribuée par l'admin (foreground) → toast + pastille
+    const handleReservationAssigned = (event: any) => {
+      console.log('📅 Réservation attribuée (foreground):', event.detail);
+      toast.success('Nouvelle réservation proposée — ouvrez Mes réservations pour accepter');
+      setRefreshKey((k) => k + 1);
+    };
+    window.addEventListener('fcm-reservation-assigned', handleReservationAssigned);
+
     // Initialiser FCM et démarrer le listener foreground
     const initFCM = async () => {
       try {
@@ -434,6 +442,7 @@ export function DriverDashboardNew() {
       navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
       window.removeEventListener('fcm-new-ride-request', handleFCMRide);
       window.removeEventListener('fcm-ride-dismissed', handleRideDismissed);
+      window.removeEventListener('fcm-reservation-assigned', handleReservationAssigned);
       clearInterval(poll);
     };
   }, [driver?.id]);
@@ -685,6 +694,20 @@ export function DriverDashboardNew() {
       <div className="p-4 space-y-4">
         {activeTab === 'home' && (
           <>
+            {/* 📅 Réservations proposées — bannière visible */}
+            {pendingReservations > 0 && (
+              <button
+                onClick={() => setCurrentScreen('driver-scheduled-rides')}
+                className="w-full text-left bg-purple-600 hover:bg-purple-700 text-white rounded-2xl p-4 shadow-lg transition-colors"
+              >
+                <p className="font-bold text-sm">
+                  📅 {pendingReservations} réservation{pendingReservations > 1 ? 's' : ''} à confirmer
+                </p>
+                <p className="text-xs text-white/85 mt-0.5">
+                  L’admin vous a proposé des courses à l’avance — touchez pour accepter.
+                </p>
+              </button>
+            )}
             {(driver.balance || 0) < getMinimumCreditForCategory(driver.vehicle?.category || 'smart_standard') && (
               <Card className="p-4 bg-orange-50 border-orange-200">
                 <div className="flex items-start gap-3">
