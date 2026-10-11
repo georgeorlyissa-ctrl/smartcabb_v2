@@ -52,7 +52,8 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
   const loadRides = async () => {
     setLoading(true);
     try {
-      let query = supabase.from('scheduled_rides').select('*').order('created_at', { ascending: false });
+      // Ordre d'arrivée : la première réservation en haut
+      let query = supabase.from('scheduled_rides').select('*').order('created_at', { ascending: true });
       if (filter !== 'all') query = query.eq('status', filter);
       const { data, error } = await query;
       if (error) throw error;
