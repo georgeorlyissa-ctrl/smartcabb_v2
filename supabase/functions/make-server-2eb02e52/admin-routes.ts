@@ -1700,7 +1700,59 @@ app.post("/cleanup-unknown-profiles", async (c) => {
     console.log(`🧹 cleanup-unknown-profiles: ${deleted.length} supprimé(s)`);
     return c.json({ success: true, deleted, count: deleted.length });
   } catch (error) {
-    console.error("❌ Erreur cleanup-unknown-profiles:", error);
+    console.error("�?O Erreur cleanup-unknown-profiles:", error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
+// ─── POST /cleanup-stale-rides — Clôturer les courses bloquées en statut actif ─
+// Annule (silencieusement, sans notifier) les courses accepted/enroute/arrived/
+// in_progress/started plus vieilles que maxAgeHours. dryRun=true : liste sans toucher.
+app.post("/cleanup-stale-rides", async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}));
+    const maxAgeHours = Number(body.maxAgeHours) > 0 ? Number(body.maxAgeHours) : 6;
+    const dryRun = body.dryRun === true;
+    const ACTIVE = ["accepted", "enroute", "arrived", "in_progress", "started"];
+    const threshold = Date.now() - maxAgeHours * 60 * 60 * 1000;
+
+    const rides = await kvGetByPrefix("ride:");
+    const stale = rides.filter((r: any) => {
+      if (!r || !ACTIVE.includes(r.status)) return false;
+      const ts = new Date(r.updatedAt || r.updated_at || r.createdAt || r.created_at || 0).getTime();
+      if (!ts) return true; // sans date fiable → considérée bloquée
+      return ts < threshold;
+    });
+
+    const cleaned: any[] = [];
+    if (!dryRun) {
+      for (const r of stale) {
+        try {
+          await kvSet(`ride:${r.id}`, {
+            ...r,
+            status: "cancelled",
+            cancelledAt: new Date().toISOString(),
+            cancelledBy: "admin",
+            cancelReason: body.reason || "Nettoyage admin — course bloquée, jamais clôturée",
+          });
+          cleaned.push({ id: r.id, status: r.status });
+        } catch (e) {
+          console.error("❌ Erreur nettoyage course:", r.id, e);
+        }
+      }
+    }
+
+    console.log(`🧹 [CLEANUP-STALE-RIDES] ${dryRun ? "simulation" : "nettoyées"}: ${dryRun ? stale.length : cleaned.length}/${stale.length}`);
+    return c.json({
+      success: true,
+      dryRun,
+      maxAgeHours,
+      staleCount: stale.length,
+      cleanedCount: cleaned.length,
+      stale: stale.map((r: any) => ({ id: r.id, status: r.status, createdAt: r.createdAt || r.created_at || null })),
+    });
+  } catch (error) {
+    console.error("❌ Erreur cleanup-stale-rides:", error);
     return c.json({ success: false, error: String(error) }, 500);
   }
 });
