@@ -4,10 +4,10 @@ import { useAppState } from '../../hooks/useAppState';
 import { toast } from '../../lib/toast';
 import { supabase } from '../../lib/supabase';
 
-// ⏱️ Expiration de la session admin après inactivité
-const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
-const WARNING_BEFORE_MS = 2 * 60 * 1000; // avertissement 2 minutes avant
-const CHECK_INTERVAL_MS = 30 * 1000; // vérification toutes les 30 secondes
+// ⏱️ Expiration de la session admin après inactivité (2 heures)
+const INACTIVITY_LIMIT_MS = 2 * 60 * 60 * 1000; // 2 heures
+const WARNING_BEFORE_MS = 10 * 60 * 1000; // avertissement 10 minutes avant
+const CHECK_INTERVAL_MS = 60 * 1000; // vérification toutes les minutes
 
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel'] as const;
 
@@ -62,7 +62,7 @@ export function AdminSessionTimeout() {
       setIsAdmin(false);
       setCurrentScreen('admin-login');
       navigate('/admin');
-      toast.info("Session expirée après 30 minutes d'inactivité. Veuillez vous reconnecter.");
+      toast.info("Session expirée après 2 heures d'inactivité. Veuillez vous reconnecter.");
     };
 
     const timer = setInterval(() => {
@@ -72,7 +72,7 @@ export function AdminSessionTimeout() {
         void doTimeoutLogout();
       } else if (!warnedRef.current && idleFor >= INACTIVITY_LIMIT_MS - WARNING_BEFORE_MS) {
         warnedRef.current = true;
-        toast.warning('Session admin : expiration dans 2 minutes par inactivité.');
+        toast.warning('Session admin : expiration dans 10 minutes par inactivité.');
       }
     }, CHECK_INTERVAL_MS);
 
