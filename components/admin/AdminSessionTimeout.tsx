@@ -6,8 +6,8 @@ import { supabase } from '../../lib/supabase';
 
 // ⏱️ Expiration de la session admin après inactivité (2 heures)
 const INACTIVITY_LIMIT_MS = 2 * 60 * 60 * 1000; // 2 heures
-const WARNING_BEFORE_MS = 10 * 60 * 1000; // avertissement 10 minutes avant
-const CHECK_INTERVAL_MS = 60 * 1000; // vérification toutes les minutes
+const WARNING_BEFORE_MS = 2 * 60 * 1000; // avertissement 2 minutes avant
+const CHECK_INTERVAL_MS = 30 * 1000; // vérification toutes les 30 secondes
 
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'wheel'] as const;
 
@@ -48,7 +48,7 @@ export function AdminSessionTimeout() {
     const doTimeoutLogout = async () => {
       if (timedOutRef.current) return;
       timedOutRef.current = true;
-      console.log("⏱️ Session admin expirée (30 min d'inactivité) — retour au login");
+      console.log("⏱️ Session admin expirée (2 h d'inactivité) — retour au login");
       try {
         await supabase.auth.signOut();
       } catch {}
@@ -72,7 +72,7 @@ export function AdminSessionTimeout() {
         void doTimeoutLogout();
       } else if (!warnedRef.current && idleFor >= INACTIVITY_LIMIT_MS - WARNING_BEFORE_MS) {
         warnedRef.current = true;
-        toast.warning('Session admin : expiration dans 10 minutes par inactivité.');
+        toast.warning('Session admin : expiration dans 2 minutes par inactivité.');
       }
     }, CHECK_INTERVAL_MS);
 
