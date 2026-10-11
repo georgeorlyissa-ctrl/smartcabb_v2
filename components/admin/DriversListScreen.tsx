@@ -34,7 +34,21 @@ interface DriversListScreenProps {
 
 export function DriversListScreen({ onBack }: DriversListScreenProps) {
   const { setCurrentScreen } = useAppState();
-  const { drivers, rides, loading, refresh, vehicleService } = useSupabaseData();
+  const { drivers, rides, loading, refresh, vehicleService, getPassengers } = useSupabaseData();
+  const passengerById = new Map<string, any>();
+  try {
+    (getPassengers() || []).forEach((p: any) => {
+      if (p?.id) passengerById.set(p.id, p);
+    });
+  } catch {}
+  const getPassenger = (ride: any) => {
+    const pid = ride?.passenger_id || ride?.passengerId;
+    return (pid && passengerById.get(pid)) || null;
+  };
+  const passengerName = (ride: any) =>
+    ride?.passengerName || getPassenger(ride)?.full_name || getPassenger(ride)?.name || 'Passager';
+  const passengerPhone = (ride: any) =>
+    getPassenger(ride)?.phone || getPassenger(ride)?.phoneNumber || '';
   
   // ✅ DEBUG: Logger les drivers reçus du hook
   useEffect(() => {
@@ -47,12 +61,26 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  // 🟢 Course en direct par conducteur (statuts réellement démarrés — pas 'pending')
+  // 🟢 Course en direct par conducteur : statut réellement démarré ET course récente.
+  // Les vieilles courses jamais clôturées (tests) ne comptent pas comme "en direct".
   const LIVE_STATUSES = ['accepted', 'enroute', 'arrived', 'in_progress'];
+  const LIVE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 heures
+  const LIVE_STATUS_LABELS: Record<string, string> = {
+    accepted: 'acceptée',
+    enroute: 'en route',
+    arrived: 'arrivé',
+    in_progress: 'en cours',
+  };
+  const isFreshLiveRide = (r: any): boolean => {
+    if (!r || !LIVE_STATUSES.includes(r.status)) return false;
+    const ts = new Date(r.created_at || r.createdAt || 0).getTime();
+    if (!ts || Number.isNaN(ts)) return false;
+    return Date.now() - ts <= LIVE_MAX_AGE_MS;
+  };
   const liveRideByDriver = new Map<string, any>();
   (rides || []).forEach((r: any) => {
     const did = r.driver_id || r.driverId;
-    if (did && LIVE_STATUSES.includes(r.status) && !liveRideByDriver.has(did)) {
+    if (did && isFreshLiveRide(r) && !liveRideByDriver.has(did)) {
       liveRideByDriver.set(did, r);
     }
   });
@@ -546,7 +574,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                           )}
                           {liveRide && (
                             <Badge className="bg-green-500 text-white text-xs animate-pulse">
-                              🟢 En course ({liveRide.status})
+                              🟢 En course ({LIVE_STATUS_LABELS[liveRide.status] || liveRide.status})
                             </Badge>
                           )}
                           {/* ✅ Catégorie de véhicule (produit SmartCabb) */}
@@ -583,12 +611,30 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                               }
                             </span>
                           </div>
-                          {liveRide && (liveRide.pickup_address || liveRide.pickup?.address || liveRide.dropoff_address || liveRide.destination?.address) && (
-                            <div className="flex items-center space-x-2 col-span-1 md:col-span-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                              <Car className="w-4 h-4 text-green-600 flex-shrink-0" />
-                              <span className="text-green-800 font-medium">
-                                Course en direct : {liveRide.pickup_address || liveRide.pickup?.address || '—'} → {liveRide.dropoff_address || liveRide.destination?.address || '—'}
-                              </span>
+                          {liveRide && (
+                            <div className="col-span-1 md:col-span-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 space-y-1">
+                              <p className="text-green-800 font-bold text-sm">
+                                🟢 Course en direct — {LIVE_STATUS_LABELS[liveRide.status] || liveRide.status}
+                              </p>
+                              <p className="text-sm text-gray-800">
+                                📍 Départ : {liveRide.pickup_address || liveRide.pickup?.address || '—'}
+                              </p>
+                              <p className="text-sm text-gray-800">
+                                🏁 Destination : {liveRide.dropoff_address || liveRide.destination?.address || '—'}
+                              </p>
+                              <p className="text-sm text-gray-800">
+                                🧍 Passager : {passengerName(liveRide)}
+                                {passengerPhone(liveRide) ? ` · ${passengerPhone(liveRide)}` : ''}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {(liveRide.total_amount || liveRide.estimatedPrice)
+                                  ? `💰 ${(liveRide.total_amount || liveRide.estimatedPrice).toLocaleString()} CDF · `
+                                  : ''}
+                                🕐 Début : {liveRide.created_at || liveRide.createdAt
+                                  ? new Date(liveRide.created_at || liveRide.createdAt).toLocaleString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                                  : '—'}
+                                {liveRide.vehicle_category ? ` · 🚗 ${liveRide.vehicle_category}` : ''}
+                              </p>
                             </div>
                           )}
                         </div>
