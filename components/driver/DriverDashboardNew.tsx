@@ -19,6 +19,7 @@ import { stopAllNotifications } from '../../lib/notification-sound';
 import { preloadVoices } from '../../lib/notification-sound';
 import { supabase } from '../../lib/supabase';
 import { NotificationBell } from '../AppNotificationsScreen';
+import { addLocalNotification } from '../AppNotificationsScreen';
 
 function isDriverFCMTokenRegistered(driverId: string): boolean {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return false;
@@ -396,10 +397,18 @@ export function DriverDashboardNew() {
     };
     window.addEventListener('fcm-ride-dismissed', handleRideDismissed);
 
-    // 📅 Réservation attribuée par l'admin (foreground) → toast + pastille
+    // 📅 Réservation attribuée par l'admin (foreground) → toast + pastille + cloche
     const handleReservationAssigned = (event: any) => {
       console.log('📅 Réservation attribuée (foreground):', event.detail);
       toast.success('Nouvelle réservation proposée — ouvrez Mes réservations pour accepter');
+      try {
+        addLocalNotification(
+          'drivers',
+          '📅 Réservation proposée',
+          'L’admin vous a proposé une course à l’avance. Ouvrez Mes réservations pour accepter.',
+          `res_proposed_${event.detail?.reservationId || Date.now()}`
+        );
+      } catch {}
       setRefreshKey((k) => k + 1);
     };
     window.addEventListener('fcm-reservation-assigned', handleReservationAssigned);

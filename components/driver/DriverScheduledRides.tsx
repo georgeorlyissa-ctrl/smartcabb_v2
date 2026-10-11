@@ -4,6 +4,7 @@ import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useAppState } from '../../hooks/useAppState';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { addLocalNotification } from '../AppNotificationsScreen';
 import { toast } from '../../lib/toast';
 
 interface AssignedRide {
@@ -45,6 +46,19 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
       const j = await resp.json();
       if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur chargement');
       setRides(j.rides || []);
+      // Cloche informative : chaque proposition y laisse une trace (sans doublon)
+      (j.rides || [])
+        .filter((r: AssignedRide) => r.driver_status === 'proposed')
+        .forEach((r: AssignedRide) => {
+          try {
+            addLocalNotification(
+              'drivers',
+              '📅 Réservation proposée',
+              `Course le ${r.scheduled_date} à ${(r.scheduled_time || '').slice(0, 5)} : ${r.pickup_address} → ${r.dropoff_address}.`,
+              `res_proposed_${r.id}`
+            );
+          } catch {}
+        });
     } catch (e) {
       console.error('Réservations conducteur:', e);
     } finally {
