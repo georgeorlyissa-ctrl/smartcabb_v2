@@ -33,7 +33,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  scheduled: { label: 'Planifiée', color: 'bg-blue-100 text-blue-800' },
+  scheduled: { label: 'Réservée', color: 'bg-blue-100 text-blue-800' },
   cancelled: { label: 'Annulée', color: 'bg-red-100 text-red-800' },
   completed: { label: 'Traitée', color: 'bg-green-100 text-green-800' }
 };
@@ -90,7 +90,7 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
   };
 
   const filters = [
-    { value: 'scheduled' as const, label: 'Planifiées', count: rides.filter(r => r.status === 'scheduled').length },
+    { value: 'scheduled' as const, label: 'Réservées', count: rides.filter(r => r.status === 'scheduled').length },
     { value: 'completed' as const, label: 'Traitées', count: rides.filter(r => r.status === 'completed').length },
     { value: 'cancelled' as const, label: 'Annulées', count: rides.filter(r => r.status === 'cancelled').length },
     { value: 'all' as const, label: 'Toutes', count: rides.length }
@@ -102,7 +102,7 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
         <Button variant="ghost" size="sm" onClick={() => onBack?.()}>
           <ChevronLeft className="w-5 h-5" />
         </Button>
-        <h1 className="text-xl font-bold">Reservations programmees</h1>
+        <h1 className="text-xl font-bold">Réservations</h1>
       </div>
 
       <div className="flex gap-2 mb-6 flex-wrap">
