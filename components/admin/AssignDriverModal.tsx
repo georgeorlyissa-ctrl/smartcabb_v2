@@ -40,11 +40,32 @@ function digitsOnly(phone: string): string {
   return (phone || '').replace(/\D/g, '');
 }
 
+// Compatibilité catégorie : la réservation n'accepte que les conducteurs
+// de la catégorie choisie (standard sans clim exclu des réservations).
+function normCategory(c?: string | null): string {
+  return (c || '').toLowerCase().replace(/^smart_/, '');
+}
+function isCategoryCompatible(driverCat: string | undefined, rideCat: string): boolean {
+  const d = normCategory(driverCat);
+  const r = normCategory(rideCat);
+  if (r === 'standard') return d === 'standard' || d === 'standard_clim';
+  return d === r;
+}
+const driverCategoryOf = (d: any): string => d.vehicle_category || d.vehicle?.category || '';
+
+const RIDE_CATEGORY_LABELS: Record<string, string> = {
+  smart_standard: 'Standard',
+  smart_confort: 'Confort',
+  smart_plus: 'Plus (Familiale)',
+  smart_business: 'Business',
+};
+
 export function AssignDriverModal({ ride, onClose, onAssigned }: AssignDriverModalProps) {
   const { drivers } = useSupabaseData();
   const [conflicts, setConflicts] = useState<Record<string, DateConflict[]>>({});
   const [assigningId, setAssigningId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [showAll, setShowAll] = useState(false);
 
   // Conflits : autres réservations déjà attribuées à chaque conducteur le même jour
   useEffect(() => {
@@ -80,6 +101,7 @@ export function AssignDriverModal({ ride, onClose, onAssigned }: AssignDriverMod
     const q = search.toLowerCase();
     return (drivers || [])
       .filter((d) => d.isApproved)
+      .filter((d) => showAll || isCategoryCompatible(driverCategoryOf(d), ride.category))
       .filter((d) => !q || (d.full_name || '').toLowerCase().includes(q) || (d.phone || '').includes(q))
       .map((d) => ({ d, nbConflicts: (conflicts[d.id] || []).length }))
       .sort((a, b) => {
@@ -87,7 +109,11 @@ export function AssignDriverModal({ ride, onClose, onAssigned }: AssignDriverMod
         if (a.nbConflicts !== b.nbConflicts) return a.nbConflicts - b.nbConflicts;
         return (a.d.full_name || '').localeCompare(b.d.full_name || '');
       });
-  }, [drivers, conflicts, search]);
+  }, [drivers, conflicts, search, showAll, ride.category]);
+  const compatibleCount = useMemo(
+    () => (drivers || []).filter((d) => d.isApproved && isCategoryCompatible(driverCategoryOf(d), ride.category)).length,
+    [drivers, ride.category]
+  );
 
   const handleAssign = async (driver: any) => {
     if (!confirm(`Attribuer cette course à ${driver.full_name} le ${ride.scheduled_date} à ${ride.scheduled_time} ?`)) return;
@@ -133,9 +159,24 @@ export function AssignDriverModal({ ride, onClose, onAssigned }: AssignDriverMod
           className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
         />
 
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+          <p className="text-xs text-blue-900">
+            🚗 Catégorie demandée : <strong>{RIDE_CATEGORY_LABELS[ride.category] || ride.category}</strong> · {compatibleCount} conducteur{compatibleCount > 1 ? 's' : ''}
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowAll((v) => !v)}
+            className="text-[11px] font-semibold text-blue-700 underline flex-shrink-0 ml-2"
+          >
+            {showAll ? 'Masquer les autres' : 'Toutes catégories'}
+          </button>
+        </div>
+
         <div className="space-y-2 mt-2">
           {sortedDrivers.length === 0 && (
-            <p className="text-sm text-gray-500 text-center py-6">Aucun conducteur approuvé</p>
+            <p className="text-sm text-gray-500 text-center py-6">
+              {showAll ? 'Aucun conducteur approuvé' : `Aucun conducteur ${RIDE_CATEGORY_LABELS[ride.category] || ''} disponible — essayez « Toutes catégories »`}
+            </p>
           )}
           {sortedDrivers.map(({ d, nbConflicts }) => {
             const phone = digitsOnly(d.phone || '');
