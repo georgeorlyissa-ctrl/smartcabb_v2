@@ -472,7 +472,7 @@ export function DriverProfileScreen() {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-xl font-semibold truncate">{state.currentDriver.name}</h2>
+              <h2 className="text-lg font-bold truncate">{state.currentDriver.name}</h2>
               <div className="flex items-center space-x-4 mt-2 overflow-x-auto">
                 <div className="flex items-center space-x-1 flex-shrink-0">
                   <Star className="w-4 h-4 text-yellow-400 fill-current" />

@@ -327,7 +327,7 @@ Contact : ${currentRide.driver?.phone}`;
             </div>
 
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Course en cours</h2>
+              <h2 className="text-lg font-bold">Course en cours</h2>
               <div className="flex items-center space-x-2 text-green-600">
                 <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
                 <span className="text-sm font-medium">En direct</span>

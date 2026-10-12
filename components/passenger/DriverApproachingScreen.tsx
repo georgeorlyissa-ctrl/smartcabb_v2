@@ -330,7 +330,7 @@ export function DriverApproachingScreen() {
           transition={{ delay: 0.1 }}
         >
           <Card className="p-6">
-            <h3 className="font-semibold mb-4">Votre chauffeur</h3>
+            <h3 className="font-bold mb-4">Votre chauffeur</h3>
             
             <div className="flex items-center space-x-4 mb-4">
               <div className="w-16 h-16 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center shadow-lg">
@@ -382,7 +382,7 @@ export function DriverApproachingScreen() {
           transition={{ delay: 0.2 }}
         >
           <Card className="p-6">
-            <h3 className="font-semibold mb-4">Détails de la course</h3>
+            <h3 className="font-bold mb-4">Détails de la course</h3>
             
             <div className="space-y-3">
               {/* Point de départ */}

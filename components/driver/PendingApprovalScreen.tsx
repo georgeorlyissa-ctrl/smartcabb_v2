@@ -92,7 +92,7 @@ export function PendingApprovalScreen({
             </div>
             
             <div className="flex-1">
-              <h2 className="text-xl text-gray-900 mb-3">
+              <h2 className="text-lg font-bold text-gray-900 mb-3">
                 Votre inscription est en cours de vérification
               </h2>
               

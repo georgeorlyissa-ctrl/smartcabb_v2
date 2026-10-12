@@ -81,7 +81,7 @@ export function LoyaltyScreen() {
 
       <div className="max-w-md mx-auto px-4 -mt-6 space-y-4">
         <div className="bg-white rounded-2xl shadow-sm border p-4">
-          <h3 className="font-semibold text-gray-900 mb-3">Paliers</h3>
+          <h3 className="font-bold text-gray-900 mb-3">Paliers</h3>
           <div className="space-y-2">
             {tiers.map((t: any) => {
               const canRedeem = balance >= t.points;
@@ -106,7 +106,7 @@ export function LoyaltyScreen() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border p-4">
-          <h3 className="font-semibold text-gray-900 mb-2">Historique récent</h3>
+          <h3 className="font-bold text-gray-900 mb-2">Historique récent</h3>
           {(data?.loyalty?.history || []).length === 0 ? (
             <p className="text-sm text-gray-400">Aucun mouvement</p>
           ) : (

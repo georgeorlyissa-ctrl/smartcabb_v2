@@ -580,7 +580,7 @@ export function PaymentScreen() {
             <Card className="p-4">
               <div className="flex items-center justify-between mb-3">
                 {/* ✅ TRADUIT : "Résumé de la course" */}
-                <h2 className="font-semibold text-sm sm:text-base">{t('trip_summary')}</h2>
+                <h2 className="font-bold text-lg">{t('trip_summary')}</h2>
                 <CheckCircle className="w-5 h-5 text-green-600" />
               </div>
 
@@ -629,7 +629,7 @@ export function PaymentScreen() {
           {/* ── MÉTHODES DE PAIEMENT — ✅ TRADUIT ── */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
             {/* ✅ TRADUIT */}
-            <h3 className="font-semibold mb-2 text-sm sm:text-base">{t('payment_method')}</h3>
+            <h3 className="font-bold mb-2 text-lg">{t('payment_method')}</h3>
 
             <div className="space-y-2">
               {paymentMethods.map((method) => (

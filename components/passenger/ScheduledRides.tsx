@@ -619,7 +619,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h3 className="text-sm text-gray-900">Courses réservées</h3>
+            <h3 className="text-lg font-bold text-gray-900">Courses réservées</h3>
             <p className="text-xs text-gray-500">
               {scheduledRides.length} course{scheduledRides.length > 1 ? 's' : ''} à venir
             </p>

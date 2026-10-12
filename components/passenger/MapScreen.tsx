@@ -325,7 +325,7 @@ export function MapScreen() {
             </button>
           </div>
 
-          <h2 className="text-base font-bold text-gray-900 px-0.5">{t('where_to') || 'Où allez-vous ?'}</h2>
+          <h2 className="text-lg font-bold text-gray-900 px-0.5">{t('where_to') || 'Où allez-vous ?'}</h2>
 
           <YangoStyleSearch
             placeholder={t('enter_destination') || 'Rechercher une destination...'}

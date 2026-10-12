@@ -219,7 +219,7 @@ export function SettingsScreen() {
 
         {/* Paramètres */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">{t('settings')}</h2>
+          <h2 className="text-lg font-bold">{t('settings')}</h2>
 
           {/* Apparence / Dark mode */}
           <Card>
@@ -280,7 +280,7 @@ export function SettingsScreen() {
 
         {/* Menu */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Menu</h2>
+          <h2 className="text-lg font-bold">Menu</h2>
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (

@@ -313,7 +313,7 @@ export function PaymentSettingsScreen() {
 
         {/* Liste des méthodes de paiement */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
+          <h2 className="text-lg font-bold flex items-center gap-2">
             <Wallet className="w-5 h-5 text-gray-600" />
             Mes moyens de paiement ({paymentMethods.length})
           </h2>

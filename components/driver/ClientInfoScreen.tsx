@@ -100,7 +100,7 @@ export function ClientInfoScreen() {
             <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto animate-pulse">
               <User className="w-8 h-8 text-blue-600" />
             </div>
-            <h2 className="text-xl font-semibold">Chargement...</h2>
+            <h2 className="text-lg font-bold">Chargement...</h2>
             <p className="text-gray-600">
               Récupération des informations du passager.
             </p>
@@ -118,7 +118,7 @@ export function ClientInfoScreen() {
             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
               <User className="w-8 h-8 text-red-600" />
             </div>
-            <h2 className="text-xl font-semibold">Passager non trouvé</h2>
+            <h2 className="text-lg font-bold">Passager non trouvé</h2>
             <p className="text-gray-600">
               Impossible de charger les informations du passager.
             </p>
@@ -208,7 +208,7 @@ export function ClientInfoScreen() {
                 <User className="w-10 h-10 text-blue-600" />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-semibold">{clientData.name}</h2>
+                <h2 className="text-lg font-bold">{clientData.name}</h2>
                 <p className="text-gray-600">Client SmartCabb</p>
                 <div className="flex items-center space-x-2 mt-2">
                   <Shield className="w-4 h-4 text-green-600" />

@@ -150,7 +150,7 @@ export function PrivacySettingsScreen() {
 
         {/* Privacy Settings */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
+          <h2 className="text-lg font-bold flex items-center gap-2">
             <Eye className="w-5 h-5 text-gray-600" />
             Paramètres de confidentialité
           </h2>
@@ -190,7 +190,7 @@ export function PrivacySettingsScreen() {
 
         {/* Security Settings */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
+          <h2 className="text-lg font-bold flex items-center gap-2">
             <Lock className="w-5 h-5 text-gray-600" />
             Sécurité du compte
           </h2>
@@ -231,7 +231,7 @@ export function PrivacySettingsScreen() {
 
         {/* Data Management */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
+          <h2 className="text-lg font-bold flex items-center gap-2">
             <FileText className="w-5 h-5 text-gray-600" />
             Gestion des données
           </h2>
@@ -286,7 +286,7 @@ export function PrivacySettingsScreen() {
 
         {/* Legal Links */}
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Documents légaux</h2>
+          <h2 className="text-lg font-bold">Documents légaux</h2>
           
           <Card 
             className="cursor-pointer hover:shadow-md transition-shadow"

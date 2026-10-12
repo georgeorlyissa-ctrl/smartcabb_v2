@@ -90,7 +90,7 @@ export function CancelRideReasonModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Annuler la course</h2>
+          <h2 className="text-lg font-bold">Annuler la course</h2>
           <Button
             variant="ghost"
             size="icon"

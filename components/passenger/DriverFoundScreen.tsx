@@ -420,7 +420,7 @@ export function DriverFoundScreen() {
           className="bg-white rounded-2xl shadow-lg border border-border p-5 space-y-4"
         >
           {/* ✅ TRADUIT : "Détails du trajet" */}
-          <h3 className="font-semibold text-lg">{t('trip_summary')}</h3>
+          <h3 className="font-bold text-lg">{t('trip_summary')}</h3>
 
           <div className="flex items-start gap-3">
             <MapPin className="w-5 h-5 text-secondary mt-1 flex-shrink-0" />

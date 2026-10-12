@@ -416,7 +416,7 @@ export function DriverRegistrationScreen() {
           transition={{ delay: 0.2 }}
           className="text-center mb-6"
         >
-          <h2 className="text-xl mb-2">Inscription Conducteur</h2>
+          <h2 className="text-lg font-bold mb-2">Inscription Conducteur</h2>
           <p className="text-gray-600 text-sm">
             Rejoignez notre équipe de conducteurs professionnels
           </p>

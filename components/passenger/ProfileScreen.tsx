@@ -611,7 +611,7 @@ export function ProfileScreen() {
           transition={{ delay: 0.1 }}
         >
           <Card className="p-4 md:p-6">
-            <h3 className="text-base md:text-lg font-semibold mb-4">Informations personnelles</h3>
+            <h3 className="text-lg font-bold mb-4">Informations personnelles</h3>
 
             <div className="space-y-4">
               <div>
@@ -711,7 +711,7 @@ export function ProfileScreen() {
           transition={{ delay: 0.2 }}
         >
           <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Méthode de paiement préférée</h3>
+            <h3 className="text-lg font-bold mb-4">Méthode de paiement préférée</h3>
 
             <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
               {getPaymentMethodIcon(passengerData?.favoritePaymentMethod)}

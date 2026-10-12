@@ -170,7 +170,7 @@ export function PaymentConfirmationScreen() {
           >
             <Calendar className="w-24 h-24 text-blue-600" />
           </motion.div>
-          <h2 className="text-xl font-semibold mb-2">En attente du paiement</h2>
+          <h2 className="text-lg font-bold mb-2">En attente du paiement</h2>
           <p className="text-gray-600">Le passager est en train de payer...</p>
         </motion.div>
 

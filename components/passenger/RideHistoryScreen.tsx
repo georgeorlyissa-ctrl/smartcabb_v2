@@ -202,7 +202,7 @@ export function RideHistoryScreen() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
-              <h1 className="text-xl">Historique des courses</h1>
+              <h1 className="text-lg font-bold">Historique des courses</h1>
               <p className="text-sm text-gray-600">
                 {rides.length} immédiate(s) · {reservations.length} réservation(s)
               </p>

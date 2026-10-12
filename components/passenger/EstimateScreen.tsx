@@ -706,7 +706,7 @@ export function EstimateScreen() {
           <ArrowLeft className="w-5 h-5 text-primary" />
         </Button>
         {/* ✅ TRADUIT */}
-        <h1 className="text-base font-semibold text-primary">{t('estimate_price')}</h1>
+        <h1 className="text-lg font-bold text-primary">{t('estimate_price')}</h1>
         <div className="w-9" />
       </div>
 
@@ -831,7 +831,7 @@ export function EstimateScreen() {
           <div className="space-y-4">
             <div className="px-4">
               {/* ✅ TRADUIT */}
-              <h2 className="text-base font-semibold mb-3">{t('choose_vehicle')}</h2>
+              <h2 className="text-lg font-bold mb-3">{t('choose_vehicle')}</h2>
             </div>
 
             {/* Badge réduction wallet */}

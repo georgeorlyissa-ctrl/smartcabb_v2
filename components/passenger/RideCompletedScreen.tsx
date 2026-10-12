@@ -122,7 +122,7 @@ export function RideCompletedScreen() {
 
           {/* Trip Summary Card */}
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Résumé du trajet</h2>
+            <h2 className="text-lg font-bold mb-4">Résumé du trajet</h2>
             
             {/* Driver Info */}
             <div className="flex items-center space-x-3 mb-4 p-3 bg-gray-50 rounded-lg">
