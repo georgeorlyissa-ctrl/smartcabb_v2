@@ -230,8 +230,8 @@ export function SettingsScreen() {
                     <span className="text-lg">{isDark ? '🌙' : '☀️'}</span>
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Apparence</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="row-title">Apparence</p>
+                    <p className="row-subtitle">
                       {isDark ? 'Mode sombre activé' : 'Mode clair activé'}
                     </p>
                   </div>
@@ -257,8 +257,8 @@ export function SettingsScreen() {
                         <Icon className="w-5 h-5 text-gray-600" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-medium text-sm">{setting.title}</h3>
-                        <p className="text-xs text-gray-500 truncate">{setting.description}</p>
+                        <h3 className="row-title">{setting.title}</h3>
+                        <p className="row-subtitle truncate">{setting.description}</p>
                       </div>
                     </div>
                     {/* ✅ content (PassengerLanguageSelector ou Switch) */}
@@ -296,8 +296,8 @@ export function SettingsScreen() {
                         <Icon className="w-5 h-5 text-gray-600" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-sm">{item.title}</h3>
-                        <p className="text-xs text-gray-500">{item.description}</p>
+                        <h3 className="row-title">{item.title}</h3>
+                        <p className="row-subtitle">{item.description}</p>
                       </div>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />

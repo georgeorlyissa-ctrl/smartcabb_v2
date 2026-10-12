@@ -167,14 +167,14 @@ export function PrivacySettingsScreen() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium">{option.title}</h3>
+                          <h3 className="row-title">{option.title}</h3>
                           {option.recommended && (
                             <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
                               Recommandé
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">{option.description}</p>
+                        <p className="row-subtitle">{option.description}</p>
                       </div>
                     </div>
                     <Switch 
@@ -207,14 +207,14 @@ export function PrivacySettingsScreen() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium">{option.title}</h3>
+                          <h3 className="row-title">{option.title}</h3>
                           {option.badge && (
                             <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs rounded-full">
                               {option.badge}
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">{option.description}</p>
+                        <p className="row-subtitle">{option.description}</p>
                       </div>
                     </div>
                     <Switch 
@@ -244,8 +244,8 @@ export function PrivacySettingsScreen() {
                     <FileText className="w-5 h-5 text-gray-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium">Télécharger mes données</h3>
-                    <p className="text-sm text-gray-600">Obtenez une copie de vos informations</p>
+                    <h3 className="row-title">Télécharger mes données</h3>
+                    <p className="row-subtitle">Obtenez une copie de vos informations</p>
                   </div>
                 </div>
                 <Button
@@ -267,8 +267,8 @@ export function PrivacySettingsScreen() {
                     <AlertCircle className="w-5 h-5 text-red-600" />
                   </div>
                   <div>
-                    <h3 className="font-medium text-red-600">Supprimer mon compte</h3>
-                    <p className="text-sm text-gray-600">Action irréversible</p>
+                    <h3 className="row-title" style={{ color: '#dc2626' }}>Supprimer mon compte</h3>
+                    <p className="row-subtitle">Action irréversible</p>
                   </div>
                 </div>
                 <Button

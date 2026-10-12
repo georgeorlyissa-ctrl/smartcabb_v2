@@ -340,7 +340,7 @@ export function PaymentSettingsScreen() {
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold">{method.name}</h3>
+                          <h3 className="row-title">{method.name}</h3>
                           {method.isDefault && (
                             <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full flex items-center gap-1">
                               <Star className="w-3 h-3 fill-current" />
@@ -348,7 +348,7 @@ export function PaymentSettingsScreen() {
                             </span>
                           )}
                         </div>
-                        <p className="text-sm text-gray-600">{method.details}</p>
+                        <p className="row-subtitle">{method.details}</p>
                       </div>
                     </div>
                     
