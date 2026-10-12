@@ -67,6 +67,9 @@ const Clock = ({ className = "w-5 h-5" }: { className?: string }) => (
 const TrendingUp = ({ className = "w-5 h-5" }: { className?: string }) => (
   <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
 );
+const ChevronRight = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+);
 
 interface Driver {
   id: string;
@@ -1175,6 +1178,7 @@ export function DriverDashboardNew() {
                     {driver.vehicle?.make || ''} {driver.vehicle?.model || ''} {driver.vehicle?.plate ? `· ${driver.vehicle.plate}` : ''}
                   </span>
                 </span>
+                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
               </button>
               <button
                 onClick={() => setCurrentScreen('driver-notifications')}
@@ -1187,6 +1191,7 @@ export function DriverDashboardNew() {
                   <span className="block row-title">Notifications</span>
                   <span className="block row-subtitle truncate">Annonces SmartCabb</span>
                 </span>
+                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
               </button>
               <button
                 onClick={() => setCurrentScreen('driver-scheduled-rides')}
@@ -1206,6 +1211,7 @@ export function DriverDashboardNew() {
                     {pendingReservations > 0 ? `${pendingReservations} à confirmer` : 'Courses attribuées à l’avance'}
                   </span>
                 </span>
+                <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
               </button>
               <a
                 href="tel:+243960624008"
@@ -1223,6 +1229,32 @@ export function DriverDashboardNew() {
             <Card className="p-4">
               <h3 className="font-semibold text-gray-900 mb-4">Paramètres</h3>
               <div className="space-y-2">
+                <button
+                  onClick={() => setCurrentScreen('driver-settings')}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left border border-gray-100"
+                >
+                  <span className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <SettingsIcon className="w-4 h-4 text-gray-700" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block row-title">Réglages</span>
+                    <span className="block row-subtitle truncate">Notifications, confidentialité, préférences</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                </button>
+                <button
+                  onClick={() => setCurrentScreen('driver-profile')}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left border border-gray-100"
+                >
+                  <span className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-blue-600" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block row-title">Mon profil</span>
+                    <span className="block row-subtitle truncate">Informations personnelles et véhicule</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                </button>
                 {/* ✅ Bouton Diagnostic FCM supprimé */}
                 <Button
                   variant="outline"

@@ -235,6 +235,7 @@ export function DriverSettingsScreen() {
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-gray-900 truncate">{state.currentDriver?.name}</p>
               <p className="text-sm text-gray-500 truncate">{getVehicleDisplayName(vehicleInfo)}</p>
+              <p className="text-xs font-semibold text-blue-700 mt-0.5">{getVehicleDisplayName({ category: vehicleInfo?.type })}</p>
               <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                 <span className="text-green-600 font-medium">● En ligne</span>
                 <span>⭐ {state.currentDriver?.rating}/5</span>
