@@ -901,6 +901,16 @@ export function AdminDashboard() {
       color: 'from-blue-500 to-indigo-500'
     },
     {
+      id: 'action-rides',
+      title: 'Gestion des courses',
+      description: 'Totales, achevées, annulées, réservées, par période',
+      icon: Car,
+      action: () => setCurrentScreen('admin-rides'),
+      count: null,
+      highlight: true,
+      color: 'from-cyan-500 to-blue-500'
+    },
+    {
       id: 'action-cancellations',
       title: 'Historique des annulations',
       description: 'Voir toutes les annulations avec raisons',
