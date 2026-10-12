@@ -218,6 +218,29 @@ app.get("/:driverId/balance", async (c) => {
   }
 });
 
+// ─── GET /:driverId/stats — Note moyenne + courses effectuées (completed+rated) ─
+app.get("/:driverId/stats", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const driver = await kvGet(`driver:${driverId}`);
+    if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    const allRides = await kvGetByPrefix("ride:");
+    const done = allRides.filter((r: any) =>
+      (r.driverId === driverId || r.driver_id === driverId) &&
+      (r.status === "completed" || r.status === "rated")
+    );
+    const rated = done.filter((r: any) => typeof r.rating === "number" && r.rating > 0);
+    const averageRating = rated.length > 0
+      ? Math.round((rated.reduce((s: number, r: any) => s + r.rating, 0) / rated.length) * 10) / 10
+      : Number(driver.rating || 0);
+    return c.json({ success: true, stats: { averageRating, totalRides: done.length, driverId } });
+  } catch (error) {
+    console.error("❌ [DRIVERS/STATS] Erreur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
 // ─── GET /:driverId/wallets — Tous les soldes (crédit, gains, bonus) ──────────
 app.get("/:driverId/wallets", async (c) => {
   try {
