@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { SmartCabbLogo } from './SmartCabbLogo';
 
-const PHASE_1_DELAY = 1100; // ms — phase 1 : médaillon logo
-const TOTAL_DELAY   = 2600; // ms — phase 2 : marque + slogan, puis onComplete()
+const PHASE_1_DELAY = 1200; // ms — phase 1 : médaillon logo
+const TOTAL_DELAY   = 3000; // ms — phase 2 : marque + slogan, puis onComplete()
 
 // ⚡ Perf : au 2e chargement (session), le splash est raccourci (assets en cache)
 const FAST_PHASE_1_DELAY = 350;
