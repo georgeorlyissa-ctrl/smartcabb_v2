@@ -442,6 +442,39 @@ app.post("/:id/driver-status", async (c) => {
   }
 });
 
+// ─── POST /:id/presence — Le conducteur confirme sa présence ──────────────────
+app.post("/:id/presence", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { driverId } = await c.req.json();
+    if (!driverId) return c.json({ success: false, error: "driverId requis" }, 400);
+
+    const { data: ride, error } = await sbAdmin()
+      .from("scheduled_rides").select("id,driver_id,driver_status,status").eq("id", id).maybeSingle();
+    if (error || !ride) {
+      return c.json({ success: false, error: "Réservation introuvable" }, 404);
+    }
+    if (ride.driver_id !== driverId) {
+      return c.json({ success: false, error: "Cette course ne vous est pas attribuée" }, 403);
+    }
+    if (ride.driver_status !== "proposed" && ride.driver_status !== "accepted") {
+      return c.json({ success: false, error: "Réservation déjà traitée" }, 400);
+    }
+
+    const { error: updErr } = await sbAdmin()
+      .from("scheduled_rides")
+      .update({ presence_confirmed: true, presence_confirmed_at: new Date().toISOString() })
+      .eq("id", id);
+    if (updErr) throw new Error(updErr.message);
+
+    console.log(`✅ [RESERVATIONS/PRESENCE] ${id} — présence confirmée par ${driverId}`);
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("❌ [RESERVATIONS/PRESENCE] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 // ─── POST /notify-created — Accusé de confirmation après enregistrement réel ─
 // À appeler UNIQUEMENT après insertion réussie en base (le message affirme
 // que la réservation est enregistrée). Persiste l'accusé pour la cloche.

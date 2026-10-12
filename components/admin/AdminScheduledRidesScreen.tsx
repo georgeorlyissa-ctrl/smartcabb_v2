@@ -25,6 +25,9 @@ interface ScheduledRide {
   driver_name?: string | null;
   driver_status?: string | null;
   assigned_at?: string | null;
+  presence_confirmed?: boolean;
+  presence_confirmed_at?: string | null;
+  reminder_sent_at?: string | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -86,6 +89,25 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
     }
   };
 
+  const handleForceProcess = async (ride: ScheduledRide, mode: 'preassigned' | 'automatch') => {
+    const label = mode === 'preassigned'
+      ? `Créer la course maintenant pour ${ride.driver_name || 'le conducteur'} ?`
+      : 'Lancer le matching auto (même catégorie) pour cette réservation ?';
+    if (!confirm(label)) return;
+    try {
+      const resp = await fetch(`${API}/rides/admin-process-one`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduledRideId: ride.id, mode }),
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
+      toast.success(mode === 'preassigned' ? 'Course créée et attribuée ✓' : `Matching lancé (${j.matching === 'success' ? 'chauffeur trouvé' : 'aucun chauffeur pour l’instant'})`);
+      loadRides();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
+  };
   const handleCancel = async (id: string) => {
     if (!confirm('Annuler cette reservation ?')) return;
     await setRideStatus(id, 'cancelled', 'Reservation annulee');
@@ -143,17 +165,34 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
             const scheduledAt = new Date(`${ride.scheduled_date}T${ride.scheduled_time}`);
             const isPast = scheduledAt < new Date();
 
-            return (
-              <Card key={ride.id} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
-                      <Badge variant="outline">{catLabel}</Badge>
-                      {isPast && ride.status === 'scheduled' && (
-                        <Badge className="bg-orange-100 text-orange-800">En retard</Badge>
-                      )}
-                    </div>
+  const isActive = ride.status === 'scheduled' || ride.status === 'confirmed';
+  const minsToStart = Math.round((scheduledAt.getTime() - Date.now()) / 60000);
+  const noPresenceSoon = ride.driver_status === 'accepted' && !(ride as any).presence_confirmed &&
+    (ride.status === 'scheduled' || ride.status === 'confirmed') && minsToStart <= 30;
+
+  return (
+    <Card key={ride.id} className="p-4">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
+            <Badge variant="outline">{catLabel}</Badge>
+            {ride.status === 'confirmed' && (
+              <Badge className="bg-green-100 text-green-800">Acompte reçu</Badge>
+            )}
+            {isPast && isActive && (
+              <Badge className="bg-orange-100 text-orange-800">En retard</Badge>
+            )}
+            {(ride as any).reminder_sent_at && isActive && (
+              <Badge className="bg-blue-100 text-blue-800">🔔 Rappel envoyé</Badge>
+            )}
+            {(ride as any).presence_confirmed && isActive && (
+              <Badge className="bg-green-100 text-green-800">✓ Présence confirmée</Badge>
+            )}
+            {noPresenceSoon && (
+              <Badge className="bg-red-100 text-red-800">⚠️ Sans confirmation</Badge>
+            )}
+          </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
                       <Calendar className="w-4 h-4" />
                       {scheduledAt.toLocaleDateString('fr-FR')}
@@ -182,10 +221,18 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 ml-4">
-                    {ride.status === 'scheduled' && (
+                    {isActive && (
                       <>
                         <Button size="sm" onClick={() => setAssignRide(ride)} className="bg-blue-600 hover:bg-blue-700">
                           🚖 {ride.driver_id ? 'Ré-attribuer' : 'Attribuer'}
+                        </Button>
+                        {ride.driver_status === 'accepted' && (
+                          <Button size="sm" onClick={() => handleForceProcess(ride, 'preassigned')} className="bg-purple-600 hover:bg-purple-700">
+                            ▶ Créer maintenant
+                          </Button>
+                        )}
+                        <Button size="sm" variant="outline" onClick={() => handleForceProcess(ride, 'automatch')} className="text-purple-700 border-purple-300">
+                          🔍 Matching auto
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => handleCancel(ride.id)} className="text-red-600 border-red-200">
                           <XCircle className="w-4 h-4 mr-1" />

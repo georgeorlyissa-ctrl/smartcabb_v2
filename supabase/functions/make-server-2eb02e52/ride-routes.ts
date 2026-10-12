@@ -1790,7 +1790,32 @@ app.post("/rate", async (c) => {
 });
 
 // ============================================
+// Helper : push passager (gracieux si token absent)
+async function notifyPassenger(userId: string, notif: { title: string; body: string; data?: Record<string, string> }): Promise<boolean> {
+  try {
+    const tokenData = await kvGet(`fcm_token_${userId}`);
+    const token = typeof tokenData === "string" ? tokenData : tokenData?.token;
+    if (!token) return false;
+    const r = await sendFCMNotification(token, {
+      title: notif.title,
+      body: notif.body,
+      data: notif.data || {},
+    });
+    return !!r.success;
+  } catch (e) {
+    console.warn("notifyPassenger:", e);
+    return false;
+  }
+}
+
 // POST /process-scheduled - Convertir les réservations programmées en courses réelles
+// ============================================
+// Cycle Jour-J (cron toutes les 5 min) :
+//  1. Rappel H-1h au conducteur ayant accepté + demande de confirmation de présence.
+//  2. À l'heure : si conducteur accepté ET présent → course PRÉ-ATTRIBUÉE (pas de matching).
+//     Si accepté mais SANS confirmation → pas de création auto, alerte admin (badge + live-feed).
+//     Si aucun conducteur → matching auto même catégorie (comportement historique).
+// Traite les statuts 'scheduled' ET 'confirmed' (acompte payé).
 // ============================================
 app.post("/process-scheduled", async (c) => {
   const cronSecret = c.req.header("x-cron-secret");
@@ -1811,11 +1836,14 @@ app.post("/process-scheduled", async (c) => {
     const bufferMinutes = parseInt(Deno.env.get("SCHEDULED_RIDE_BUFFER_MINUTES") || "5");
     const futureTime = new Date(now.getTime() + bufferMinutes * 60000);
     const futureTimeStr = futureTime.toTimeString().slice(0, 5);
+    // Fenêtre de rappel : course qui démarre dans ~1h (55-65 min)
+    const remindFrom = new Date(now.getTime() + 55 * 60000);
+    const remindTo = new Date(now.getTime() + 65 * 60000);
 
     const { data: scheduledRides, error } = await supabase
       .from("scheduled_rides")
       .select("*")
-      .eq("status", "scheduled")
+      .in("status", ["scheduled", "confirmed"])
       .lte("scheduled_date", today);
 
     if (error) {
@@ -1824,24 +1852,123 @@ app.post("/process-scheduled", async (c) => {
     }
 
     if (!scheduledRides || scheduledRides.length === 0) {
-      return c.json({ success: true, processed: 0, message: "Aucune course programmee a traiter" });
+      return c.json({ success: true, processed: 0, reminded: 0, message: "Aucune course programmee a traiter" });
     }
 
-    const dueRides = scheduledRides.filter((r) => {
-      if (r.scheduled_date < today) return true;
-      return r.scheduled_time <= futureTimeStr;
-    });
-
-    console.log(`📋 ${dueRides.length}/${scheduledRides.length} courses programmees a traiter`);
-
+    const startTs = (r: any) => new Date(`${r.scheduled_date}T${r.scheduled_time || "00:00"}`).getTime();
     const results = [];
+    let reminded = 0;
 
-    for (const sr of dueRides) {
+    for (const sr of scheduledRides) {
       try {
-        const passengerProfile = await kvGet(`passenger:${sr.user_id}`);
+        const start = startTs(sr);
+
+        // ── 1. RAPPEL H-1h au conducteur ayant accepté ──
+        if (
+          sr.driver_id && sr.driver_status === "accepted" && !sr.reminder_sent_at &&
+          start >= remindFrom.getTime() && start <= remindTo.getTime()
+        ) {
+          const drv = await kv.get<any>(`driver:${sr.driver_id}`);
+          const token = drv?.fcmToken;
+          if (token) {
+            await sendFCMNotification(token, {
+              title: "📅 Rappel de course dans 1h",
+              body: `Course ${sr.pickup_address} → ${sr.dropoff_address} à ${(sr.scheduled_time || "").slice(0, 5)}. Confirmez votre présence dans l'app.`,
+              data: { type: "reservation_reminder", reservationId: sr.id },
+            });
+          }
+          await supabase.from("scheduled_rides").update({ reminder_sent_at: new Date().toISOString() }).eq("id", sr.id);
+          reminded++;
+          console.log(`🔔 Rappel H-1h envoyé pour ${sr.id} (conducteur ${sr.driver_id})`);
+          continue;
+        }
+
+        // ── 2. Échéance : la course doit démarrer (passée ou dans ~5 min) ──
+        const isDue = sr.scheduled_date < today || sr.scheduled_time <= futureTimeStr;
+        if (!isDue) continue;
+
+        const passengerProfile = await kv.get(`passenger:${sr.user_id}`);
         const passengerName = passengerProfile?.full_name || passengerProfile?.name || "Passager";
         const passengerPhone = passengerProfile?.phone || passengerProfile?.phone_number || "";
 
+        // ── 2a. Conducteur accepté → course PRÉ-ATTRIBUÉE (pas de matching) ──
+        if (sr.driver_id && sr.driver_status === "accepted") {
+          if (!sr.presence_confirmed) {
+            // Pas de confirmation de présence → on ne crée rien, alerte admin
+            await logAdminEvent("reservation_no_presence", {
+              reservationId: sr.id,
+              driverId: sr.driver_id,
+              driverName: sr.driver_name || null,
+              pickup: sr.pickup_address,
+              destination: sr.dropoff_address,
+              scheduledDate: sr.scheduled_date,
+              scheduledTime: sr.scheduled_time,
+            });
+            console.log(`⚠️ Pas de confirmation de présence pour ${sr.id} — action admin requise`);
+            // Rassurer le passager sans promettre un chauffeur précis
+            await notifyPassenger(sr.user_id, {
+              title: "SmartCabb — Votre course",
+              body: `Votre course de ${(sr.scheduled_time || "").slice(0, 5)} est en cours de finalisation. Nous vous confirmons votre chauffeur dans un instant.`,
+              data: { type: "reservation_finalizing", reservationId: sr.id },
+            });
+            results.push({ scheduledRideId: sr.id, skipped: "no_presence" });
+            continue;
+          }
+
+          const driver = await kv.get<any>(`driver:${sr.driver_id}`);
+          const rideId = crypto.randomUUID();
+          const ride = {
+            id: rideId,
+            passengerId: sr.user_id,
+            passengerName,
+            passengerPhone,
+            driverId: sr.driver_id,
+            driverName: driver?.full_name || driver?.name || sr.driver_name || "Conducteur",
+            driverPhone: driver?.phone || "",
+            pickup: { name: sr.pickup_address, address: sr.pickup_address, coordinates: { lat: sr.pickup_lat, lng: sr.pickup_lng } },
+            destination: { name: sr.dropoff_address, address: sr.dropoff_address, coordinates: { lat: sr.dropoff_lat, lng: sr.dropoff_lng } },
+            vehicleCategory: sr.category,
+            estimatedPrice: sr.estimated_price,
+            distance: 0,
+            duration: 0,
+            pickupAddress: sr.pickup_address,
+            destinationAddress: sr.dropoff_address,
+            status: "accepted",
+            acceptedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            isScheduled: true,
+            scheduledDate: sr.scheduled_date,
+            scheduledTime: sr.scheduled_time,
+            scheduledRideId: sr.id,
+            passengerCount: 1
+          };
+
+          await kv.set(`ride:${rideId}`, ride);
+          console.log(`Course pre-attribuee creee: ${rideId} (conducteur ${sr.driver_id})`);
+
+          // Notifier le conducteur : mise en route
+          if (driver?.fcmToken) {
+            await sendFCMNotification(driver.fcmToken, {
+              title: "🚖 Votre course réservée démarre",
+              body: `${sr.pickup_address} → ${sr.dropoff_address}. Mettez-vous en route vers le point de départ.`,
+              data: { type: "reservation_started", rideId, reservationId: sr.id },
+            });
+          }
+
+          await supabase.from("scheduled_rides").update({ status: "completed" }).eq("id", sr.id);
+
+          // Notifier le passager avec les détails du chauffeur (sécurité)
+          await notifyPassenger(sr.user_id, {
+            title: "🚖 Votre chauffeur est en route",
+            body: `${ride.driverName} · ${sr.pickup_address} → ${sr.dropoff_address}. Suivez votre course dans l'app.`,
+            data: { type: "reservation_driver_enroute", rideId, reservationId: sr.id },
+          });
+
+          results.push({ scheduledRideId: sr.id, rideId, matching: "preassigned" });
+          continue;
+        }
+
+        // ── 2b. Aucun conducteur accepté → matching auto même catégorie ──
         const rideId = crypto.randomUUID();
         const ride = {
           id: rideId,
@@ -1915,10 +2042,108 @@ app.post("/process-scheduled", async (c) => {
       }
     }
 
-    return c.json({ success: true, processed: results.length, results });
+    return c.json({ success: true, processed: results.length, reminded, results });
 
   } catch (error) {
     console.error("Erreur process-scheduled:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST /admin-process-one - L'admin crée la course d'une réservation immédiatement
+// Body : { scheduledRideId, mode: 'preassigned' | 'automatch' }
+//  - preassigned : conducteur accepté → course créée directement pour lui (pas de matching).
+//  - automatch : libère l'attribution (declined-système) → searching + matching même catégorie.
+// ============================================
+app.post("/admin-process-one", async (c) => {
+  try {
+    const { scheduledRideId, mode } = await c.req.json();
+    if (!scheduledRideId || (mode !== "preassigned" && mode !== "automatch")) {
+      return c.json({ success: false, error: "scheduledRideId et mode (preassigned|automatch) requis" }, 400);
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const { data: sr, error } = await supabase
+      .from("scheduled_rides").select("*").eq("id", scheduledRideId).maybeSingle();
+    if (error || !sr) {
+      return c.json({ success: false, error: "Réservation introuvable" }, 404);
+    }
+    if (sr.status !== "scheduled" && sr.status !== "confirmed") {
+      return c.json({ success: false, error: "Réservation déjà traitée ou annulée" }, 400);
+    }
+
+    const passengerProfile = await kvGet(`passenger:${sr.user_id}`);
+    const base: any = {
+      id: crypto.randomUUID(),
+      passengerId: sr.user_id,
+      passengerName: passengerProfile?.full_name || passengerProfile?.name || "Passager",
+      passengerPhone: passengerProfile?.phone || passengerProfile?.phone_number || "",
+      pickup: { name: sr.pickup_address, address: sr.pickup_address, coordinates: { lat: sr.pickup_lat, lng: sr.pickup_lng } },
+      destination: { name: sr.dropoff_address, address: sr.dropoff_address, coordinates: { lat: sr.dropoff_lat, lng: sr.dropoff_lng } },
+      vehicleCategory: sr.category,
+      estimatedPrice: sr.estimated_price,
+      distance: 0,
+      duration: 0,
+      pickupAddress: sr.pickup_address,
+      destinationAddress: sr.dropoff_address,
+      createdAt: new Date().toISOString(),
+      isScheduled: true,
+      scheduledDate: sr.scheduled_date,
+      scheduledTime: sr.scheduled_time,
+      scheduledRideId: sr.id,
+      passengerCount: 1,
+    };
+
+    if (mode === "preassigned") {
+      if (!sr.driver_id || sr.driver_status !== "accepted") {
+        return c.json({ success: false, error: "Aucun conducteur accepté — utilisez le matching auto" }, 400);
+      }
+      const driver = await kvGet<any>(`driver:${sr.driver_id}`);
+      const ride = {
+        ...base,
+        driverId: sr.driver_id,
+        driverName: driver?.full_name || driver?.name || sr.driver_name || "Conducteur",
+        driverPhone: driver?.phone || "",
+        status: "accepted",
+        acceptedAt: new Date().toISOString(),
+      };
+      await kv.set(`ride:${ride.id}`, ride);
+      await supabase.from("scheduled_rides").update({ status: "completed" }).eq("id", sr.id);
+      if (driver?.fcmToken) {
+        await sendFCMNotification(driver.fcmToken, {
+          title: "🚖 Votre course réservée démarre",
+          body: `${sr.pickup_address} → ${sr.dropoff_address}. Mettez-vous en route.`,
+          data: { type: "reservation_started", rideId: ride.id, reservationId: sr.id },
+        });
+      }
+      await notifyPassenger(sr.user_id, {
+        title: "🚖 Votre chauffeur est en route",
+        body: `${ride.driverName} · ${sr.pickup_address} → ${sr.dropoff_address}. Suivez votre course dans l'app.`,
+        data: { type: "reservation_driver_enroute", rideId: ride.id, reservationId: sr.id },
+      });
+      console.log(`Course forcee pre-attribuee: ${ride.id} (reservation ${sr.id})`);
+      return c.json({ success: true, rideId: ride.id, mode: "preassigned" });
+    }
+
+    // automatch : libère l'attribution puis matching auto même catégorie
+    await supabase.from("scheduled_rides").update({ driver_status: "declined" }).eq("id", sr.id);
+    const ride = { ...base, status: "searching" };
+    await kv.set(`ride:${ride.id}`, ride);
+    const matchingResult = await findAndNotifyNearbyDrivers(ride);
+    await supabase.from("scheduled_rides").update({ status: "completed" }).eq("id", sr.id);
+    await notifyPassenger(sr.user_id, {
+      title: "SmartCabb - Course programmee",
+      body: `Votre course ${sr.pickup_address} vers ${sr.dropoff_address} est en cours de traitement. Un chauffeur arrive bientot.`,
+      data: { type: "scheduled_ride_processing", rideId: ride.id, reservationId: sr.id },
+    });
+    console.log(`Course forcee matching auto: ${ride.id} (reservation ${sr.id})`);
+    return c.json({ success: true, rideId: ride.id, mode: "automatch", matching: matchingResult.success ? "success" : "no_driver" });
+  } catch (error) {
+    console.error("Erreur admin-process-one:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

@@ -86,6 +86,27 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const confirmPresence = async (ride: AssignedRide) => {
+    setActingId(ride.id);
+    try {
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reservations/${ride.id}/presence`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driverId }),
+        }
+      );
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
+      toast.success('Présence confirmée ✓ — à l’heure pour la prise en charge');
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur');
+    } finally {
+      setActingId(null);
+    }
+  };
   const setStatus = async (ride: AssignedRide, next: 'accepted' | 'declined') => {
     const msg = next === 'accepted'
       ? `Accepter cette course le ${ride.scheduled_date} à ${ride.scheduled_time} ?`
@@ -245,6 +266,18 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
                 <Card key={ride.id} className="p-4 border-green-300">
                   <RideBody ride={ride} />
                   <Badge className="bg-green-100 text-green-800 text-xs mt-2">Acceptée — à effectuer</Badge>
+                  {(ride as any).presence_confirmed ? (
+                    <Badge className="bg-blue-100 text-blue-800 text-xs mt-2 ml-2">✓ Présence confirmée</Badge>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={actingId === ride.id}
+                      onClick={() => confirmPresence(ride)}
+                      className="w-full mt-2 bg-blue-600 hover:bg-blue-700"
+                    >
+                      📍 Je suis prêt — confirmer ma présence
+                    </Button>
+                  )}
                 </Card>
               ))}
             </>
