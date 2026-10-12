@@ -42,6 +42,39 @@ export function ActiveRideNavigationScreen() {
   const [passengerPaid, setPassengerPaid] = useState<boolean | null>(null); // null = pas encore répondu
   const [isCompleting, setIsCompleting] = useState(false);
   const [showIncidentModal, setShowIncidentModal] = useState(false);
+  // ⏱️ État compteur serveur (télécommande admin) — fait foi sur le local
+  const [serverMeter, setServerMeter] = useState<any>(null);
+
+  // ⏱️ Suivre la télécommande compteur (pause/reprise/arrêt par SmartCabb)
+  useEffect(() => {
+    if (!currentRide?.id) return;
+    let alive = true;
+    const check = async () => {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/status/${currentRide.id}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        const data = await res.json();
+        const m = data.success ? data.ride?.meter : null;
+        if (alive && m) {
+          setServerMeter((prev: any) => {
+            if (prev?.state !== m.state) {
+              const reason = m.log?.slice(-1)[0]?.reason || '';
+              if (m.state === 'paused') toast.warning(`⏸️ Chronomètre suspendu par SmartCabb${reason ? ` (${reason})` : ''} — temps gelé`);
+              if (m.state === 'running' && prev?.state === 'paused') toast.success('▶️ Chronomètre repris');
+              if (m.state === 'stopped') toast.info('⏹️ Chronomètre arrêté par SmartCabb — terminez la course');
+            }
+            return m;
+          });
+        }
+      } catch {}
+    };
+    check();
+    const iv = setInterval(check, 15000);
+    return () => { alive = false; clearInterval(iv); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRide?.id]);
 
   // Protection: Si pas de course, retourner au tableau de bord
   if (!currentRide) {
@@ -136,13 +169,14 @@ export function ActiveRideNavigationScreen() {
     };
   }, [currentRide, state.userId, isUpdatingLocation]);
 
-  // ⏱️ Chronomètre de la course
+  // ⏱️ Chronomètre de la course (gelé si suspendu/arrêté par SmartCabb)
   useEffect(() => {
     if (!currentRide.startedAt) return;
 
     const updateTimer = () => {
-      const startTime = typeof currentRide.startedAt === 'number' 
-        ? currentRide.startedAt 
+      if (serverMeter?.state === 'paused' || serverMeter?.state === 'stopped') return;
+      const startTime = typeof currentRide.startedAt === 'number'
+        ? currentRide.startedAt
         : new Date(currentRide.startedAt).getTime();
       const now = Date.now();
       const elapsed = Math.floor((now - startTime) / 1000); // en secondes
@@ -154,7 +188,7 @@ export function ActiveRideNavigationScreen() {
     const timer = setInterval(updateTimer, 1000);
 
     return () => clearInterval(timer);
-  }, [currentRide.startedAt, currentRide.vehicleCategory, currentRide.vehicleType]);
+  }, [currentRide.startedAt, currentRide.vehicleCategory, currentRide.vehicleType, serverMeter?.state]);
 
   // Formater le temps en HH:MM:SS ou MM:SS
   const formatTime = (seconds: number): string => {
@@ -413,6 +447,18 @@ export function ActiveRideNavigationScreen() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* ⏱️ Bannière télécommande SmartCabb */}
+          {serverMeter?.state === 'paused' && (
+            <div className="mt-3 p-3 rounded-xl bg-orange-100 border-2 border-orange-400 text-orange-800 text-sm font-semibold text-center">
+              ⏸️ Chronomètre suspendu par SmartCabb{serverMeter?.log?.slice(-1)[0]?.reason ? ` (${serverMeter.log.slice(-1)[0].reason})` : ''} — temps gelé, non facturé
+            </div>
+          )}
+          {serverMeter?.state === 'stopped' && (
+            <div className="mt-3 p-3 rounded-xl bg-red-100 border-2 border-red-400 text-red-800 text-sm font-semibold text-center">
+              ⏹️ Chronomètre arrêté par SmartCabb — terminez la course
+            </div>
+          )}
 
           {/* Bouton incident — panne, crevaison, urgence */}
           <button

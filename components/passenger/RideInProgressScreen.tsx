@@ -95,6 +95,18 @@ export function RideInProgressScreen() {
     rideCompleted: false
   });
 
+  // ⏱️ Télécommande compteur SmartCabb (pause/reprise/arrêt) — lue via le polling
+  const meterState = (currentRide as any)?.meter?.state as string | undefined;
+  const meterReason = (currentRide as any)?.meter?.log?.slice(-1)[0]?.reason as string | undefined;
+  const [seenMeterState, setSeenMeterState] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!meterState || meterState === seenMeterState) return;
+    setSeenMeterState(meterState);
+    if (meterState === 'paused') toast.warning(`⏸️ Chronomètre suspendu par SmartCabb${meterReason ? ` (${meterReason})` : ''} — temps gelé, non facturé`);
+    if (meterState === 'running' && seenMeterState === 'paused') toast.success('▶️ Chronomètre repris');
+    if (meterState === 'stopped') toast.info('⏹️ Chronomètre arrêté par SmartCabb');
+  }, [meterState]);
+
   // Position simulée du conducteur
   const [driverLocation, setDriverLocation] = useState({
     lat: currentRide?.pickup?.lat || -4.3276,
@@ -518,6 +530,17 @@ export function RideInProgressScreen() {
                   <span className="text-base leading-none">⚠️</span>
                 </button>
               </div>
+
+              {/* ⏱️ Bannière télécommande SmartCabb */}
+              {(meterState === 'paused' || meterState === 'stopped') && (
+                <div className={`mt-2 px-3 py-2 rounded-xl text-xs font-semibold text-center backdrop-blur-md shadow-xl ${
+                  meterState === 'paused' ? 'bg-orange-500/90 text-white' : 'bg-red-500/90 text-white'
+                }`}>
+                  {meterState === 'paused'
+                    ? `⏸️ Chronomètre suspendu${meterReason ? ` (${meterReason})` : ''} — non facturé`
+                    : '⏹️ Chronomètre arrêté par SmartCabb'}
+                </div>
+              )}
             </div>
           </div>
         </div>

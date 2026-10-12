@@ -587,8 +587,19 @@ app.get("/pending/:driverId", async (c) => {
     
     // ✅ FIX PRINCIPAL: Chercher dans driver_notification (clé écrite par notifyDriverAtIndex)
     const notification = await kv.get<any>(`driver_notification:${driverId}`);
-    
+
     if (notification?.rideId) {
+      // Proposition de TRANSFERT : la course est en cours, ne pas supprimer
+      if (notification.type === 'transfer_ride_request') {
+        const ride = await kv.get<any>(`ride:${notification.rideId}`);
+        if (ride && ride.transferProposal?.toDriverId === driverId &&
+            ["accepted", "enroute", "arrived", "in_progress"].includes(ride.status)) {
+          console.log(`🔄 Proposition de transfert pour ${driverId}: ${notification.rideId}`);
+          return c.json({ success: true, ride: { ...ride, ...notification } });
+        }
+        await kv.delete(`driver_notification:${driverId}`);
+        return c.json({ success: true, ride: null });
+      }
       // Vérifier que la course est toujours en recherche (pas encore acceptée par un autre)
       const ride = await kv.get<any>(`ride:${notification.rideId}`);
       if (ride && ride.status === 'searching') {
@@ -2171,6 +2182,374 @@ app.get("/:id/incidents", async (c) => {
     return c.json({ success: true, incidents: all });
   } catch (error) {
     console.error("Erreur journal incidents:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// ⏱️ COMPTEUR SERVEUR + TRANSFERT — horloge de référence, journal infalsifiable
+// ============================================
+// ride.meter = { state, accumulatedSec, lastResumeAt, currentDriverId,
+//                segments: [{driverId, driverName, startedAt, endedAt, billedSec}],
+//                log: [{at, actor, actorName, action, reason, billedSec}] }
+
+function ensureMeter(ride: any): any {
+  if (!ride.meter) {
+    const start = ride.startedAt || ride.acceptedAt || ride.createdAt || new Date().toISOString();
+    ride.meter = {
+      state: "running",
+      accumulatedSec: 0,
+      lastResumeAt: start,
+      currentDriverId: ride.driverId || ride.driver_id || null,
+      segments: [{
+        driverId: ride.driverId || ride.driver_id || null,
+        driverName: ride.driverName || null,
+        startedAt: start,
+        endedAt: null,
+        billedSec: 0,
+      }],
+      log: [{ at: start, actor: "system", actorName: "Système", action: "start", reason: "Début de course", billedSec: 0 }],
+    };
+  }
+  return ride.meter;
+}
+
+function meterBilledSec(ride: any): number {
+  const m = ensureMeter(ride);
+  let total = m.accumulatedSec || 0;
+  if (m.state === "running" && m.lastResumeAt) {
+    total += Math.max(0, Math.floor((Date.now() - new Date(m.lastResumeAt).getTime()) / 1000));
+  }
+  return total;
+}
+
+function meterLog(ride: any, entry: any): void {
+  const m = ensureMeter(ride);
+  m.log.push({ at: new Date().toISOString(), billedSec: meterBilledSec(ride), ...entry });
+  if (m.log.length > 200) m.log = m.log.slice(-200);
+}
+
+async function pushToRideParties(ride: any, title: string, body: string, data: Record<string, string>): Promise<void> {
+  try {
+    const did = ride.driverId || ride.driver_id;
+    if (did) {
+      const driver = await kv.get<any>(`driver:${did}`);
+      if (driver?.fcmToken) {
+        await sendFCMNotification(driver.fcmToken, { title, body, data });
+      }
+    }
+  } catch (e) { console.warn("push driver:", e); }
+  try {
+    const pid = ride.passengerId || ride.passenger_id;
+    if (pid) {
+      const t = await kv.get(`fcm_token_${pid}`);
+      const token = typeof t === "string" ? t : t?.token;
+      if (token) {
+        await sendFCMNotification(token, { title, body, data });
+      }
+    }
+  } catch (e) { console.warn("push passenger:", e); }
+}
+
+const METER_REASONS = ["panne", "crevaison", "urgence", "convenance", "transfert", "cloture", "autre"];
+
+// POST /:id/meter - Télécommande admin : pause | resume | stop (+ motif obligatoire)
+// ============================================
+app.post("/:id/meter", async (c) => {
+  try {
+    const rideId = c.req.param("id");
+    const { action, reason, adminId, adminName } = await c.req.json();
+    if (!isValidUUID(rideId)) {
+      return c.json({ success: false, error: "ID course invalide" }, 400);
+    }
+    if (!["pause", "resume", "stop"].includes(action)) {
+      return c.json({ success: false, error: "Action invalide (pause|resume|stop)" }, 400);
+    }
+    if (!reason) {
+      return c.json({ success: false, error: "Motif obligatoire" }, 400);
+    }
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    if (!ride) {
+      return c.json({ success: false, error: "Course introuvable" }, 404);
+    }
+    if (!["accepted", "enroute", "arrived", "in_progress"].includes(ride.status)) {
+      return c.json({ success: false, error: "Course non active" }, 400);
+    }
+
+    const m = ensureMeter(ride);
+    const who = adminName || "Admin";
+    if (action === "pause") {
+      if (m.state !== "running") {
+        return c.json({ success: false, error: "Chronomètre non actif" }, 400);
+      }
+      m.accumulatedSec = meterBilledSec(ride);
+      m.lastResumeAt = null;
+      m.state = "paused";
+      meterLog(ride, { actor: "admin", actorId: adminId || null, actorName: who, action: "pause", reason });
+      await kv.set(`ride:${rideId}`, ride);
+      await pushToRideParties(ride, "⏸️ Chronomètre suspendu", `Suspendu par SmartCabb (${reason}). Le temps d'arrêt n'est pas facturé.`, { type: "meter_paused", rideId });
+    } else if (action === "resume") {
+      if (m.state !== "paused") {
+        return c.json({ success: false, error: "Chronomètre non suspendu" }, 400);
+      }
+      m.lastResumeAt = new Date().toISOString();
+      m.state = "running";
+      meterLog(ride, { actor: "admin", actorId: adminId || null, actorName: who, action: "resume", reason });
+      await kv.set(`ride:${rideId}`, ride);
+      await pushToRideParties(ride, "▶️ Chronomètre repris", `Repris par SmartCabb (${reason}).`, { type: "meter_resumed", rideId });
+    } else {
+      if (m.state === "stopped") {
+        return c.json({ success: false, error: "Chronomètre déjà arrêté" }, 400);
+      }
+      m.accumulatedSec = meterBilledSec(ride);
+      m.lastResumeAt = null;
+      m.state = "stopped";
+      const seg = m.segments[m.segments.length - 1];
+      if (seg && !seg.endedAt) {
+        seg.endedAt = new Date().toISOString();
+        seg.billedSec = m.accumulatedSec - m.segments.slice(0, -1).reduce((s: number, x: any) => s + (x.billedSec || 0), 0);
+      }
+      ride.meterFinalSec = m.accumulatedSec;
+      meterLog(ride, { actor: "admin", actorId: adminId || null, actorName: who, action: "stop", reason });
+      await kv.set(`ride:${rideId}`, ride);
+      await pushToRideParties(ride, "⏹️ Chronomètre arrêté", `Arrêté par SmartCabb (${reason}). Montant arrêté : ${m.accumulatedSec}s facturables.`, { type: "meter_stopped", rideId });
+    }
+
+    await logAdminEvent("ride_meter", {
+      rideId, action, reason, adminId: adminId || null, adminName: who,
+      billedSec: m.accumulatedSec,
+      driverId: ride.driverId || ride.driver_id || null,
+    });
+    return c.json({ success: true, meter: m });
+  } catch (error) {
+    console.error("Erreur meter:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST /:id/transfer/propose - Proposer le transfert à un autre conducteur
+// Body : { toDriverId, reason, adminId, adminName }
+// ============================================
+app.post("/:id/transfer/propose", async (c) => {
+  try {
+    const rideId = c.req.param("id");
+    const { toDriverId, reason, adminId, adminName } = await c.req.json();
+    if (!isValidUUID(rideId) || !toDriverId) {
+      return c.json({ success: false, error: "Paramètres invalides" }, 400);
+    }
+    if (!reason) {
+      return c.json({ success: false, error: "Motif obligatoire" }, 400);
+    }
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    if (!ride) {
+      return c.json({ success: false, error: "Course introuvable" }, 404);
+    }
+    if (!["accepted", "enroute", "arrived", "in_progress"].includes(ride.status)) {
+      return c.json({ success: false, error: "Course non active" }, 400);
+    }
+    const fromId = ride.driverId || ride.driver_id;
+    if (fromId === toDriverId) {
+      return c.json({ success: false, error: "Même conducteur" }, 400);
+    }
+    if (ride.transferProposal) {
+      return c.json({ success: false, error: "Un transfert est déjà proposé" }, 400);
+    }
+
+    const nd = await kv.get<any>(`driver:${toDriverId}`);
+    if (!nd) {
+      return c.json({ success: false, error: "Conducteur destinataire introuvable" }, 404);
+    }
+    if (!isDriverOnline(nd) || !isDriverAvailable(nd)) {
+      return c.json({ success: false, error: "Conducteur non disponible" }, 400);
+    }
+    const rideCat = ride.vehicleCategory || ride.vehicle_category;
+    const ndCat = nd.vehicleCategory || nd.vehicle_category || nd.vehicle_type || nd.vehicleType || nd.vehicle?.category || nd.vehicle?.type;
+    if (!categoriesCompatible(ndCat, rideCat)) {
+      return c.json({ success: false, error: "Catégorie de véhicule incompatible" }, 400);
+    }
+    // Conducteur déjà occupé ?
+    const allRides = await kv.getByPrefix("ride:");
+    const busy = allRides.some((r: any) =>
+      (r.driverId === toDriverId || r.driver_id === toDriverId) &&
+      ["accepted", "enroute", "arrived", "in_progress"].includes(r.status) &&
+      r.id !== rideId
+    );
+    if (busy) {
+      return c.json({ success: false, error: "Conducteur déjà en course" }, 400);
+    }
+
+    // Geler le compteur pendant le transfert
+    const m = ensureMeter(ride);
+    if (m.state === "running") {
+      m.accumulatedSec = meterBilledSec(ride);
+      m.lastResumeAt = null;
+      m.state = "paused";
+    }
+    meterLog(ride, { actor: "admin", actorId: adminId || null, actorName: adminName || "Admin", action: "transfer_proposed", reason });
+    ride.transferProposal = { toDriverId, reason, at: new Date().toISOString(), by: adminId || null, byName: adminName || "Admin" };
+    await kv.set(`ride:${rideId}`, ride);
+
+    const notif = {
+      rideId,
+      type: "transfer_ride_request",
+      transfer: true,
+      reason,
+      pickupName: typeof ride.pickup === "object" ? (ride.pickup?.address || ride.pickup?.name) : ride.pickup,
+      destinationName: typeof ride.destination === "object" ? (ride.destination?.address || ride.destination?.name) : ride.destination,
+      passengerName: ride.passengerName || "Passager",
+      vehicleCategory: rideCat,
+      notifiedAt: new Date().toISOString(),
+    };
+    await kv.set(`driver_notification:${toDriverId}`, notif);
+    if (nd.fcmToken) {
+      await sendFCMNotification(nd.fcmToken, {
+        title: "🔄 Transfert de course proposé",
+        body: `Reprendre une course en cours (${notif.pickupName} → ${notif.destinationName}). Motif : ${reason}.`,
+        data: { type: "transfer_ride_request", rideId },
+      });
+    }
+
+    // Ancien conducteur + passager informés
+    await pushToRideParties(ride, "🔄 Transfert en cours", `Transfert proposé (${reason}). Compteur gelé en attendant.`, { type: "transfer_proposed", rideId });
+    await logAdminEvent("ride_transfer_proposed", {
+      rideId, fromDriverId: fromId, toDriverId,
+      toDriverName: nd.full_name || nd.name || null, reason,
+      adminId: adminId || null, adminName: adminName || "Admin",
+    });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Erreur transfer propose:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST /:id/transfer/accept - Le nouveau conducteur accepte le transfert
+// ============================================
+app.post("/:id/transfer/accept", async (c) => {
+  try {
+    const rideId = c.req.param("id");
+    const { driverId } = await c.req.json();
+    if (!isValidUUID(rideId) || !driverId) {
+      return c.json({ success: false, error: "Paramètres invalides" }, 400);
+    }
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    if (!ride?.transferProposal || ride.transferProposal.toDriverId !== driverId) {
+      return c.json({ success: false, error: "Aucune proposition pour vous" }, 400);
+    }
+    const nd = await kv.get<any>(`driver:${driverId}`);
+    if (!nd) {
+      return c.json({ success: false, error: "Conducteur introuvable" }, 404);
+    }
+
+    const m = ensureMeter(ride);
+    // Clôturer le segment précédent (montant partiel prorata temporis au journal)
+    const prevSeg = m.segments[m.segments.length - 1];
+    if (prevSeg && !prevSeg.endedAt) {
+      prevSeg.endedAt = new Date().toISOString();
+      const before = m.segments.slice(0, -1).reduce((s: number, x: any) => s + (x.billedSec || 0), 0);
+      prevSeg.billedSec = Math.max(0, m.accumulatedSec - before);
+    }
+    const oldDriverId = ride.driverId || ride.driver_id;
+    const oldDriverName = ride.driverName;
+    ride.driverId = driverId;
+    ride.driver_id = driverId;
+    ride.driverName = nd.full_name || nd.name || "Conducteur";
+    ride.driverPhone = nd.phone || "";
+    ride.transferProposal = null;
+    m.currentDriverId = driverId;
+    m.segments.push({
+      driverId,
+      driverName: ride.driverName,
+      startedAt: new Date().toISOString(),
+      endedAt: null,
+      billedSec: 0,
+    });
+    // Reprise du compteur par le nouveau conducteur
+    m.lastResumeAt = new Date().toISOString();
+    m.state = "running";
+    meterLog(ride, { actor: "driver", actorId: driverId, actorName: ride.driverName, action: "transfer_accepted", reason: "Transfert accepté" });
+    await kv.set(`ride:${rideId}`, ride);
+    await kv.delete(`driver_notification:${driverId}`);
+
+    await pushToRideParties(ride, "✅ Transfert effectué", `${ride.driverName} reprend la course. Compteur relancé.`, { type: "transfer_done", rideId });
+    // Prévenir l'ancien conducteur
+    try {
+      const od = oldDriverId ? await kv.get<any>(`driver:${oldDriverId}`) : null;
+      if (od?.fcmToken) {
+        await sendFCMNotification(od.fcmToken, {
+          title: "🔄 Course transférée",
+          body: "La course a été reprise par un autre conducteur. Merci.",
+          data: { type: "transfer_relieved", rideId },
+        });
+      }
+    } catch (e) { console.warn("push ancien conducteur:", e); }
+    await logAdminEvent("ride_transfer_accepted", {
+      rideId, oldDriverId, oldDriverName, newDriverId: driverId, newDriverName: ride.driverName,
+    });
+    return c.json({ success: true, ride });
+  } catch (error) {
+    console.error("Erreur transfer accept:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST /:id/transfer/decline - Le nouveau conducteur refuse le transfert
+// ============================================
+app.post("/:id/transfer/decline", async (c) => {
+  try {
+    const rideId = c.req.param("id");
+    const { driverId } = await c.req.json();
+    if (!isValidUUID(rideId) || !driverId) {
+      return c.json({ success: false, error: "Paramètres invalides" }, 400);
+    }
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    if (!ride?.transferProposal || ride.transferProposal.toDriverId !== driverId) {
+      return c.json({ success: false, error: "Aucune proposition pour vous" }, 400);
+    }
+    const m = ensureMeter(ride);
+    meterLog(ride, { actor: "driver", actorId: driverId, actorName: null, action: "transfer_declined", reason: "Transfert refusé" });
+    ride.transferProposal = null;
+    await kv.set(`ride:${rideId}`, ride);
+    await kv.delete(`driver_notification:${driverId}`);
+    await logAdminEvent("ride_transfer_declined", { rideId, driverId });
+    return c.json({ success: true });
+  } catch (error) {
+    console.error("Erreur transfer decline:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// GET /:id/journal - Journal complet : incidents + compteur (transparence)
+// ============================================
+app.get("/:id/journal", async (c) => {
+  try {
+    const rideId = c.req.param("id");
+    if (!isValidUUID(rideId)) {
+      return c.json({ success: false, error: "ID course invalide" }, 400);
+    }
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    if (!ride) {
+      return c.json({ success: false, error: "Course non trouvée" }, 404);
+    }
+    const incidents = await kvGetByPrefix(`incident:${rideId}:`);
+    incidents.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const m = ride.meter || null;
+    return c.json({
+      success: true,
+      journal: {
+        rideId,
+        status: ride.status,
+        meter: m ? {
+          state: m.state,
+          billedSec: meterBilledSec(ride),
+          currentDriverId: m.currentDriverId,
+          segments: m.segments || [],
+          log: m.log || [],
+        } : null,
+        incidents,
+      },
+    });
+  } catch (error) {
+    console.error("Erreur journal:", error);
     return c.json({ success: false, error: error.message }, 500);
   }
 });

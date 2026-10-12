@@ -25,6 +25,7 @@ import {
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
+import { RideLiveControls } from './RideLiveControls';
 import type { Vehicle } from '../../lib/supabase';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
@@ -671,6 +672,7 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                                   ⚠️ {incidentCounts[liveRide.id]} incident{incidentCounts[liveRide.id] > 1 ? 's' : ''} signalé{incidentCounts[liveRide.id] > 1 ? 's' : ''} — voir fil d’activité
                                 </p>
                               )}
+                              <RideLiveControls liveRide={liveRide} onChanged={() => refresh()} />
                             </div>
                           )}
                         </div>

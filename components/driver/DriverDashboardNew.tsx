@@ -441,7 +441,7 @@ export function DriverDashboardNew() {
           { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
         );
         const data = await res.json();
-        if (data.success && data.ride) {
+        if (data.success && data.ride && data.ride.type !== 'transfer_ride_request') {
           console.log('📋 Course en attente trouvée via polling:', data.ride.id);
           setPendingRideRequest(buildRideRequest(data.ride));
         }
@@ -456,6 +456,67 @@ export function DriverDashboardNew() {
       clearInterval(poll);
     };
   }, [driver?.id]);
+
+  // 🔄 Proposition de TRANSFERT (course en cours à reprendre)
+  const [transferProposal, setTransferProposal] = useState<any | null>(null);
+  const [actingTransfer, setActingTransfer] = useState(false);
+  useEffect(() => {
+    if (!driver?.id) return;
+    const check = async () => {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/pending/${driver.id}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        const data = await res.json();
+        if (data.success && data.ride?.type === 'transfer_ride_request') {
+          setTransferProposal((prev: any) => {
+            if (!prev || prev.rideId !== data.ride.rideId) {
+              toast.info('🔄 Transfert de course proposé — acceptez pour reprendre');
+            }
+            return data.ride;
+          });
+        } else {
+          setTransferProposal(null);
+        }
+      } catch {}
+    };
+    check();
+    const iv = setInterval(check, 10000);
+    return () => clearInterval(iv);
+  }, [driver?.id]);
+
+  const answerTransfer = async (accept: boolean) => {
+    if (!transferProposal?.rideId || !driver?.id) return;
+    setActingTransfer(true);
+    try {
+      const resp = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/${transferProposal.rideId}/transfer/${accept ? 'accept' : 'decline'}`,
+        {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driverId: driver.id }),
+        }
+      );
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
+      if (accept) {
+        toast.success('Transfert accepté ✓ — la course est à vous');
+        if (j.ride && setCurrentRide) {
+          setCurrentRide({ ...j.ride, createdAt: new Date(j.ride.createdAt || Date.now()) } as any);
+          setCurrentScreen('driver-active-ride');
+        }
+      } else {
+        toast.success('Transfert refusé');
+      }
+      setTransferProposal(null);
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur');
+    } finally {
+      setActingTransfer(false);
+    }
+  };
 
   // 3b. Watcher: quand une notif est visible, vérifier toutes les 3s si la course est encore disponible
   useEffect(() => {
@@ -704,6 +765,32 @@ export function DriverDashboardNew() {
       <div className="p-4 space-y-4">
         {activeTab === 'home' && (
           <>
+            {/* 🔄 Transfert proposé — reprendre une course en cours */}
+            {transferProposal && (
+              <div className="bg-orange-500 text-white rounded-2xl p-4 shadow-lg">
+                <p className="font-bold text-sm">🔄 Transfert de course proposé</p>
+                <p className="text-xs text-white/90 mt-1">
+                  {transferProposal.pickupName || 'Départ'} → {transferProposal.destinationName || 'Destination'}
+                  {transferProposal.reason ? ` · Motif : ${transferProposal.reason}` : ''}
+                </p>
+                <div className="flex gap-2 mt-3">
+                  <button
+                    disabled={actingTransfer}
+                    onClick={() => answerTransfer(true)}
+                    className="flex-1 py-2 rounded-xl bg-white text-orange-700 text-sm font-bold disabled:opacity-60"
+                  >
+                    ✓ Reprendre
+                  </button>
+                  <button
+                    disabled={actingTransfer}
+                    onClick={() => answerTransfer(false)}
+                    className="flex-1 py-2 rounded-xl border-2 border-white/70 text-white text-sm font-bold disabled:opacity-60"
+                  >
+                    ✕ Refuser
+                  </button>
+                </div>
+              </div>
+            )}
             {/* 📅 Réservations proposées — bannière visible */}
             {pendingReservations > 0 && (
               <button
