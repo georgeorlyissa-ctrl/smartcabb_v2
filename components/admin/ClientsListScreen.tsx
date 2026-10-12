@@ -116,8 +116,9 @@ export function ClientsListScreen({ onBack }: ClientsListScreenProps) {
     return passengerRides.reduce((sum, ride) => sum + (ride.rating || 0), 0) / passengerRides.length;
   };
 
+  // Courses effectuées = terminées OU notées (cohérent avec le montant dépensé)
   const getPassengerRidesCount = (passengerId: string) => {
-    return rides.filter(r => r.passenger_id === passengerId).length;
+    return rides.filter(r => r.passenger_id === passengerId && (r.status === 'completed' || r.status === 'rated')).length;
   };
 
   const exportClientsData = () => {

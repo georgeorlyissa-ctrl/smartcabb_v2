@@ -1351,6 +1351,51 @@ app.get("/drivers/diagnostic/:phone", async (c) => {
   }
 });
 
+// ─── DELETE /passengers/:passengerId — Suppression d'un seul passager ─────────
+// Sécurité : refuse si le passager a des courses effectuées (sauf force=true).
+// Ne touche jamais aux profils miroirs des conducteurs (vérifié côté appelant).
+app.delete("/passengers/:passengerId", async (c) => {
+  try {
+    const passengerId = c.req.param("passengerId");
+    const body = await c.req.json().catch(() => ({}));
+    const force = body.force === true;
+    console.log(`🗑️ [ADMIN/DELETE-PASSENGER] ${passengerId} (force=${force})`);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+
+    const pass = await kvGet(`passenger:${passengerId}`);
+    if (!pass) {
+      return c.json({ success: false, error: "Passager introuvable" }, 404);
+    }
+
+    if (!force) {
+      const rides = await kvGetByPrefix("ride:");
+      const doneCount = rides.filter((r: any) =>
+        (r.passengerId === passengerId || r.passenger_id === passengerId) &&
+        (r.status === "completed" || r.status === "rated")
+      ).length;
+      if (doneCount > 0) {
+        return c.json({ success: false, error: `Passager avec ${doneCount} course(s) effectuée(s) — utilisez force=true pour confirmer` }, 400);
+      }
+    }
+
+    try { await supabase.auth.admin.deleteUser(passengerId); } catch (_) {}
+    await kvDel(`passenger:${passengerId}`);
+    await kvDel(`profile:${passengerId}`);
+    await kvDel(`fcm_token_${passengerId}`);
+    await kvDel(`fcm_user_${passengerId}`);
+
+    console.log(`✅ Passager supprimé: ${passengerId}`);
+    return c.json({ success: true, id: passengerId });
+  } catch (error) {
+    console.error("❌ [ADMIN/DELETE-PASSENGER] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 // ─── DELETE /drivers/:driverId — Suppression d'un seul conducteur ────────────
 // Sécurité : refuse si le conducteur a des courses terminées (sauf force=true).
 app.delete("/drivers/:driverId", async (c) => {

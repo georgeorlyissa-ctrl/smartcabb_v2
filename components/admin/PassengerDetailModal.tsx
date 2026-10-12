@@ -251,7 +251,7 @@ export function PassengerDetailModal({
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="info">Informations</TabsTrigger>
             <TabsTrigger value="wallet">Portefeuille</TabsTrigger>
-            <TabsTrigger value="rides">Courses ({passengerRides.length})</TabsTrigger>
+            <TabsTrigger value="rides">Courses ({completedRides.length})</TabsTrigger>
             <TabsTrigger value="stats">Statistiques</TabsTrigger>
           </TabsList>
 
@@ -274,8 +274,8 @@ export function PassengerDetailModal({
                   <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-full mx-auto mb-2">
                     <Car className="w-5 h-5 text-blue-600" />
                   </div>
-                  <p className="text-xs text-gray-500 mb-1">Courses</p>
-                  <p className="font-bold text-sm">{passengerRides.length}</p>
+                    <p className="text-xs text-gray-500 mb-1">Courses effectuées</p>
+                    <p className="font-bold text-sm">{completedRides.length}</p>
                 </div>
               </Card>
 
@@ -537,11 +537,11 @@ export function PassengerDetailModal({
           <TabsContent value="rides" className="space-y-4">
             <Card className="p-6">
               <h3 className="font-semibold mb-4">Historique des courses</h3>
-              {passengerRides.length === 0 ? (
+              {completedRides.length === 0 ? (
                 <p className="text-center text-gray-500 py-8">Aucune course</p>
               ) : (
                 <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {passengerRides.map((ride) => (
+                  {completedRides.map((ride) => (
                     <div key={ride.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <Car className="w-5 h-5 text-blue-600" />
@@ -580,8 +580,8 @@ export function PassengerDetailModal({
               <Card className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">Courses totales</p>
-                    <p className="text-2xl font-bold">{passengerRides.length}</p>
+                    <p className="text-sm text-gray-500">Courses effectuées</p>
+                    <p className="text-2xl font-bold">{completedRides.length}</p>
                   </div>
                   <Car className="w-8 h-8 text-blue-600" />
                 </div>
