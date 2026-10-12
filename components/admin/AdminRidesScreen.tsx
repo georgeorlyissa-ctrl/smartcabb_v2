@@ -117,6 +117,19 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
   ];
 
   const statuses = ['all', ...Array.from(new Set(rides.map((r) => r.status).filter(Boolean)))];
+  const STATUS_FR: Record<string, string> = {
+    all: 'Tous statuts',
+    searching: 'En recherche',
+    pending: 'En attente',
+    accepted: 'Acceptée',
+    enroute: 'En route',
+    arrived: 'Arrivé',
+    in_progress: 'En cours',
+    completed: 'Terminée',
+    rated: 'Terminée (notée)',
+    cancelled: 'Annulée',
+    no_driver_found: 'Sans chauffeur',
+  };
 
   // Par catégorie : nombre + revenus (effectuées uniquement pour les revenus)
   const normCat = (c: any) => (c || 'smart_standard').toLowerCase();
@@ -203,7 +216,7 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
             className="px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white"
           >
             {statuses.map((s) => (
-              <option key={s} value={s}>{s === 'all' ? 'Tous statuts' : s}</option>
+              <option key={s} value={s}>{STATUS_FR[s] || s}</option>
             ))}
           </select>
         )}
@@ -218,7 +231,7 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
             <Card key={r.id} className="p-3">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2 min-w-0">
-                  <Badge className={STATUS_STYLE[r.status] || 'bg-gray-100 text-gray-700'}>{r.status}</Badge>
+                  <Badge className={STATUS_STYLE[r.status] || 'bg-gray-100 text-gray-700'}>{STATUS_FR[r.status] || r.status}</Badge>
                   <span className="text-sm font-medium truncate">
                     {r.pickup_address || r.pickup?.address || '—'} → {r.dropoff_address || r.destination?.address || '—'}
                   </span>
