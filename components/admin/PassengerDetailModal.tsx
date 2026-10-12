@@ -83,9 +83,9 @@ export function PassengerDetailModal({
     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
 
-  // Calculer les statistiques du passager
+  // Calculer les statistiques du passager (rated = terminée + avis)
   const passengerRides = rides.filter(r => r.passenger_id === passenger.id);
-  const completedRides = passengerRides.filter(r => r.status === 'completed');
+  const completedRides = passengerRides.filter(r => r.status === 'completed' || r.status === 'rated');
   const totalSpent = completedRides.reduce((sum, r) => sum + (r.total_amount || 0), 0);
   const avgRating = completedRides.filter(r => r.rating).length > 0
     ? completedRides.reduce((sum, r) => sum + (r.rating || 0), 0) / completedRides.filter(r => r.rating).length

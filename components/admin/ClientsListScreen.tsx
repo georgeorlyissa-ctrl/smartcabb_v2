@@ -104,7 +104,7 @@ export function ClientsListScreen({ onBack }: ClientsListScreenProps) {
 
   const getTotalSpent = (passengerId: string) => {
     return rides
-      .filter(ride => ride.passenger_id === passengerId && ride.status === 'completed')
+      .filter(ride => ride.passenger_id === passengerId && (ride.status === 'completed' || ride.status === 'rated'))
       .reduce((total, ride) => total + (ride.total_amount || 0), 0);
   };
 

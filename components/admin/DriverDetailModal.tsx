@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { safeFormatDate, safeFormatDateShort } from '../../utils/dateHelpers'; // 🔥 IMPORT
+import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 
 import type { EnrichedDriver, EnrichedRide } from '../../hooks/useSupabaseData';
 import type { Vehicle } from '../../lib/supabase';
@@ -96,8 +97,10 @@ export function DriverDetailModal({
   const isDriverOnline = (driver as any).isOnline === true || (driver as any).is_online === true || driver.is_available === true;
 
   // Calculer les statistiques du conducteur
+  // Une course est "effectuée" si terminée OU notée (rated = terminée + avis)
+  const isDoneRide = (r: any) => r.status === 'completed' || r.status === 'rated';
   const driverRides = rides.filter(r => r.driver_id === driver.id);
-  const completedRides = driverRides.filter(r => r.status === 'completed');
+  const completedRides = driverRides.filter(isDoneRide);
   const totalEarnings = completedRides.reduce((sum, r) => sum + (r.totalPrice || r.total_amount || r.finalPrice || r.price || r.estimatedPrice || r.fare || r.amount || 0), 0);
   const avgRating = driver.rating || 0;
   const cancelledRides = driverRides.filter(r => r.status === 'cancelled' && r.cancelled_by === 'driver').length;
@@ -619,7 +622,7 @@ export function DriverDetailModal({
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="info">Informations</TabsTrigger>
             <TabsTrigger value="vehicle">Véhicule</TabsTrigger>
-            <TabsTrigger value="rides">Courses ({driverRides.length})</TabsTrigger>
+            <TabsTrigger value="rides">Courses ({completedRides.length})</TabsTrigger>
             <TabsTrigger value="stats">Statistiques</TabsTrigger>
           </TabsList>
 
@@ -987,7 +990,7 @@ export function DriverDetailModal({
                         </SelectContent>
                       </Select>
                     ) : (
-                      <p className="mt-2 font-medium capitalize">{driverVehicle.category.replace('_', ' ')}</p>
+                      <p className="mt-2 font-medium">{getVehicleDisplayName({ category: driverVehicle.category })}</p>
                     )}
                   </div>
                 </div>
@@ -1002,14 +1005,14 @@ export function DriverDetailModal({
 
           {/* Onglet Courses */}
           <TabsContent value="rides" className="space-y-4">
-            {driverRides.length === 0 ? (
+            {completedRides.length === 0 ? (
               <div className="text-center py-12">
                 <Car className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Aucune course enregistrée</p>
+                <p className="text-gray-600">Aucune course effectuée</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {driverRides.map((ride) => (
+                {completedRides.map((ride) => (
                   <Card key={ride.id} className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
@@ -1064,8 +1067,8 @@ export function DriverDetailModal({
                     <Car className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Courses totales</p>
-                    <p className="text-2xl font-bold">{driverRides.length}</p>
+                    <p className="text-sm text-gray-600">Courses effectuées</p>
+                    <p className="text-2xl font-bold">{completedRides.length}</p>
                   </div>
                 </div>
               </Card>

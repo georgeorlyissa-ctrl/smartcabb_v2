@@ -36,33 +36,39 @@ export function getVehicleDisplayName(vehicleInfo: VehicleInfo | null | undefine
     return `${color}${vehicleInfo.make}`;
   }
 
-  // Sinon, mapper la catégorie vers un nom lisible
+  // Sinon, mapper la catégorie vers son nom complet officiel
   const category = vehicleInfo.type || vehicleInfo.category || '';
-  
+
   switch (category) {
-    case 'smart_standard':
     case 'smart_standard_clim':
+      return 'SmartCabb Standard avec Clim';
+
+    case 'smart_standard':
     case 'standard':
     case 'economique':
-      return 'SmartCabb STANDARD (Clim)';
+      return 'SmartCabb Standard';
 
     case 'smart_standard_no_clim':
-      return 'SmartCabb STANDARD';
-    
+      return 'SmartCabb Standard sans Clim';
+
     case 'smart_confort':
     case 'comfort':
     case 'confort':
-      return 'SmartCabb CONFORT';
-    
+      return 'SmartCabb Confort';
+
     case 'smart_plus':
     case 'van':
-      return 'SmartCabb PLUS';
-    
+      return 'SmartCabb Familiale';
+
+    case 'smart_business':
+    case 'business':
+      return 'SmartCabb Business';
+
     case 'smart_luxury':
     case 'luxury':
     case 'premium':
-      return 'SmartCabb LUXURY';
-    
+      return 'SmartCabb Luxury';
+
     default:
       return 'Véhicule';
   }

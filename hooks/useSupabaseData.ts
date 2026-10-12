@@ -306,10 +306,10 @@ export function useSupabaseData() {
             ? driver.is_approved 
             : false;
 
-        // ✅ FIX : Calculer les stats depuis les courses complétées
+        // ✅ FIX : Calculer les stats depuis les courses effectuées (terminées OU notées)
         const completedRides = ridesData.filter((r: any) =>
           (r.driver_id === driver.id || r.driverId === driver.id) &&
-          r.status === 'completed'
+          (r.status === 'completed' || r.status === 'rated')
         );
         const computedRides    = completedRides.length;
         const computedEarnings = completedRides.reduce(

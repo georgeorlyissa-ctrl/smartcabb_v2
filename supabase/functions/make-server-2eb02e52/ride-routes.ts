@@ -1606,8 +1606,9 @@ app.get("/driver/:driverId/earnings", async (c) => {
     const period = c.req.query('period') || 'today';
     
     const allRides = await kv.getByPrefix('ride:');
-    const driverRides = allRides.filter((r: any) => 
-      r.driverId === driverId && r.status === 'completed'
+    // Courses effectuées = terminées OU notées (rated = terminée + avis passager)
+    const driverRides = allRides.filter((r: any) =>
+      r.driverId === driverId && (r.status === 'completed' || r.status === 'rated')
     );
     
     const now = new Date();
