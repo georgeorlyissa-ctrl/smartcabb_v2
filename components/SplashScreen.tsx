@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { SmartCabbLogo } from './SmartCabbLogo';
 
-const PHASE_1_DELAY = 1200; // ms — phase 1 : logo seul (zoom-in)
-const TOTAL_DELAY   = 2600; // ms — phase 2 : logo + slogan, puis onComplete()
+const PHASE_1_DELAY = 1100; // ms — phase 1 : médaillon logo
+const TOTAL_DELAY   = 2600; // ms — phase 2 : marque + slogan, puis onComplete()
 
 // ⚡ Perf : au 2e chargement (session), le splash est raccourci (assets en cache)
-const FAST_PHASE_1_DELAY = 400;
-const FAST_TOTAL_DELAY   = 1100;
+const FAST_PHASE_1_DELAY = 350;
+const FAST_TOTAL_DELAY   = 1000;
 
 /**
- * SplashScreen — animation 2 phases façon Yango
- * Phase 1 : logo seul (zoom-in + cercles animés)
- * Phase 2 : logo + slogan « Ride Smart, Live Smart »
+ * SplashScreen — identité SmartCabb (acier/bleu riveté, comme le logo CS)
+ * Fond bleu nuit acier + grille blueprint + itinéraire animé traversé par le point course.
+ * Phase 1 : médaillon logo (halo + rivets).
+ * Phase 2 : SMARTCABB + slogan « Ride Smart, Live Smart ».
  */
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [phase, setPhase] = useState(0);
@@ -32,127 +33,142 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   }, [onComplete, isFast]);
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-cyan-500 via-cyan-600 to-green-500 overflow-hidden sc-splash-in">
-      {/* Orbes flottants animés */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-2xl animate-pulse"></div>
-        <div className="absolute -bottom-20 -right-20 w-96 h-96 bg-yellow-400/20 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.7s' }}></div>
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-green-400/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1.4s' }}></div>
+    <div className="fixed inset-0 z-[9999] overflow-hidden sc-splash-in"
+      style={{ background: 'linear-gradient(160deg, #081C28 0%, #0E3548 45%, #175A78 100%)' }}>
 
-        {/* Particules flottantes */}
-        {[...Array(18)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 bg-white/30 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `sc-float ${3 + Math.random() * 4}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 2}s`
-            }}
-          />
-        ))}
-
-        {/* Grille de points moderne */}
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255, 255, 255, 0.4) 1px, transparent 1px)',
-          backgroundSize: '50px 50px'
+      {/* Grille blueprint + vignettage */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 opacity-[0.13]" style={{
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
+          backgroundSize: '44px 44px',
         }} />
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 40%, rgba(4,15,22,0.55) 100%)' }} />
       </div>
+
+      {/* Itinéraire animé — le trajet se dessine, le point course avance */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">
+        <path
+          d="M -20 620 C 80 600, 90 480, 180 470 S 300 380, 290 270 S 360 150, 420 130"
+          fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="3" strokeDasharray="10 10"
+          className="sc-route-draw"
+        />
+        <circle r="7" fill="#FFCC00" className="sc-route-dot" />
+        <circle r="12" fill="none" stroke="#FFCC00" strokeWidth="1.5" opacity="0.5" className="sc-route-dot" />
+      </svg>
 
       {/* Contenu principal */}
       <div className="relative z-10 h-full flex flex-col items-center justify-center px-6">
-        {/* ── PHASE 1 : logo seul ── */}
         <div
           className={`flex flex-col items-center transition-all duration-700 ease-out ${
-            phase === 1 ? '-translate-y-6 scale-[0.82] opacity-90' : 'translate-y-0 scale-100 opacity-100'
+            phase === 1 ? '-translate-y-5 scale-[0.86]' : 'translate-y-0 scale-100'
           }`}
         >
-          <div className="relative w-44 h-44 mb-10">
-            {/* Cercles animés autour du logo */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-full h-full rounded-full border-4 border-white/20 animate-ping" style={{ animationDuration: '3s' }}></div>
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-[90%] h-[90%] rounded-full border-2 border-white/30 animate-pulse" style={{ animationDuration: '2s' }}></div>
-            </div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-4/5 h-4/5 rounded-full border border-yellow-300/40 animate-spin" style={{ animationDuration: '8s' }}></div>
-            </div>
-
-            {/* Logo — zoom-in à l'apparition */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-32 h-32 rounded-[28px] bg-white shadow-2xl shadow-black/40 flex items-center justify-center overflow-hidden">
-                <SmartCabbLogo plain className="w-full h-full object-contain p-1" />
-              </div>
+          {/* Médaillon logo — blanc brossé + halo acier + rivets */}
+          <div className="relative w-48 h-48 mb-8 sc-medal-in">
+            <div className="absolute inset-0 rounded-full sc-halo" />
+            {/* Rivets orbitaux (clin d'œil aux boulons du logo) */}
+            {[0, 60, 120, 180, 240, 300].map((deg) => (
+              <span
+                key={deg}
+                className="absolute w-2 h-2 rounded-full sc-rivet"
+                style={{
+                  left: '50%', top: '50%',
+                  transform: `rotate(${deg}deg) translateX(88px) translate(-50%, -50%)`,
+                }}
+              />
+            ))}
+            <div className="absolute inset-[18px] rounded-[32px] overflow-hidden flex items-center justify-center sc-medal-face">
+              <SmartCabbLogo plain className="w-full h-full object-contain p-2" />
             </div>
           </div>
 
-          {/* Nom de la marque — apparaît avec le logo */}
-          <h1 className="text-5xl font-black text-white mb-2 tracking-tight text-center sc-title-in">
-            Smart<span className="text-yellow-300">Cabb</span>
+          {/* Marque */}
+          <h1 className="text-[42px] font-black tracking-[0.18em] text-center sc-brand-in" style={{ color: '#FFFFFF' }}>
+            SMART<span style={{ color: '#7FB8D4' }}>CABB</span>
           </h1>
+          <div className="mt-2 h-[3px] w-24 rounded-full sc-bar-fill" style={{ background: 'rgba(255,255,255,0.15)' }}>
+            <div className="h-full w-full rounded-full" style={{ background: '#FFCC00' }} />
+          </div>
         </div>
 
-        {/* ── PHASE 2 : slogan ── */}
+        {/* Phase 2 : slogan */}
         <div
-          className={`absolute bottom-[18%] left-0 right-0 flex flex-col items-center transition-all duration-700 ease-out ${
+          className={`absolute bottom-[16%] left-0 right-0 flex flex-col items-center transition-all duration-700 ease-out ${
             phase === 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'
           }`}
         >
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="h-px w-12 bg-gradient-to-r from-transparent via-white/80 to-white/80 rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-yellow-300 rounded-full"></div>
-            <div className="h-px w-12 bg-gradient-to-l from-transparent via-white/80 to-white/80 rounded-full"></div>
-          </div>
-          <p className="text-2xl font-bold text-white tracking-wide text-center drop-shadow-md">
+          <p className="text-xl font-bold tracking-wide text-center" style={{ color: '#FFFFFF' }}>
             Ride Smart, Live Smart
           </p>
-          <p className="text-white/80 text-sm font-medium mt-2">
-            Votre partenaire de mobilité urbaine
+          <p className="text-sm mt-1.5 font-medium" style={{ color: 'rgba(255,255,255,0.65)' }}>
+            Kinshasa · République Démocratique du Congo
           </p>
         </div>
       </div>
 
-      {/* Animations CSS personnalisées */}
       <style>{`
-        @keyframes sc-splash-in {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
+        @keyframes sc-splash-in { from { opacity: 0; } to { opacity: 1; } }
+        .sc-splash-in { animation: sc-splash-in 0.35s ease-out forwards; }
+
+        @keyframes sc-medal-in {
+          0% { opacity: 0; transform: scale(0.6); }
+          60% { opacity: 1; transform: scale(1.04); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .sc-medal-in { animation: sc-medal-in 0.9s cubic-bezier(0.22, 1.4, 0.36, 1) forwards; }
+
+        .sc-halo {
+          background: radial-gradient(circle, rgba(127,184,212,0.35) 0%, rgba(127,184,212,0.08) 55%, transparent 70%);
+          animation: sc-halo-pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes sc-halo-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.8; }
+          50% { transform: scale(1.08); opacity: 1; }
         }
 
-        .sc-splash-in {
-          animation: sc-splash-in 0.35s ease-out forwards;
+        .sc-medal-face {
+          background: linear-gradient(145deg, #ffffff 0%, #dfe9ef 60%, #c3d5e0 100%);
+          box-shadow: 0 18px 50px rgba(0,0,0,0.5), inset 0 2px 6px rgba(255,255,255,0.9), 0 0 0 3px rgba(127,184,212,0.45);
         }
 
-        @keyframes sc-float {
-          0%, 100% {
-            transform: translateY(0) translateX(0);
-            opacity: 0.3;
-          }
-          50% {
-            transform: translateY(-20px) translateX(10px);
-            opacity: 0.6;
-          }
+        .sc-rivet {
+          background: radial-gradient(circle at 35% 35%, #ffffff 0%, #9fb6c3 55%, #5d7a8a 100%);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.6);
+          animation: sc-rivet-orbit 9s linear infinite;
+        }
+        @keyframes sc-rivet-orbit {
+          from { rotate: 0deg; }
+          to { rotate: 360deg; }
         }
 
-        @keyframes animate-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        @keyframes sc-brand-in {
+          from { opacity: 0; letter-spacing: 0.42em; }
+          to { opacity: 1; letter-spacing: 0.18em; }
+        }
+        .sc-brand-in { animation: sc-brand-in 0.9s ease-out 0.25s both; }
+
+        .sc-bar-fill > div { animation: sc-bar-fill 1.6s ease-out 0.4s both; transform-origin: left; }
+        @keyframes sc-bar-fill {
+          from { transform: scaleX(0); }
+          to { transform: scaleX(1); }
         }
 
-        .sc-title-in {
-          animation: animate-in 0.6s ease-out forwards;
+        .sc-route-draw {
+          stroke-dasharray: 10 10;
+          animation: sc-route-dash 1.4s linear infinite;
+        }
+        @keyframes sc-route-dash {
+          to { stroke-dashoffset: -40; }
+        }
+        .sc-route-dot {
+          offset-path: path('M -20 620 C 80 600, 90 480, 180 470 S 300 380, 290 270 S 360 150, 420 130');
+          animation: sc-route-move 2.6s linear infinite;
+        }
+        @keyframes sc-route-move {
+          from { offset-distance: 0%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          to { offset-distance: 100%; opacity: 0; }
         }
       `}</style>
     </div>
