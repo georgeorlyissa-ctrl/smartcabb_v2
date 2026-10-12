@@ -28,6 +28,9 @@ interface ScheduledRide {
   presence_confirmed?: boolean;
   presence_confirmed_at?: string | null;
   reminder_sent_at?: string | null;
+  deposit_received?: boolean;
+  deposit_method?: string | null;
+  deposit_received_at?: string | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -89,8 +92,26 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
     }
   };
 
-  const handleForceProcess = async (ride: ScheduledRide, mode: 'preassigned' | 'automatch') => {
-    const label = mode === 'preassigned'
+  // 💰 Confirmer la réception de l'acompte → notifie le passager « prise en compte »
+  const handleConfirmDeposit = async (ride: ScheduledRide) => {
+    const amount = Math.round((ride.estimated_price || 0) * 0.5);
+    if (!confirm(`Confirmer la réception de l'acompte de ${amount.toLocaleString()} CDF pour cette réservation ?\nLe passager sera notifié que sa réservation est prise en compte.`)) return;
+    try {
+      const resp = await fetch(`${API}/reservations/${ride.id}/confirm-deposit`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: ride.deposit_method || 'cash' }),
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
+      toast.success(`Acompte confirmé ✓ — passager notifié${j.pushSent ? ' (push)' : ' (cloche)'}`);
+      loadRides();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
+    }
+  };
+
+  const handleForceProcess = async (ride: ScheduledRide, mode: 'preassigned' | 'automatch') => {    const label = mode === 'preassigned'
       ? `Créer la course maintenant pour ${ride.driver_name || 'le conducteur'} ?`
       : 'Lancer le matching auto (même catégorie) pour cette réservation ?';
     if (!confirm(label)) return;
@@ -216,6 +237,19 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                       </p>
                     )}
                     <p className="text-sm font-semibold mt-1">{ride.estimated_price.toLocaleString()} CDF</p>
+                    {(ride.estimated_price || 0) > 0 && (
+                      <p className="text-xs mt-1">
+                        {ride.deposit_received ? (
+                          <span className="font-semibold text-green-700">
+                            💰 Acompte reçu ({Math.round(ride.estimated_price / 2).toLocaleString()} CDF{ride.deposit_method ? ` · ${ride.deposit_method}` : ''})
+                          </span>
+                        ) : (
+                          <span className="font-semibold text-orange-600">
+                            ⏳ Acompte en attente ({Math.round(ride.estimated_price / 2).toLocaleString()} CDF)
+                          </span>
+                        )}
+                      </p>
+                    )}
                     <p className="text-xs text-gray-400 mt-1">
                       Cree le {new Date(ride.created_at).toLocaleString('fr-FR')}
                     </p>
@@ -223,6 +257,11 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                   <div className="flex flex-col gap-2 ml-4">
                     {isActive && (
                       <>
+                        {(ride.estimated_price || 0) > 0 && !ride.deposit_received && (
+                          <Button size="sm" onClick={() => handleConfirmDeposit(ride)} className="bg-amber-500 hover:bg-amber-600 text-white">
+                            💰 Confirmer l'acompte
+                          </Button>
+                        )}
                         <Button size="sm" onClick={() => setAssignRide(ride)} className="bg-blue-600 hover:bg-blue-700">
                           🚖 {ride.driver_id ? 'Ré-attribuer' : 'Attribuer'}
                         </Button>

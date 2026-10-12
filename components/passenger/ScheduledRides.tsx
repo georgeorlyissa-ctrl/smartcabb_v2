@@ -44,6 +44,8 @@ interface ScheduledRide {
   driver_id?: string | null;
   driver_name?: string | null;
   driver_status?: string | null;
+  deposit_received?: boolean;
+  deposit_method?: string | null;
 }
 
 interface ScheduledRidesProps {
@@ -293,7 +295,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     if (depositMethod === 'cash') {
       setIsLoading(true);
       try {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('scheduled_rides')
           .insert({
             user_id: state.currentUser.id,
@@ -307,7 +309,9 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
             scheduled_time: newRide.scheduled_time,
             category: newRide.category,
             estimated_price: newRide.estimated_price,
-            status: 'scheduled'
+            status: 'scheduled',
+            deposit_received: false,
+            deposit_method: 'cash'
           })
           .select('id')
           .single();
@@ -315,7 +319,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         toast.info(`Demande enregistrée : réglez l\u2019acompte de ${depositAmount.toLocaleString()} CDF en espèces pour confirmer la réservation`);
         setCguAccepted(false);
         scheduleReservationAck();
-        if (data?.id) await persistConfirmationAck(data.id);
+        // Pas d'accusé « prise en compte » : l'admin le déclenchera en confirmant l'acompte
         await loadScheduledRides();
         handleCloseDialog();
       } catch (error) {
@@ -471,12 +475,15 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         dropoff_lng: newRide.dropoff_lng,
         scheduled_date: newRide.scheduled_date,
         scheduled_time: newRide.scheduled_time,
-        category: newRide.category,
-        estimated_price: newRide.estimated_price,
-        status: 'confirmed'
-      })
-      .select('id')
-      .single();
+            category: newRide.category,
+            estimated_price: newRide.estimated_price,
+            status: 'confirmed',
+            deposit_received: true,
+            deposit_method: depositMethod,
+            deposit_received_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
 
     if (error) throw error;
 
@@ -552,7 +559,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         classes: 'text-orange-800 bg-orange-100',
       };
     }
-    if (ride.status === 'confirmed') {
+    if (ride.status === 'confirmed' || ride.deposit_received) {
       return { label: 'Confirmée (acompte reçu)', classes: 'text-green-700 bg-green-100' };
     }
     if ((ride.estimated_price || 0) === 0) {

@@ -475,6 +475,67 @@ app.post("/:id/presence", async (c) => {
   }
 });
 
+// ─── POST /:id/confirm-deposit — L'admin confirme la réception de l'acompte ───
+// C'est SEULEMENT après cette confirmation que le passager reçoit
+// la notification « réservation prise en compte » (push + cloche).
+// Body : { method?: 'cash' | 'mobile_money' | 'card' | 'wallet' }
+app.post("/:id/confirm-deposit", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { method } = await c.req.json().catch(() => ({}));
+
+    const { data: ride, error } = await sbAdmin()
+      .from("scheduled_rides").select("*").eq("id", id).maybeSingle();
+    if (error || !ride) {
+      return c.json({ success: false, error: "Réservation introuvable" }, 404);
+    }
+    if (ride.status !== "scheduled" && ride.status !== "confirmed") {
+      return c.json({ success: false, error: "Réservation déjà traitée ou annulée" }, 400);
+    }
+    if (!ride.estimated_price || ride.estimated_price <= 0) {
+      return c.json({ success: false, error: "Aucun acompte requis (sur devis)" }, 400);
+    }
+    if (ride.deposit_received) {
+      return c.json({ success: false, error: "Acompte déjà confirmé" }, 400);
+    }
+
+    const { error: updErr } = await sbAdmin()
+      .from("scheduled_rides")
+      .update({
+        deposit_received: true,
+        deposit_method: method || ride.deposit_method || "cash",
+        deposit_received_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+    if (updErr) throw new Error(updErr.message);
+
+    // Notification « prise en compte » : push + cloche persistante
+    const { title, message } = confirmationMessage(ride);
+    let pushSent = false;
+    if (isFirebaseAdminConfigured()) {
+      const token = await kvGet(`fcm_token_${ride.user_id}`);
+      if (token) {
+        const r = await sendFCMNotification(token, {
+          title,
+          body: `Votre réservation du ${fmtDateFR(ride.scheduled_date)} à ${fmtTimeFR(ride.scheduled_time)} est confirmée. Acompte reçu.`,
+          data: { type: "reservation_confirmed", reservationId: id },
+        });
+        pushSent = !!r.success;
+      }
+    }
+    let notification = null;
+    try {
+      notification = await storeUserNotif(ride.user_id, title, message, "created", id);
+    } catch (e) { console.warn("Store confirmation notif:", e); }
+
+    console.log(`💰 [RESERVATIONS/CONFIRM-DEPOSIT] ${id} — acompte confirmé (push=${pushSent})`);
+    return c.json({ success: true, pushSent, notification });
+  } catch (error) {
+    console.error("❌ [RESERVATIONS/CONFIRM-DEPOSIT] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
 // ─── POST /notify-created — Accusé de confirmation après enregistrement réel ─
 // À appeler UNIQUEMENT après insertion réussie en base (le message affirme
 // que la réservation est enregistrée). Persiste l'accusé pour la cloche.
