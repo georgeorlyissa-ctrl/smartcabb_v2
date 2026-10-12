@@ -79,12 +79,12 @@ export function AdvancedAnalyticsDashboard({ onBack }: AdvancedAnalyticsDashboar
       const now = new Date();
       const startDate = getStartDate(timeRange);
 
-      // Revenue stats
+      // Revenue stats (effectuées = completed + rated)
       const { data: rides, error: ridesError } = await supabase
         .from('rides')
         .select('actual_price, created_at, category, status')
         .gte('created_at', startDate.toISOString())
-        .eq('status', 'completed');
+        .in('status', ['completed', 'rated']);
 
       if (ridesError) throw ridesError;
 
@@ -103,12 +103,12 @@ export function AdvancedAnalyticsDashboard({ onBack }: AdvancedAnalyticsDashboar
         .from('drivers')
         .select('id, isOnline');
 
-      // Top drivers
+      // Top drivers (effectuées = completed + rated)
       const { data: driverStats } = await supabase
         .from('rides')
         .select('driver_id, actual_price, driver:drivers(name, rating)')
         .gte('created_at', startDate.toISOString())
-        .eq('status', 'completed');
+        .in('status', ['completed', 'rated']);
 
       const driverMap = new Map();
       driverStats?.forEach(ride => {

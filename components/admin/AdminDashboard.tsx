@@ -264,7 +264,7 @@ export function AdminDashboard() {
 
   // KPI calculations — priorité aux stats live du backend
   const activeRides    = liveStats?.activeRides   ?? rides.filter(r => r.status === 'in_progress' || r.status === 'started').length;
-  const completedRides = rides.filter(r => r.status === 'completed');
+  const completedRides = rides.filter(r => r.status === 'completed' || r.status === 'rated');
   const onlineDrivers  = liveStats?.onlineDrivers ?? drivers.filter(d => d.is_available).length;
   const pendingDrivers = drivers.filter(d =>
     (d.status === 'pending' || !d.isApproved || d.isApproved === false)

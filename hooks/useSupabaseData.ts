@@ -444,9 +444,9 @@ export function useSupabaseData() {
     return profiles.filter(p => p.role === 'admin');
   }, [profiles]);
 
-  // Obtenir les statistiques
+  // Obtenir les statistiques (effectuées = completed + rated)
   const getStats = useCallback(() => {
-    const completedRides = rides.filter(r => r.status === 'completed');
+    const completedRides = rides.filter(r => r.status === 'completed' || r.status === 'rated');
     const totalRevenue = completedRides.reduce((sum, ride) => sum + (ride.estimatedPrice || 0), 0);
     const activeDrivers = drivers.filter(d => d.is_available && d.status === 'approved');
     const totalPassengers = passengers.length; // ✅ FIX: Utiliser passengers.length

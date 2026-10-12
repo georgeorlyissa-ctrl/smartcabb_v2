@@ -133,6 +133,7 @@ export function RideHistoryScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'rated':
         return 'text-green-600 bg-green-100';
       case 'cancelled':
         return 'text-red-600 bg-red-100';
@@ -146,6 +147,7 @@ export function RideHistoryScreen() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'rated':
         return 'Terminée';
       case 'cancelled':
         return 'Annulée';

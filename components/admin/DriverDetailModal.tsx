@@ -1018,7 +1018,7 @@ export function DriverDetailModal({
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
                           <Badge variant={
-                            ride.status === 'completed' ? 'default' : 
+                            ride.status === 'completed' || ride.status === 'rated' ? 'default' : 
                             ride.status === 'cancelled' ? 'destructive' : 
                             'secondary'
                           }>

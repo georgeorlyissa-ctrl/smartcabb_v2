@@ -556,7 +556,7 @@ export function PassengerDetailModal({
                       <div className="text-right">
                         <Badge 
                           variant={
-                            ride.status === 'completed' ? 'default' : 
+                            ride.status === 'completed' || ride.status === 'rated' ? 'default' : 
                             ride.status === 'cancelled' ? 'destructive' : 
                             'secondary'
                           }
