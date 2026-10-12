@@ -6,6 +6,7 @@ import { SiteNavigation } from '../components/SiteNavigation';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Link } from '../lib/simple-router';
 import { ImageCarousel } from '../components/ImageCarousel';
+import { PageHero } from '../components/PageHero';
 
 const BOOK_URL = '/app/passenger';
 const RESERVE_URL = '/app/passenger?screen=scheduled-rides';
@@ -150,43 +151,31 @@ export function ServicesPage() {
 
       <SiteNavigation />
 
-      {/* HERO photo plein écran */}
-      <section style={{ position: 'relative', minHeight: '560px', display: 'flex', alignItems: 'flex-end', overflow: 'hidden' }}>
-        <img src="/photo_conducteur_smartcabb2026.jpeg" alt="Chauffeur SmartCabb"
-          onError={e => { e.currentTarget.src = '/photo2_smartcabb.jpeg'; }}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-        <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(7,20,32,0.25) 0%, rgba(7,20,32,0.55) 55%, ${NAVY} 100%)` }} />
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 w-full" style={{ paddingTop: '140px', paddingBottom: '56px' }}>
-          <motion.div initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <p style={{ color: '#7FB8D4', fontSize: '13px', fontWeight: '800', letterSpacing: '0.22em', marginBottom: '14px' }}>
-              {fr ? 'NOS SERVICES' : 'OUR SERVICES'}
-            </p>
-            <h1 style={{ color: '#fff', fontSize: 'clamp(36px,5vw,60px)', fontWeight: '900', lineHeight: '1.05', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-              {fr ? <>Une gamme pour<br />chaque déplacement.</> : <>A range for<br />every trip.</>}
-            </h1>
-            <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: '17px', lineHeight: '1.7', maxWidth: '540px', marginBottom: '32px' }}>
-              {t('services.subtitle')}
-            </p>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '44px' }}>
-              <Link to={BOOK_URL} className="btn-primary">
-                {fr ? 'Commander maintenant' : 'Book now'}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
-              </Link>
-              <a href={RESERVE_URL} className="btn-outline" style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', borderColor: 'rgba(255,255,255,0.5)' }}>
-                📅 {fr ? 'Réserver à l’avance' : 'Book in advance'}
-              </a>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '24px', maxWidth: '640px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '24px' }}>
-              {stats.map((s, i) => (
-                <div key={i}>
-                  <div style={{ color: '#fff', fontSize: '26px', fontWeight: '900' }}>{s.v}</div>
-                  <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '12px', marginTop: '2px' }}>{s.l}</div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+      {/* HERO photo plein écran (logique partagée) */}
+      <PageHero
+        image="/photo_conducteur_smartcabb2026.jpeg"
+        fallbackImage="/photo2_smartcabb.jpeg"
+        title={fr ? <>Une gamme pour<br />chaque déplacement.</> : <>A range for<br />every trip.</>}
+        subtitle={t('services.subtitle')}
+      >
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '44px' }}>
+          <Link to={BOOK_URL} className="btn-primary">
+            {fr ? 'Commander maintenant' : 'Book now'}
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7" /></svg>
+          </Link>
+          <a href={RESERVE_URL} className="btn-outline" style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', borderColor: 'rgba(255,255,255,0.5)' }}>
+            📅 {fr ? 'Réserver à l’avance' : 'Book in advance'}
+          </a>
         </div>
-      </section>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '24px', maxWidth: '640px', borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '24px' }}>
+          {stats.map((s, i) => (
+            <div key={i}>
+              <div style={{ color: '#fff', fontSize: '26px', fontWeight: '900' }}>{s.v}</div>
+              <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '12px', marginTop: '2px' }}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+      </PageHero>
 
       {/* Nav catégories sticky */}
       <div className="cat-nav">
@@ -212,7 +201,7 @@ export function ServicesPage() {
                   className={isVisible ? 'card-visible' : 'card-hidden'}>
                   <div style={{ background: '#fff', borderRadius: '24px', overflow: 'hidden', border: '1px solid #e8eef4', boxShadow: '0 12px 40px rgba(11,31,51,0.08)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', alignItems: 'stretch' }} className="lg:grid-cols-2">
-                      <div style={{ order: isEven ? 1 : 2, minHeight: '320px', position: 'relative' }}>
+                      <div style={{ order: isEven ? 1 : 2, minHeight: '420px', position: 'relative' }}>
                         <div style={{ position: 'absolute', inset: 0 }}>
                           <ImageCarousel images={service.images} serviceName={service.name} />
                         </div>
@@ -220,13 +209,13 @@ export function ServicesPage() {
                           {service.badge}
                         </div>
                       </div>
-                      <div style={{ order: isEven ? 2 : 1, padding: '44px 44px 40px' }}>
-                        <div style={{ color: BLUE, fontSize: '28px', fontWeight: '900', opacity: 0.9, lineHeight: 1, marginBottom: '10px' }}>
+                      <div style={{ order: isEven ? 2 : 1, padding: '52px 52px 48px' }}>
+                        <div style={{ color: BLUE, fontSize: '30px', fontWeight: '900', opacity: 0.9, lineHeight: 1, marginBottom: '12px' }}>
                           {String(index + 1).padStart(2, '0')}
                         </div>
-                        <h2 style={{ fontSize: '30px', fontWeight: '900', color: NAVY, marginBottom: '4px', letterSpacing: '-0.01em' }}>{service.name}</h2>
-                        <p style={{ fontSize: '14px', fontWeight: '700', color: BLUE, marginBottom: '14px' }}>{service.tagline}</p>
-                        <p style={{ fontSize: '15px', color: '#475569', lineHeight: '1.75', marginBottom: '20px' }}>{service.description}</p>
+                        <h2 style={{ fontSize: '36px', fontWeight: '900', color: NAVY, marginBottom: '6px', letterSpacing: '-0.01em' }}>{service.name}</h2>
+                        <p style={{ fontSize: '16px', fontWeight: '700', color: BLUE, marginBottom: '16px' }}>{service.tagline}</p>
+                        <p style={{ fontSize: '17px', color: '#475569', lineHeight: '1.8', marginBottom: '24px' }}>{service.description}</p>
                         <div style={{ marginBottom: '20px' }}>
                           {service.features.map((f, idx) => (
                             <div key={idx} className="feat">

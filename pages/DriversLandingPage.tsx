@@ -3,6 +3,7 @@ import { motion } from '../lib/motion';
 import { ChatWidget } from '../components/ChatWidget';
 import { ProfessionalFooter } from '../components/ProfessionalFooter';
 import { SiteNavigation } from '../components/SiteNavigation';
+import { PageHero } from '../components/PageHero';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Link } from '../lib/simple-router';
 import { PRICING_CONFIG } from '../lib/pricing-data';
@@ -220,69 +221,15 @@ export function DriversLandingPage() {
 
       <SiteNavigation />
 
-      {/* HERO */}
-      <section style={{ paddingTop: '100px', paddingBottom: '72px', background: '#fafafa', borderBottom: '1px solid #f3f4f6' }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-
-            <motion.div
-              initial={{ opacity: 0, y: 32 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease }}
-            >
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
-                style={{ height: '4px', background: 'linear-gradient(90deg,#007AFF,#007AFF)', borderRadius: '2px', maxWidth: '64px', marginBottom: '20px' }}
-              />
-              <motion.h1
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.7, ease }}
-                style={{ fontSize: 'clamp(36px, 5vw, 52px)', fontWeight: '900', color: '#222222', lineHeight: '1.1', marginBottom: '20px', letterSpacing: '-0.02em' }}
-              >
-                {t('drivers.title')}
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35, duration: 0.6 }}
-                style={{ fontSize: '18px', color: '#6b7280', lineHeight: '1.7', marginBottom: '32px', maxWidth: '480px' }}
-              >
-                {t('drivers.subtitle')}
-              </motion.p>
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.5 }}
-              >
-                <Link to="/app/driver/signup" className="btn-primary btn-glow">{t('drivers.signup')}</Link>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 48, scale: 0.95 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              transition={{ duration: 0.8, delay: 0.25, ease }}
-            >
-              <div style={{ borderRadius: '20px', overflow: 'hidden', aspectRatio: '1', position: 'relative', boxShadow: '0 24px 64px rgba(0,0,0,0.12)' }}>
-                {driverImages.map((img, i) =>
-                  currentImageIndex === i || currentImageIndex === (i + 1) % driverImages.length ? (
-                    <img
-                      key={i}
-                      src={img}
-                      alt="Driver SmartCabb"
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: i === currentImageIndex ? 1 : 0, transition: 'opacity 1s ease' }}
-                    />
-                  ) : null
-                )}
-              </div>
-            </motion.div>
-
-          </div>
-        </div>
-      </section>
+      {/* HERO photo plein écran (logique partagée) */}
+      <PageHero
+        image="/driver3.jpeg"
+        fallbackImage="/photo2_smartcabb.jpeg"
+        title={t('drivers.title')}
+        subtitle={t('drivers.subtitle')}
+      >
+        <Link to="/app/driver/signup" className="btn-primary btn-glow">{t('drivers.signup')}</Link>
+      </PageHero>
 
       {/* ✅ NOUVEAU : COMBIEN POUVEZ-VOUS GAGNER (style Yango) */}
       <section ref={earnRef as any} style={{ padding: '80px 0', background: 'white', borderBottom: '1px solid #f3f4f6' }}>

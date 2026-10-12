@@ -2,6 +2,7 @@ import { motion } from '../lib/motion';
 import { ChatWidget } from '../components/ChatWidget';
 import { ProfessionalFooter } from '../components/ProfessionalFooter';
 import { SiteNavigation } from '../components/SiteNavigation';
+import { PageHero } from '../components/PageHero';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export function AboutPage() {
@@ -128,22 +129,13 @@ export function AboutPage() {
 
       <SiteNavigation />
 
-      {/* Hero */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-50 via-white to-blue-50"></div>
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <h1 className="text-6xl font-black mb-6">
-              {language === 'fr' ? 'À propos de SmartCabb' : 'About SmartCabb'}
-            </h1>
-            
-          </motion.div>
-        </div>
-      </section>
+      {/* Hero photo plein écran (logique partagée) */}
+      <PageHero
+        image="/about-smartcabb.jpg"
+        fallbackImage="/photo2_smartcabb.jpeg"
+        title={language === 'fr' ? <>À propos de<br />SmartCabb</> : <>About<br />SmartCabb</>}
+        subtitle={t('about.subtitle')}
+      />
 
       {/* Mission & Vision */}
       <section className="py-20 bg-white">

@@ -26,7 +26,7 @@ export function ImageCarousel({ images, serviceName }: ImageCarouselProps) {
 
   return (
     <div
-      className="relative h-72 md:h-80 bg-white overflow-hidden group rounded-2xl shadow-xl border border-gray-100"
+      className="relative h-80 md:h-[420px] bg-white overflow-hidden group rounded-2xl shadow-xl border border-gray-100"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -37,7 +37,7 @@ export function ImageCarousel({ images, serviceName }: ImageCarouselProps) {
               <img
                 src={src}
                 alt={`${serviceName} - ${idx + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-center"
                 loading={idx === 0 ? 'eager' : 'lazy'}
                 onError={(e) => {
                   e.currentTarget.src =

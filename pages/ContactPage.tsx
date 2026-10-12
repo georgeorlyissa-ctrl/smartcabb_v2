@@ -1,14 +1,13 @@
-import { useState, useEffect } from 'react';
-import { motion } from '../lib/motion';
+import { useState } from 'react';
 import { ChatWidget } from '../components/ChatWidget';
 import { ProfessionalFooter } from '../components/ProfessionalFooter';
 import { SiteNavigation } from '../components/SiteNavigation';
+import { PageHero } from '../components/PageHero';
 import { useLanguage } from '../contexts/LanguageContext';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 
 export function ContactPage() {
   const { t } = useLanguage();
-  const [currentBg, setCurrentBg] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,19 +16,6 @@ export function ContactPage() {
     message: ''
   });
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-
-  const backgrounds = [
-    '/photo2_smartcabb.jpeg',
-    '/Images_2.jpeg',
-    '/driver3.jpeg',
-  ];
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentBg(prev => (prev + 1) % backgrounds.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,47 +67,13 @@ export function ContactPage() {
 
       <SiteNavigation />
 
-      {/* Hero Section avec carrousel arrière-plan */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-
-        {/* Carrousel arrière-plan */}
-        {backgrounds.map((bg, index) => (
-          <div
-            key={index}
-            className="absolute inset-0 transition-opacity duration-1000"
-            style={{
-              backgroundImage: `url(${bg})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              opacity: currentBg === index ? 1 : 0,
-            }}
-          />
-        ))}
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-white/75"></div>
-
-        {/* Formes décoratives */}
-        <div className="absolute top-20 right-0 w-96 h-96 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
-
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="inline-block px-4 py-2 bg-cyan-100 rounded-full text-cyan-700 font-semibold text-sm mb-6">
-              📧 {t('contact.title')}
-            </div>
-            <h1 className="text-6xl font-black mb-6">
-              {t('contact.title')} <span className="gradient-text">SmartCabb</span>
-            </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              {t('contact.subtitle')}
-            </p>
-          </motion.div>
-        </div>
-      </section>
+      {/* Hero photo plein écran (logique partagée) */}
+      <PageHero
+        image="/photo2_smartcabb.jpeg"
+        fallbackImage="/Images_2.jpeg"
+        title={<>{t('contact.title')} <span style={{ color: '#7FB8D4' }}>SmartCabb</span></>}
+        subtitle={t('contact.subtitle')}
+      />
 
       {/* Contact Content */}
       <section className="py-20">
