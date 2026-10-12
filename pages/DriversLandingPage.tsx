@@ -223,7 +223,7 @@ export function DriversLandingPage() {
 
       {/* HERO photo plein écran (logique partagée) */}
       <PageHero
-        image="/driver3.jpeg"
+        image="/photo_conducteur_smartcabb2026.jpeg"
         fallbackImage="/photo2_smartcabb.jpeg"
         title={t('drivers.title')}
         subtitle={t('drivers.subtitle')}
