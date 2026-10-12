@@ -29,9 +29,9 @@ import {
   Eye
 } from '../../lib/admin-icons';
 import type { Profile } from '../../lib/supabase';
-import { User as UserType } from '../../types';
 import { toast } from '../../lib/toast';
 import { syncAllUsersFromSupabase, listenToProfileChanges } from '../../lib/sync-service';
+import { getPassengerWalletBalances } from '../../lib/wallet-balances';
 import { formatCDF } from '../../utils/formatters';
 import { PassengerDetailModal } from './PassengerDetailModal';
 
@@ -53,6 +53,18 @@ export function ClientsListScreen({ onBack }: ClientsListScreenProps) {
   const [sortBy, setSortBy] = useState<'name' | 'rides' | 'date'>('name');
   const [selectedPassenger, setSelectedPassenger] = useState<Profile | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  // 💰 Soldes réels serveur (jamais le localStorage de l'admin, toujours vide)
+  const [walletBalances, setWalletBalances] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let alive = true;
+    const ids = (passengers || []).map((p: any) => p.id).filter(Boolean);
+    if (ids.length === 0) return;
+    getPassengerWalletBalances(ids).then((map) => {
+      if (alive) setWalletBalances(map);
+    });
+    return () => { alive = false; };
+  }, [passengers?.length]);
 
   // Filter and sort passengers
   const filteredPassengers = passengers
@@ -331,12 +343,8 @@ export function ClientsListScreen({ onBack }: ClientsListScreenProps) {
           {filteredPassengers.map((passenger, index) => {
             const totalSpent = getTotalSpent(passenger.id);
             const avgRating = getAverageRating(passenger.id);
-            
-            // Récupérer le solde du portefeuille depuis localStorage
-            const allUsersStr = localStorage.getItem('smartcab_all_users') || '[]';
-            const allUsers: UserType[] = JSON.parse(allUsersStr);
-            const userWithWallet = allUsers.find((u: UserType) => u.id === passenger.id);
-            const walletBalance = userWithWallet?.walletBalance || 0;
+            // 💰 Solde réel serveur (le localStorage de l'admin est toujours vide)
+            const walletBalance = walletBalances[passenger.id] ?? 0;
             
             return (
               <motion.div
