@@ -1674,10 +1674,36 @@ app.get("/history/:passengerId", async (c) => {
 
     console.log(`✅ [RIDES/HISTORY-PASSENGER] ${passengerRides.length} course(s) trouvée(s)`);
 
+    // Enrichir avec la fiche conducteur (photo, véhicule) pour l'historique
+    const enriched = await Promise.all(passengerRides.map(async (r: any) => {
+      const did = r.driverId || r.driver_id;
+      if (!did) return r;
+      try {
+        const d = await kv.get<any>(`driver:${did}`);
+        if (!d) return r;
+        const v = d.vehicle || {};
+        return {
+          ...r,
+          driver: {
+            name: d.full_name || d.name || r.driverName || 'Conducteur',
+            phone: d.phone || '',
+            photo: d.photo || d.photo_url || d.profile_photo || null,
+            vehicleCategory: d.vehicleCategory || d.vehicle_category || v.category || r.vehicleCategory || r.vehicle_category || null,
+            color: v.color || '',
+            make: v.make || '',
+            model: v.model || '',
+            plate: v.license_plate || v.plate || '',
+          },
+        };
+      } catch {
+        return r;
+      }
+    }));
+
     return c.json({
       success: true,
-      rides: passengerRides,
-      count: passengerRides.length
+      rides: enriched,
+      count: enriched.length
     });
   } catch (error) {
     console.error("❌ [RIDES/HISTORY-PASSENGER] Erreur:", error);

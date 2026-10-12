@@ -17,6 +17,7 @@ import { Card } from '../ui/card';
 import { useAppState } from '../../hooks/useAppState';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { supabase } from '../../lib/supabase';
+import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 import { toast } from '../../lib/toast';
 
 type HistoryTab = 'all' | 'immediate' | 'reservation';
@@ -125,10 +126,14 @@ export function RideHistoryScreen() {
         return 'Carte bancaire';
       case 'cash':
         return 'Espèces';
+      case 'wallet':
+        return 'Portefeuille';
       default:
         return 'Non spécifié';
     }
   };
+  const ridePaymentMethod = (ride: any) =>
+    ride.paymentMethod || ride.payment_method || ride.paymentMethodUsed || undefined;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -323,8 +328,8 @@ export function RideHistoryScreen() {
                     <div className="text-right">
                       <p className="font-semibold">{(ride.actualPrice || ride.estimatedPrice).toLocaleString()} CDF</p>
                       <div className="flex items-center space-x-1 text-xs text-gray-500">
-                        {getPaymentIcon(ride.paymentMethod)}
-                        <span>{getPaymentLabel(ride.paymentMethod)}</span>
+                        {getPaymentIcon(ridePaymentMethod(ride))}
+                        <span>{getPaymentLabel(ridePaymentMethod(ride))}</span>
                       </div>
                     </div>
                   </div>
@@ -386,15 +391,35 @@ export function RideHistoryScreen() {
                       </div>
                     </div>
 
-                    {ride.driverId && (
+                    {(ride.driver || ride.driverId) && (
                       <div className="mt-3 pt-3 border-t border-gray-100">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-gray-600">Chauffeur</p>
-                            <p className="font-medium">{ride.driverName || getDriverName(ride.driverId)}</p>
+                        <div className="flex items-center gap-3">
+                          {ride.driver?.photo ? (
+                            <img
+                              src={ride.driver.photo}
+                              alt={ride.driver?.name || 'Chauffeur'}
+                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                              <span className="text-blue-700 font-bold">
+                                {((ride.driver?.name || ride.driverName || 'C') as string).charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-500">Chauffeur</p>
+                            <p className="font-medium text-sm truncate">
+                              {ride.driver?.name || ride.driverName || getDriverName(ride.driverId)}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {getVehicleDisplayName({ category: ride.driver?.vehicleCategory || ride.vehicleCategory || ride.vehicle_category })}
+                              {ride.driver?.phone ? ` · ${ride.driver.phone}` : ''}
+                            </p>
                           </div>
                           {ride.rating && (
-                            <div className="flex items-center space-x-1">
+                            <div className="flex items-center space-x-1 flex-shrink-0">
                               <Star className="w-4 h-4 text-yellow-500 fill-current" />
                               <span className="text-sm font-medium">{ride.rating}/5</span>
                             </div>
