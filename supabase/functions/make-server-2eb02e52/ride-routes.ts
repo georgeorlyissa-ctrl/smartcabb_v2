@@ -2050,8 +2050,132 @@ app.post("/process-scheduled", async (c) => {
   }
 });
 
-// POST /admin-process-one - L'admin crée la course d'une réservation immédiatement
-// Body : { scheduledRideId, mode: 'preassigned' | 'automatch' }
+// POST /:id/incident - Déclarer un incident en cours de course (panne, crevaison…)
+// Body : { reporterType: 'driver'|'passenger', reporterId, kind, comment?, lat?, lng? }
+// → stocké + événement admin (fil d'activité) + push à l'autre partie.
+// ============================================
+app.post("/:id/incident", async (c) => {
+  try {
+    const rideId = c.req.param("id");
+    const { reporterType, reporterId, kind, comment, lat, lng } = await c.req.json();
+
+    if (!isValidUUID(rideId)) {
+      return c.json({ success: false, error: "ID de course invalide" }, 400);
+    }
+    const KINDS = ["panne", "crevaison", "urgence", "autre"];
+    if ((reporterType !== "driver" && reporterType !== "passenger") || !KINDS.includes(kind)) {
+      return c.json({ success: false, error: "Paramètres invalides" }, 400);
+    }
+
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    if (!ride) {
+      return c.json({ success: false, error: "Course introuvable" }, 404);
+    }
+    if (!["accepted", "enroute", "arrived", "in_progress"].includes(ride.status)) {
+      return c.json({ success: false, error: "Course non active" }, 400);
+    }
+
+    const KIND_LABELS: Record<string, string> = {
+      panne: "Panne véhicule",
+      crevaison: "Crevaison",
+      urgence: "Urgence / sécurité",
+      autre: "Autre incident",
+    };
+    const incident = {
+      id: `inc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      rideId,
+      reporterType,
+      reporterId: reporterId || null,
+      kind,
+      kindLabel: KIND_LABELS[kind],
+      comment: (comment || "").slice(0, 500),
+      lat: typeof lat === "number" ? lat : null,
+      lng: typeof lng === "number" ? lng : null,
+      scheduledRideId: ride.scheduledRideId || null,
+      createdAt: new Date().toISOString(),
+    };
+    await kv.set(`incident:${rideId}:${incident.id}`, incident);
+
+    await logAdminEvent("ride_incident", {
+      rideId,
+      kind,
+      kindLabel: incident.kindLabel,
+      reporterType,
+      comment: incident.comment || null,
+      lat: incident.lat,
+      lng: incident.lng,
+      pickup: typeof ride.pickup === "object" ? (ride.pickup?.address || ride.pickup?.name) : ride.pickup,
+      destination: typeof ride.destination === "object" ? (ride.destination?.address || ride.destination?.name) : ride.destination,
+      driverId: ride.driverId || ride.driver_id || null,
+      driverName: ride.driverName || null,
+      passengerId: ride.passengerId || ride.passenger_id || null,
+      passengerName: ride.passengerName || null,
+      scheduledRideId: ride.scheduledRideId || null,
+    });
+
+    // Notifier l'autre partie
+    try {
+      const mapsUrl = incident.lat != null && incident.lng != null
+        ? ` Position : https://www.google.com/maps?q=${incident.lat},${incident.lng}` : "";
+      if (reporterType === "driver" && (ride.passengerId || ride.passenger_id)) {
+        const passenger = await kv.get<any>(`passenger:${ride.passengerId || ride.passenger_id}`);
+        const pToken = passenger?.fcmToken;
+        if (!pToken) {
+          const t = await kv.get(`fcm_token_${ride.passengerId || ride.passenger_id}`);
+          if (t) {
+            await sendFCMNotification(typeof t === "string" ? t : t.token, {
+              title: "⚠️ Incident signalé",
+              body: `Votre chauffeur signale : ${incident.kindLabel}.${mapsUrl}`,
+              data: { type: "ride_incident", rideId },
+            });
+          }
+        } else {
+          await sendFCMNotification(pToken, {
+            title: "⚠️ Incident signalé",
+            body: `Votre chauffeur signale : ${incident.kindLabel}.${mapsUrl}`,
+            data: { type: "ride_incident", rideId },
+          });
+        }
+      } else if (reporterType === "passenger" && (ride.driverId || ride.driver_id)) {
+        const driver = await kv.get<any>(`driver:${ride.driverId || ride.driver_id}`);
+        if (driver?.fcmToken) {
+          await sendFCMNotification(driver.fcmToken, {
+            title: "⚠️ Incident signalé",
+            body: `Votre passager signale : ${incident.kindLabel}.${mapsUrl}`,
+            data: { type: "ride_incident", rideId },
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Notif incident autre partie:", e);
+    }
+
+    console.log(`⚠️ Incident ${kind} déclaré sur course ${rideId} par ${reporterType}`);
+    return c.json({ success: true, incident });
+  } catch (error) {
+    console.error("Erreur incident:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// GET /:id/incidents - Journal des incidents d'une course (transparence)
+// ============================================
+app.get("/:id/incidents", async (c) => {
+  try {
+    const rideId = c.req.param("id");
+    if (!isValidUUID(rideId)) {
+      return c.json({ success: false, error: "ID de course invalide" }, 400);
+    }
+    const all = await kvGetByPrefix(`incident:${rideId}:`);
+    all.sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    return c.json({ success: true, incidents: all });
+  } catch (error) {
+    console.error("Erreur journal incidents:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// POST /admin-process-one - L'admin crée la course d'une réservation immédiatement// Body : { scheduledRideId, mode: 'preassigned' | 'automatch' }
 //  - preassigned : conducteur accepté → course créée directement pour lui (pas de matching).
 //  - automatch : libère l'attribution (declined-système) → searching + matching même catégorie.
 // ============================================

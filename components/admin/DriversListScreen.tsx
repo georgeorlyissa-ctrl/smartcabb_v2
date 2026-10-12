@@ -86,6 +86,37 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
   });
   const getLiveRide = (driverId: string) => liveRideByDriver.get(driverId);
 
+  // ⚠️ Incidents déclarés sur les courses en direct (journal)
+  const [incidentCounts, setIncidentCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const ids = [...liveRideByDriver.keys()];
+    if (ids.length === 0) {
+      setIncidentCounts({});
+      return;
+    }
+    let alive = true;
+    Promise.all(
+      ids.map(async (rideId) => {
+        try {
+          const resp = await fetch(
+            `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/${rideId}/incidents`,
+            { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+          );
+          const j = await resp.json();
+          return [rideId, j.success ? (j.incidents || []).length : 0] as const;
+        } catch {
+          return [rideId, 0] as const;
+        }
+      })
+    ).then((pairs) => {
+      if (!alive) return;
+      const map: Record<string, number> = {};
+      pairs.forEach(([id, n]) => { map[id] = n; });
+      setIncidentCounts(map);
+    });
+    return () => { alive = false; };
+  }, [rides]);
+
   // ✅ FIX CRITIQUE : Synchroniser selectedDriver avec les données fraîches après chaque refresh
   // Sans ça, la modale garde un snapshot figé → le badge En ligne/Hors ligne ne se met pas à jour
   useEffect(() => {
@@ -635,6 +666,11 @@ export function DriversListScreen({ onBack }: DriversListScreenProps) {
                                   : '—'}
                                 {liveRide.vehicle_category ? ` · 🚗 ${liveRide.vehicle_category}` : ''}
                               </p>
+                              {!!incidentCounts[liveRide.id] && (
+                                <p className="text-xs font-bold text-red-700 bg-red-100 rounded px-2 py-0.5 inline-block">
+                                  ⚠️ {incidentCounts[liveRide.id]} incident{incidentCounts[liveRide.id] > 1 ? 's' : ''} signalé{incidentCounts[liveRide.id] > 1 ? 's' : ''} — voir fil d’activité
+                                </p>
+                              )}
                             </div>
                           )}
                         </div>

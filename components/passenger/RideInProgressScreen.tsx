@@ -55,7 +55,7 @@ const Timer = ({ className = "w-5 h-5" }: { className?: string }) => (
 );
 
 import { RatingDialog } from './RatingDialog';
-import { MapView } from '../MapView';
+import { IncidentModal } from '../IncidentModal';import { MapView } from '../MapView';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 
@@ -79,6 +79,7 @@ export function RideInProgressScreen() {
   const [currentCost, setCurrentCost] = useState(0);
   const [currentCostUSD, setCurrentCostUSD] = useState(0);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [rideCompleted, setRideCompleted] = useState(false);
   const [timeOfDay, setTimeOfDay] = useState<'jour' | 'nuit'>(getTimeOfDay());
 
@@ -507,6 +508,15 @@ export function RideInProgressScreen() {
                 >
                   <Phone className="w-4 h-4 text-white" />
                 </button>
+
+                {/* Bouton incident */}
+                <button
+                  onClick={() => setShowIncidentModal(true)}
+                  className="p-2.5 bg-orange-500/90 backdrop-blur-md rounded-full shadow-xl hover:bg-orange-600 transition-all active:scale-95"
+                  title="Signaler un incident"
+                >
+                  <span className="text-base leading-none">⚠️</span>
+                </button>
               </div>
             </div>
           </div>
@@ -718,6 +728,16 @@ export function RideInProgressScreen() {
             setShowRatingDialog(false);
             setCurrentScreen('home');
           }}
+        />
+      )}
+
+      {/* Modale incident */}
+      {showIncidentModal && currentRide?.id && (
+        <IncidentModal
+          rideId={currentRide.id}
+          reporterType="passenger"
+          reporterId={state.currentUser?.id}
+          onClose={() => setShowIncidentModal(false)}
         />
       )}
     </div>

@@ -21,6 +21,7 @@ import { Button } from '../ui/button';
 import { FreeWaitingToggle } from '../FreeWaitingToggle';
 import { motion, AnimatePresence } from '../../lib/motion';
 import { calculateRideMeterCost } from '../../lib/pricing';
+import { IncidentModal } from '../IncidentModal';
 
 interface Location {
   lat: number;
@@ -40,6 +41,7 @@ export function ActiveRideNavigationScreen() {
   // 🆕 Confirmation paiement passager
   const [passengerPaid, setPassengerPaid] = useState<boolean | null>(null); // null = pas encore répondu
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
 
   // Protection: Si pas de course, retourner au tableau de bord
   if (!currentRide) {
@@ -411,6 +413,24 @@ export function ActiveRideNavigationScreen() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Bouton incident — panne, crevaison, urgence */}
+          <button
+            onClick={() => setShowIncidentModal(true)}
+            className="w-full mt-3 py-2.5 rounded-xl border-2 border-orange-300 bg-orange-50 text-orange-700 text-sm font-semibold hover:bg-orange-100 transition-colors"
+          >
+            ⚠️ Signaler un incident
+          </button>
+
+          {/* Modale incident */}
+          {showIncidentModal && currentRide?.id && (
+            <IncidentModal
+              rideId={currentRide.id}
+              reporterType="driver"
+              reporterId={state.currentDriver?.id}
+              onClose={() => setShowIncidentModal(false)}
+            />
+          )}
         </div>
       </div>
     </div>
