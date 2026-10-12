@@ -118,6 +118,37 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
 
   const statuses = ['all', ...Array.from(new Set(rides.map((r) => r.status).filter(Boolean)))];
 
+  // Par catégorie : nombre + revenus (effectuées uniquement pour les revenus)
+  const normCat = (c: any) => (c || 'smart_standard').toLowerCase();
+  const byCategory = useMemo(() => {
+    const map = new Map<string, { count: number; done: number; revenue: number }>();
+    rides.forEach((r) => {
+      const c = normCat(r.vehicle_category || r.vehicleCategory || r.vehicleType || r.category);
+      const e = map.get(c) || { count: 0, done: 0, revenue: 0 };
+      e.count++;
+      if (DONE.includes(r.status)) {
+        e.done++;
+        e.revenue += Number(r.total_amount || r.totalPrice || r.finalPrice || 0);
+      }
+      map.set(c, e);
+    });
+    const order = ['smart_standard', 'smart_standard_clim', 'smart_standard_no_clim', 'smart_confort', 'smart_plus', 'smart_business'];
+    return [...map.entries()].sort((a, b) => {
+      const ia = order.indexOf(a[0]);
+      const ib = order.indexOf(b[0]);
+      return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    });
+  }, [rides]);
+
+  const CAT_LABELS: Record<string, string> = {
+    smart_standard: 'SmartCabb Standard',
+    smart_standard_clim: 'SmartCabb Standard avec Clim',
+    smart_standard_no_clim: 'SmartCabb Standard sans Clim',
+    smart_confort: 'SmartCabb Confort',
+    smart_plus: 'SmartCabb Familiale',
+    smart_business: 'SmartCabb Business',
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-6">
@@ -138,11 +169,25 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
         ))}
       </div>
 
+      <h2 className="text-sm font-bold text-gray-700 mb-2">Par catégorie (immédiates)</h2>
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+        {byCategory.map(([cat, e]) => (
+          <Card key={cat} className="p-3">
+            <p className="text-xs font-semibold text-gray-700">{CAT_LABELS[cat] || cat}</p>
+            <p className="text-lg font-bold mt-1">{e.count} <span className="text-xs font-normal text-gray-500">courses</span></p>
+            <p className="text-xs text-gray-600">{e.done} achevée{e.done > 1 ? 's' : ''}</p>
+            <p className="text-xs font-semibold text-green-700">{e.revenue.toLocaleString()} CDF</p>
+          </Card>
+        ))}
+        {byCategory.length === 0 && (
+          <p className="text-sm text-gray-400 col-span-full">Aucune donnée</p>
+        )}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <Button size="sm" variant={tab === 'immediate' ? 'default' : 'outline'} onClick={() => setTab('immediate')}>
           Immédiates ({rides.length})
-        </Button>
-        <Button size="sm" variant={tab === 'reserved' ? 'default' : 'outline'} onClick={() => setTab('reserved')}>
+        </Button>        <Button size="sm" variant={tab === 'reserved' ? 'default' : 'outline'} onClick={() => setTab('reserved')}>
           Réservées ({reservations.length})
         </Button>
         <input
