@@ -186,14 +186,13 @@ export function SettingsScreen() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentScreen('map')}
-              className="hide-in-apk"
+              onClick={() => setCurrentScreen('profile')}
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div className="flex items-center gap-2">
               <Settings className="w-5 h-5 text-cyan-600" />
-              <h1 className="text-xl font-semibold">{t('settings')}</h1>
+              <h1 className="text-lg font-bold">{t('settings')}</h1>
             </div>
           </div>
         </div>
