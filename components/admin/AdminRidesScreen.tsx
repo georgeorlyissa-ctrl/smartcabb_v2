@@ -36,9 +36,12 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
   const [rides, setRides] = useState<any[]>([]);
   const [reservations, setReservations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<'immediate' | 'reserved'>('immediate');
+  const [tab, setTab] = useState<'immediate' | 'reserved' | 'fraud'>('immediate');
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [signals, setSignals] = useState<any[]>([]);
+  const [sweeping, setSweeping] = useState(false);
+  const [sweepResult, setSweepResult] = useState<any>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -117,6 +120,43 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
   ];
 
   const statuses = ['all', ...Array.from(new Set(rides.map((r) => r.status).filter(Boolean)))];
+
+  const loadSignals = async () => {
+    try {
+      const resp = await fetch(`${API}/rides/admin/fraud-signals`, {
+        headers: { 'Authorization': `Bearer ${publicAnonKey}` },
+      });
+      const j = await resp.json();
+      if (j.success) setSignals(j.signals || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const runSweep = async (dryRun: boolean) => {
+    if (!dryRun && !confirm('Lancer le balayage anti-fraude ? (démarrages auto, annulations timeout, clôtures)')) return;
+    setSweeping(true);
+    try {
+      const resp = await fetch(`${API}/rides/sweep-fraud${dryRun ? '?dryRun=true' : ''}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+        body: '{}',
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
+      setSweepResult(j);
+      if (!dryRun) {
+        toast.success(`Balayage : ${j.autoStarted.length} démarrée(s), ${j.autoCancelled.length} annulée(s), ${j.autoCompleted.length} clôturée(s)`);
+        loadSignals();
+      } else {
+        toast.info(`Simulation : ${j.autoStarted.length} à démarrer, ${j.autoCancelled.length} à annuler, ${j.autoCompleted.length} à clôturer`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur');
+    } finally {
+      setSweeping(false);
+    }
+  };
   const STATUS_FR: Record<string, string> = {
     all: 'Tous statuts',
     searching: 'En recherche',
@@ -203,6 +243,9 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
         </Button>        <Button size="sm" variant={tab === 'reserved' ? 'default' : 'outline'} onClick={() => setTab('reserved')}>
           Réservées ({reservations.length})
         </Button>
+        <Button size="sm" variant={tab === 'fraud' ? 'default' : 'outline'} onClick={() => { setTab('fraud'); loadSignals(); }}>
+          🛡️ Anti-fraude
+        </Button>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -224,6 +267,51 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
 
       {loading ? (
         <p className="text-gray-500">Chargement…</p>
+      ) : tab === 'fraud' ? (
+        <div className="space-y-3">
+          <Card className="p-4">
+            <p className="text-sm font-bold mb-1">🛡️ Balayage anti-fraude</p>
+            <p className="text-xs text-gray-500 mb-3">
+              Démarrage auto si le chauffeur roule sans démarrer · annulation après 15 min sans démarrage ·
+              clôture auto à destination · provision restituée si annulé avant démarrage.
+            </p>
+            <div className="flex gap-2 flex-wrap">
+              <Button size="sm" variant="outline" disabled={sweeping} onClick={() => runSweep(true)}>
+                {sweeping ? '…' : 'Simuler'}
+              </Button>
+              <Button size="sm" disabled={sweeping} onClick={() => runSweep(false)} className="bg-red-600 hover:bg-red-700">
+                {sweeping ? '…' : 'Lancer le balayage'}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={loadSignals}>Actualiser signaux</Button>
+            </div>
+            {sweepResult && (
+              <p className="text-xs text-gray-600 mt-2">
+                {sweepResult.dryRun ? 'Simulation' : 'Exécuté'} : {sweepResult.autoStarted.length} démarrée(s) ·
+                {' '}{sweepResult.autoCancelled.length} annulée(s) · {sweepResult.autoCompleted.length} clôturée(s)
+              </p>
+            )}
+          </Card>
+          {signals.length === 0 && (
+            <Card className="p-8 text-center text-gray-500">Aucun signal — tous les chauffeurs sont réguliers ✅</Card>
+          )}
+          {signals.filter((s) => s.score > 0 || s.noStartTimeouts > 0 || s.suspectStarts > 0).map((s) => (
+            <Card key={s.driverId} className="p-3 border-red-200">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <p className="text-sm font-bold">🚩 {s.driverName} <span className="text-xs font-normal text-gray-400">· score {s.score} · {s.strikes} strike(s)</span></p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {s.accepts} acceptée(s) · {s.completed} terminée(s) · {s.cancelled} annulée(s) · taux {s.completionRate ?? '—'}%
+                    {s.avgStartDelaySec != null ? ` · démarrage moyen ${Math.round(s.avgStartDelaySec / 60)} min` : ''}
+                  </p>
+                  <p className="text-xs text-red-600 font-medium mt-0.5">
+                    {s.noStartTimeouts > 0 ? `⏱️ ${s.noStartTimeouts} démarrage(s) manqué(s) · ` : ''}
+                    {s.suspectStarts > 0 ? `🚗 ${s.suspectStarts} démarrage(s) auto (mouvement sans start)` : ''}
+                  </p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       ) : tab === 'immediate' ? (
         <div className="space-y-2">
           {filteredRides.length === 0 && <Card className="p-8 text-center text-gray-500">Aucune course</Card>}

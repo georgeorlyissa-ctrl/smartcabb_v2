@@ -887,6 +887,37 @@ app.post("/accept", async (c) => {
     ride.driver = { id: driverId, name: driverName, phone: driverPhone, vehicle: driverVehicle, rating: driverRating };
     ride.acceptedAt = new Date().toISOString();
 
+    // 🛡️ ANTI-FRAUDE : provisionner la commission dès l'acceptation.
+    // Sans ça, un chauffeur qui transporte hors-système (jamais de start/complete)
+    // ne paie rien. La provision est restituée si la course est annulée avant démarrage,
+    // et déduite de la commission finale à la clôture.
+    let commissionHold = 0;
+    try {
+      const csHold = await getCommissionSettings();
+      if (csHold.enabled) {
+        commissionHold = Math.max(Math.round((ride.estimatedPrice || 0) * csHold.rate / 100), csHold.minimum);
+      }
+      if (commissionHold > 0) {
+        const newBal = (driver.balance || 0) - commissionHold;
+        driver.balance = newBal;
+        driver.creditBalance = newBal;
+        ride.commissionHold = commissionHold;
+        ride.commissionHoldAt = new Date().toISOString();
+        const loc = driver.currentLocation || driver.current_location || driver.location || null;
+        if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
+          ride.acceptDriverLoc = { lat: loc.lat, lng: loc.lng, at: new Date().toISOString() };
+        }
+        await kv.set(`driver:${driverId}`, driver);
+        const prof = await kv.get<any>(`profile:${driverId}`);
+        if (prof) {
+          await kv.set(`profile:${driverId}`, { ...prof, balance: newBal, creditBalance: newBal });
+        }
+        console.log(`💰 Provision commission ${commissionHold} CDF prélevée à ${driverName} (nouveau solde ${newBal})`);
+      }
+    } catch (e) {
+      console.error('❌ Erreur provision commission:', e);
+    }
+
     // ✅ Champs plats pour la compatibilité du polling passager
     ride.driverName  = driverName;
     ride.driverPhone = driverPhone;
@@ -958,7 +989,7 @@ app.post("/accept", async (c) => {
       console.error('❌ Erreur notification passager:', error);
     }
 
-    return c.json({ success: true, ride });
+    return c.json({ success: true, ride, commissionHold });
   } catch (error) {
     console.error("❌ Erreur acceptation course:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
@@ -1189,8 +1220,30 @@ app.post("/cancel", async (c) => {
     ride.cancelledAt = new Date().toISOString();
     ride.cancelledBy = cancelledBy;
     ride.cancellationReason = reason;
-    
+
     await kv.set(`ride:${rideId}`, ride);
+
+    // 🛡️ ANTI-FRAUDE : restituer la provision si la course n'a jamais démarré.
+    // (Annulation avant démarrage = pas de transport = pas de commission.)
+    // Si le conducteur annule ALORS QUE la course roule, la provision est conservée.
+    try {
+      const hold = ride.commissionHold || 0;
+      const did = ride.driverId || driverId;
+      if (hold > 0 && !ride.startedAt && did) {
+        const drv = await kv.get<any>(`driver:${did}`);
+        if (drv) {
+          const refunded = (drv.balance || 0) + hold;
+          drv.balance = refunded;
+          drv.creditBalance = refunded;
+          await kv.set(`driver:${did}`, drv);
+          ride.commissionHoldRefunded = true;
+          await kv.set(`ride:${rideId}`, ride);
+          console.log(`💰 Provision ${hold} CDF restituée à ${did} (annulation avant démarrage)`);
+        }
+      }
+    } catch (e) {
+      console.error('❌ Erreur restitution provision:', e);
+    }
 
     // ─── Blocage automatique après 3 annulations successives ───────────────
     if (cancelledBy === 'passenger' && ride.passengerId) {
@@ -1286,6 +1339,278 @@ app.post("/cancel", async (c) => {
   } catch (error) {
     console.error("❌ Erreur annulation course:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ============================================
+// 🛡️ POST /sweep-fraud - Balayage anti-fraude (timeout, mouvement, arrivée)
+// Protégé par CRON_SECRET. ?dryRun=true : simule sans rien modifier.
+//  - accepté/arrivé jamais démarré depuis +15 min :
+//      * conducteur a bougé > 500 m depuis l'acceptation → démarrage auto + suspect
+//      * sinon → annulation auto (système) + restitution provision + strike
+//  - in_progress proche de la destination depuis +45 min → clôture auto au prix estimé
+// ============================================
+app.post("/sweep-fraud", async (c) => {
+  try {
+    const cronSecret = c.req.header("x-cron-secret");
+    const expectedSecret = Deno.env.get("CRON_SECRET") || "smartcabb-cron-2026";
+    if (cronSecret !== expectedSecret) {
+      return c.json({ success: false, error: "Unauthorized" }, 401);
+    }
+    const url = new URL(c.req.url);
+    const dryRun = url.searchParams.get("dryRun") === "true";
+    const now = Date.now();
+    const summary: any = { dryRun, autoStarted: [], autoCancelled: [], autoCompleted: [], strikes: {} };
+
+    const distanceKm = (a: number, b: number, d: number, e: number) => {
+      const R = 6371;
+      const dLat = (d - a) * Math.PI / 180;
+      const dLon = (e - b) * Math.PI / 180;
+      const s =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(a * Math.PI / 180) * Math.cos(d * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      return 2 * R * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+    };
+
+    const rides = await kv.getByPrefix("ride:");
+    const strike = async (driverId: string) => {
+      const key = `fraud_strikes:${driverId}`;
+      const cur = (await kv.get<any>(key)) || { count: 0 };
+      cur.count = (cur.count || 0) + 1;
+      cur.lastAt = new Date().toISOString();
+      await kv.set(key, cur);
+      summary.strikes[driverId] = cur.count;
+      return cur.count;
+    };
+
+    for (const ride of rides) {
+      try {
+        const did = ride.driverId || ride.driver_id;
+        if (!did) continue;
+        const acceptedAt = new Date(ride.acceptedAt || ride.createdAt || 0).getTime();
+        const startedAt = ride.startedAt ? new Date(ride.startedAt).getTime() : 0;
+
+        // ── 1. Accepté/arrivé mais jamais démarré depuis +15 min ──
+        if ((ride.status === "accepted" || ride.status === "arrived") && acceptedAt && now - acceptedAt > 15 * 60 * 1000) {
+          const driver = await kv.get<any>(`driver:${did}`);
+          const snap = ride.acceptDriverLoc;
+          const cur = driver?.currentLocation || driver?.current_location || driver?.location || null;
+          let movedKm = -1;
+          if (snap && cur && typeof cur.lat === "number" && typeof cur.lng === "number") {
+            movedKm = distanceKm(snap.lat, snap.lng, cur.lat, cur.lng);
+          }
+
+          if (movedKm >= 0.5) {
+            // Le chauffeur roule sans avoir démarré → démarrage auto + suspect
+            if (!dryRun) {
+              ride.status = "in_progress";
+              ride.startedAt = new Date().toISOString();
+              ride.startedBy = "system-antifraude";
+              ride.fraudSuspect = true;
+              await kv.set(`ride:${ride.id}`, ride);
+              const n = await strike(did);
+              await logAdminEvent("fraud_auto_start", {
+                rideId: ride.id, driverId: did,
+                driverName: ride.driverName || null,
+                movedKm: Math.round(movedKm * 10) / 10,
+                strikes: n,
+              });
+              await pushToRidePartiesSafe(ride, "🚖 Course démarrée",
+                "Départ détecté : la course est maintenant suivie par SmartCabb.", ride.id);
+            }
+            summary.autoStarted.push({ rideId: ride.id, driverId: did, movedKm: Math.round(movedKm * 10) / 10 });
+          } else {
+            // Immobile sans démarrage → annulation auto + restitution + strike
+            if (!dryRun) {
+              const hold = ride.commissionHold || 0;
+              if (hold > 0 && driver) {
+                const refunded = (driver.balance || 0) + hold;
+                driver.balance = refunded;
+                driver.creditBalance = refunded;
+                await kv.set(`driver:${did}`, driver);
+              }
+              ride.status = "cancelled";
+              ride.cancelledAt = new Date().toISOString();
+              ride.cancelledBy = "system";
+              ride.cancellationReason = "Démarrage jamais effectué (timeout 15 min)";
+              ride.commissionHoldRefunded = hold > 0;
+              await kv.set(`ride:${ride.id}`, ride);
+              const n = await strike(did);
+              await logAdminEvent("fraud_auto_cancel", {
+                rideId: ride.id, driverId: did,
+                driverName: ride.driverName || null,
+                strikes: n,
+              });
+              await pushToRidePartiesSafe(ride, "❌ Course annulée",
+                "Le chauffeur n'a pas démarré la course. Une nouvelle recherche va démarrer.", ride.id);
+            }
+            summary.autoCancelled.push({ rideId: ride.id, driverId: did });
+          }
+          continue;
+        }
+
+        // ── 2. En cours, proche de la destination depuis +45 min, jamais clôturée ──
+        if (ride.status === "in_progress" && startedAt && now - startedAt > 45 * 60 * 1000) {
+          const dest = ride.destination || {};
+          const dlat = dest.coordinates?.lat ?? dest.lat;
+          const dlng = dest.coordinates?.lng ?? dest.lng;
+          const driver = await kv.get<any>(`driver:${did}`);
+          const cur = driver?.currentLocation || driver?.current_location || driver?.location || null;
+          if (typeof dlat === "number" && typeof dlng === "number" && cur &&
+              distanceKm(cur.lat, cur.lng, dlat, dlng) < 0.2) {
+            if (!dryRun) {
+              const price = ride.estimatedPrice || 0;
+              ride.status = "completed";
+              ride.completedAt = new Date().toISOString();
+              ride.totalPrice = price;
+              ride.finalPrice = price;
+              ride.autoCompleted = true;
+              await kv.set(`ride:${ride.id}`, ride);
+              // Commission normale (provision déjà prélevée déduite)
+              if (did && price > 0) {
+                const drv = await kv.get<any>(`driver:${did}`);
+                if (drv) {
+                  const cs = await getCommissionSettings();
+                  let commission = 0;
+                  if (cs.enabled) commission = Math.max(Math.round(price * cs.rate / 100), cs.minimum);
+                  const due = commission - (ride.commissionHold || 0);
+                  const nb = (drv.balance || 0) - due;
+                  drv.balance = nb;
+                  drv.creditBalance = nb;
+                  drv.earningsBalance = (drv.earningsBalance || 0) + (price - commission);
+                  const pc = drv.totalRides || drv.total_rides || 0;
+                  drv.totalRides = pc + 1;
+                  drv.total_rides = pc + 1;
+                  await kv.set(`driver:${did}`, drv);
+                }
+              }
+              await logAdminEvent("fraud_auto_complete", { rideId: ride.id, driverId: did, price });
+              await pushToRidePartiesSafe(ride, "🏁 Course clôturée",
+                "Arrivée détectée : la course a été clôturée automatiquement.", ride.id);
+            }
+            summary.autoCompleted.push({ rideId: ride.id, driverId: did });
+          }
+          continue;
+        }
+      } catch (e) {
+        console.error("sweep ride:", ride?.id, e);
+      }
+    }
+
+    console.log("🛡️ Sweep anti-fraude:", JSON.stringify(summary));
+    return c.json({ success: true, ...summary });
+  } catch (error) {
+    console.error("Erreur sweep-fraud:", error);
+    return c.json({ success: false, error: error.message }, 500);
+  }
+});
+
+// Helper local : push aux deux parties d'une course (gracieux)
+async function pushToRidePartiesSafe(ride: any, title: string, body: string, rideId: string): Promise<void> {
+  try {
+    const did = ride.driverId || ride.driver_id;
+    if (did) {
+      const driver = await kv.get<any>(`driver:${did}`);
+      if (driver?.fcmToken) {
+        await sendFCMNotification(driver.fcmToken, { title, body, data: { type: "ride_antifraud", rideId } });
+      }
+    }
+  } catch (e) { console.warn("push driver antifraude:", e); }
+  try {
+    const pid = ride.passengerId || ride.passenger_id;
+    if (pid) {
+      const t = await kv.get(`fcm_token_${pid}`);
+      const token = typeof t === "string" ? t : t?.token;
+      if (token) {
+        await sendFCMNotification(token, { title, body, data: { type: "ride_antifraud", rideId } });
+      }
+    }
+  } catch (e) { console.warn("push passenger antifraude:", e); }
+}
+
+// ============================================
+// GET /admin/fraud-signals - Tableau anti-fraude : démarrages manqués, taux, délais
+// ============================================
+app.get("/admin/fraud-signals", async (c) => {
+  try {
+    const rides = await kv.getByPrefix("ride:");
+    // Fenêtre 30 jours : le passé lointain (tests) ne doit pas accuser
+    const since = Date.now() - 30 * 24 * 3600 * 1000;
+    const recent = rides.filter((r: any) => {
+      const t = new Date(r.acceptedAt || r.createdAt || r.created_at || 0).getTime();
+      return t >= since;
+    });
+    const byDriver: Record<string, any> = {};
+    const bump = (did: string, key: string, ride: any) => {
+      if (!did) return;
+      if (!byDriver[did]) {
+        byDriver[did] = { driverId: did, driverName: null, accepts: 0, completed: 0, cancelled: 0, noStart: 0, suspectStarts: 0, startDelaysSec: [] };
+      }
+      const s = byDriver[did];
+      if (!s.driverName) s.driverName = ride.driverName || null;
+      if (key === "delay" && typeof ride._delay === "number") s.startDelaysSec.push(ride._delay);
+      else s[key]++;
+    };
+
+    for (const r of recent) {
+      const did = r.driverId || r.driver_id;
+      if (!did) continue;
+      if (r.status === "accepted" || r.status === "arrived" || r.status === "in_progress" ||
+          r.status === "completed" || r.status === "rated" || r.status === "cancelled") {
+        // accepté (tout ce qui a dépassé searching/pending compte comme acceptation)
+        if (r.acceptedAt || ["accepted", "arrived", "in_progress", "completed", "rated"].includes(r.status)) {
+          bump(did, "accepts", r);
+        }
+      }
+      if (r.status === "completed" || r.status === "rated") bump(did, "completed", r);
+      if (r.status === "cancelled") bump(did, "cancelled", r);
+      if ((r.status === "cancelled" && r.cancelledBy === "system") ||
+          (r.cancellationReason || "").includes("jamais effectué")) {
+        bump(did, "noStart", r);
+      }
+      if (r.fraudSuspect) bump(did, "suspectStarts", r);
+      if (r.acceptedAt && r.startedAt) {
+        const d = Math.floor((new Date(r.startedAt).getTime() - new Date(r.acceptedAt).getTime()) / 1000);
+        if (d >= 0 && d < 24 * 3600) { bump(did, "delay", { ...r, _delay: d }); }
+      }
+    }
+
+    const drivers = await kv.getByPrefix("driver:");
+    const nameOf: Record<string, string> = {};
+    drivers.forEach((d: any) => { if (d.id) nameOf[d.id] = d.full_name || d.name || null; });
+
+    const signals = Object.values(byDriver).map((s: any) => {
+      const avgDelay = s.startDelaysSec.length > 0
+        ? Math.round(s.startDelaysSec.reduce((a: number, b: number) => a + b, 0) / s.startDelaysSec.length)
+        : null;
+      const completionRate = s.accepts > 0 ? Math.round((s.completed / s.accepts) * 100) : null;
+      return {
+        driverId: s.driverId,
+        driverName: s.driverName || nameOf[s.driverId] || "Conducteur",
+        accepts: s.accepts,
+        completed: s.completed,
+        cancelled: s.cancelled,
+        noStartTimeouts: s.noStart,
+        suspectStarts: s.suspectStarts,
+        avgStartDelaySec: avgDelay,
+        completionRate,
+        score: (s.noStart * 3) + (s.suspectStarts * 2) + (s.accepts >= 5 && (completionRate ?? 100) < 60 ? 2 : 0),
+      };
+    })
+    .filter((s: any) => s.accepts > 0)
+    .sort((a: any, b: any) => b.score - a.score || b.noStartTimeouts - a.noStartTimeouts);
+
+    const strikes: Record<string, number> = {};
+    for (const s of signals) {
+      const st = await kv.get<any>(`fraud_strikes:${s.driverId}`);
+      if (st?.count) strikes[s.driverId] = st.count;
+    }
+
+    return c.json({ success: true, signals: signals.map((s: any) => ({ ...s, strikes: strikes[s.driverId] || 0 })) });
+  } catch (error) {
+    console.error("Erreur fraud-signals:", error);
+    return c.json({ success: false, error: error.message }, 500);
   }
 });
 
@@ -1395,7 +1720,11 @@ app.post("/complete", async (c) => {
         }
         const driverEarnings  = actualCost - commission;
 
-        const newBalance = (driver.balance || 0) - commission;
+        // 🛡️ ANTI-FRAUDE : déduire la provision déjà prélevée à l'acceptation.
+        // Si la course a coûté moins que prévu, le trop-perçu est restitué.
+        const hold = ride.commissionHold || 0;
+        const due = commission - hold;
+        const newBalance = (driver.balance || 0) - due;
 
         // ✅ FIX BUG SOLDE : Synchroniser balance ET creditBalance en même temps
         // (évite la dérive qui causait des recharges incorrectes)

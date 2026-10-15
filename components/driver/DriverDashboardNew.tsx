@@ -1499,6 +1499,12 @@ export function DriverDashboardNew() {
               stopAllNotifications();
 
               toast.success('Course acceptée ! En route vers le passager 🚗');
+              if (data.commissionHold > 0) {
+                toast.info(
+                  `Commission provisionnée : ${Number(data.commissionHold).toLocaleString('fr-FR')} CDF — restituée si annulation avant démarrage.`,
+                  { duration: 6000 }
+                );
+              }
 
               // Naviguer vers l'écran de navigation
               setCurrentScreen('driver-navigation');
