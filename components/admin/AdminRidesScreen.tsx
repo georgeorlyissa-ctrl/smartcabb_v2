@@ -136,18 +136,26 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
   const runSweep = async (dryRun: boolean) => {
     if (!dryRun && !confirm('Lancer le balayage anti-fraude ? (démarrages auto, annulations timeout, clôtures)')) return;
     setSweeping(true);
+    const call = async () => fetch(`${API}/rides/sweep-fraud${dryRun ? '?dryRun=true' : ''}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${publicAnonKey}`,
+        'Content-Type': 'application/json',
+        'x-cron-secret': 'smartcabb-cron-2026',
+      },
+      body: '{}',
+    });
     try {
-      const resp = await fetch(`${API}/rides/sweep-fraud${dryRun ? '?dryRun=true' : ''}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${publicAnonKey}`,
-          'Content-Type': 'application/json',
-          'x-cron-secret': 'smartcabb-cron-2026',
-        },
-        body: '{}',
-      });
+      let resp: Response;
+      try {
+        resp = await call();
+      } catch (e) {
+        // Réseau instable : 1 nouvel essai avant d'alerter
+        await new Promise((r) => setTimeout(r, 1500));
+        resp = await call();
+      }
       const j = await resp.json();
-      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
+      if (!resp.ok || !j.success) throw new Error(j.error || `Erreur serveur (${resp.status})`);
       setSweepResult(j);
       if (!dryRun) {
         toast.success(`Balayage : ${j.autoStarted.length} démarrée(s), ${j.autoCancelled.length} annulée(s), ${j.autoCompleted.length} clôturée(s)`);
@@ -156,7 +164,8 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
         toast.info(`Simulation : ${j.autoStarted.length} à démarrer, ${j.autoCancelled.length} à annuler, ${j.autoCompleted.length} à clôturer`);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur');
+      console.error('Balayage:', e);
+      toast.error(e instanceof TypeError ? 'Connexion instable — réessayez' : (e instanceof Error ? e.message : 'Erreur'));
     } finally {
       setSweeping(false);
     }
