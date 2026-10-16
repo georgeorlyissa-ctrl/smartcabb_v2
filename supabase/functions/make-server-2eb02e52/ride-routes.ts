@@ -1352,9 +1352,7 @@ app.post("/cancel", async (c) => {
 // ============================================
 app.post("/sweep-fraud", async (c) => {
   try {
-    const cronSecret = c.req.header("x-cron-secret");
-    const expectedSecret = Deno.env.get("CRON_SECRET") || "smartcabb-cron-2026";
-    if (cronSecret !== expectedSecret) {
+    if (!hasValidCronSecret(c)) {
       return c.json({ success: false, error: "Unauthorized" }, 401);
     }
     const url = new URL(c.req.url);
@@ -1506,7 +1504,13 @@ app.post("/sweep-fraud", async (c) => {
   }
 });
 
-// Helper local : push aux deux parties d'une course (gracieux)
+// Le secret peut être celui configuré (CRON_SECRET) ou le défaut historique
+// 'smartcabb-cron-2026' (utilisé par le cron pg_cron et le panel admin).
+function hasValidCronSecret(c: any): boolean {
+  const got = c.req.header("x-cron-secret") || "";
+  const expected = Deno.env.get("CRON_SECRET") || "smartcabb-cron-2026";
+  return got !== "" && (got === expected || got === "smartcabb-cron-2026");
+}
 async function pushToRidePartiesSafe(ride: any, title: string, body: string, rideId: string): Promise<void> {
   try {
     const did = ride.driverId || ride.driver_id;
@@ -2185,9 +2189,7 @@ async function notifyPassenger(userId: string, notif: { title: string; body: str
 // Traite les statuts 'scheduled' ET 'confirmed' (acompte payé).
 // ============================================
 app.post("/process-scheduled", async (c) => {
-  const cronSecret = c.req.header("x-cron-secret");
-  const expectedSecret = Deno.env.get("CRON_SECRET") || "smartcabb-cron-2026";
-  if (cronSecret !== expectedSecret) {
+  if (!hasValidCronSecret(c)) {
     console.warn("Tentative d acces non autorise a /process-scheduled");
     return c.json({ success: false, error: "Unauthorized" }, 401);
   }

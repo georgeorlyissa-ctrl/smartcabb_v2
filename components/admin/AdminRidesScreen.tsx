@@ -139,7 +139,11 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
     try {
       const resp = await fetch(`${API}/rides/sweep-fraud${dryRun ? '?dryRun=true' : ''}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+        headers: {
+          'Authorization': `Bearer ${publicAnonKey}`,
+          'Content-Type': 'application/json',
+          'x-cron-secret': 'smartcabb-cron-2026',
+        },
         body: '{}',
       });
       const j = await resp.json();
