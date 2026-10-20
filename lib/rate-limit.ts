@@ -2,11 +2,13 @@
  * Rate Limiter Global pour Hono
  * Limite toutes les requêtes API par adresse IP
  * Prévente les attaques par force brute et le spam
+ * Affiche un message utilisateur friendly quand la limite est dépassée
  * 
  * Configuration par défaut :
  * - 100 requêtes par 15 minutes par IP
  * - Header RateLimit-Remaining dans la réponse
  * - Header RateLimit-Reset avec le temps avant réinitialisation
+ * - Message français friendly en cas de dépassement
  */
 
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes en ms
@@ -41,11 +43,7 @@ export function rateLimit(maxRequests = DEFAULT_MAX_REQUESTS, windowMs = RATE_LI
       // Première requête - initialiser le compteur
       await kvClient().from("kv_store_2eb02e52").upsert({
         key,
-        value: JSON.stringify({
-          count: 1,
-          firstRequest: Date.now(),
-          lastRequest: Date.now()
-        })
+        value: JSON.stringify({ count: 1, firstRequest: Date.now(), lastRequest: Date.now() })
       });
     } else {
       const record = JSON.parse(data.value);
@@ -56,11 +54,7 @@ export function rateLimit(maxRequests = DEFAULT_MAX_REQUESTS, windowMs = RATE_LI
         // Fenêtre expirée - réinitialiser
         await kvClient().from("kv_store_2eb02e52").upsert({
           key,
-          value: JSON.stringify({
-            count: 1,
-            firstRequest: now,
-            lastRequest: now
-          })
+          value: JSON.stringify({ count: 1, firstRequest: now, lastRequest: now })
         });
       } else {
         // Incrémenter le compteur dans la fenêtre active
@@ -86,10 +80,15 @@ export function rateLimit(maxRequests = DEFAULT_MAX_REQUESTS, windowMs = RATE_LI
     c.header('RateLimit-Remaining', (DEFAULT_MAX_REQUESTS - currentCount).toString());
     c.header('RateLimit-Reset', timeToReset.toString());
     
-    // Si limite dépassée, bloquer avec 429
+    // Si limite dépassée, bloquer avec message utilisateur français
     if (currentCount > DEFAULT_MAX_REQUESTS) {
       return c.json(
-        { success: false, error: 'Limite de requêtes dépassée. Réessayez dans quelques minutes.' },
+        { 
+          success: false, 
+          error: 'Limite de requêtes dépassée',
+          message: 'Vous avez effectué trop de requêtes. Veuillez patienter 15 minutes avant de réessayer.',
+          retryAfter: Math.ceil(timeToReset / 60000) + ' minutes'
+        },
         429
       );
     }
