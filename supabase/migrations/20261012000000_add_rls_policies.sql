@@ -11,17 +11,18 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 -- Policy : Users can read their own profile
 -- Un utilisateur authentifié peut SELECT sa propre ligne de profile
+-- La table profiles utilise 'id' qui référence auth.users(id)
 CREATE POLICY "Users can read own profile" ON profiles
   FOR SELECT
   TO authenticated
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = id);
 
 -- Policy : Users can update their own profile
 -- Un utilisateur peut UPDATE sa propre ligne de profile (sauf role/admin)
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE
   TO authenticated
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = id);
 
 -- Policy : Service role (admin backend) peut tout faire
 -- Les fonctions backend utilisent la clé service-role qui contourne RLS,
