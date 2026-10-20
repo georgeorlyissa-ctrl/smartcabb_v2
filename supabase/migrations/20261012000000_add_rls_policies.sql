@@ -10,23 +10,24 @@
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 -- Policy : Users can read their own profile
--- Un utilisateur authentifié peut SELECT sa propre ligne de profile
--- La table profiles utilise 'id' qui référence auth.users(id)
+-- Si la policy existe déjà, on la supprime avant de la recréer
+DROP POLICY IF EXISTS "Users can read own profile" ON profiles;
 CREATE POLICY "Users can read own profile" ON profiles
   FOR SELECT
   TO authenticated
   USING (auth.uid() = id);
 
 -- Policy : Users can update their own profile
--- Un utilisateur peut UPDATE sa propre ligne de profile (sauf role/admin)
+-- Si la policy existe déjà, on la supprime avant de la recréer
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE
   TO authenticated
   USING (auth.uid() = id);
 
 -- Policy : Service role (admin backend) peut tout faire
--- Les fonctions backend utilisent la clé service-role qui contourne RLS,
--- mais on garde cette policy pour la clarté
+-- Si la policy existe déjà, on la supprime avant de la recréer
+DROP POLICY IF EXISTS "Admins can do anything via service role" ON profiles;
 CREATE POLICY "Admins can do anything via service role" ON profiles
   USING (false) -- Never triggered when using service-role key
   WITH CHECK (false);
@@ -39,28 +40,32 @@ CREATE POLICY "Admins can do anything via service role" ON profiles
 ALTER TABLE scheduled_rides ENABLE ROW LEVEL SECURITY;
 
 -- Policy : Users can read their own rides
--- Un utilisateur peut voir seulement ses propres courses/réservations
+-- Si la policy existe déjà, on la supprime avant de la recréer
+DROP POLICY IF EXISTS "Users can read own rides" ON scheduled_rides;
 CREATE POLICY "Users can read own rides" ON scheduled_rides
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id);
 
 -- Policy : Users can insert their own rides
--- Un utilisateur peut créer sa propre course/réservation
+-- Si la policy existe déjà, on la supprime avant de la recréer
+DROP POLICY IF EXISTS "Users can insert own rides" ON scheduled_rides;
 CREATE POLICY "Users can insert own rides" ON scheduled_rides
   FOR INSERT
   TO authenticated
   WITH CHECK (auth.uid() = user_id);
 
 -- Policy : Users can update their own rides
--- Un utilisateur peut modifier sa propre course (statut, etc.)
+-- Si la policy existe déjà, on la supprime avant de la recréer
+DROP POLICY IF EXISTS "Users can update own rides" ON scheduled_rides;
 CREATE POLICY "Users can update own rides" ON scheduled_rides
   FOR UPDATE
   TO authenticated
   USING (auth.uid() = user_id);
 
 -- Policy : Drivers can read rides assigned to them
--- Un conducteur peut voir les courses qui lui sont assignées
+-- Si la policy existe déjà, on la supprime avant de la recréer
+DROP POLICY IF EXISTS "Drivers can read assigned rides" ON scheduled_rides;
 CREATE POLICY "Drivers can read assigned rides" ON scheduled_rides
   FOR SELECT
   TO authenticated
@@ -76,6 +81,8 @@ CREATE POLICY "Drivers can read assigned rides" ON scheduled_rides
   );
 
 -- Policy : Admin full access via service role (handled separately)
+-- Si la policy existe déjà, on la supprime avant de la recréer
+DROP POLICY IF EXISTS "Admins can do anything via service role" ON scheduled_rides;
 CREATE POLICY "Admins can do anything via service role" ON scheduled_rides
   USING (false)
   WITH CHECK (false);
