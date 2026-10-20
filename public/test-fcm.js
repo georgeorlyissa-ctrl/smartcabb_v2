@@ -9,7 +9,7 @@ const firebaseConfig = {
   measurementId: "G-8QY9ZYGC7B"
 };
 
-const VAPID_KEY = "BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekIOWUiJ6vHvO06yaXXnyp0i_1Muc";
+const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekIOWUiJ6vHvO06yaXXnyp0i_1Muc";
 
 // Variables globales
 let firebaseApp = null;

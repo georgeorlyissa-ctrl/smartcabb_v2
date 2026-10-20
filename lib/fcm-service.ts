@@ -72,8 +72,11 @@ async function loadFCMFunctions() {
  * 
  * ✅ CLÉ VAPID CONFIGURÉE POUR SMARTCABB
  * Générée depuis Firebase Console > Project Settings > Cloud Messaging > Web Push certificates
+ * 
+ * ⚠️ Lecture depuis Vercel env vars `VITE_FIREBASE_VAPID_KEY` pour la production.
+ * En développement, la valeur par défaut ci-dessous est utilisée.
  */
-const VAPID_KEY = 'BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekIOWUiJ6vHvO06yaXXnyp0i_1Muc';
+const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || 'BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekIOWUiJ6vHvO06yaXXnyp0i_1Muc';
 
 /**
  * Type pour les détails de notification de course

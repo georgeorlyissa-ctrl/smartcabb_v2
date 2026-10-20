@@ -9,16 +9,16 @@ import { toast } from './toast';
 type Messaging = any;
 
 const firebaseConfig = {
-  apiKey: "AIzaSyC0Kq6QgnfVna4bEWUj0J3VknU0ZHMAaWU",
-  authDomain: "smartcabb-bed00.firebaseapp.com",
-  projectId: "smartcabb-bed00",
-  storageBucket: "smartcabb-bed00.firebasestorage.app",
-  messagingSenderId: "855559530237",
-  appId: "1:855559530237:web:5ea0fa4232bb08196f4094",
-  measurementId: "G-8QY9ZYGC7B"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyC0Kq6QgnfVna4bEWUj0J3VknU0ZHMAaWU",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "smartcabb-bed00.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "smartcabb-bed00",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "smartcabb-bed00.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "855559530237",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:855559530237:web:5ea0fa4232bb08196f4094",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-8QY9ZYGC7B"
 };
 
-const VAPID_KEY = "BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekIOWUiJ6vHvO06yaXXnyp0i_1Muc";
+const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY || "BDHm-w7od6Q7PP8y_vCv3TxuQiocDUyH3X6sg1zxQfm_KhCSFJnHtcVP4yekIOWUiJ6vHvO06yaXXnyp0i_1Muc";
 
 let messaging: Messaging | null = null;
 let firebaseModules: any = null;
