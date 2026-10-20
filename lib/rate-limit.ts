@@ -1,29 +1,30 @@
 /**
- * Rate Limiter Middleware pour Hono
- * Limite les requêtes par IP pour prévenir les attaques par force brute
- * Utilise le même KV store que auth-routes.ts
+ * Rate Limiter Global pour Hono
+ * Limite toutes les requêtes API par adresse IP
+ * Prévente les attaques par force brute et le spam
  * 
- * Configuration :
- * - MAX_ATTEMPTS : 5 essais par fenêtre
- * - WINDOW_MS : 15 minutes
+ * Configuration par défaut :
+ * - 100 requêtes par 15 minutes par IP
+ * - Header RateLimit-Remaining dans la réponse
+ * - Header RateLimit-Reset avec le temps avant réinitialisation
  */
 
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes en ms
-const MAX_ATTEMPTS = 5; // Nombre maximal de tentatives
+const DEFAULT_MAX_REQUESTS = 100; // Nombre maximal de requêtes par fenêtre
 
 /**
- * Crée un middleware de rate limiting
- * @param maxAttempts Nombre maximal de tentatives autorisées
- * @param windowMs Fenêtre de temps en millisecondes
+ * Crée un middleware de rate limiting global
+ * @param maxRequests Nombre maximal de requêtes autorisées (défaut: 100)
+ * @param windowMs Fenêtre de temps en millisecondes (défaut: 15min)
  * @returns Middleware Hono
  */
-export function rateLimiter(maxAttempts = MAX_ATTEMPTS, windowMs = RATE_LIMIT_WINDOW) {
-  return async function rateLimiterMiddleware(c, next) {
+export function rateLimit(maxRequests = DEFAULT_MAX_REQUESTS, windowMs = RATE_LIMIT_WINDOW) {
+  return async function rateLimitMiddleware(c, next) {
     // Récupérer l'IP de l'expéditeur
     const ip = c.req.header('X-Forwarded-For') || c.req.header('Remote-Addr') || 'unknown';
-    const key = `rate_limit:${ip}`;
+    const key = `global_rate_limit:${ip}`;
     
-    // Utiliser le même pattern que auth-routes.ts : kvClient().from(KV_TABLE)
+    // Utiliser le même pattern KV que le projet
     const kvClient = () =>
       createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
@@ -37,38 +38,70 @@ export function rateLimiter(maxAttempts = MAX_ATTEMPTS, windowMs = RATE_LIMIT_WI
       .maybeSingle();
     
     if (error || !data) {
-      // Première requête - démarrer avec count=1
+      // Première requête - initialiser le compteur
       await kvClient().from("kv_store_2eb02e52").upsert({
         key,
-        value: JSON.stringify({ count: 1, firstRequest: Date.now() })
+        value: JSON.stringify({
+          count: 1,
+          firstRequest: Date.now(),
+          lastRequest: Date.now()
+        })
       });
-      return await next();
+    } else {
+      const record = JSON.parse(data.value);
+      const now = Date.now();
+      
+      // Vérifier si la fenêtre a expiré
+      if (now - record.firstRequest > RATE_LIMIT_WINDOW) {
+        // Fenêtre expirée - réinitialiser
+        await kvClient().from("kv_store_2eb02e52").upsert({
+          key,
+          value: JSON.stringify({
+            count: 1,
+            firstRequest: now,
+            lastRequest: now
+          })
+        });
+      } else {
+        // Incrémenter le compteur dans la fenêtre active
+        record.count = (record.count || 0) + 1;
+        record.lastRequest = now;
+        await kvClient().from("kv_store_2eb02e52").upsert({ key, value: JSON.stringify(record) });
+      }
     }
     
-    const record = JSON.parse(data.value);
-    const elapsed = Date.now() - record.firstRequest;
+    // Récupérer le compteur mis à jour
+    const { data: finalData, error: finalError } = await kvClient()
+      .from("kv_store_2eb02e52")
+      .select("value")
+      .eq("key", key)
+      .maybeSingle();
     
-    // Si la fenêtre de temps est écoulée, réinitialiser
-    if (elapsed > RATE_LIMIT_WINDOW) {
-      await kvClient().from("kv_store_2eb02e52").upsert({
-        key,
-        value: JSON.stringify({ count: 1, firstRequest: Date.now() })
-      });
-      return await next();
-    }
+    const finalRecord = finalError ? null : JSON.parse(finalData.value);
+    const currentCount = finalRecord ? finalRecord.count : 1;
+    const timeToReset = finalRecord ? Math.max(0, RATE_LIMIT_WINDOW - (Date.now() - record.firstRequest)) : 0;
     
-    // Si le nombre de tentatives dépasse la limite, bloquer
-    if (record.count >= maxAttempts) {
+    // Ajouter des headers d'information
+    c.header('RateLimit-Limit', DEFAULT_MAX_REQUESTS.toString());
+    c.header('RateLimit-Remaining', (DEFAULT_MAX_REQUESTS - currentCount).toString());
+    c.header('RateLimit-Reset', timeToReset.toString());
+    
+    // Si limite dépassée, bloquer avec 429
+    if (currentCount > DEFAULT_MAX_REQUESTS) {
       return c.json(
-        { success: false, error: 'Trop de tentatives. Réessayez dans 15 minutes.' },
-        429 // Too Many Requests
+        { success: false, error: 'Limite de requêtes dépassée. Réessayez dans quelques minutes.' },
+        429
       );
     }
     
-    // Incrémenter le compteur
-    record.count = (record.count || 0) + 1;
-    await kvClient().from("kv_store_2eb02e52").upsert({ key, value: JSON.stringify(record) });
-    
     return await next();
   };
+}
+
+/**
+ * Alias pour une limite plus stricte (authentification)
+ * @returns Middleware avec 5 requêtes/15min
+ */
+export function rateLimitAuth() {
+  return rateLimit(5, 15 * 60 * 1000);
 }

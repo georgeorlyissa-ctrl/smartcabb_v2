@@ -10,6 +10,7 @@
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
+import { rateLimit } from "../lib/rate-limit.ts";
 
 // Import des routes
 import rideRoutes from "./ride-routes.ts";
@@ -39,6 +40,9 @@ const app = new Hono();
 
 // Enable logger pour tous les endpoints
 app.use('*', logger(console.log));
+
+// ✅ RATE LIMITING GLOBAL — 100 requêtes par 15 min par IP
+app.use('*', rateLimit());
 
 // ✅ FIX CORS — Doit être AVANT toutes les routes
 // Supabase Edge Functions nécessite une gestion explicite du preflight OPTIONS
