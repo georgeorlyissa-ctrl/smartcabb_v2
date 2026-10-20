@@ -8,6 +8,7 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { isOTPRequired, verifyOTPToken } from "./otp-core.ts";
+import { rateLimiter } from "../lib/rate-limit.ts";
 
 const app = new Hono();
 
@@ -73,7 +74,7 @@ function normalizeEmail(email: string): string {
 
 // ─── POST /signup ─────────────────────────────────────────────────────────────
 
-app.post("/signup", async (c) => {
+app.post("/signup", rateLimiter(), async (c) => {
   try {
     const body = await c.req.json();
     const { email, password, phone, name, full_name, fullName, role } = body;
@@ -206,7 +207,7 @@ app.post("/signup", async (c) => {
 
 // ─── POST /login ──────────────────────────────────────────────────────────────
 
-app.post("/login", async (c) => {
+app.post("/login", rateLimiter(), async (c) => {
   try {
     const body = await c.req.json();
     const { identifier, email, password } = body;
