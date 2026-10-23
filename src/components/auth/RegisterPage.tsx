@@ -2,18 +2,26 @@
  * PAGE D'INSCRIPTION - SmartCabb
  * ✅ Avec indication de chargement, messages d'erreur friendly
  * ✅ Rate limiting à 5 tentatives/15min
- * ✅ Utilise useApiCall + LoadingOverlay
+ * ✅ Bouton retour flèche dans l'en-tête
+ * ✅ Utilise useApiCall + LoadingScreen
  * @author SmartCabb Team
  * @date 15 Mars 2026
  */
 
 import { useState } from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 import { useApiCall } from '../../hooks/useApi';
 import { register } from '../../supabase/functions/make-server-2eb02e52/auth-routes';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { toast } from '../../components/ui/toast';
+import { Icons } from '../../lib/icons';
 
-export function RegisterPage() {
+interface RegisterPageProps {
+  onNavigate: (screen: 'login' | 'home' | 'searching' | 'driver_found' | 'settings' | 'history' | 'wallet' | 'profile') => void;
+}
+
+export function RegisterPage({ onNavigate }: RegisterPageProps) {
+  const { t } = useTranslation();
   const [fullName, setFullName] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -48,114 +56,66 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Inscription à SmartCabb
-        </h2>
+    <div className="min-h-screen bg-white">
+      {/* Header avec bouton retour */}
+      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+        <button
+          onClick={() => onNavigate('login')}
+          className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
+        >
+          <Icons.ArrowLeft className="w-5 h-5 text-gray-700" />
+        </button>
+        <h1 style={{ fontSize: 17, fontWeight: 700, color: "#222222" }}>{t("register_title")}</h1>
+      </div>
 
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nom complet
-            </label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Jean Mukendi"
-              required
-            />
-          </div>
+      <div className="px-6 pt-6 pb-28">
+        <p style={{ fontSize: 14, color: "#6B7280", marginBottom: 24 }}>{t("register_subtitle")}</p>
+        <div className="space-y-4">
+          {[
+            { label: t("full_name"), placeholder: "Jean Mukendi", type: "text" },
+            { label: t("phone_number"), placeholder: "+243 XXX XXX XXX", type: "tel" },
+            { label: t("password"), placeholder: "••••••••", type: "password" },
+            { label: t("confirm_password"), placeholder: "••••••••", type: "password" },
+          ].map(({ label, placeholder, type }) => (
+            <div key={label}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>{label}</label>
+              <input
+                type={type}
+                placeholder={placeholder}
+                className="w-full px-4 py-3 rounded-xl border outline-none transition-all"
+                style={{ borderColor: "#E5E7EB", fontSize: 14, background: "#F9FAFB" }}
+                onFocus={(e) => (e.target.style.borderColor = "#007AFF")}
+                onBlur={(e) => (e.target.style.borderColor = "#E5E7EB")}
+              />
+            </div>
+          ))}
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Téléphone
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="+243 XXX XXX XXX"
-              required
-            />
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••••••••••"
-              required
-            />
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Confirmer le mot de passe
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="••••••••••••••••"
-            />
-          </div>
-
-          <div className="mb-6 flex items-start">
-            <input
-              type="checkbox"
-              id="rememberMe2"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-500 focus:ring-2 focus:ring-blue-500 cursor-pointer mr-2"
-            />
-            <label htmlFor="rememberMe2" className="text-sm text-gray-600 cursor-pointer">
-              Se souvenir de moi
+          <div className="flex items-start gap-3 py-2">
+            <input type="checkbox" id="terms" className="mt-1 w-4 h-4 accent-blue-500" />
+            <label htmlFor="terms" style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.5 }}>
+              {t("terms_agree")}{" "}
+              <span style={{ color: "#007AFF", fontWeight: 600 }}>{t("terms_link")}</span>
             </label>
           </div>
 
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 transition-colors"
+            onClick={() => onNavigate('home')}
+            className="w-full py-4 rounded-2xl text-white transition-all active:scale-95 shadow-lg"
+            style={{ background: "linear-gradient(135deg, #007AFF, #007AFF)", fontSize: 15, fontWeight: 700 }}
           >
-            {loading ? 'Inscription en cours...' : 'Créer un compte'}
+            {t("register_btn")}
           </button>
 
-          {error && (
-            <p className="mt-3 text-sm text-red-600">{error}</p>
-          )}
-
-          {success && (
-            <p className="mt-3 text-sm text-green-600">
-              Inscription réussie ! Veuillez vous connecter.
-            </p>
-          )}
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Vous avez déjà un compte ?
-            <a
-              href="/connexion"
-              className="text-blue-600 underline hover:text-blue-800"
-            >
-              Connectez-vous
-            </a>
-          </p>
+          <div className="flex items-center justify-center gap-1">
+            <span style={{ fontSize: 14, color: "#6B7280" }}>{t("already_account")}</span>
+            <button onClick={() => onNavigate('login')} style={{ fontSize: 14, color: "#007AFF", fontWeight: 600 }}>
+              {t("login_link")}
+            </button>
+          </div>
         </div>
       </div>
 
-      <LoadingOverlay isLoading={loading} />
+      <LoadingScreen isLoading={loading} />
     </div>
   );
 }
