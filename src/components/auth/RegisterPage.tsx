@@ -10,7 +10,7 @@
 import { useState } from 'react';
 import { useApiCall } from '../../hooks/useApi';
 import { register } from '../../supabase/functions/make-server-2eb02e52/auth-routes';
-import { LoadingOverlay } from '../../components/LoadingOverlay';
+import { LoadingScreen } from '../../components/LoadingScreen';
 import { toast } from '../../components/ui/toast';
 
 export function RegisterPage() {

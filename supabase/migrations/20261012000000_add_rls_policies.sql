@@ -102,6 +102,20 @@ CREATE POLICY "Admins can do anything via service role" ON scheduled_rides
 --   );
 
 -- -----------------------------------------------------
+-- GRANTs pour l'API de données Supabase (requis à partir du 30/10/2026)
+-- -----------------------------------------------------
+
+-- Table profiles : accès public et authentifié
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO service_role;
+
+-- Table scheduled_rides : accès public et authentifié
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.scheduled_rides TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.scheduled_rides TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.scheduled_rides TO service_role;
+
+-- -----------------------------------------------------
 -- Résumé des règles appliquées :
 -- - Tout utilisateur authentifié isole ses données via auth.uid() = user_id
 -- - Les conducteurs peuvent voir leurs courses assignées

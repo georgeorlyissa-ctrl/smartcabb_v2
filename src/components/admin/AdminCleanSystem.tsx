@@ -9,7 +9,7 @@
 
 import { useState } from 'react';
 import { useApiCall } from '../../hooks/useApi';
-import { LoadingOverlay } from '../../components/LoadingOverlay';
+import { LoadingScreen } from '../../components/LoadingScreen';
 import { toast } from '../../components/ui/toast';
 import { ArrowLeft } from 'lucide-react';
 
