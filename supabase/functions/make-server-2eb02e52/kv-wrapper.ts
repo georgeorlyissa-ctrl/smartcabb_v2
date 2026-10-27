@@ -1,4 +1,4 @@
-import * as kvStore from "./kv_store.tsx";
+import * as kvStore from "./kv_store.ts";
 
 /**
  * Wrapper autour du KV store pour gérer les erreurs de connexion
