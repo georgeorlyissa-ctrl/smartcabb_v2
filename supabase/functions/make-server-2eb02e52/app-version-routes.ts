@@ -17,7 +17,17 @@ const KV_TABLE = "kv_store_2eb02e52";
 const VERSION_KEY = "app:version";
 
 // Secret pour la mise à jour de la version (header `x-update-key`)
-const UPDATE_SECRET = "SmartCabbApk2026!";
+// ⚠️ Configuré dans Supabase → Settings → Edge Functions → Secrets (APK_UPDATE_SECRET).
+// Ne JAMAIS remettre de valeur en dur ici : le repo GitHub est public.
+const UPDATE_SECRET = (Deno.env.get("APK_UPDATE_SECRET") ?? "").trim();
+
+// Préfixes autorisés pour le fichier APK. Empêche de pointer les utilisateurs
+// vers un binaire hébergé sur un autre serveur, même si le secret fuit.
+const APK_URL_PREFIXES = [
+  "https://zaerjqchzqmcxqblkfkg.supabase.co/storage/v1/object/public/apk/",
+  "https://www.smartcabb.com/",
+  "https://smartcabb.com/",
+];
 
 function kvClient() {
   return createClient(
@@ -71,7 +81,13 @@ app.get("/version", async (c) => {
 // ═════════════════════════════════════════════════════════════════════════════
 app.post("/version", async (c) => {
   try {
-    const key = c.req.header("x-update-key");
+    // Refus sécurisé : route fermée tant que le secret n'est pas configuré côté Supabase
+    if (!UPDATE_SECRET) {
+      console.error("❌ APK_UPDATE_SECRET non configuré - mise à jour de version refusée");
+      return c.json({ success: false, error: "Mise à jour désactivée" }, 503);
+    }
+
+    const key = (c.req.header("x-update-key") ?? "").trim();
     if (key !== UPDATE_SECRET) {
       return c.json({ success: false, error: "Accès refusé" }, 401);
     }
@@ -79,6 +95,21 @@ app.post("/version", async (c) => {
     const body = await c.req.json();
     if (!body?.version || typeof body.version !== "string") {
       return c.json({ success: false, error: "Champ version requis" }, 400);
+    }
+    if (body.version.length > 20) {
+      return c.json({ success: false, error: "Version invalide" }, 400);
+    }
+    if (body.versionCode !== undefined && (!Number.isInteger(body.versionCode) || body.versionCode < 0)) {
+      return c.json({ success: false, error: "versionCode invalide" }, 400);
+    }
+    if (body.message !== undefined && (typeof body.message !== "string" || body.message.length > 300)) {
+      return c.json({ success: false, error: "Message invalide" }, 400);
+    }
+    if (body.apkUrl !== undefined) {
+      const url = typeof body.apkUrl === "string" ? body.apkUrl.trim() : "";
+      if (!url || !APK_URL_PREFIXES.some((prefix) => url.startsWith(prefix))) {
+        return c.json({ success: false, error: "apkUrl non autorisé" }, 400);
+      }
     }
 
     const current = (await kvGet(VERSION_KEY)) || DEFAULT_VERSION;
