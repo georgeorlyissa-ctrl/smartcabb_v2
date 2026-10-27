@@ -1,1 +1,7 @@
-{ "version": "518.5.0", "apkUrl": "https://www.smartcabb.com/smartcabb.apk", "message": "Nouvelle version SmartCabb disponible", "force": false }
+{
+  "version": "1.3",
+  "versionCode": 6,
+  "apkUrl": "https://zaerjqchzqmcxqblkfkg.supabase.co/storage/v1/object/public/apk/smartcabb.apk",
+  "message": "Nouvelle version SmartCabb disponible",
+  "force": false
+}
