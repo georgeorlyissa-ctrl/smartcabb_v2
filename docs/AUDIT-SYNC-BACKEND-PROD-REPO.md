@@ -143,3 +143,54 @@ Le backend exigerait un `confirmationCode`, mais **le chauffeur, dans le parcour
 | 2 | Déployer le backend `main` (3 fichiers) | faible une fois l'étape 1 faite |
 | 3 | Tests : connexion, inscription, commande de course, acceptation, démarrage avec code, arrêt, paiement | — |
 | 4 | Supprimer les 4 fichiers morts du repo | nul |
+
+---
+
+## 8. Mise en œuvre — 28 octobre 2026
+
+Décision retenue : **déployer le backend tout de suite**, en neutralisant le contrôle du code de confirmation jusqu'à ce que le frontend l'envoie.
+
+**Backend `main` déployé** : version **110**, le 28/10/2026 à 18:51 UTC.
+
+### Neutralisation du contrôle du code
+
+`supabase/functions/make-server-2eb02e52/ride-routes.ts` :
+
+```ts
+const CONFIRMATION_CODE_REQUIRED =
+  (Deno.env.get("RIDE_CONFIRMATION_CODE_REQUIRED") ?? "").trim().toLowerCase() === "true";
+
+if (CONFIRMATION_CODE_REQUIRED && !confirmationCode) { /* 400 */ }
+ride.confirmationCodeVerified = !!confirmationCode;
+```
+
+- Par défaut : **désactivé** → le démarrage de course fonctionne comme avant.
+- Réactivation **sans redéploiement** : secret Supabase `RIDE_CONFIRMATION_CODE_REQUIRED=true`, à ne faire qu'une fois le frontend capable d'envoyer le code.
+
+### Rate limiting effectif
+
+| Limiteur | Par défaut | Réglage sans redéploiement |
+|---|---|---|
+| Global (`app.use('*')`) | **désactivé** | `RATE_LIMIT_GLOBAL_MAX=<n>` (0 = off) |
+| Authentification (`/signup`, `/login`) | **10 / 15 min**, compté par IP **+ identifiant** | `RATE_LIMIT_AUTH_MAX=<n>` |
+
+Raison du comptage par identifiant : au Congo, des dizaines d'utilisateurs partagent la même IP publique (CGNAT) ; un compteur par IP seule aurait bloqué des connexions légitimes.
+
+### Vérifications faites en production
+
+| Vérification | Résultat |
+|---|---|
+| `GET /health` | `200` — `{"status":"ok","version":"2.0.2"}` |
+| `GET /app/version` | `200` — lit bien le KV |
+| `POST /rides/start` **sans** `confirmationCode` | `404 Course non trouvée` → **le contrôle du code ne bloque plus** (avant : `400 Code de confirmation requis`) |
+| `POST /auth/login` (identifiants faux) | `401 Email ou mot de passe incorrect` + en-têtes `ratelimit-limit: 10`, `ratelimit-remaining: 9` |
+| En-têtes sur route non-auth | aucun `ratelimit-*` → limiteur global bien inactif |
+| `POST /app/version` avec l'ancienne clé exposée | `401 Accès refusé` |
+
+### Points de suivi
+
+| Sujet | Détail |
+|---|---|
+| Latence de `/auth/login` | Le limiteur ajoute 2 allers-retours SQL (lecture + écriture KV) : ~+3 s mesurées depuis l'extérieur. Optimisable en une seule requête via une fonction SQL `rate_limit_hit()` (1 migration à appliquer). |
+| Code de confirmation | À implémenter côté frontend (voir section 4), puis activer le secret `RIDE_CONFIRMATION_CODE_REQUIRED`. |
+| Fichiers morts | `kv_store.ts`, `kv-wrapper.ts`, `uuid-validator.ts`, `email-validation.ts` toujours présents, supprimables. |
