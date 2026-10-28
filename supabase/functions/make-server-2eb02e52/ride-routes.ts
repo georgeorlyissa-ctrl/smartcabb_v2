@@ -1097,6 +1097,16 @@ app.post("/arrived", async (c) => {
 // ============================================
 // POST /start - Démarrer une course
 // ============================================
+
+// ⏸️ Exigence du code de confirmation au démarrage : DÉSACTIVÉE (28/10/2026).
+// Le parcours chauffeur réellement en production (NavigationScreen) n'envoie pas
+// encore le code, la vérification est donc neutralisée pour ne pas bloquer les
+// démarrages de course. À réactiver sans redéploiement une fois la saisie du code
+// branchée dans l'app mobile :
+//   Supabase → Settings → Edge Functions → Secrets → RIDE_CONFIRMATION_CODE_REQUIRED=true
+const CONFIRMATION_CODE_REQUIRED =
+  (Deno.env.get("RIDE_CONFIRMATION_CODE_REQUIRED") ?? "").trim().toLowerCase() === "true";
+
 app.post("/start", async (c) => {
   try {
     const { rideId, driverId, confirmationCode } = await c.req.json();
@@ -1114,25 +1124,24 @@ app.post("/start", async (c) => {
       return c.json({ success: false, error: "Vous n'êtes pas le chauffeur assigné" }, 403);
     }
     
-    // ✅ VÉRIFICATION CODE DE CONFIRMATION - Empêcher le démarrage sans code
+    // ✅ VÉRIFICATION CODE DE CONFIRMATION (désactivée, voir CONFIRMATION_CODE_REQUIRED)
     // Le passager reçoit un code 4 chiffres par SMS. Le chauffeur doit le saisir.
-    if (!confirmationCode) {
+    if (CONFIRMATION_CODE_REQUIRED && !confirmationCode) {
       return c.json({ success: false, error: "Code de confirmation requis pour démarrer la course" }, 400);
     }
-    
-    // Récupérer le code attendu (stocké au moment de l'acceptation de la course)
-    // Le code est généré côté client et envoyé au chauffeur par SMS
-    // On vérifie ici que le code a été fourni (la vérification complète se fait côté client)
-    // Mais on s'assure au minimum que le champ n'est pas vide
-    
+
     // Démarrer la course
     ride.status = 'in_progress';
     ride.startedAt = new Date().toISOString();
-    ride.confirmationCodeVerified = true;
-    
+    // On garde la trace du code fourni, même quand l'exigence est désactivée
+    ride.confirmationCodeVerified = !!confirmationCode;
+
     await kv.set(`ride:${rideId}`, ride);
-    
-    console.log(`✅ Course ${rideId} démarrée par ${driverId} avec code de confirmation`);
+
+    console.log(
+      `✅ Course ${rideId} démarrée par ${driverId}` +
+      (confirmationCode ? " avec code de confirmation" : " sans code (vérification désactivée)")
+    );
     
     return c.json({ success: true, ride });
   } catch (error) {
