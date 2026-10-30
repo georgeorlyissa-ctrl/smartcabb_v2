@@ -6,7 +6,7 @@ import { Badge } from '../ui/badge';
 import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
 import { toast } from '../../lib/toast';
-import { ArrowLeft, Car, Users, Clock, MapPin, Info, Sun, Moon, Calendar, ChevronDown, ChevronUp } from '../../lib/icons';
+import { ArrowLeft, Car, Users, Clock, MapPin, Info, Sun, Moon, Calendar } from '../../lib/icons';
 import { VehicleCategory, PromoCode } from '../../types';
 import { VEHICLE_PRICING, convertUSDtoCDF, formatCDF, isDayTime } from '../../lib/pricing';
 import { calculateRoute, calculateDistanceHaversine } from '../../lib/distance-calculator';
@@ -48,8 +48,9 @@ const businessVehicle2 = '/vehicles/smartcabb_business/Business_2.jpg';
 export function EstimateScreen() {
   const { t, language } = useTranslation();
   const { setCurrentScreen, createRide, state, calculateDistance } = useAppState();
-  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('smart_standard_clim');
-  const [standardExpanded, setStandardExpanded] = useState(true);
+  // 🚦 « smart_standard » = SmartCabb Standard (la variante « sans clim » est en pause,
+  // voir NO_CLIM_CATEGORY_ENABLED dans lib/pricing-data.ts).
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('smart_standard');
   const [passengerCount, setPassengerCount] = useState(1);
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [basePrice, setBasePrice] = useState(12500);
@@ -156,31 +157,17 @@ export function EstimateScreen() {
 
   const vehicles = [
     {
-      id: 'smart_standard_clim' as VehicleCategory,
+      id: 'smart_standard' as VehicleCategory,
       name: 'SmartCabb Standard',
-      description: `${VEHICLE_PRICING.smart_standard_clim.capacity} ${t('seats')} · Climatisation · GPS`,
-      capacity: VEHICLE_PRICING.smart_standard_clim.capacity,
+      description: `${VEHICLE_PRICING.smart_standard.capacity} ${t('seats')} · Climatisation · GPS`,
+      capacity: VEHICLE_PRICING.smart_standard.capacity,
       icon: Car,
       color: 'bg-gray-100',
-      hourlyRateUSD: VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.jour.usd,
-      nightRateUSD: VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.nuit.usd,
-      hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.jour.usd),
-      rateText: `${VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.jour.usd}$/h`,
-      rateTextNight: `${VEHICLE_PRICING.smart_standard_clim.pricing.course_heure.nuit.usd}$/h`,
-      images: [standardVehicle1, standardVehicle2, standardVehicle3, standardVehicle4, standardVehicle5, standardVehicle6]
-    },
-    {
-      id: 'smart_standard_no_clim' as VehicleCategory,
-      name: 'SmartCabb Standard sans Clim',
-      description: `${VEHICLE_PRICING.smart_standard_no_clim.capacity} ${t('seats')} · Sans Clim`,
-      capacity: VEHICLE_PRICING.smart_standard_no_clim.capacity,
-      icon: Car,
-      color: 'bg-gray-50',
-      hourlyRateUSD: VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.jour.usd,
-      nightRateUSD: VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.nuit.usd,
-      hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.jour.usd),
-      rateText: `${VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.jour.usd}$/h`,
-      rateTextNight: `${VEHICLE_PRICING.smart_standard_no_clim.pricing.course_heure.nuit.usd}$/h`,
+      hourlyRateUSD: VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd,
+      nightRateUSD: VEHICLE_PRICING.smart_standard.pricing.course_heure.nuit.usd,
+      hourlyRateCDF: convertUSDtoCDF(VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd),
+      rateText: `${VEHICLE_PRICING.smart_standard.pricing.course_heure.jour.usd}$/h`,
+      rateTextNight: `${VEHICLE_PRICING.smart_standard.pricing.course_heure.nuit.usd}$/h`,
       images: [standardVehicle1, standardVehicle2, standardVehicle3, standardVehicle4, standardVehicle5, standardVehicle6]
     },
     {
@@ -492,10 +479,8 @@ export function EstimateScreen() {
   const dayLabel = t('good_morning').startsWith('Bonjour') ? 'Jour' : 'Day';
   const nightLabel = t('good_evening').startsWith('Bonsoir') ? 'Nuit' : 'Night';
 
-  const isStandardVariant = (id: string) => id === 'smart_standard_clim' || id === 'smart_standard_no_clim';
-  const standardVehicles = vehicles.filter(v => isStandardVariant(v.id));
-  const otherVehicles = vehicles.filter(v => !isStandardVariant(v.id));
-  const isStandardSelected = isStandardVariant(selectedVehicle);
+  // 🚦 Standard : une seule carte (la variante « sans clim » est en pause)
+  const isStandardVariant = (id: string) => id === 'smart_standard' || id === 'smart_standard_clim';
 
   const renderVehicleCard = (vehicle: (typeof vehicles)[number]) => {
     const isSelected = selectedVehicle === vehicle.id;
@@ -860,65 +845,8 @@ export function EstimateScreen() {
             {/* Grille véhicules */}
             <div className="px-4">
               <div className="grid grid-cols-2 gap-1.5">
-                {/* Carte principale SmartCabb Standard — pliable */}
-                <motion.button
-                  key="standard-group"
-                  onClick={() => setStandardExpanded(!standardExpanded)}
-                  whileTap={{ scale: 0.97 }}
-                  className={`col-span-2 w-full rounded-lg border transition-all duration-300 bg-white overflow-hidden text-left ${
-                    isStandardSelected && standardExpanded
-                      ? 'border-secondary bg-secondary/5 shadow-lg shadow-secondary/20'
-                      : 'border-border hover:border-secondary/50 hover:shadow-md'
-                  }`}
-                >
-                  <div className="p-2 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Car className="w-3.5 h-3.5 text-secondary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-xs font-bold text-foreground">SmartCabb Standard</h3>
-                        <p className="text-[9px] text-muted-foreground mt-0.5">
-                          {isStandardSelected
-                            ? selectedVehicle === 'smart_standard_clim'
-                              ? `✓ ${t('success')} · 3 ${t('seats')} · Climatisation`
-                              : `✓ ${t('success')} · 3 ${t('seats')} · Sans Clim`
-                            : 'Choisissez : avec ou sans clim'
-                          }
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <span className="text-[9px] font-bold text-secondary">
-                          {isStandardSelected ? `✓ ${t('success')}` : ''}
-                        </span>
-                        {standardExpanded ? (
-                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </motion.button>
-
-                {!standardExpanded && (
-                  <motion.div
-                    key="standard-collapsed-hint"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="col-span-2 px-1 -mt-1"
-                  >
-                    <p className="text-[9px] text-muted-foreground italic">
-                      👇 Touchez « SmartCabb Standard » pour voir les deux options (avec clim / sans clim)
-                    </p>
-                  </motion.div>
-                )}
-
-                {/* Variantes Standard (pleine largeur) */}
-                {standardExpanded && standardVehicles.map(renderVehicleCard)}
-
-                {/* Autres véhicules */}
-                {otherVehicles.map(renderVehicleCard)}
+                {/* Véhicules : SmartCabb Standard, Confort, Familiale, Business */}
+                {vehicles.map(renderVehicleCard)}
               </div>
             </div>
 
@@ -1059,8 +987,8 @@ export function EstimateScreen() {
               <Calendar className="w-5 h-5" />
               🚗 {{
                 smart_standard: 'SmartCabb Standard',
-                smart_standard_clim: 'SmartCabb Standard avec Clim',
-                smart_standard_no_clim: 'SmartCabb Standard sans Clim',
+                smart_standard_clim: 'SmartCabb Standard',
+                smart_standard_no_clim: 'SmartCabb Standard',
                 smart_confort: 'SmartCabb Confort',
                 smart_plus: 'SmartCabb Familiale',
                 smart_business: 'SmartCabb Business'
@@ -1069,8 +997,8 @@ export function EstimateScreen() {
             <DialogDescription>
               Réservez votre course <strong>{{
                 smart_standard: 'Standard (3 places)',
-                smart_standard_clim: 'Standard Clim (3 places)',
-                smart_standard_no_clim: 'Standard sans Clim (3 places)',
+                smart_standard_clim: 'Standard (3 places)',
+                smart_standard_no_clim: 'Standard (3 places)',
                 smart_confort: 'Confort (3 places + Data)',
                 smart_plus: 'Familiale (6 places)',
                 smart_business: 'Business VIP (4 places)'

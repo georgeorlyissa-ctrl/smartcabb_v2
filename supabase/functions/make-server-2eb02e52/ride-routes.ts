@@ -14,23 +14,26 @@ function isDriverAvailable(d: any): boolean {
   return d.available === true || d.is_available === true || d.status === 'online';
 }
 
-// ✅ Catégories Standard :
-//  - 'smart_standard' (legacy) == 'smart_standard_clim' : le produit historique "SmartCabb
-//    STANDARD (Clim)". Le legacy est normalisé → clim, pour ne PLUS jamais matcher
-//    une demande "sans clim" (bug : un chauffeur clim recevait les courses no_clim).
-//  - 'smart_standard_no_clim' : produit distinct (505 FC/km) → matche UNIQUEMENT
-//    les chauffeurs no_clim.
+// ✅ Catégories Standard — 🚦 la variante « sans clim » est EN PAUSE (28/10/2026) :
+//  - 'smart_standard_no_clim' est fusionnée dans 'smart_standard' : les chauffeurs
+//    « sans clim » roulent désormais avec les Standard, et une éventuelle course
+//    no_clim résiduelle retombe sur le même pool.
+//  - 'smart_standard' (legacy) == 'smart_standard_clim' : le produit historique
+//    "SmartCabb STANDARD". Le legacy est normalisé → clim pour que les anciennes
+//    courses et anciens chauffeurs matchent le même pool.
 // Compatibilité STRICTE après normalisation.
 function normalizeCategory(cat: string | undefined): string | undefined {
   if (!cat) return undefined;
   if (cat === 'smart_standard') return 'smart_standard_clim';
+  if (cat === 'smart_standard_no_clim') return 'smart_standard_clim';
   return cat;
 }
 function categoriesCompatible(a: string | undefined, b: string | undefined): boolean {
   const na = normalizeCategory(a);
   const nb = normalizeCategory(b);
   if (!na || !nb) return false;
-  // Compatibilité stricte : clim <-> clim, no_clim <-> no_clim
+  // Compatibilité stricte après normalisation (toutes les variantes Standard
+  // sont ramenées au même pool tant que « sans clim » est en pause)
   return na === nb;
 }
 
@@ -847,8 +850,10 @@ app.post("/accept", async (c) => {
       smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
       smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
     };
-    const rideCategory = ride.vehicleCategory || ride.vehicleType ||
-                         driver.vehicleCategory || driver.vehicle?.category || 'smart_standard';
+    const rideCategory = normalizeCategory(
+      ride.vehicleCategory || ride.vehicleType ||
+      driver.vehicleCategory || driver.vehicle?.category || 'smart_standard'
+    ) || 'smart_standard';
     const requiredBalance = MIN_COMMISSION_BY_CATEGORY[rideCategory] ??
                             Math.round(0.15 * 6 * 2800); // fallback standard
 
@@ -1769,8 +1774,10 @@ app.post("/complete", async (c) => {
           smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
           smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
         };
-        const driverCategory = driver.vehicleCategory || driver.vehicle_category ||
-                               driver.vehicle?.category || 'smart_standard';
+        // 🚦 variantes Standard fusionnées (sans clim en pause)
+        const driverCategory = normalizeCategory(
+          driver.vehicleCategory || driver.vehicle_category || driver.vehicle?.category || 'smart_standard'
+        ) || 'smart_standard';
         const minimumCredit  = MIN_CREDITS_BY_CATEGORY[driverCategory] ?? Math.round(0.15 * 6 * 2800);
 
         let forcedOffline = false;
@@ -1902,8 +1909,10 @@ app.post("/:id/complete", async (c) => {
           smart_plus:     Math.round(0.15 * 12  * 2800), // 5 040 CDF
           smart_business: Math.round(0.15 * 160 * 2800), // 67 200 CDF
         };
-        const driverCategory = driver.vehicleCategory || driver.vehicle_category ||
-                               driver.vehicle?.category || 'smart_standard';
+        // 🚦 variantes Standard fusionnées (sans clim en pause)
+        const driverCategory = normalizeCategory(
+          driver.vehicleCategory || driver.vehicle_category || driver.vehicle?.category || 'smart_standard'
+        ) || 'smart_standard';
         const minimumCredit  = MIN_CREDITS_BY_CATEGORY[driverCategory] ?? 5000;
 
         let forcedOffline = false;

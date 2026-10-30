@@ -35,13 +35,20 @@ const MULTIPLIERS: Record<string, number> = {
 };
 
 const FREE_TIERS: Record<string, { points: number; cap: number; label: string }> = {
-  smart_standard_no_clim: { points: 7500, cap: 4000, label: "Standard sans clim gratuite" },
+  // 🚦 « Standard sans clim » est en pause et « Standard avec Clim » est fusionnée :
+  // un seul palier Standard (les variantes héritées sont ramenées ici au moment de l'échange).
   smart_standard: { points: 7500, cap: 6500, label: "Standard gratuite" },
-  smart_standard_clim: { points: 7500, cap: 6500, label: "Standard clim gratuite" },
   smart_confort: { points: 12000, cap: 9000, label: "Confort gratuite" },
   smart_plus: { points: 20000, cap: 13000, label: "Plus gratuite" },
   smart_business: { points: 35000, cap: 25000, label: "Business gratuite" },
 };
+
+/** Ramène les variantes Standard héritées vers la catégorie unique « smart_standard ». */
+function normalizeStandardVariant(category: string): string {
+  return category === 'smart_standard_clim' || category === 'smart_standard_no_clim'
+    ? 'smart_standard'
+    : category;
+}
 
 const DISCOUNT_TIERS = [
   { points: 3000, discount: 0.15, cap: 2000, label: "-15%" },
@@ -208,7 +215,7 @@ app.post("/redeem", async (c) => {
     let discountRate: number | null = null;
     if (freeTier) {
       if (!category) return c.json({ success: false, error: "Catégorie requise pour une course gratuite" }, 400);
-      const tier = FREE_TIERS[category];
+      const tier = FREE_TIERS[normalizeStandardVariant(category)];
       if (!tier || tier.points !== points) return c.json({ success: false, error: "Palier incompatible avec la catégorie" }, 400);
       cap = tier.cap;
       label = tier.label;

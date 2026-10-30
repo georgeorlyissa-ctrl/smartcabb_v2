@@ -44,12 +44,11 @@ export function getVehicleDisplayName(vehicleInfo: VehicleInfo | null | undefine
       return 'SmartCabb Standard avec Clim';
 
     case 'smart_standard':
+    case 'smart_standard_clim':
+    case 'smart_standard_no_clim': // 🚦 variante « sans clim » en pause → affichée comme Standard
     case 'standard':
     case 'economique':
       return 'SmartCabb Standard';
-
-    case 'smart_standard_no_clim':
-      return 'SmartCabb Standard sans Clim';
 
     case 'smart_confort':
     case 'comfort':
@@ -81,12 +80,10 @@ export function getVehicleCategoryDescription(category: string): string {
   switch (category) {
     case 'smart_standard':
     case 'smart_standard_clim':
+    case 'smart_standard_no_clim': // 🚦 variante « sans clim » en pause (fusionnée dans Standard)
     case 'standard':
     case 'economique':
-      return 'Toyota IST, Vitz, Swift, Blade, Ractis, Runx (3 places, Clim)';
-
-    case 'smart_standard_no_clim':
-      return 'Toyota IST, Vitz, Swift, Blade, Ractis, Runx (3 places, sans Clim)';
+      return 'Toyota IST, Vitz, Swift, Blade, Ractis, Runx (3 places)';
     
     case 'smart_confort':
     case 'comfort':

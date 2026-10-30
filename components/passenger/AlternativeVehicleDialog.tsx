@@ -40,8 +40,8 @@ export function AlternativeVehicleDialog({
 
   const categoryNames: Record<VehicleCategory, string> = {
     'smart_standard': 'SmartCabb Standard',
-    'smart_standard_clim': 'SmartCabb Standard avec Clim',
-    'smart_standard_no_clim': 'SmartCabb Standard sans Clim',
+    'smart_standard_clim': 'SmartCabb Standard', // 🚦 une seule catégorie Standard
+    'smart_standard_no_clim': 'SmartCabb Standard', // 🚦 variante en pause → affichée comme Standard
     'smart_confort': 'SmartCabb Confort',
     'smart_plus': 'SmartCabb Plus',
     'smart_business': 'SmartCabb Business'

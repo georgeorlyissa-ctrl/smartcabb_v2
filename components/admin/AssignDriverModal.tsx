@@ -7,6 +7,7 @@ import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 import { supabase } from '../../lib/supabase';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
+import { normalizeVehicleCategory } from '../../lib/pricing-data';
 
 export interface AssignableRide {
   id: string;
@@ -41,14 +42,16 @@ function digitsOnly(phone: string): string {
 }
 
 // Compatibilité catégorie : la réservation n'accepte que les conducteurs
-// de la catégorie choisie (standard sans clim exclu des réservations).
+// de la catégorie choisie. 🚦 La variante « Standard sans clim » est en pause :
+// ses conducteurs sont désormais des conducteurs « Standard ».
 function normCategory(c?: string | null): string {
-  return (c || '').toLowerCase().replace(/^smart_/, '');
+  const normalized = normalizeVehicleCategory(c) || '';
+  return normalized.toLowerCase().replace(/^smart_/, '');
 }
 function isCategoryCompatible(driverCat: string | undefined, rideCat: string): boolean {
   const d = normCategory(driverCat);
   const r = normCategory(rideCat);
-  if (r === 'standard') return d === 'standard' || d === 'standard_clim';
+  if (r === 'standard' || r === 'standard_clim') return d === 'standard' || d === 'standard_clim';
   return d === r;
 }
 const driverCategoryOf = (d: any): string => d.vehicle_category || d.vehicle?.category || '';

@@ -12,6 +12,7 @@ import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { safeFormatDate, safeFormatDateShort } from '../../utils/dateHelpers'; // 🔥 IMPORT
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
+import { normalizeVehicleCategory } from '../../lib/pricing-data';
 
 import type { EnrichedDriver, EnrichedRide } from '../../hooks/useSupabaseData';
 import type { Vehicle } from '../../lib/supabase';
@@ -88,7 +89,8 @@ export function DriverDetailModal({
     model: driverVehicle?.model || '',
     license_plate: driverVehicle?.license_plate || '',
     color: driverVehicle?.color || '',
-    category: driverVehicle?.category || 'smart_standard',
+    // 🚦 « smart_standard_no_clim » est fusionnée dans « smart_standard » (variante en pause)
+    category: normalizeVehicleCategory(driverVehicle?.category) || 'smart_standard',
   });
 
   if (!driver) return null;
@@ -982,8 +984,6 @@ export function DriverDetailModal({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="smart_standard">SmartCabb Standard</SelectItem>
-                          <SelectItem value="smart_standard_clim">SmartCabb Standard avec Clim</SelectItem>
-                          <SelectItem value="smart_standard_no_clim">SmartCabb Standard sans Clim</SelectItem>
                           <SelectItem value="smart_confort">SmartCabb Confort</SelectItem>
                           <SelectItem value="smart_plus">SmartCabb Plus / Familiale</SelectItem>
                           <SelectItem value="smart_business">SmartCabb Business</SelectItem>

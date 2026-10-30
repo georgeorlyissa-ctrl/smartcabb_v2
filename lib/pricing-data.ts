@@ -10,10 +10,47 @@
 export type VehicleCategory = 
   | 'smart_standard'        // 3 places — catégorie générique (rétro-compat)
   | 'smart_standard_clim'   // 3 places avec Clim
-  | 'smart_standard_no_clim'// 3 places sans Clim
+  | 'smart_standard_no_clim'// 3 places sans Clim (en pause, voir NO_CLIM_CATEGORY_ENABLED)
   | 'smart_confort'         // 3 places + Data
   | 'smart_plus'            // 7 places + Data (Familiale)
   | 'smart_business';       // 4 places VIP + Data + Rafraîchissement
+
+/**
+ * 🚦 BASCULE TEMPORAIRE — catégorie « SmartCabb Standard sans Clim » mise en pause
+ * le 28/10/2026.
+ *
+ * Quand la valeur est `false` :
+ *  - la variante « sans clim » n'est plus proposée au passager ni à l'inscription
+ *    des conducteurs : il ne reste que « SmartCabb Standard » ;
+ *  - tout ce qui référence encore `smart_standard_no_clim` (anciens conducteurs,
+ *    anciennes courses, données déjà en base) est ramené à `smart_standard`,
+ *    donc les conducteurs « sans clim » roulent avec les Standard ;
+ *  - les courses déjà enregistrées restent lisibles (affichage historique).
+ *
+ * Repasser à `true` pour réactiver les deux variantes côte à côte.
+ */
+export const NO_CLIM_CATEGORY_ENABLED = false;
+
+/** Catégorie canonique « SmartCabb Standard » (fusion des variantes clim / sans clim). */
+export const STANDARD_CATEGORY: VehicleCategory = 'smart_standard';
+
+/** Ancienne catégorie « sans clim » (conservée pour l'affichage de l'historique). */
+export const NO_CLIM_CATEGORY: VehicleCategory = 'smart_standard_no_clim';
+
+/**
+ * Ramène une catégorie à sa valeur courante.
+ * - `smart_standard_clim` → `smart_standard` (fusion des variantes, une seule
+ *   catégorie « SmartCabb Standard »).
+ * - `smart_standard_no_clim` → `smart_standard` tant que la variante est en pause.
+ * - `smart_standard_no_clim` → `smart_standard_clim` sinon (comportement historique).
+ * Utile pour normaliser les données conducteurs déjà en base.
+ */
+export function normalizeVehicleCategory(cat?: string | null): VehicleCategory | undefined {
+  if (!cat) return undefined;
+  if (!NO_CLIM_CATEGORY_ENABLED && cat === NO_CLIM_CATEGORY) return STANDARD_CATEGORY;
+  if (cat === 'smart_standard_clim') return STANDARD_CATEGORY;
+  return cat as VehicleCategory;
+}
 
 /**
  * 📋 TYPES DE SERVICES

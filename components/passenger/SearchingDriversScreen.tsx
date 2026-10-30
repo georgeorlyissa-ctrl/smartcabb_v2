@@ -40,8 +40,8 @@ interface PendingRideData {
 
 const VEHICLE_LABELS: Record<string, string> = {
   smart_standard: 'Smart Standard',
-  smart_standard_clim: 'Smart Standard avec Clim',
-  smart_standard_no_clim: 'Smart Standard sans Clim',
+  smart_standard_clim: 'Smart Standard',
+  smart_standard_no_clim: 'Smart Standard', // 🚦 variante en pause → affichée comme Standard
   smart_confort: 'Smart Confort',
   smart_plus: 'Smart Plus / Familiale',
   smart_business: 'Smart Business',

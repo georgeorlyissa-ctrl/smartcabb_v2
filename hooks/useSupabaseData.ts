@@ -9,6 +9,7 @@ import {
 } from '../lib/supabase-services';
 import type { Profile, Driver, Vehicle, Ride, PromoCode, Setting } from '../lib/supabase';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { normalizeVehicleCategory } from '../lib/pricing-data';
 
 // Type enrichi qui combine Driver + Profile + Vehicle
 export type EnrichedDriver = Driver & {
@@ -316,6 +317,11 @@ export function useSupabaseData() {
           (sum: number, r: any) => sum + (r.totalPrice || r.total_amount || r.finalPrice || r.price || r.estimatedPrice || r.fare || r.amount || 0), 0
         );
 
+        // ✅ Catégorie normalisée : les anciens chauffeurs « Standard sans clim »
+        // deviennent des chauffeurs « SmartCabb Standard » (variante en pause).
+        const normalizedCategory =
+          normalizeVehicleCategory(driver.vehicle?.category || driver.vehicleType || driver.vehicle_category) || 'standard';
+
         return {
           ...driver,
           // ✅ Les infos sont déjà dans driver du KV store
@@ -330,7 +336,9 @@ export function useSupabaseData() {
           vehicle_model: driver.vehicle?.model || '',
           vehicle_plate: driver.vehicle?.license_plate || '',
           vehicle_color: driver.vehicle?.color || '',
-          vehicle_category: driver.vehicle?.category || driver.vehicleType || 'standard',
+          vehicle_category: normalizedCategory,
+          vehicleCategory: normalizedCategory,
+          vehicle: driver.vehicle ? { ...driver.vehicle, category: normalizedCategory } : driver.vehicle,
           // ✅ Stats réelles : toujours basé sur les courses, fallback KV
           total_rides:    computedRides > 0 ? computedRides : (driver.total_rides || driver.totalRides || 0),
           total_earnings: computedEarnings > 0 ? computedEarnings : (driver.total_earnings || 0),
