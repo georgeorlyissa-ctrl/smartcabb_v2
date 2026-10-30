@@ -135,7 +135,17 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
   };
 
   const handleManualProcess = async (ride: ScheduledRide) => {
-    if (!confirm('Declencher le traitement maintenant pour cette reservation ?')) return;
+    // 🚦 Le bouton « Traiter » n'est actif qu'après acceptation du conducteur.
+    // Double sécurité ici au cas où l'état aurait changé entre-temps.
+    if (ride.driver_status !== 'accepted') {
+      toast.error(
+        ride.driver_id
+          ? "En attente : le conducteur doit accepter la réservation avant de pouvoir la traiter"
+          : "Aucun conducteur assigné : attribuez la réservation et attendez son acceptation"
+      );
+      return;
+    }
+    if (!confirm('Clôturer cette réservation et la classer dans les traitées ?')) return;
     await setRideStatus(ride.id, 'completed', 'Reservation marquee comme traitee');
   };
 
@@ -190,6 +200,9 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
   const minsToStart = Math.round((scheduledAt.getTime() - Date.now()) / 60000);
   const noPresenceSoon = ride.driver_status === 'accepted' && !(ride as any).presence_confirmed &&
     (ride.status === 'scheduled' || ride.status === 'confirmed') && minsToStart <= 30;
+
+  // 🚦 « Traiter » n'est cliquable qu'une fois la réservation acceptée par le conducteur
+  const driverAccepted = ride.driver_status === 'accepted';
 
   return (
     <Card key={ride.id} className="p-4">
@@ -277,9 +290,24 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                           <XCircle className="w-4 h-4 mr-1" />
                           Annuler
                         </Button>
-                        <Button size="sm" onClick={() => handleManualProcess(ride)} className="bg-green-600">
+                        <Button
+                          size="sm"
+                          onClick={() => handleManualProcess(ride)}
+                          className="bg-green-600"
+                          disabled={!driverAccepted}
+                          title={driverAccepted
+                            ? 'Clôturer la réservation et la classer dans les traitées'
+                            : "Disponible uniquement quand le conducteur a accepté la réservation"}
+                        >
                           Traiter
                         </Button>
+                        {!driverAccepted && (
+                          <span className="text-[10px] text-gray-500 text-center leading-tight max-w-[120px]">
+                            {ride.driver_id
+                              ? '⏳ En attente d’acceptation du conducteur'
+                              : '⏳ Aucun conducteur assigné'}
+                          </span>
+                        )}
                       </>
                     )}
                   </div>

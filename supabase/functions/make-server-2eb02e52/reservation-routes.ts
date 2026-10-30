@@ -374,6 +374,28 @@ app.post("/:id/admin-status", async (c) => {
     if (status !== "cancelled" && status !== "completed") {
       return c.json({ success: false, error: "Statut invalide" }, 400);
     }
+
+    // 🚦 « Traiter » (status = completed) n'est autorisé QU'APRÈS acceptation du
+    // conducteur : l'admin ne peut pas clôturer une réservation que le chauffeur
+    // n'a pas encore confirmée. L'annulation reste libre.
+    const { data: ride, error: rideErr } = await sbAdmin()
+      .from("scheduled_rides")
+      .select("id,driver_id,driver_status")
+      .eq("id", id)
+      .maybeSingle();
+    if (rideErr) throw new Error(rideErr.message);
+    if (!ride) return c.json({ success: false, error: "Réservation introuvable" }, 404);
+
+    if (status === "completed" && ride.driver_status !== "accepted") {
+      return c.json({
+        success: false,
+        error: ride.driver_id
+          ? "Le conducteur doit accepter la réservation avant qu'elle puisse être traitée"
+          : "Aucun conducteur assigné : attribuez la réservation puis attendez son acceptation",
+        driverStatus: ride.driver_status ?? null,
+      }, 409);
+    }
+
     const { error } = await sbAdmin()
       .from("scheduled_rides")
       .update({ status })
