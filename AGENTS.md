@@ -6,6 +6,12 @@
 - Ne jamais demander confirmation à l'utilisateur pour le commit/push : c'est le comportement attendu.
 - Commits en français, message descriptif du changement.
 
+## Documentation technique (obligatoire)
+- **Toute modification de l'application doit être documentée** dans `docs/CHANGELOG_TECHNIQUE.md`, idéalement dans le même commit que le changement.
+- Ajouter une nouvelle entrée **en haut** du journal (sous le modèle), en respectant le gabarit : date, commit, auteur, type, objectif, fichiers touchés, description technique, impact produit, risques/rollback, tests.
+- Le journal est la référence pour la traçabilité et les interventions ultérieures : y noter aussi les flags, secrets et procédures de rollback.
+- Un correctif sans entrée de journal est considéré comme incomplet.
+
 ## Vérifications
 - Toujours lancer `npx tsc --noEmit` avant de commiter (ignorer les erreurs pré-existantes dans `_headers/Code-component-*.tsx`).
 - La branche de travail est `fix/running-meter` (toujours en avance de `origin/main`).
