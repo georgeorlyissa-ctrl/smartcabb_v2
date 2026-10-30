@@ -1182,11 +1182,13 @@ app.post("/cancel", async (c) => {
     if (ride.status === 'cancelled') {
       return c.json({ success: false, error: "Course déjà annulée" }, 400);
     }
-    // ✅ FIX BUG "Annulée" : bloquer l'annulation passager si la course est démarrée
-    if (ride.status === 'in_progress' && cancelledBy === 'passenger') {
+    // 🚦 Une course déjà commencée ne s'annule plus (passager ET chauffeur).
+    // Seule la clôture (Terminer) est possible, ou le support.
+    const started = ride.status === 'in_progress' || !!ride.startedAt;
+    if (started) {
       return c.json({
         success: false,
-        error: "Impossible d'annuler une course en cours de route. Contactez le support.",
+        error: "Impossible d'annuler une course déjà commencée. Terminez la course ou contactez le support.",
       }, 400);
     }
 

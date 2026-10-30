@@ -345,12 +345,18 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
     >
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="bg-white shadow-sm px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 text-sm"
-        >
-          ← Retour
-        </button>
+        {phase === 'in_progress' ? (
+          // 🚦 Course commencée : on ne peut plus quitter ni annuler, on reste
+          // sur l'écran jusqu'à la clôture de la course.
+          <div className="w-16" />
+        ) : (
+          <button
+            onClick={onBack}
+            className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 text-sm"
+          >
+            ← Retour
+          </button>
+        )}
         <div className="flex items-center gap-2">
           <div className={`w-2.5 h-2.5 rounded-full ${
             phase === 'pickup'      ? 'bg-yellow-400' :

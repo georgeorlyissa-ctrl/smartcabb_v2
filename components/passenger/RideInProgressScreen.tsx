@@ -392,58 +392,10 @@ export function RideInProgressScreen() {
     toast.success('WhatsApp ouvert, le message est prêt à envoyer');
   };
 
-  // ─── ANNULATION COURSE ───────────────────────────────────────
-  const handleCancelRide = async () => {
-    if (!currentRide?.id) return;
-
-    // ✅ TRADUIT
-    const confirmed = window.confirm(
-      `⚠️ ${t('cancel')} ?\n\n${t('billing_started')}`
-    );
-    if (!confirmed) return;
-
-    try {
-      console.log('🚫 Annulation de la course:', currentRide.id);
-
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/cancel`,
-        {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            rideId: currentRide.id,
-            passengerId: state.currentUser?.id,
-            cancelledBy: 'passenger',
-            reason: 'Annulation par le passager pendant la course'
-          })
-        }
-      );
-
-      const data = await response.json();
-      if (!data.success) {
-        // ✅ TRADUIT
-        toast.error(data.error || t('error'));
-        return;
-      }
-
-      if (updateRide) {
-        updateRide(currentRide.id, {
-          status: 'cancelled',
-          cancelledBy: 'passenger',
-          cancelledAt: new Date().toISOString()
-        });
-      }
-
-      // ✅ TRADUIT
-      toast.success(t('cancel'));
-      setTimeout(() => { setCurrentScreen('map'); }, 1500);
-
-    } catch (error) {
-      console.error('❌ Erreur annulation:', error);
-      // ✅ TRADUIT
-      toast.error(t('error'));
-    }
-  };
+  // ─── ANNULATION : SUPPRIMÉE ──────────────────────────────────
+  // 🚦 Une course déjà commencée ne peut plus être annulée (ni par le passager,
+  // ni par le chauffeur). Le bouton a été retiré de l'écran ; le backend refuse
+  // aussi toute demande d'annulation sur une course `in_progress`.
 
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-gray-900 relative overflow-hidden">
@@ -486,14 +438,7 @@ export function RideInProgressScreen() {
                 <p className="text-xs text-white/90 drop-shadow-md">{t('driver_on_way')}</p>
               </div>
               <div className="flex items-center space-x-2">
-                {/* Bouton annulation */}
-                <button
-                  onClick={handleCancelRide}
-                  className="p-2.5 bg-red-500/90 backdrop-blur-md rounded-full shadow-xl hover:bg-red-600 transition-all active:scale-95"
-                  title={t('cancel')}
-                >
-                  <X className="w-4 h-4 text-white" />
-                </button>
+                {/* 🚦 Plus de bouton d'annulation : une course commencée ne s'annule pas */}
 
                 {/* Bouton partage */}
                 <button
