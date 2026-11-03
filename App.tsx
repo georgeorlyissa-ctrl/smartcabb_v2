@@ -93,15 +93,8 @@ const FixEmailsPage = lazyWithRetry(() => import('./components/admin/FixEmailsPa
 const PurgeUserPage = lazyWithRetry(() => import('./components/admin/PurgeUserPage').then(m => ({ default: m.PurgeUserPage })));
 const DriverSignupDiagnostic = lazyWithRetry(() => import('./components/driver/DriverSignupDiagnostic').then(m => ({ default: m.DriverSignupDiagnostic })));
 
-// 🔧 Loading fallback
-const SuspenseFallback = () => {
-  console.log('⏳ SuspenseFallback - Chargement en cours...');
-  return (
-    <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 to-white">
-      <LoadingScreen />
-    </div>
-  );
-};
+// 🔧 Loading fallback — un seul écran de chargement (animation unique)
+const SuspenseFallback = () => <LoadingScreen />;
 
 // 🔧 Retry logic pour lazy loading
 function lazyWithRetry(componentImport: () => Promise<any>) {

@@ -71,9 +71,16 @@ const initApp = () => {
         <App />
       </React.StrictMode>
     );
-    // Retirer le preloader HTML dès que React est monté (ne pas attendre window.load)
+    // Retirer le preloader HTML seulement APRÈS que React ait peint son premier
+    // écran : double requestAnimationFrame = garantie d'un frame rendu.
+    // Sans cela, le preloader disparaissait avant le rendu → flash blanc entre
+    // deux écrans de chargement.
     if (typeof window !== 'undefined' && typeof (window as any).__SMARTCABB_READY__ === 'function') {
-      (window as any).__SMARTCABB_READY__();
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          (window as any).__SMARTCABB_READY__?.(); 
+        });
+      });
     }
     console.log('✅ Application React montée avec succès');
   } catch (error) {

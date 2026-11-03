@@ -1,7 +1,54 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   🔤 ÉCHELLE TYPOGRAPHIQUE — calquée sur le design system d'Uber (Uber Base)
+   ---------------------------------------------------------------------------
+   Uber travaille sur une échelle dense : corps de texte 14 px, secondaire 12 px,
+   libellés 11–12 px, titres 18/20/24/28 px, display 32–40 px.
+   Ces variables remplacent celles de Tailwind : TOUTES les classes `text-*`
+   (y compris les variantes responsives `md:text-*`) suivent donc la nouvelle
+   échelle, sans toucher aux composants.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@theme {
+  /* 11 px — libellés, badges, mentions légales */
+  --text-xs: 0.6875rem;
+  --text-xs--line-height: 1rem;
+  /* 13 px — texte secondaire, aides, métadonnées */
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.125rem;
+  /* 14 px — corps de texte par défaut (référence Uber) */
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.25rem;
+  /* 16 px — corps mis en avant, boutons principaux */
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.375rem;
+  /* 18 px — sous-titres de section */
+  --text-xl: 1.125rem;
+  --text-xl--line-height: 1.5rem;
+  /* 20 px — titres de carte / d'écran */
+  --text-2xl: 1.25rem;
+  --text-2xl--line-height: 1.625rem;
+  /* 24 px — titres d'écran */
+  --text-3xl: 1.5rem;
+  --text-3xl--line-height: 1.875rem;
+  /* 28 px — titres de page */
+  --text-4xl: 1.75rem;
+  --text-4xl--line-height: 2.125rem;
+  /* 32 px — hero mobile */
+  --text-5xl: 2rem;
+  --text-5xl--line-height: 2.375rem;
+  /* 40 px — hero desktop / display */
+  --text-6xl: 2.5rem;
+  --text-6xl--line-height: 2.875rem;
+  --text-7xl: 3rem;
+  --text-7xl--line-height: 3.5rem;
+  --text-8xl: 3.5rem;
+  --text-8xl--line-height: 4rem;
+  --text-9xl: 4rem;
+  --text-9xl--line-height: 4.5rem;
+}
 
 :root {
   --vh: 1vh;
@@ -177,22 +224,39 @@
  * Titles: Montserrat, Body: Poppins
  */
 @layer base {
+  /* Corps de texte global — 14 px, interligne serré (référence Uber) */
+  body {
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+
   h1, h2, h3, h4, label, button {
     font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: var(--font-weight-medium);
-    line-height: 1.5;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
   }
 
   p, input, div, span, li {
     font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
     font-weight: var(--font-weight-normal);
-    line-height: 1.5;
+    line-height: 1.45;
   }
 
-  h1 { font-size: 1.5rem; font-weight: 700; }
-  h2 { font-size: 1.25rem; font-weight: 600; }
-  h3 { font-size: 1.125rem; font-weight: 600; }
-  h4, p, label, button, input { font-size: 1rem; }
+  h1 { font-size: 1.375rem; font-weight: 700; line-height: 1.25; }
+  h2 { font-size: 1.125rem; font-weight: 600; line-height: 1.3; }
+  h3 { font-size: 1rem; font-weight: 600; line-height: 1.35; }
+  h4 { font-size: 0.9375rem; font-weight: 600; }
+  p, input { font-size: 0.875rem; }
+  label { font-size: 0.8125rem; font-weight: 500; }
+  button { font-size: 0.9375rem; font-weight: 500; letter-spacing: 0; }
+
+  /* Titres de page un peu plus généreux sur grand écran */
+  @media (min-width: 768px) {
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.25rem; }
+  }
 }
 
 html {
@@ -574,4 +638,160 @@ input[type="tel"] {
 }
 .dark-mode-toggle.on .dark-mode-toggle-thumb {
   transform: translateX(24px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   📱 RESPONSIVITÉ — garde-fous globaux
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 1. Hauteurs dynamiques : `100vh` déborde sous la barre d'adresse mobile.
+      `100dvh` suit la hauteur réellement visible. */
+@supports (height: 100dvh) {
+  .h-screen { height: 100dvh; }
+  .min-h-screen { min-height: 100dvh; }
+  .max-h-screen { max-height: 100dvh; }
+  .h-\[100vh\] { height: 100dvh; }
+}
+
+/* 2. Aucun débordement horizontal, quelle que soit la page */
+html, body, #root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+body { min-width: 320px; }
+
+/* 3. Zones sûres (encoche, barre gestuelle iOS / Android) */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+.safe-x {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* 4. Conteneurs : largeur de lecture confortable et centrage */
+.app-container { width: 100%; max-width: 42rem; margin-inline: auto; }
+.page-container {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1rem;
+}
+@media (min-width: 640px)  { .page-container { padding-inline: 1.5rem; } }
+@media (min-width: 1024px) { .page-container { padding-inline: 2rem; } }
+
+/* 5. Tableaux admin larges : défilement horizontal au lieu de casser la page */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-responsive > table { min-width: 40rem; }
+
+/* 6. Longs identifiants / adresses : jamais d'élargissement de la page */
+.break-anywhere { overflow-wrap: anywhere; word-break: break-word; }
+
+/* 7. Très petits écrans (≤ 380 px) : on resserre les marges, pas le texte */
+@media (max-width: 380px) {
+  .page-container { padding-inline: 0.875rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ⏳ ÉCRAN DE CHARGEMENT UNIQUE — une seule animation
+   ---------------------------------------------------------------------------
+   Markup partagé par :
+     • le preloader natif d''index.html (affiché avant le JS)
+     • React : BrandLoader, utilisé par SplashScreen et LoadingScreen
+   Comme les deux rendus sont identiques, la transition est invisible.
+   L''unique animation est la barre de progression (sc-boot-bar).
+   ═══════════════════════════════════════════════════════════════════════════ */
+.sc-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #081C28 0%, #0E3548 45%, #175A78 100%);
+}
+.sc-boot-inner {
+  text-align: center;
+  padding: 0 1.5rem;
+}
+.sc-boot-medal {
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 1.25rem;
+  border-radius: 30px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #ffffff 0%, #dfe9ef 60%, #c3d5e0 100%);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), 0 0 0 3px rgba(127, 184, 212, 0.45);
+}
+.sc-boot-medal img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+.sc-boot-brand {
+  margin: 0;
+  color: #ffffff;
+  font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  line-height: 1.1;
+  padding-left: 0.18em; /* compense le letter-spacing */
+}
+.sc-boot-brand span { color: #7FB8D4; }
+.sc-boot-track {
+  width: 104px;
+  height: 3px;
+  margin: 0.875rem auto 0;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+.sc-boot-bar {
+  display: block;
+  width: 40%;
+  height: 100%;
+  border-radius: 99px;
+  background: #FFCC00;
+  animation: sc-boot-bar-slide 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform;
+}
+@keyframes sc-boot-bar-slide {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(260%); }
+}
+.sc-boot-msg {
+  margin: 0.75rem 0 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* Accessibilité : une animation ne doit jamais être indispensable */
+@media (prefers-reduced-motion: reduce) {
+  .sc-boot-bar {
+    animation: none !important;
+    width: 60%;
+    transform: none;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 8. Titres équilibrés (évite les veuves/orphelines sur mobile) */
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+
+/* 9. Mode PWA / APK plein écran : les barres collantes ne passent plus
+      sous l''encoche ni sous la barre d''état. */
+@media (display-mode: standalone) {
+  .sticky.top-0,
+  .fixed.top-0 { padding-top: env(safe-area-inset-top); }
 }

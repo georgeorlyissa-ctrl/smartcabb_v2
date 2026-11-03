@@ -14,6 +14,14 @@
     <!-- Préchargement du logo (affichage instantané dans le splash) -->
     <link rel="preload" as="image" href="/logo-smartcabb.jpeg" />
 
+    <!-- Polices de marque — chargées en parallèle du JS (non bloquant pour le rendu) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&display=swap"
+    />
+
     <!-- Canonical — indique à Google l'URL officielle -->
     <link rel="canonical" href="https://www.smartcabb.com/" />
 
@@ -227,6 +235,24 @@
     <script src="/client-init.js"></script>
     <script type="module" src="/main.tsx?v=517.113"></script>
     <script src="/preloader.js"></script>
+
+    <!-- ⏳ ÉCRAN DE CHARGEMENT UNIQUE — styles critiques, inline pour un affichage
+         instantané avant même le chargement du bundle CSS/JS.
+         Markup et classes identiques à components/BrandLoader.tsx : une seule
+         animation (la barre), donc aucune rupture visuelle à l'hydratation. -->
+    <style id="boot-loader-css">
+      .sc-boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#081C28 0%,#0E3548 45%,#175A78 100%);}
+      .sc-boot-inner{text-align:center;padding:0 1.5rem;}
+      .sc-boot-medal{width:132px;height:132px;margin:0 auto 1.25rem;border-radius:30px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#ffffff 0%,#dfe9ef 60%,#c3d5e0 100%);box-shadow:0 18px 50px rgba(0,0,0,.5),0 0 0 3px rgba(127,184,212,.45);}
+      .sc-boot-medal img{width:100%;height:100%;object-fit:contain;padding:8px;}
+      .sc-boot-brand{margin:0;color:#fff;font-family:'Montserrat',system-ui,-apple-system,sans-serif;font-size:26px;font-weight:900;letter-spacing:.18em;line-height:1.1;padding-left:.18em;}
+      .sc-boot-brand span{color:#7FB8D4;}
+      .sc-boot-track{width:104px;height:3px;margin:.875rem auto 0;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;}
+      .sc-boot-bar{display:block;width:40%;height:100%;border-radius:99px;background:#FFCC00;animation:sc-boot-bar-slide 1.15s cubic-bezier(.4,0,.2,1) infinite;will-change:transform;}
+      @keyframes sc-boot-bar-slide{0%{transform:translateX(-110%);}100%{transform:translateX(260%);}}
+      .sc-boot-msg{margin:.75rem 0 0;color:rgba(255,255,255,.55);font-size:11px;letter-spacing:.18em;text-transform:uppercase;}
+      @media (prefers-reduced-motion: reduce){.sc-boot-bar{animation:none;width:60%;transform:none;}}
+    </style>
   </head>
 
   <body>
@@ -241,16 +267,15 @@
     </noscript>
 
     <div id="root">
-      <!-- Preloader natif — IDENTIQUE au splash React (transition invisible) -->
-      <div id="preloader" style="position:fixed;inset:0;background:linear-gradient(160deg,#081C28 0%,#0E3548 45%,#175A78 100%);display:flex;align-items:center;justify-content:center;z-index:9999;">
-        <div style="text-align:center;">
-          <div style="width:144px;height:144px;margin:0 auto 20px;border-radius:32px;overflow:hidden;background:linear-gradient(145deg,#ffffff 0%,#dfe9ef 60%,#c3d5e0 100%);display:flex;align-items:center;justify-content:center;box-shadow:0 18px 50px rgba(0,0,0,0.5),0 0 0 3px rgba(127,184,212,0.45);">
-            <img src="/logo-smartcabb.jpeg" alt="SmartCabb" style="width:100%;height:100%;object-fit:contain;padding:8px;" />
+      <!-- Écran de chargement natif — markup strictement identique à BrandLoader -->
+      <div id="preloader" class="sc-boot" role="status" aria-live="polite" aria-label="Chargement de SmartCabb">
+        <div class="sc-boot-inner">
+          <div class="sc-boot-medal">
+            <img src="/logo-smartcabb.jpeg" alt="" aria-hidden="true" />
           </div>
-          <p style="color:#FFFFFF;font-size:30px;font-weight:900;letter-spacing:0.18em;font-family:system-ui,-apple-system,sans-serif;margin:0;">SMART<span style="color:#7FB8D4;">CABB</span></p>
-          <div style="width:96px;height:3px;margin:10px auto 0;border-radius:99px;background:rgba(255,255,255,0.15);overflow:hidden;">
-            <div style="height:100%;width:60%;border-radius:99px;background:#FFCC00;"></div>
-          </div>
+          <p class="sc-boot-brand">SMART<span>CABB</span></p>
+          <div class="sc-boot-track"><span class="sc-boot-bar"></span></div>
+          <p class="sc-boot-msg">Ride Smart · Live Smart</p>
         </div>
       </div>
     </div>

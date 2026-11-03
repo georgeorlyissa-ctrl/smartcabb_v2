@@ -42,6 +42,55 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-03 — Design system : échelle typographique Uber, chargement unique, responsivité globale
+
+- **Commit** : `b75651c` (`main` → `origin/main`)
+- **Auteur** : équipe SmartCabb
+- **Type** : feat (design system) + perf (chargement)
+- **Objectif** : harmoniser la typographie sur une échelle dense type Uber (textes plus petits, hiérarchie plus nette), ne garder qu'**une seule animation** pendant le chargement de page, et durcir la responsivité sur toute l'application (hauteurs dynamiques, encoches, débordements, tailles tactiles).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `styles/globals.css` | Nouvelle échelle `@theme` (`--text-xs` → `--text-9xl`), typographie de base 14 px, correctifs responsives globaux, styles du loader unique, `prefers-reduced-motion` |
+| `index.html` | Polices en `<link>` + `preconnect` (retirées du CSS), styles critiques du loader inline, preloader natif au nouveau markup |
+| `components/BrandLoader.tsx` | **Nouveau** — écran de chargement unique (1 seule animation : la barre) |
+| `components/LoadingScreen.tsx` | Réutilise `BrandLoader` (avant : spinner + point pulsé + barre = 3 animations) |
+| `components/SplashScreen.tsx` | Réécrit : plus de phases halo/rivets/itinéraire/slogan, délais réduits (1,2 s / 0,5 s) |
+| `components/AppRouter.tsx`, `App.tsx` | Fallback Suspense simplifié (plus de wrapper dégradé autour du loader) |
+| `main.tsx` | Le preloader natif n'est retiré qu'après le premier rendu React (double `requestAnimationFrame`) |
+| `public/preloader.js` | Retrait instantané du preloader (plus de fondu de 300 ms qui superposait deux barres) |
+| `components/ui/button.tsx` | Hauteurs type Uber : 44 px (défaut), 36 px (`sm`), 48 px (`lg`), libellé 15 px |
+| `components/ui/input.tsx` | Champs 44 px, texte 15 px |
+
+### Description technique
+- **Typographie** : les variables `--text-*` de Tailwind sont redéfinies dans un bloc `@theme`. Toutes les classes `text-*` — y compris les variantes responsives `md:text-*` — suivent donc la nouvelle échelle : `xs` 11 px, `sm` 13 px, `base` 14 px, `lg` 16 px, `xl` 18 px, `2xl` 20 px, `3xl` 24 px, `4xl` 28 px, `5xl` 32 px, `6xl` 40 px. Le corps de texte passe à 14 px (référence Uber), les titres ont un interligne resserré et un `letter-spacing` de −0,01 em.
+- **Chargement unique** : `BrandLoader` est le seul écran de démarrage. Il est rendu à l'identique par le preloader natif (`index.html`), le `SplashScreen` et tous les fallbacks `LoadingScreen`/`Suspense`. Une seule animation : `.sc-boot-bar` (`sc-boot-bar-slide`, barre jaune en boucle). Le CSS critique est inline dans `index.html` pour un affichage avant même le bundle.
+- **Pas de flash** : `main.tsx` attend deux frames avant de retirer le preloader ; `preloader.js` le supprime instantanément (le rendu React est identique). Les anciennes 7 animations du splash (halo, 6 rivets orbitaux, tracé, point, marque, barre) sont supprimées.
+- **Responsivité** : `.h-screen`/`.min-h-screen` passent en `100dvh` (barre d'adresse mobile), `overflow-x` verrouillé sur `html/body/#root`, utilitaires `.safe-top/.safe-bottom/.safe-x` (encoches), `.app-container` / `.page-container` (largeurs de lecture), `.table-responsive`, `.break-anywhere`. En mode PWA/APK plein écran, les barres `sticky top-0` / `fixed top-0` reçoivent `env(safe-area-inset-top)`.
+- **Accessibilité** : `prefers-reduced-motion` neutralise la barre et les transitions ; `text-wrap: balance/pretty` sur les titres et paragraphes.
+- **Perf** : les polices Google ne sont plus importées depuis le CSS (bloquant) mais chargées via `preconnect` + `link` dans `index.html`.
+
+### Impact produit / comportement visible
+- Tous les écrans (vitrine, passager, chauffeur, admin) paraissent plus denses et plus pro : textes secondaires à 11–13 px, corps à 14 px, titres à 20–28 px.
+- Démarrage : un seul écran bleu acier, un seul logo, une seule barre qui progresse — plus de spinner concurrent ni de splash de 3 s.
+- Les anciens titres trop grands sur mobile (`text-6xl` = 60 px) passent à 40 px : plus de débordement.
+- Boutons et champs à 44 px minimum : cibles tactiles conformes.
+
+### Risques & rollback
+- **Risque** : certaines pages très denses peuvent sembler plus compactes qu'avant ; les écrans qui misaient sur des tailles énormes perdent en emphase.
+- **Rollback typographie** : supprimer le bloc `@theme` des tailles dans `styles/globals.css` (retour à l'échelle Tailwind d'origine) — le reste (loader, dvh) est indépendant.
+- **Rollback chargement** : `git revert` du commit ; `SplashScreen` et `LoadingScreen` restent néanmoins compatibles avec l'ancien markup.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur (hors `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` — build OK, échelle CSS compilée vérifiée (`--text-6xl: 2.5rem`, `100dvh`, `sc-boot-bar-slide`)
+- [x] Rendu vérifié en 390 px sur `/`, `/app/landing`, `/app/passenger`, `/app/driver`, `/services`, `/terms`, `/about`, `/contact` : `scrollWidth === clientWidth` partout (aucun débordement horizontal)
+- [x] Corps de texte mesuré à 14 px, boutons à 44–48 px
+- [x] Loader vérifié : une seule animation (`sc-boot-bar-slide`), fond dégradé et médaillon conformes
+
+---
+
 ## 2026-10-30 — Interdiction d'annuler une course déjà commencée
 
 - **Commit** : `590bae3` (`main` → `origin/main`)

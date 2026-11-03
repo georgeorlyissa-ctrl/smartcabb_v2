@@ -1,23 +1,18 @@
-// Script de gestion du preloader
-// Retiré dès que React a monté l'app (signal via window.__SMARTCABB_READY__),
-// fallback : window.load + délai court si le signal n'arrive jamais.
+// Gestion du preloader natif.
+// Le preloader est retiré dès que React a peint son premier écran
+// (signal window.__SMARTCABB_READY__ envoyé après un double requestAnimationFrame).
+// Le retrait est instantané : l'écran React (BrandLoader) est visuellement
+// identique, donc l'utilisateur ne perçoit aucune bascule ni double animation.
 (function () {
   function hidePreloader() {
     const preloader = document.getElementById('preloader');
-    if (preloader && preloader.style.display !== 'none') {
-      preloader.style.opacity = '0';
-      preloader.style.transition = 'opacity 0.3s ease-out';
-      setTimeout(function () {
-        preloader.remove();
-      }, 300);
-    }
+    if (preloader) preloader.remove();
   }
 
-  // L'app React appelle window.__SMARTCABB_READY__() dès son premier rendu
   window.__SMARTCABB_READY__ = hidePreloader;
 
-  // Fallback : ne jamais laisser le preloader visible plus de 3s après le load
+  // Filet de sécurité : ne jamais laisser le preloader plus de 3 s après load.
   window.addEventListener('load', function () {
-    setTimeout(hidePreloader, 300);
+    setTimeout(hidePreloader, 3000);
   });
 })();

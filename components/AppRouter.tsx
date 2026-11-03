@@ -35,11 +35,7 @@ export function AppRouter() {
   }
 
   return (
-    <Suspense fallback={
-      <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-cyan-50 to-white">
-        <LoadingScreen />
-      </div>
-    }>
+    <Suspense fallback={<LoadingScreen />}>
       <Routes>
         {/* Landing Page - Sélection du type d'utilisateur */}
         <Route path="/app/landing" element={<LandingScreen />} />
