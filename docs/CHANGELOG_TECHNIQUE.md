@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-03 — Design system : échelle typographique Uber, chargement unique, responsivité globale
 
-- **Commit** : `b75651c` (`main` → `origin/main`)
+- **Commit** : `94c9ca7` (`main` → `origin/main`)
 - **Auteur** : équipe SmartCabb
 - **Type** : feat (design system) + perf (chargement)
 - **Objectif** : harmoniser la typographie sur une échelle dense type Uber (textes plus petits, hiérarchie plus nette), ne garder qu'**une seule animation** pendant le chargement de page, et durcir la responsivité sur toute l'application (hauteurs dynamiques, encoches, débordements, tailles tactiles).
