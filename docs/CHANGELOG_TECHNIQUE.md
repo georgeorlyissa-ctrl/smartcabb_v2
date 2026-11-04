@@ -42,6 +42,52 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-04 — Vitrine : CTA « Réserver une course », photo chauffeur en fond de hero, App Store « très bientôt » et animations au défilement
+
+- **Commit** : `fefa519` (`main` → `origin/main`)
+- **Auteur** : Équipe SmartCabb
+- **Type** : feat (vitrine) + fix (animations / ancres)
+- **Objectif** : compléter le hero refait la veille (CTA « Réserver une course », photo du chauffeur, suppression du badge « Taxi & VTC · Kinshasa »), annoncer l'arrivée de l'app iPhone, et faire en sorte que **toutes** les sections s'animent réellement au défilement ou au clic sur les liens du menu.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/LandingPage.tsx` | Hero : badge « Taxi & VTC · Kinshasa » supprimé, 3ᵉ CTA « Réserver une course », rangée de badges Google Play + App Store, tableau `backgrounds` `{ src, position }` avec la photo du chauffeur en 1ʳᵉ position ; nouveau composant `AppStoreBadge` ; `PlayStoreBadge` refactoré sur `.sc-store-badge` ; `useInViewCustom` fiabilisé ; `scroll-margin-top` des ancres ; fermeture du menu mobile au clic |
+| `styles/globals.css` | `scroll-behavior: smooth` ajouté aussi sur `body` (conteneur de défilement réel des pages longues) |
+| `public/hero-driver.jpg` | Nouvelle image de fond du hero (chauffeur SmartCabb souriant), 1518 × 1152, qualité 90 |
+
+### Description technique
+- **Hero** : suppression de l'eyebrow « Taxi & VTC · Kinshasa » (jugé non essentiel). Les CTA sont désormais : `Commander une course` (`/app/passenger`), `Réserver une course` (`/app/passenger?screen=scheduled-rides`, bouton clair `.sc-hero-btn-soft`) et `Devenir Chauffeur`. Les badges de téléchargement sont sortis de la rangée de boutons et regroupés dans `.sc-hero-stores` (Google Play cliquable + App Store « très bientôt »).
+- **Photos de fond** : `backgrounds` passe de `string[]` à `{ src: string; position: string }[]` pour pouvoir cadrer chaque image indépendamment. `public/hero-driver.jpg` est en première position avec `background-position: center 32%`. Le fondu enchaîné (4 s, opacité 1,6 s) est inchangé.
+- **`AppStoreBadge`** : composant non cliquable (`role="note"`, `aria-label` explicite), logo Apple, mention « Très bientôt » / « App Store » et pastille `iOS`. Utilisé à la fois dans le hero et dans le bandeau « Télécharger l'app » (remplace l'ancien bloc iOS inline, dont le balisage était dupliqué).
+- **`PlayStoreBadge`** : styles inline remplacés par la classe `.sc-store-badge` (hauteur 52 px desktop / 48 px mobile, fond `#222`, hover CSS). Le prop `pulse` réactive l'animation d'attention `ctaAttention` uniquement dans le bandeau de téléchargement — le hero reste calme (une seule animation d'entrée).
+- **Animations au défilement** : `useInViewCustom` vérifie d'abord si l'élément est déjà dans le viewport au montage (affichage immédiat, pas de section qui « saute »), sinon utilise `IntersectionObserver` avec `rootMargin: '0px 0px -6% 0px'`, replie sur `setInView(true)` si l'API est absente, et embarque un filet de sécurité : si l'observateur ne rappelle jamais (rendu suspendu, WebView), la section est affichée au bout de 2,5 s. Une section ne peut donc plus rester invisible.
+- **Ancres** : `section[id] { scroll-margin-top: 118px }` (90 px sous 900 px) pour que « Comment ça marche », « Pourquoi nous », « Témoignages » s'arrêtent **sous** le header fixe (barre d'infos 36 px + nav 74 px). Le menu mobile se referme au clic sur un lien (`setIsMenuOpen(false)`).
+- **Défilement réel** : sur les pages longues, `html, body { height: 100% }` fait de `<body>` le conteneur de défilement. `scroll-behavior: smooth` a donc été ajouté sur `body` (il n'était que sur `html`), et l'écouteur du scroll-spy passe en phase de capture (`{ capture: true }`) pour recevoir les événements émis par `<body>`.
+
+### Impact produit / comportement visible
+- Le hero propose à nouveau « Réserver une course » (réservation planifiée) à côté de « Commander une course ».
+- La photo du chauffeur souriant ouvre le diaporama de fond du hero.
+- « Très bientôt sur l'App Store » est visible pour les iPhone, dans le hero **et** dans le bandeau de téléchargement, sans lien mort.
+- Chaque section apparaît en fondu + translation (droite/gauche pour « Pourquoi nous » et « Afrique ») au défilement, et les liens d'ancre amènent la section sous le header sans la masquer.
+- Menu mobile : un clic sur un lien ferme le panneau et laisse voir la section ciblée.
+
+### Risques & rollback
+- **Risque** : `public/hero-driver.jpg` est un recadrage (1518 × 1152) de la photo fournie, pas l'original haute définition — léger flou possible sur écran 4K. Remplacer le fichier par l'original **sans changer le code** (même nom, même chemin).
+- **Risque** : `scroll-behavior: smooth` sur `body` s'applique à toute l'application (désactivé automatiquement par la règle `prefers-reduced-motion` déjà présente).
+- **Rollback global** : `git revert fefa519`.
+- **Rollback animations** : retirer `rootMargin` / filet de sécurité dans `useInViewCustom` (les sections redeviennent dépendantes du seul `IntersectionObserver`).
+- **Rollback hero** : remettre `backgrounds` en `string[]` et retirer la section `.sc-hero-stores` du JSX.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur (hors `_headers/Code-component-*.tsx`, pré-existantes)
+- [x] `npx vite build` — build OK (seul avertissement : chunk `PassengerApp` > 500 kB, pré-existant)
+- [x] Mesures DOM via iframes 1440 / 1280 / 390 px : `scrollWidth === clientWidth` (aucun débordement horizontal), hero 900 px (desktop) / 828 px (mobile), titre 76 px → 35 px, `scroll-margin-top` 118 px / 90 px, badges 52 px / 48 px, 3 CTA présents
+- [x] Barre d'informations masquée sous 900 px, `.sc-hero-eyebrow` absent du DOM
+- [ ] Vérification visuelle du fondu au défilement (non instrumentable ici : le panneau navigateur de test suspend le rendu, `IntersectionObserver` et `requestAnimationFrame` ne rappellent pas) — à confirmer sur `https://smartcabb.vercel.app` après déploiement
+
+---
+
 ## 2026-11-04 — Vitrine plein écran (hero full-bleed) + correction du conteneur racine compressé
 
 - **Commit** : `0527c23` (`main` → `origin/main`)
