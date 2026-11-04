@@ -479,12 +479,8 @@ export function EstimateScreen() {
   const dayLabel = t('good_morning').startsWith('Bonjour') ? 'Jour' : 'Day';
   const nightLabel = t('good_evening').startsWith('Bonsoir') ? 'Nuit' : 'Night';
 
-  // 🚦 Standard : une seule carte (la variante « sans clim » est en pause)
-  const isStandardVariant = (id: string) => id === 'smart_standard' || id === 'smart_standard_clim';
-
   const renderVehicleCard = (vehicle: (typeof vehicles)[number]) => {
     const isSelected = selectedVehicle === vehicle.id;
-    const fullWidth = isStandardVariant(vehicle.id);
 
     const currentHour = new Date().getHours();
     const isDay = isDayTime(currentHour);
@@ -512,7 +508,7 @@ export function EstimateScreen() {
         whileTap={{ scale: 0.97 }}
         role="button"
         tabIndex={0}
-        className={`relative ${fullWidth ? 'col-span-2' : ''} w-full rounded-lg border transition-all duration-300 bg-white overflow-hidden text-left cursor-pointer ${
+        className={`relative w-full h-full flex flex-col rounded-lg border transition-all duration-300 bg-white overflow-hidden text-left cursor-pointer ${
           isReservationOnly
             ? 'border-purple-200 hover:border-purple-400'
             : isSelected
@@ -535,7 +531,9 @@ export function EstimateScreen() {
           />
         )}
 
-        <div className="p-1.5 space-y-1">
+        {/* flex-col + pied de carte réservé : les 4 cartes gardent exactement
+            la même hauteur, que le véhicule soit sélectionné ou non. */}
+        <div className="p-1.5 flex flex-col flex-1 gap-1">
           <div>
             <h3 className={`text-xs font-bold leading-tight ${isSelected ? 'text-secondary' : 'text-foreground'}`}>
               {vehicle.name}
@@ -626,21 +624,26 @@ export function EstimateScreen() {
             )}
           </div>
 
-          {/* Badge sélectionné — ✅ TRADUIT */}
-          {isSelected && (
+          {/* Pied de carte : sélection + commande. L'espace est TOUJOURS réservé
+              (`invisible` et non un rendu conditionnel) pour que la carte
+              sélectionnée ne devienne pas plus haute que les autres. */}
+          <div
+            className={`mt-auto pt-1 space-y-1 ${isSelected ? '' : 'invisible'}`}
+            aria-hidden={!isSelected}
+          >
+            {/* Badge sélectionné — ✅ TRADUIT */}
             <div className="flex items-center justify-center gap-1 py-0.5 bg-secondary/10 rounded-lg">
               <span className="text-[9px] font-bold text-secondary">✓ {t('success')}</span>
             </div>
-          )}
 
-          {/* 🚀 BOUTON COMMANDER — juste à côté du choix */}
-          {isSelected && (
+            {/* 🚀 BOUTON COMMANDER — juste à côté du choix */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 if (isBooking) return;
                 handleBookRide();
               }}
+              tabIndex={isSelected ? 0 : -1}
               className={`w-full h-8 rounded-lg font-bold text-xs flex items-center justify-center gap-1 transition-all ${
                 isBooking
                   ? 'bg-gray-300 text-gray-500'
@@ -663,7 +666,7 @@ export function EstimateScreen() {
                 </>
               )}
             </button>
-          )}
+          </div>
         </div>
       </motion.div>
     );
@@ -842,9 +845,10 @@ export function EstimateScreen() {
               </motion.div>
             )}
 
-            {/* Grille véhicules */}
+            {/* Grille véhicules — 2 × 2 : les 4 catégories ont la même largeur
+                (`auto-rows-fr` = toutes les rangées de la même hauteur). */}
             <div className="px-4">
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 auto-rows-fr gap-1.5">
                 {/* Véhicules : SmartCabb Standard, Confort, Familiale, Business */}
                 {vehicles.map(renderVehicleCard)}
               </div>

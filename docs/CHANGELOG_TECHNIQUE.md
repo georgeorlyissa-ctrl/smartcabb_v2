@@ -42,6 +42,43 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-04 — « Choisir un véhicule » : SmartCabb Standard à la même taille que les autres catégories
+
+- **Commit** : `78ba960` (`main` → `origin/main`)
+- **Auteur** : Équipe SmartCabb
+- **Type** : fix (UI) 
+- **Objectif** : sur l'écran « Choisir un véhicule », la carte **SmartCabb Standard** occupait toute la largeur (`col-span-2`) et devenait plus haute que les autres une fois sélectionnée. Le client demande qu'elle soit « au même pied » que Confort, Familiale et Business.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/EstimateScreen.tsx` | Suppression de `isStandardVariant` / `fullWidth` (`col-span-2`) ; grille `auto-rows-fr` ; pied de carte (badge ✓ + bouton) à espace réservé |
+
+### Description technique
+- **Largeur** : la classe conditionnelle `${fullWidth ? 'col-span-2' : ''}` a été retirée de `renderVehicleCard`, ainsi que le helper `isStandardVariant`. Les 4 cartes (Standard, Confort, Familiale, Business) occupent donc une seule colonne de la grille `grid-cols-2`.
+- **Hauteur identique** : la grille passe de `grid grid-cols-2 gap-1.5` à `grid grid-cols-2 auto-rows-fr gap-1.5`. `grid-auto-rows: minmax(0, 1fr)` force les deux rangées à la même hauteur (celle du plus grand contenu), donc les 4 cartes ont exactement la même hauteur même si Business n'affiche qu'une seule ligne tarifaire.
+- **Sélection sans changement de taille** : le pied de carte (badge « ✓ Succès » + bouton « Confirmer la commande », ~52 px) n'est plus rendu conditionnellement. Il est toujours présent en DOM et simplement masqué par `invisible` (`visibility: hidden`, l'espace reste occupé) quand le véhicule n'est pas sélectionné ; `aria-hidden` et `tabIndex={-1}` évitent qu'il soit lu ou focusé. La carte sélectionnée n'est donc pas plus haute que les autres.
+- **Alignement** : la carte devient `flex flex-col` + `h-full`, le contenu interne `p-1.5 flex flex-col flex-1 gap-1`, et le pied est poussé en bas par `mt-auto` → bouton toujours aligné en bas de carte, quelle que soit la longueur du bloc tarifaire.
+
+### Impact produit / comportement visible
+- Les 4 catégories ont la même largeur et la même hauteur, alignées en 2 × 2.
+- Sélectionner un véhicule ne fait plus « sauter » la hauteur de la grille : seul le pied de la carte devient visible.
+- Le bouton de commande reste dans la carte sélectionnée, aligné en bas.
+
+### Risques & rollback
+- **Risque** : chaque carte réserve ~52 px de pied vide quand elle n'est pas sélectionnée (choix assumé pour garantir une hauteur constante).
+- **Risque** : sur écran très étroit, les libellés du bloc tarifaire restent en 9 px (comportement inchangé).
+- **Rollback** : `git revert f9e0c11`, ou remettre manuellement `col-span-2` pour `smart_standard` et l'affichage conditionnel du pied de carte.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur (hors `_headers/Code-component-*.tsx`, pré-existantes)
+- [x] `npx vite build` — OK
+- [x] Mesures DOM (reproduction de la grille, viewport 390 px) : 4 cartes à **176 × 234 px**, Standard sélectionnée incluse
+- [x] Mesures DOM (1440 px) : 4 cartes à **701 × 234 px**, aucun débordement horizontal
+- [ ] Contrôle visuel sur appareil réel après déploiement Vercel
+
+---
+
 ## 2026-11-04 — Chargement : un seul écran (le splash validé) au lieu de 2-3 écrans successifs
 
 - **Commit** : `9f14db1` (`main` → `origin/main`)
