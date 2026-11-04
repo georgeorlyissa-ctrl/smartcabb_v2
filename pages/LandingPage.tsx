@@ -8,38 +8,65 @@ import { LanguageSelector } from '../components/LanguageSelector';
 const ChatWidget = lazy(() => import('../components/ChatWidget').then(module => ({ default: module.ChatWidget })));
 
 // ─── Google Play Badge SVG inline ────────────────────────────
-function PlayStoreBadge({ lang }: { lang: 'fr' | 'en' }) {
+// `pulse` : conserve l'effet d'attention dans le bandeau de téléchargement ;
+// désactivé dans le hero (rendu plus sobre, une seule animation d'entrée).
+function PlayStoreBadge({ lang, pulse = false }: { lang: 'fr' | 'en'; pulse?: boolean }) {
   return (
     <a
       href="https://play.google.com/store/apps/details?id=com.smartcabb.app"
       target="_blank"
       rel="noopener noreferrer"
-      className="cta-attention"
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: '10px',
-        padding: '11px 20px', background: '#222222', color: 'white',
-        borderRadius: '10px', textDecoration: 'none', border: '1.5px solid rgba(255,255,255,0.08)',
-        transition: 'all 0.22s', cursor: 'pointer', flexShrink: 0,
-      }}
-      onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.background = '#1f2937'; el.style.transform = 'translateY(-2px)'; el.style.boxShadow = '0 8px 24px rgba(0,0,0,0.25)'; }}
-      onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.background = '#222222'; el.style.transform = 'translateY(0)'; el.style.boxShadow = 'none'; }}
+      className={`sc-store-badge${pulse ? ' sc-store-badge--pulse' : ''}`}
     >
       {/* Google Play logo */}
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M3.18 23.63c.37.2.8.22 1.19.07l12.5-7.22-2.8-2.8-10.89 9.95z" fill="#EA4335"/>
         <path d="M20.52 10.3L17.4 8.5l-3.12 3.12 3.12 3.12 3.14-1.81a1.63 1.63 0 000-2.63z" fill="#FBBC04"/>
         <path d="M3.18.37a1.63 1.63 0 00-.18.74v21.78c0 .26.06.5.18.74l.1.09 12.2-12.2v-.25L3.28.28l-.1.09z" fill="#4285F4"/>
         <path d="M14.37 11.62L3.18 23.63c.37.2.8.22 1.19.07l12.5-7.22-2.5-2.86z" fill="#34A853"/>
       </svg>
       <div style={{ textAlign: 'left' }}>
-        <div style={{ fontSize: '9px', opacity: 0.7, letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1 }}>
-          {lang === 'fr' ? 'Disponible sur' : 'Get it on'}
-        </div>
-        <div style={{ fontSize: '14px', fontWeight: '700', lineHeight: 1.3 }}>Google Play</div>
+        <small>{lang === 'fr' ? 'Disponible sur' : 'Get it on'}</small>
+        <strong>Google Play</strong>
       </div>
     </a>
   );
 }
+
+/**
+ * AppStoreBadge — iPhone / iOS, pas encore publié.
+ * Volontairement non cliquable : « Très bientôt sur l'App Store ».
+ */
+function AppStoreBadge({ lang }: { lang: 'fr' | 'en' }) {
+  return (
+    <div
+      className="sc-store-badge sc-store-badge--soon"
+      role="note"
+      aria-label={
+        lang === 'fr'
+          ? "Application iPhone bientôt disponible sur l'App Store"
+          : 'iPhone app coming soon to the App Store'
+      }
+    >
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M17.05 20.28c-.98.95-2.05.94-3.08.4-1.09-.55-2.08-.57-3.23 0-1.44.72-2.2.51-3.05-.4C3.79 15.25 4.6 7.66 9.05 7.4c1.1.06 1.87.62 2.56.66.93-.19 1.82-.76 2.82-.68 1.2.1 2.1.56 2.7 1.4-2.5 1.5-1.9 4.85.6 5.8-.57 1.5-1.3 2.98-2.68 4.7zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+      </svg>
+      <div>
+        <small>{lang === 'fr' ? 'Très bientôt' : 'Very soon'}</small>
+        <strong>App Store</strong>
+      </div>
+      <span className="sc-store-soon-tag">iOS</span>
+    </div>
+  );
+}
+
+/**
+ * Badge « bientôt disponible » pour le App Store.
+ */
+// Santé de l'IntersectionObserver : certains navigateurs / WebViews suspendent
+// le rendu (frames gelées) et ne rappellent jamais l'observateur. On s'en sert
+// comme filet de sécurité pour ne JAMAIS laisser une section invisible.
+let ioHealthy = false;
 
 function useInViewCustom(threshold = 0.15) {
   const ref = useRef<HTMLElement>(null);
@@ -47,12 +74,38 @@ function useInViewCustom(threshold = 0.15) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    const vh = () => window.innerHeight || document.documentElement.clientHeight;
+    const visibleNow = () => {
+      const r = el.getBoundingClientRect();
+      return r.top < vh() * 0.92 && r.bottom > 0;
+    };
+
+    // Déjà à l'écran au montage : on affiche immédiatement (le CSS fait le fondu).
+    if (visibleNow()) { setInView(true); return; }
+    // Pas d'IntersectionObserver : tout est visible, aucune section bloquée.
+    if (typeof IntersectionObserver === 'undefined') { setInView(true); return; }
+
     const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setInView(true); obs.disconnect(); } },
-      { threshold }
+      ([entry]) => {
+        ioHealthy = true;
+        if (entry.isIntersecting) { setInView(true); obs.disconnect(); }
+      },
+      { threshold, rootMargin: '0px 0px -6% 0px' }
     );
     obs.observe(el);
-    return () => obs.disconnect();
+
+    // Repli si l'observateur reste muet (rendu suspendu) : on vérifie la position
+    // réelle au premier défilement, puis on affiche au bout de 2,5 s.
+    const onScroll = () => { if (visibleNow()) setInView(true); };
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+    const safety = window.setTimeout(() => { if (!ioHealthy) setInView(true); }, 2500);
+
+    return () => {
+      obs.disconnect();
+      window.removeEventListener('scroll', onScroll, true);
+      window.clearTimeout(safety);
+    };
   }, [threshold]);
   return { ref, inView };
 }
@@ -63,7 +116,12 @@ export function LandingPage() {
   const [currentBg, setCurrentBg] = useState(0);
   const [vehiculeIndex, setVehiculeIndex] = useState(0);
   const { t, language } = useLanguage();
-  const backgrounds = ['/photo2_smartcabb.jpeg', '/Images_2.jpeg', '/fille_smartcabb.jpg'];
+  const backgrounds = [
+    { src: '/hero-driver.jpg', position: 'center 32%' },
+    { src: '/photo2_smartcabb.jpeg', position: 'center' },
+    { src: '/Images_2.jpeg', position: 'center' },
+    { src: '/fille_smartcabb.jpg', position: 'center' },
+  ];
 
   const vehicules = ['/Stadard_5.png', '/TOYOTA NOAH_2.png', '/Confort_4.png'];
 
@@ -103,8 +161,8 @@ export function LandingPage() {
       });
       if (current) setActiveSection(current);
     };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    return () => window.removeEventListener('scroll', handleScroll, true);
   }, []);
 
   useEffect(() => {
@@ -365,7 +423,7 @@ export function LandingPage() {
           background: #FFCC00; box-shadow: 0 0 0 4px rgba(255,204,0,0.22);
         }
         .sc-hero-title {
-          margin: 26px auto 0; max-width: 18ch;
+          margin: 0 auto; max-width: 18ch;
           color: #fff; font-weight: 900;
           font-size: clamp(36px, 6vw, 76px);
           line-height: 1.02; letter-spacing: -0.035em;
@@ -400,7 +458,49 @@ export function LandingPage() {
           -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
         }
         .sc-hero-btn-ghost:hover { background: rgba(255,255,255,0.15); border-color: #fff; transform: translateY(-2px); }
+        .sc-hero-btn-soft {
+          background: #fff; color: #0B2239;
+          box-shadow: 0 10px 26px rgba(0,0,0,0.18);
+        }
+        .sc-hero-btn-soft:hover { background: #eef4f9; transform: translateY(-2px); }
+
+        /* Badges de téléchargement — Google Play + App Store (bientôt) */
+        .sc-hero-stores {
+          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+          gap: 12px; margin-top: 22px;
+        }
+        .sc-store-badge {
+          display: inline-flex; align-items: center; gap: 10px;
+          height: 52px; padding: 0 18px; border-radius: 10px;
+          background: #222222; color: #fff; text-decoration: none;
+          border: 1px solid rgba(255,255,255,0.14);
+          transition: background .2s, transform .2s, box-shadow .2s;
+        }
+        .sc-store-badge:hover { background: #2f2f2f; transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,0.28); }
+        .sc-store-badge--pulse { animation: ctaAttention 2.2s ease-in-out infinite; }
+        .sc-store-badge small {
+          display: block; font-size: 9px; line-height: 1.1; opacity: 0.68;
+          letter-spacing: 0.06em; text-transform: uppercase;
+        }
+        .sc-store-badge strong { display: block; font-size: 14px; font-weight: 700; line-height: 1.25; }
+        .sc-store-badge--soon {
+          background: rgba(255,255,255,0.06);
+          border-color: rgba(255,255,255,0.28);
+          cursor: default;
+        }
+        .sc-store-badge--soon:hover { transform: none; box-shadow: none; background: rgba(255,255,255,0.06); }
+        .sc-store-badge--soon strong { color: rgba(255,255,255,0.92); }
+        .sc-store-soon-tag {
+          margin-left: 2px; padding: 2px 7px; border-radius: 999px;
+          background: rgba(255,204,0,0.16); color: #FFD84D;
+          font-size: 9px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+          white-space: nowrap;
+        }
         .sc-hero-actions a { min-height: 52px; }
+
+        /* Ancre des sections : le header fixe (barre d'infos + nav) ne doit jamais
+           recouvrir le titre de la section ciblée par « Comment ça marche », etc. */
+        section[id] { scroll-margin-top: 118px; }
         .sc-hero-trust {
           margin-top: 30px;
           display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
@@ -444,6 +544,12 @@ export function LandingPage() {
           .sc-hero-actions { margin-top: 28px; gap: 10px; }
           .sc-hero-btn { height: 48px; padding: 0 22px; font-size: 14px; }
           .sc-hero-actions a { min-height: 48px; }
+          .sc-hero-stores { margin-top: 18px; gap: 10px; }
+          .sc-store-badge { height: 48px; padding: 0 14px; gap: 8px; border-radius: 9px; }
+          .sc-store-badge strong { font-size: 13px; }
+          .sc-store-badge small { font-size: 8.5px; }
+          .sc-store-soon-tag { font-size: 8px; padding: 2px 6px; }
+          section[id] { scroll-margin-top: 90px; }
           .sc-hero-trust { margin-top: 24px; font-size: 11.5px; gap: 8px 16px; }
           .sc-hero-trust span + span::before { display: none; }
           .sc-hero-stats { margin-top: 36px; padding: 0 20px; }
@@ -517,9 +623,9 @@ export function LandingPage() {
           {isMenuOpen && (
             <div style={{ padding: '16px 0', borderTop: '1px solid #f1f5f9' }}>
               {[{ href: '#home', label: t('nav.home') }, { href: '#how', label: t('nav.howItWorks') }, { href: '#why', label: t('nav.whyUs') }, { href: '#testimonials', label: t('nav.testimonials') }].map((item, i) => (
-                <a key={i} href={item.href} className="nav-link" style={{ display: 'block', padding: '10px 0' }}>{item.label}</a>
+                <a key={i} href={item.href} onClick={() => setIsMenuOpen(false)} className="nav-link" style={{ display: 'block', padding: '10px 0' }}>{item.label}</a>
               ))}
-              <Link to="/contact" className="nav-link" style={{ display: 'block', padding: '10px 0' }}>{t('nav.contact')}</Link>
+              <Link to="/contact" onClick={() => setIsMenuOpen(false)} className="nav-link" style={{ display: 'block', padding: '10px 0' }}>{t('nav.contact')}</Link>
               <div style={{ padding: '10px 0' }}><LanguageSelector /></div>
               <Link to="/app/passenger" className="btn-hero-primary" style={{ display: 'block', textAlign: 'center', marginTop: '8px' }}>{t('nav.login')}</Link>
             </div>
@@ -535,7 +641,7 @@ export function LandingPage() {
           currentBg === i || currentBg === (i + 1) % backgrounds.length ? (
             <div key={i} style={{
               position: 'absolute', inset: 0, zIndex: 0,
-              backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center',
+              backgroundImage: `url(${bg.src})`, backgroundSize: 'cover', backgroundPosition: bg.position,
               opacity: currentBg === i ? 1 : 0, transition: 'opacity 1.6s ease'
             }} />
           ) : null
@@ -544,37 +650,46 @@ export function LandingPage() {
         <div className="sc-hero-overlay" />
 
         <div className="sc-hero-copy">
-          <motion.span className="sc-hero-eyebrow"
-            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}>
-            {language === 'fr' ? 'Taxi & VTC · Kinshasa' : 'Taxi & ride-hailing · Kinshasa'}
-          </motion.span>
-
           <motion.h1 className="sc-hero-title"
-            initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.7, ease }}>
+            initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.7, ease }}>
             {language === 'fr'
               ? <>Votre trajet,<br /><em>votre choix.</em></>
               : <>Your ride,<br /><em>your choice.</em></>}
           </motion.h1>
 
           <motion.p className="sc-hero-sub"
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.6 }}>
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26, duration: 0.6 }}>
             {t('hero.description')}
           </motion.p>
 
           <motion.div className="sc-hero-actions"
-            initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.55 }}>
+            initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.55 }}>
             <Link to="/app/passenger" className="sc-hero-btn sc-hero-btn-primary">
               <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               {t('hero.bookRide')}
             </Link>
+            <Link
+              to="/app/passenger?screen=scheduled-rides"
+              className="sc-hero-btn sc-hero-btn-soft"
+              title={language === 'fr' ? 'Réserver — Familiale & Business' : 'Book — Family & Business'}
+            >
+              <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.9" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path strokeLinecap="round" d="M8 3v4M16 3v4M3 10h18M8 15h3"/></svg>
+              {language === 'fr' ? 'Réserver une course' : 'Book a ride'}
+            </Link>
             <Link to="/app/driver/signup" className="sc-hero-btn sc-hero-btn-ghost">
               {t('hero.becomeDriver')}
             </Link>
+          </motion.div>
+
+          {/* Téléchargement — Google Play disponible, App Store très bientôt */}
+          <motion.div className="sc-hero-stores"
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.48, duration: 0.5 }}>
             <PlayStoreBadge lang={language} />
+            <AppStoreBadge lang={language} />
           </motion.div>
 
           <motion.div className="sc-hero-trust"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}>
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
             <span><b>4,9/5</b> {language === 'fr' ? 'note moyenne' : 'average rating'}</span>
             <span>{language === 'fr' ? 'Paiement M-Pesa, Orange Money, Airtel' : 'Pay with M-Pesa, Orange Money, Airtel'}</span>
             <span>{language === 'fr' ? 'Chauffeurs vérifiés' : 'Verified drivers'}</span>
@@ -660,17 +775,8 @@ export function LandingPage() {
                     : "Download the SmartCabb app on Google Play. Book a driver in seconds, track your ride in real time and pay via Mobile Money."}
                 </p>
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <PlayStoreBadge lang={language} />
-                  {/* iOS coming soon */}
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', padding: '11px 20px', background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)', borderRadius: '10px', cursor: 'default', opacity: 0.7 }}>
-                    <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-                      <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                    </svg>
-                    <div>
-                      <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.6)', lineHeight: 1 }}>{language === 'fr' ? 'Bientôt sur' : 'Coming soon'}</div>
-                      <div style={{ fontSize: '14px', fontWeight: '700', color: 'white', lineHeight: 1.3 }}>App Store</div>
-                    </div>
-                  </div>
+                  <PlayStoreBadge lang={language} pulse />
+                  <AppStoreBadge lang={language} />
                 </div>
               </div>
 

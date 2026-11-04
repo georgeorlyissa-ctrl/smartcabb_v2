@@ -196,6 +196,10 @@
   body {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
+    /* `html, body` ont height:100% : sur les pages longues, c'est <body> qui
+       devient le conteneur de défilement. Le défilement doux doit donc aussi
+       être déclaré ici pour que les ancres (#how, #testimonials…) glissent. */
+    scroll-behavior: smooth;
   }
   
   #root {
