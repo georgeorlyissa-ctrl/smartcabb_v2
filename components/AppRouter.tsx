@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate, useNavigate } from '../lib/simple-router';
 import { useEffect, Suspense, lazy, useState } from 'react';
-import { LoadingScreen } from './LoadingScreen';
+import { DeferredLoading } from './DeferredLoading';
 import { SplashScreen } from './SplashScreen';
 
 // Applications principales — chargées à la demande pendant le splash (démarrage fluide)
@@ -17,7 +17,12 @@ const AdminApp = lazy(() => import('../pages/AdminApp').then(m => ({ default: m.
  */
 export function AppRouter() {
   const navigate = useNavigate();
-  const [showSplash, setShowSplash] = useState(true);
+  // Splash au plus une fois par session : au rechargement complet d'une
+  // navigation, le preloader natif (identique) suffit — pas de 2e écran.
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof sessionStorage === 'undefined') return true;
+    return sessionStorage.getItem('sc-splash-seen') !== '1';
+  });
 
   useEffect(() => {
     const currentPath = window.location.pathname;
@@ -35,7 +40,7 @@ export function AppRouter() {
   }
 
   return (
-    <Suspense fallback={<LoadingScreen />}>
+    <Suspense fallback={<DeferredLoading />}>
       <Routes>
         {/* Landing Page - Sélection du type d'utilisateur */}
         <Route path="/app/landing" element={<LandingScreen />} />

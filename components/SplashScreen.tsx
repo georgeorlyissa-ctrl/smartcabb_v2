@@ -2,33 +2,75 @@ import { useEffect } from 'react';
 import { BrandLoader } from './BrandLoader';
 
 /**
- * Durées du splash.
- * - 1er chargement : le temps de charger les modules lazy.
- * - Chargements suivants (session) : très court, les assets sont en cache.
+ * Durées du splash (première ouverture de la session).
+ * - MIN : durée minimale pour que l'écran soit lisible (pas un flash).
+ * - MAX : filet de sécurité si le réseau traîne.
  */
-const FIRST_LOAD_DELAY = 1200;
-const FAST_LOAD_DELAY = 500;
+const FIRST_LOAD_MIN = 800;
+const FIRST_LOAD_MAX = 2600;
 
 /**
- * SplashScreen — écran d'ouverture.
+ * Préchauffe le module de la route courante pendant le splash.
+ * Sans cela, le module lazy arrivait APRÈS le splash et déclenchait un
+ * deuxième écran de chargement (le fallback Suspense) : c'est exactement
+ * le « 2 ou 3 images de chargement » signalé en navigation.
+ */
+function warmRouteModule(): Promise<unknown> {
+  const path = typeof window === 'undefined' ? '' : window.location.pathname;
+  const load = () => {
+    if (path === '/app' || path === '/app/') {
+      return import('./LandingScreen');
+    }
+    if (path.startsWith('/app/driver') || path.startsWith('/driver/')) {
+      return import('../pages/DriverApp');
+    }
+    if (path.startsWith('/app/admin') || path.startsWith('/admin/')) {
+      return import('../pages/AdminApp');
+    }
+    if (path.startsWith('/app/passenger') || path.startsWith('/app')) {
+      return import('../pages/PassengerApp');
+    }
+    return import('../pages/LandingPage');
+  };
+  try {
+    return Promise.resolve(load()).catch(() => undefined);
+  } catch {
+    return Promise.resolve();
+  }
+}
+
+/**
+ * SplashScreen — écran d'ouverture, **au plus une fois par session**.
  *
- * Volontairement minimaliste : il réutilise `BrandLoader`, donc **une seule
- * animation** (la barre de progression) et une identité visuelle identique
- * au preloader natif puis aux fallbacks de chargement. Les anciennes
- * animations concurrentes (halo, rivets, itinéraire, slogan en 2 phases)
- * ont été supprimées pour un démarrage plus rapide et plus sobre.
+ * C'est `AppRouter` qui décide de l'afficher (sessionStorage `sc-splash-seen`).
+ * Ici on gère uniquement son temps d'affichage : on précharge la route en
+ * cours pour que l'utilisateur ne voie jamais un deuxième écran de chargement
+ * derrière le splash.
+ *
+ * Une seule animation : la barre de progression de `BrandLoader`.
  */
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
-  const isFast =
-    typeof sessionStorage !== 'undefined' && sessionStorage.getItem('sc-splash-seen') === '1';
-
   useEffect(() => {
     if (typeof sessionStorage !== 'undefined') {
       sessionStorage.setItem('sc-splash-seen', '1');
     }
-    const timer = setTimeout(onComplete, isFast ? FAST_LOAD_DELAY : FIRST_LOAD_DELAY);
-    return () => clearTimeout(timer);
-  }, [onComplete, isFast]);
+
+    const startedAt = Date.now();
+    let finished = false;
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      onComplete();
+    };
+
+    const hardStop = setTimeout(finish, FIRST_LOAD_MAX);
+    warmRouteModule().then(() => {
+      const remaining = Math.max(0, FIRST_LOAD_MIN - (Date.now() - startedAt));
+      setTimeout(finish, remaining);
+    });
+
+    return () => clearTimeout(hardStop);
+  }, [onComplete]);
 
   return <BrandLoader />;
 }

@@ -238,19 +238,26 @@
 
     <!-- ⏳ ÉCRAN DE CHARGEMENT UNIQUE — styles critiques, inline pour un affichage
          instantané avant même le chargement du bundle CSS/JS.
-         Markup et classes identiques à components/BrandLoader.tsx : une seule
-         animation (la barre), donc aucune rupture visuelle à l'hydratation. -->
+         ⚠️ Doit rester IDENTIQUE à components/BrandLoader.tsx et aux règles
+         .sc-boot* de styles/globals.css (même visuel, une seule animation). -->
     <style id="boot-loader-css">
-      .sc-boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#081C28 0%,#0E3548 45%,#175A78 100%);}
-      .sc-boot-inner{text-align:center;padding:0 1.5rem;}
-      .sc-boot-medal{width:132px;height:132px;margin:0 auto 1.25rem;border-radius:30px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#ffffff 0%,#dfe9ef 60%,#c3d5e0 100%);box-shadow:0 18px 50px rgba(0,0,0,.5),0 0 0 3px rgba(127,184,212,.45);}
-      .sc-boot-medal img{width:100%;height:100%;object-fit:contain;padding:8px;}
-      .sc-boot-brand{margin:0;color:#fff;font-family:'Montserrat',system-ui,-apple-system,sans-serif;font-size:26px;font-weight:900;letter-spacing:.18em;line-height:1.1;padding-left:.18em;}
+      .sc-boot{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(168deg,#092130 0%,#0D3145 40%,#134A63 72%,#0A2534 100%);}
+      .sc-boot-grid{position:absolute;inset:0;pointer-events:none;opacity:.11;background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:54px 54px;}
+      .sc-boot-vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 44%,transparent 30%,rgba(3,11,18,.62) 100%);}
+      .sc-boot-route{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+      .sc-boot-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 1.5rem;}
+      .sc-boot-medal{width:112px;height:112px;border-radius:26px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#ffffff 0%,#e3edf3 60%,#c6d8e3 100%);box-shadow:0 18px 44px rgba(0,0,0,.5),0 0 0 3px rgba(127,184,212,.4),inset 0 2px 6px rgba(255,255,255,.9);}
+      .sc-boot-medal img{width:100%;height:100%;object-fit:contain;padding:7px;}
+      .sc-boot-brand{margin:1rem 0 0;color:#fff;font-family:'Montserrat',system-ui,-apple-system,sans-serif;font-size:23px;font-weight:900;letter-spacing:.2em;line-height:1.1;padding-left:.2em;}
       .sc-boot-brand span{color:#7FB8D4;}
-      .sc-boot-track{width:104px;height:3px;margin:.875rem auto 0;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;}
-      .sc-boot-bar{display:block;width:40%;height:100%;border-radius:99px;background:#FFCC00;animation:sc-boot-bar-slide 1.15s cubic-bezier(.4,0,.2,1) infinite;will-change:transform;}
-      @keyframes sc-boot-bar-slide{0%{transform:translateX(-110%);}100%{transform:translateX(260%);}}
+      .sc-boot-track{width:96px;height:3px;margin:1rem auto 0;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;}
+      .sc-boot-bar{display:block;width:38%;height:100%;border-radius:99px;background:#FFCC00;animation:sc-boot-bar-slide 1.15s cubic-bezier(.4,0,.2,1) infinite;will-change:transform;}
+      @keyframes sc-boot-bar-slide{0%{transform:translateX(-120%);}100%{transform:translateX(280%);}}
+      .sc-boot-footer{position:absolute;left:0;right:0;bottom:calc(10% + env(safe-area-inset-bottom,0px));z-index:2;text-align:center;padding:0 1.5rem;}
+      .sc-boot-tagline{margin:0;color:#fff;font-family:'Montserrat',system-ui,-apple-system,sans-serif;font-size:19px;font-weight:800;line-height:1.25;}
+      .sc-boot-place{margin:6px 0 0;color:rgba(255,255,255,.68);font-family:'Poppins',system-ui,-apple-system,sans-serif;font-size:13px;font-weight:500;line-height:1.4;}
       .sc-boot-msg{margin:.75rem 0 0;color:rgba(255,255,255,.55);font-size:11px;letter-spacing:.18em;text-transform:uppercase;}
+      @media (max-width:380px){.sc-boot-medal{width:96px;height:96px;border-radius:22px;}.sc-boot-brand{font-size:20px;}.sc-boot-tagline{font-size:16px;}.sc-boot-place{font-size:11.5px;}}
       @media (prefers-reduced-motion: reduce){.sc-boot-bar{animation:none;width:60%;transform:none;}}
     </style>
   </head>
@@ -269,13 +276,24 @@
     <div id="root">
       <!-- Écran de chargement natif — markup strictement identique à BrandLoader -->
       <div id="preloader" class="sc-boot" role="status" aria-live="polite" aria-label="Chargement de SmartCabb">
+        <div class="sc-boot-grid" aria-hidden="true"></div>
+        <svg class="sc-boot-route" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+          <path d="M -20 640 C 80 620, 92 500, 182 486 S 300 386, 292 268 S 360 148, 420 128"
+                fill="none" stroke="rgba(255,255,255,.2)" stroke-width="3" stroke-dasharray="10 10" />
+          <circle cx="292" cy="268" r="7" fill="#FFCC00" />
+          <circle cx="292" cy="268" r="13" fill="none" stroke="#FFCC00" stroke-width="1.5" opacity=".45" />
+        </svg>
+        <div class="sc-boot-vignette" aria-hidden="true"></div>
         <div class="sc-boot-inner">
           <div class="sc-boot-medal">
             <img src="/logo-smartcabb.jpeg" alt="" aria-hidden="true" />
           </div>
           <p class="sc-boot-brand">SMART<span>CABB</span></p>
           <div class="sc-boot-track"><span class="sc-boot-bar"></span></div>
-          <p class="sc-boot-msg">Ride Smart · Live Smart</p>
+        </div>
+        <div class="sc-boot-footer">
+          <p class="sc-boot-tagline">Ride Smart, Live Smart</p>
+          <p class="sc-boot-place">Kinshasa · République Démocratique du Congo</p>
         </div>
       </div>
     </div>

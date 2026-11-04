@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect } from 'react';
 import { Router, Routes, Route, Navigate } from './lib/simple-router';
 import { useLocation } from './lib/simple-router';
 import { Toaster } from './lib/toast';
-import { LoadingScreen } from './components/LoadingScreen';
+import { DeferredLoading } from './components/DeferredLoading';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PWAInstallPrompt, OnlineStatusIndicator } from './components/PWAInstallPrompt';
 import { ExchangeRateSync } from './components/ExchangeRateSync';
@@ -93,8 +93,8 @@ const FixEmailsPage = lazyWithRetry(() => import('./components/admin/FixEmailsPa
 const PurgeUserPage = lazyWithRetry(() => import('./components/admin/PurgeUserPage').then(m => ({ default: m.PurgeUserPage })));
 const DriverSignupDiagnostic = lazyWithRetry(() => import('./components/driver/DriverSignupDiagnostic').then(m => ({ default: m.DriverSignupDiagnostic })));
 
-// 🔧 Loading fallback — un seul écran de chargement (animation unique)
-const SuspenseFallback = () => <LoadingScreen />;
+// 🔧 Loading fallback — un seul écran de chargement, et seulement s'il est vraiment utile
+const SuspenseFallback = () => <DeferredLoading />;
 
 // 🔧 Retry logic pour lazy loading
 function lazyWithRetry(componentImport: () => Promise<any>) {
