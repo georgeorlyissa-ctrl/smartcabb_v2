@@ -42,6 +42,49 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-04 — Vitrine plein écran (hero full-bleed) + correction du conteneur racine compressé
+
+- **Commit** : `0527c23` (`main` → `origin/main`)
+- **Auteur** : équipe SmartCabb
+- **Type** : fix (mise en page) + feat (design vitrine)
+- **Objectif** : le site public paraissait « bizarre » et comprimé au centre de l'écran. Il doit occuper toute la largeur, avec un rendu professionnel de type site institutionnel : barre d'informations, header large, hero photo plein écran et titre centré.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `styles/globals.css` | `.app-container` repassé en pleine largeur (`max-width: none`) ; nouveau `.content-narrow` (42 rem) pour les blocs de texte qui doivent rester lisibles |
+| `pages/LandingPage.tsx` | Refonte complète du hero (full-bleed photo + voile sombre + titre centré + bandeau de chiffres) ; barre d'informations et header élargis à 1600 px ; suppression du hero 2 colonnes, du carrousel d'images et des badges flottants ; polices Inter déplacées vers `index.html` |
+| `lib/simple-router.tsx` | `Link` transmet désormais **toutes** les props natives de `<a>` (dont `style`, `title`, `aria-*`) — avant, seul `className` était transmis |
+| `index.html` | Famille Inter ajoutée au `<link>` Google Fonts (suppression de l'`@import` CSS bloquant de la vitrine) |
+
+### Description technique
+- **Cause racine du site « comprimé »** : le lot design précédent avait défini `.app-container { max-width: 42rem }`. Or `App.tsx` utilise `.app-container` comme **conteneur racine de toute l'application** : le site entier était donc limité à 672 px et centré. Correction : `.app-container { width: 100%; max-width: none; margin-inline: 0 }`. L'utilitaire de largeur de lecture est renommé `.content-narrow` (opt-in, 42 rem).
+- **Hero full-bleed** : section `min-height: 100dvh`, photo de fond en `background-size: cover` (3 photos en fondu enchaîné toutes les 4 s), voile dégradé bleu nuit pour la lisibilité, contenu centré : badge « Taxi & VTC · Kinshasa », titre `clamp(36px, 6vw, 76px)`, sous-titre 660 px max, 3 CTA (Commander, Devenir chauffeur, Google Play) et bandeau de 3 chiffres clés en verre dépoli. Plus de grille 2 colonnes, plus de badges flottants ni de particules.
+- **En-tête** : barre d'informations sombre (36 px, desktop uniquement) — Kinshasa, 24h/24, téléphone `+243 960 624 008`, moyens de paiement, chauffeurs vérifiés — puis navigation blanche collante de 74 px. Les deux blocs sont contenus dans 1600 px (au lieu de 1280 px), ce qui donne l'effet pleine largeur sur grand écran. En dessous de 900 px, la barre d'informations est masquée et le hero passe à 92 dvh avec des paddings réduits.
+- **`Link` du routeur maison** : la signature est étendue à `Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>` et `{...rest}` est appliqué à l'ancre. Conséquence immédiate : le logo du header n'est plus empilé (son `display:flex` inline était perdu) et les liens stylés en boutons (ex. « Login ») retrouvent leur padding et leur taille de police. Correction transverse, bénéfique à toutes les pages.
+- **Polices** : `@import url(fonts.googleapis…)` retiré du `<style>` de la vitrine (bloquant) ; Inter est chargée via le `<link>` de `index.html` avec `preconnect`.
+
+### Impact produit / comportement visible
+- Le site public occupe désormais 100 % de la largeur : plus de colonne étroite au centre de l'écran.
+- Page d'accueil : hero photo plein écran avec titre centré, comme une vitrine institutionnelle ; header avec coordonnées et moyens de paiement.
+- Les pages `/services`, `/about`, `/contact`, `/terms`, `/legal` occupent aussi toute la largeur (contenu à 1280 px, fond pleine largeur).
+- Header corrigé sur toutes les pages : logo horizontal, boutons de navigation à la bonne hauteur.
+
+### Risques & rollback
+- **Risque** : le hero plein écran est plus sombre que l'ancien hero clair ; les photos de fond doivent rester lisibles (voile réglable dans `.sc-hero-overlay`).
+- **Rollback mise en page** : remettre `max-width: 42rem; margin-inline: auto` sur `.app-container` (déconseillé : reproduit le bug).
+- **Rollback hero** : `git revert` du commit ; l'ancien hero 2 colonnes est dans l'historique Git (`pages/LandingPage.tsx`).
+- **Rollback `Link`** : retirer `{...rest}` et l'extension de `LinkProps` — mais le logo du header redeviendra empilé.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur (hors `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` — OK
+- [x] Mesures réelles en iframe 1440 / 1280 / 390 px sur `/` : `scrollWidth === clientWidth` partout ; hero 900 px (1440), 828 px (390) ; titre 76 px / 61 px / 35 px ; barre d'infos visible ≥ 900 px uniquement ; boutons 52 px (desktop) / 48 px (mobile)
+- [x] `/services`, `/about`, `/contact`, `/terms`, `/legal`, `/app/landing` en 1440 px : aucune page ne dépasse la largeur, contenu 1280 px
+- [x] Logo du header mesuré `display: flex`, 176 × 40 px (alignement horizontal rétabli)
+
+---
+
 ## 2026-11-03 — Design system : échelle typographique Uber, chargement unique, responsivité globale
 
 - **Commit** : `94c9ca7` (`main` → `origin/main`)
