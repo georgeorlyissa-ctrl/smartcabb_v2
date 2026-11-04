@@ -61,12 +61,10 @@ export function LandingPage() {
   const [activeSection, setActiveSection] = useState('home');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentBg, setCurrentBg] = useState(0);
-  const [heroImg, setHeroImg] = useState(0);
   const [vehiculeIndex, setVehiculeIndex] = useState(0);
   const { t, language } = useLanguage();
   const backgrounds = ['/photo2_smartcabb.jpeg', '/Images_2.jpeg', '/fille_smartcabb.jpg'];
 
-  const heroImages = ['/photo_conducteur_smartcabb2026.jpeg', '/fille_smartcabb.jpg'];
   const vehicules = ['/Stadard_5.png', '/TOYOTA NOAH_2.png', '/Confort_4.png'];
 
   const paymentMethods = [
@@ -89,9 +87,8 @@ export function LandingPage() {
   useEffect(() => {
     const rafId = requestAnimationFrame(() => {
       const t1 = setInterval(() => setCurrentBg(p => (p + 1) % backgrounds.length), 4000);
-      const t2 = setInterval(() => setHeroImg(p => (p + 1) % heroImages.length), 4500);
       const t3 = setInterval(() => setVehiculeIndex(p => (p + 1) % vehicules.length), 3000);
-      return () => { clearInterval(t1); clearInterval(t2); clearInterval(t3); };
+      return () => { clearInterval(t1); clearInterval(t3); };
     });
     return () => cancelAnimationFrame(rafId);
   }, []);
@@ -163,7 +160,6 @@ export function LandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'white' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important; }
         html { scroll-behavior: smooth; }
 
@@ -310,22 +306,192 @@ export function LandingPage() {
         ::-webkit-scrollbar-track { background: #f9fafb; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-        /* ── Hero image float badges ── */
-        .float-badge {
-          position: absolute; background: white;
-          border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.14);
-          display: flex; align-items: center; gap: 10px;
+        /* ══════════════════════════════════════════════════════════════════
+           EN-TÊTE — barre d'informations + navigation
+           ══════════════════════════════════════════════════════════════════ */
+        .sc-topbar { background: #0B2239; color: rgba(255,255,255,0.72); }
+        .sc-topbar-inner {
+          max-width: 1600px; margin: 0 auto; height: 36px; padding: 0 40px;
+          display: flex; align-items: center; justify-content: space-between;
+          font-size: 12px; letter-spacing: 0.01em;
+        }
+        .sc-topbar-group { display: flex; align-items: center; gap: 26px; }
+        .sc-topbar-item { display: inline-flex; align-items: center; gap: 7px; }
+        .sc-topbar a { color: inherit; text-decoration: none; transition: color .2s; }
+        .sc-topbar a:hover { color: #fff; }
+        .sc-nav-shell {
+          background: rgba(255,255,255,0.98);
+          -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+          border-bottom: 1px solid #eef2f7;
+          box-shadow: 0 2px 18px rgba(15,23,42,0.06);
+        }
+        .sc-nav-inner { max-width: 1600px; margin: 0 auto; padding: 0 40px; }
+
+        /* ══════════════════════════════════════════════════════════════════
+           HERO plein écran — photo de fond + overlay + titre centré
+           ══════════════════════════════════════════════════════════════════ */
+        .sc-hero {
+          position: relative;
+          display: flex; flex-direction: column; justify-content: center;
+          min-height: 100dvh;
+          padding: 172px 0 60px; /* 36 px barre d'infos + 74 px nav + respiration */
+          overflow: hidden;
+          background: #08192B;
+          isolation: isolate;
+        }
+        .sc-hero-overlay {
+          position: absolute; inset: 0; z-index: 1; pointer-events: none;
+          background:
+            linear-gradient(180deg, rgba(5,18,31,0.88) 0%, rgba(5,18,31,0.58) 34%, rgba(5,18,31,0.66) 70%, rgba(5,18,31,0.95) 100%),
+            linear-gradient(115deg, rgba(0,86,140,0.55) 0%, rgba(4,24,42,0.25) 55%, rgba(0,40,70,0.45) 100%);
+        }
+        .sc-hero-copy {
+          position: relative; z-index: 2;
+          width: 100%; max-width: 1600px; margin: 0 auto; padding: 0 40px;
+          text-align: center;
+        }
+        .sc-hero-eyebrow {
+          display: inline-flex; align-items: center; gap: 10px;
+          padding: 8px 18px; border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.22);
+          background: rgba(255,255,255,0.07);
+          -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+          color: rgba(255,255,255,0.9);
+          font-size: 11.5px; font-weight: 600;
+          letter-spacing: 0.16em; text-transform: uppercase;
+        }
+        .sc-hero-eyebrow::before {
+          content: ''; width: 7px; height: 7px; border-radius: 50%;
+          background: #FFCC00; box-shadow: 0 0 0 4px rgba(255,204,0,0.22);
+        }
+        .sc-hero-title {
+          margin: 26px auto 0; max-width: 18ch;
+          color: #fff; font-weight: 900;
+          font-size: clamp(36px, 6vw, 76px);
+          line-height: 1.02; letter-spacing: -0.035em;
+        }
+        .sc-hero-title em { font-style: normal; color: #5FB2FF; }
+        .sc-hero-sub {
+          margin: 24px auto 0; max-width: 660px;
+          color: rgba(255,255,255,0.76);
+          font-size: clamp(15px, 1.15vw, 18px);
+          line-height: 1.65;
+        }
+        .sc-hero-actions {
+          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+          gap: 14px; margin-top: 36px;
+        }
+        .sc-hero-btn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+          height: 52px; padding: 0 30px; border-radius: 10px;
+          font-size: 15px; font-weight: 700; letter-spacing: 0;
+          text-decoration: none; cursor: pointer;
+          border: 1px solid transparent;
+          transition: background .2s, border-color .2s, transform .2s, box-shadow .2s;
+        }
+        .sc-hero-btn-primary {
+          background: #007AFF; color: #fff;
+          box-shadow: 0 12px 30px rgba(0,122,255,0.35);
+        }
+        .sc-hero-btn-primary:hover { background: #0062CC; transform: translateY(-2px); box-shadow: 0 16px 34px rgba(0,122,255,0.45); }
+        .sc-hero-btn-ghost {
+          background: rgba(255,255,255,0.06); color: #fff;
+          border-color: rgba(255,255,255,0.34);
+          -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+        }
+        .sc-hero-btn-ghost:hover { background: rgba(255,255,255,0.15); border-color: #fff; transform: translateY(-2px); }
+        .sc-hero-actions a { min-height: 52px; }
+        .sc-hero-trust {
+          margin-top: 30px;
+          display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+          gap: 10px 24px;
+          color: rgba(255,255,255,0.62); font-size: 12.5px;
+        }
+        .sc-hero-trust b { color: #fff; font-weight: 700; }
+        .sc-hero-trust span { display: inline-flex; align-items: center; gap: 7px; }
+        .sc-hero-trust span + span::before {
+          content: ''; width: 1px; height: 12px; margin-right: 17px;
+          background: rgba(255,255,255,0.22);
+        }
+        .sc-hero-stats {
+          position: relative; z-index: 2;
+          width: 100%; max-width: 1040px; margin: 56px auto 0; padding: 0 40px;
+          display: grid; grid-template-columns: repeat(3, 1fr);
+          gap: 1px;
+          background: rgba(255,255,255,0.14);
+          border: 1px solid rgba(255,255,255,0.14);
+          border-radius: 16px; overflow: hidden;
+          -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+        }
+        .sc-hero-stat { background: rgba(7,23,40,0.55); padding: 22px 16px; text-align: center; }
+        .sc-hero-stat b {
+          display: block; color: #fff; font-weight: 900;
+          font-size: clamp(22px, 2.4vw, 32px); line-height: 1.05; letter-spacing: -0.02em;
+        }
+        .sc-hero-stat small {
+          display: block; margin-top: 5px;
+          color: rgba(255,255,255,0.58);
+          font-size: 11px; font-weight: 600;
+          letter-spacing: 0.1em; text-transform: uppercase;
+        }
+        @media (max-width: 900px) {
+          .sc-topbar { display: none; }
+          .sc-nav-inner { padding: 0 20px; }
+          .sc-hero { min-height: 92dvh; padding: 104px 0 44px; }
+          .sc-hero-copy { padding: 0 20px; }
+          .sc-hero-title { margin-top: 20px; font-size: clamp(32px, 9vw, 44px); max-width: 100%; }
+          .sc-hero-sub { margin-top: 18px; font-size: 15px; }
+          .sc-hero-actions { margin-top: 28px; gap: 10px; }
+          .sc-hero-btn { height: 48px; padding: 0 22px; font-size: 14px; }
+          .sc-hero-actions a { min-height: 48px; }
+          .sc-hero-trust { margin-top: 24px; font-size: 11.5px; gap: 8px 16px; }
+          .sc-hero-trust span + span::before { display: none; }
+          .sc-hero-stats { margin-top: 36px; padding: 0 20px; }
+          .sc-hero-stat { padding: 16px 8px; }
+          .sc-hero-stat small { font-size: 9.5px; letter-spacing: 0.06em; }
         }
       `}</style>
 
-      {/* ═══════════════════ NAV ═══════════════════ */}
-      <motion.nav
+      {/* ═══════════════════ BARRE D'INFOS + NAV ═══════════════════ */}
+      <motion.header
         initial={{ y: -80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.55, ease }}
-        style={{ position: 'fixed', top: 0, width: '100%', background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(16px)', borderBottom: '1px solid #f1f5f9', zIndex: 50 }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '72px' }}>
+        style={{ position: 'fixed', top: 0, width: '100%', zIndex: 50 }}>
+
+        {/* Barre d'informations — desktop uniquement */}
+        <div className="sc-topbar">
+          <div className="sc-topbar-inner">
+            <div className="sc-topbar-group">
+              <span className="sc-topbar-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Kinshasa, RDC
+              </span>
+              <span className="sc-topbar-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2"/></svg>
+                24h/24 — 7j/7
+              </span>
+              <a className="sc-topbar-item" href="tel:+243960624008">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.6a1 1 0 01.97.76l1 4a1 1 0 01-.29.96L7.6 10.4a15 15 0 006 6l1.68-1.68a1 1 0 01.96-.29l4 1A1 1 0 0121 16.4V19a2 2 0 01-2 2A17 17 0 013 5z"/></svg>
+                +243 960 624 008
+              </a>
+            </div>
+            <div className="sc-topbar-group">
+              <span className="sc-topbar-item">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path strokeLinecap="round" d="M2 10h20"/></svg>
+                Paiement Mobile Money &amp; cash
+              </span>
+              <span className="sc-topbar-item" style={{ color: '#7FD1A0' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path strokeLinecap="round" strokeLinejoin="round" d="M20 6L9 17l-5-5"/></svg>
+                Chauffeurs vérifiés
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <nav className="sc-nav-shell">
+          <div className="sc-nav-inner">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '74px' }}>
             <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', overflow: 'hidden', flexShrink: 0 }}>
                 <img src="/logo-smartcabb.jpeg" alt="SmartCabb" width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -359,153 +525,74 @@ export function LandingPage() {
             </div>
           )}
         </div>
-      </motion.nav>
+        </nav>
+      </motion.header>
 
-      {/* ═══════════════════ HERO ═══════════════════ */}
-      <section id="home" style={{ paddingTop: '112px', paddingBottom: '88px', position: 'relative', overflow: 'hidden', background: '#f0f0f0' }}>
-        {/* Background photos avec overlay beaucoup plus net */}
+      {/* ═══════════════════ HERO PLEIN ÉCRAN ═══════════════════ */}
+      <section id="home" className="sc-hero">
+        {/* Photos de fond en fondu enchaîné */}
         {backgrounds.map((bg, i) =>
           currentBg === i || currentBg === (i + 1) % backgrounds.length ? (
             <div key={i} style={{
-              position: 'absolute', inset: 0,
+              position: 'absolute', inset: 0, zIndex: 0,
               backgroundImage: `url(${bg})`, backgroundSize: 'cover', backgroundPosition: 'center',
-              opacity: currentBg === i ? 1 : 0, transition: 'opacity 1.4s ease'
+              opacity: currentBg === i ? 1 : 0, transition: 'opacity 1.6s ease'
             }} />
           ) : null
         )}
-        {/* Overlay dégradé — plus sombre = photo reste visible mais texte lisible */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.92) 50%, rgba(240,249,255,0.7) 100%)' }} />
+        {/* Voile sombre — lisibilité du texte, photo toujours perceptible */}
+        <div className="sc-hero-overlay" />
 
-        {/* Particules flottantes */}
-        {[{ w: 80, h: 80, top: '12%', left: '7%', d: '5s', dl: '0s' }, { w: 40, h: 40, top: '65%', left: '3%', d: '7s', dl: '1s' }, { w: 56, h: 56, top: '28%', right: '5%', d: '6s', dl: '0.5s' }, { w: 28, h: 28, top: '78%', right: '9%', d: '4s', dl: '2s' }].map((p, i) => (
-          <div key={i} className="particle" style={{ width: p.w, height: p.h, top: p.top, left: (p as any).left, right: (p as any).right, animation: `floatP ${p.d} ease-in-out ${p.dl} infinite` }} />
-        ))}
+        <div className="sc-hero-copy">
+          <motion.span className="sc-hero-eyebrow"
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.5 }}>
+            {language === 'fr' ? 'Taxi & VTC · Kinshasa' : 'Taxi & ride-hailing · Kinshasa'}
+          </motion.span>
 
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div>
+          <motion.h1 className="sc-hero-title"
+            initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.7, ease }}>
+            {language === 'fr'
+              ? <>Votre trajet,<br /><em>votre choix.</em></>
+              : <>Your ride,<br /><em>your choice.</em></>}
+          </motion.h1>
 
+          <motion.p className="sc-hero-sub"
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.6 }}>
+            {t('hero.description')}
+          </motion.p>
 
-              <motion.h1 initial={{ opacity: 0, y: 36 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.7, ease }}
-                style={{ fontSize: 'clamp(38px, 5vw, 62px)', fontWeight: '900', color: '#222222', lineHeight: '1.08', marginBottom: '24px', letterSpacing: '-0.03em' }}>
-                {language === 'fr'
-                  ? <><span style={{ color: '#007AFF' }}>Votre trajet,</span><br />votre choix.</>
-                  : <><span style={{ color: '#007AFF' }}>Your ride,</span><br />your choice.</>}
-              </motion.h1>
+          <motion.div className="sc-hero-actions"
+            initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.55 }}>
+            <Link to="/app/passenger" className="sc-hero-btn sc-hero-btn-primary">
+              <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              {t('hero.bookRide')}
+            </Link>
+            <Link to="/app/driver/signup" className="sc-hero-btn sc-hero-btn-ghost">
+              {t('hero.becomeDriver')}
+            </Link>
+            <PlayStoreBadge lang={language} />
+          </motion.div>
 
-              <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.6 }}
-                style={{ fontSize: '18px', color: '#475569', lineHeight: '1.75', marginBottom: '36px', maxWidth: '460px' }}>
-                {t('hero.description')}
-              </motion.p>
-
-              {/* ✅ Boutons CTA — Commander / Devenir chauffeur / Play Store */}
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.5 }}
-                style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '48px', alignItems: 'center' }}>
-                <Link to="/app/passenger" className="btn-hero-primary cta-attention">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                  {t('hero.bookRide')}
-                </Link>
-                <a
-                  href="/app/passenger?screen=scheduled-rides"
-                  className="btn-hero-secondary cta-attention"
-                  title={language === 'fr' ? 'Réserver — Familiale & Business' : 'Book — Familiale & Business'}
-                >
-                  📅 {language === 'fr' ? 'Réserver une course' : 'Book a ride'}
-                </a>
-                <Link to="/app/driver/signup" className="btn-hero-secondary cta-attention">
-                  {t('hero.becomeDriver')}
-                </Link>
-                <PlayStoreBadge lang={language} />
-              </motion.div>
-
-              {/* Stats */}
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}
-                style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px' }}>
-                {[{ target: 150, suffix: '+', label: t('hero.activeDrivers') }, { target: 1000, suffix: '+', label: t('hero.happyClients') }, { target: 24, suffix: '/7', label: t('hero.available') }].map((s, i) => (
-                  <motion.div key={i} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 + i * 0.1 }}
-                    style={{ borderLeft: '3px solid #007AFF', paddingLeft: '16px' }}>
-                    <div className="stat-number" data-target={s.target} data-suffix={s.suffix} style={{ fontSize: '30px', fontWeight: '900', color: '#007AFF', lineHeight: 1.1 }}>0</div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', fontWeight: '500' }}>{s.label}</div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </div>
-
-            {/* Hero image — mobile */}
-            <div className="relative lg:hidden" style={{ marginBottom: '32px', borderRadius: '20px', overflow: 'hidden', height: '280px', boxShadow: '0 20px 56px rgba(0,0,0,0.14)' }}>
-              {heroImages.map((img, i) =>
-                heroImg === i || heroImg === (i + 1) % heroImages.length ? (
-                  <img key={i} src={img} alt="Chauffeur SmartCabb à Kinshasa" width={600} height={280}
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
-                    onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }}
-                  />
-                ) : null
-              )}
-              <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 10 }}>
-                {heroImages.map((_, i) => (
-                  <button key={i} onClick={() => setHeroImg(i)}
-                    style={{ height: '6px', borderRadius: '3px', border: 'none', cursor: 'pointer', background: heroImg === i ? 'white' : 'rgba(255,255,255,0.4)', width: heroImg === i ? '24px' : '6px', transition: 'all 0.3s' }} />
-                ))}
-              </div>
-            </div>
-
-            {/* Hero image — desktop */}
-            <div className="relative hidden lg:block">
-              <motion.div style={{ position: 'relative', height: '500px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 32px 80px rgba(0,0,0,0.16)' }}
-                initial={{ opacity: 0, scale: 0.92, x: 40 }} animate={{ opacity: 1, scale: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.25, ease }}>
-                {heroImages.map((img, i) =>
-                  heroImg === i || heroImg === (i + 1) % heroImages.length ? (
-                      <img key={i} src={img} alt="Chauffeur SmartCabb à Kinshasa" width={800} height={500}
-                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: heroImg === i ? 1 : 0, transition: 'opacity 1s ease' }}
-                      onError={e => { e.currentTarget.src = 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=600&fit=crop'; }} />
-                  ) : null
-                )}
-                {/* Gradient au bas pour fondre l'image */}
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '120px', background: 'linear-gradient(to top, rgba(8,145,178,0.15), transparent)', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '8px', zIndex: 10 }}>
-                  {heroImages.map((_, i) => (
-                    <button key={i} onClick={() => setHeroImg(i)}
-                      style={{ height: '6px', borderRadius: '3px', border: 'none', cursor: 'pointer', background: heroImg === i ? 'white' : 'rgba(255,255,255,0.4)', width: heroImg === i ? '24px' : '6px', transition: 'all 0.3s' }} />
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Badge flottant — chauffeurs en ligne */}
-              <motion.div className="float-badge"
-                style={{ top: '-16px', right: '-16px', padding: '12px 18px' }}
-                initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.9, type: 'spring', stiffness: 220 }}>
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 4px rgba(34,197,94,0.2)', flexShrink: 0 }} />
-                <span style={{ fontWeight: '700', fontSize: '14px', color: '#222222' }}>50+ {language === 'fr' ? 'en ligne' : 'online'}</span>
-              </motion.div>
-
-              {/* Badge flottant — note */}
-              <motion.div className="float-badge"
-                style={{ bottom: '-16px', left: '-16px', padding: '14px 20px', background: '#007AFF', flexDirection: 'column', gap: '2px' }}
-                initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.05, type: 'spring', stiffness: 220 }}>
-                <div style={{ fontSize: '22px', fontWeight: '900', color: 'white', lineHeight: 1 }}>4.9 / 5</div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>{language === 'fr' ? 'Note moyenne' : 'Average rating'}</div>
-              </motion.div>
-
-              {/* Badge flottant — Play Store */}
-              <motion.div className="float-badge"
-                style={{ bottom: '60px', right: '-16px', padding: '10px 14px', gap: '8px' }}
-                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 1.2, type: 'spring', stiffness: 200 }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                  <path d="M3.18 23.63c.37.2.8.22 1.19.07l12.5-7.22-2.8-2.8-10.89 9.95z" fill="#EA4335"/>
-                  <path d="M20.52 10.3L17.4 8.5l-3.12 3.12 3.12 3.12 3.14-1.81a1.63 1.63 0 000-2.63z" fill="#FBBC04"/>
-                  <path d="M3.18.37a1.63 1.63 0 00-.18.74v21.78c0 .26.06.5.18.74l.1.09 12.2-12.2v-.25L3.28.28l-.1.09z" fill="#4285F4"/>
-                  <path d="M14.37 11.62L3.18 23.63c.37.2.8.22 1.19.07l12.5-7.22-2.5-2.86z" fill="#34A853"/>
-                </svg>
-                <div>
-                  <div style={{ fontSize: '9px', color: '#94a3b8', lineHeight: 1 }}>App disponible</div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#222222', lineHeight: 1.2 }}>Google Play</div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
+          <motion.div className="sc-hero-trust"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.65 }}>
+            <span><b>4,9/5</b> {language === 'fr' ? 'note moyenne' : 'average rating'}</span>
+            <span>{language === 'fr' ? 'Paiement M-Pesa, Orange Money, Airtel' : 'Pay with M-Pesa, Orange Money, Airtel'}</span>
+            <span>{language === 'fr' ? 'Chauffeurs vérifiés' : 'Verified drivers'}</span>
+          </motion.div>
         </div>
+
+        {/* Bandeau de chiffres clés */}
+        <motion.div className="sc-hero-stats"
+          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75, duration: 0.6 }}>
+          {[{ target: 150, suffix: '+', label: t('hero.activeDrivers') }, { target: 1000, suffix: '+', label: t('hero.happyClients') }, { target: 24, suffix: '/7', label: t('hero.available') }].map((s, i) => (
+            <div key={i} className="sc-hero-stat">
+              <b className="stat-number" data-target={s.target} data-suffix={s.suffix}>0</b>
+              <small>{s.label}</small>
+            </div>
+          ))}
+        </motion.div>
       </section>
+
 
       {/* ═══════════════════ COMMENT CA MARCHE ═══════════════════ */}
       <section id="how" ref={howRef as any} style={{ padding: '96px 0', background: 'white', borderTop: '1px solid #f1f5f9' }}>

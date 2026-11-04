@@ -156,24 +156,28 @@ export function Navigate({ to, replace = false }: { to: string; replace?: boolea
   return null;
 }
 
-interface LinkProps {
+/**
+ * Link — navigation interne.
+ * ⚠️ Toutes les props natives d'ancre (style, title, aria-*, target…) sont
+ * transmises à <a>. Auparavant seul `className` l'était : les styles inline
+ * (alignement du logo, tailles de boutons) étaient silencieusement perdus.
+ */
+interface LinkProps extends Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, 'href'> {
   to: string;
   children: ReactNode;
-  className?: string;
-  onClick?: () => void;
 }
 
-export function Link({ to, children, className, onClick }: LinkProps) {
+export function Link({ to, children, className, onClick, ...rest }: LinkProps) {
   const { navigate } = useRouter();
   
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
-    onClick?.();
+    onClick?.(e);
     navigate(to);
   };
   
   return (
-    <a href={to} onClick={handleClick} className={className}>
+    <a href={to} onClick={handleClick} className={className} {...rest}>
       {children}
     </a>
   );
