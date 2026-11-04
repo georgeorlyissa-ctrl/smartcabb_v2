@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-04 — « Choisir un véhicule » : SmartCabb Standard à la même taille que les autres catégories
 
-- **Commit** : `78ba960` (`main` → `origin/main`)
+- **Commit** : `bc3933e` (`main` → `origin/main`)
 - **Auteur** : Équipe SmartCabb
 - **Type** : fix (UI) 
 - **Objectif** : sur l'écran « Choisir un véhicule », la carte **SmartCabb Standard** occupait toute la largeur (`col-span-2`) et devenait plus haute que les autres une fois sélectionnée. Le client demande qu'elle soit « au même pied » que Confort, Familiale et Business.
