@@ -42,6 +42,56 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-04 — Chargement : un seul écran (le splash validé) au lieu de 2-3 écrans successifs
+
+- **Commit** : `9f14db1` (`main` → `origin/main`)
+- **Auteur** : Équipe SmartCabb
+- **Type** : fix (perf perçue) + feat (identité du loader)
+- **Objectif** : en passant d'une page à l'autre, l'application affichait parfois **deux ou trois écrans de chargement à la suite** (splash natif Android → preloader web → splash React → fallback Suspense), ce qui donnait une impression de lourdeur. Le seul écran de chargement doit être celui validé par le client (capture : fond bleu nuit, tuile logo, SMARTCABB, barre jaune, « Ride Smart, Live Smart », Kinshasa · RDC).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/BrandLoader.tsx` | Reproduit le splash validé (grille, itinéraire pointillé, tuile logo, filigrane, pied de page) ; une seule animation |
+| `index.html` | Bloc `<style id="boot-loader-css">` et markup `#preloader` réécrits à l'identique ; mêmes classes `.sc-boot*` |
+| `styles/globals.css` | Règles `.sc-boot*` alignées sur le nouveau visuel (`.sc-boot-grid`, `.sc-boot-route`, `.sc-boot-vignette`, `.sc-boot-footer`, `.sc-boot-tagline`, `.sc-boot-place`) |
+| `components/DeferredLoading.tsx` | **Nouveau** : fallback `Suspense` qui n'affiche le loader qu'après 400 ms |
+| `components/SplashScreen.tsx` | Précharge la route courante (`warmRouteModule`) et borne l'affichage (0,8 s → 2,6 s) ; plus de retour anticipé |
+| `components/AppRouter.tsx` | Le splash n'est affiché qu'une fois par session (`sc-splash-seen` lu à l'initialisation) ; fallback = `DeferredLoading` |
+| `App.tsx` | Fallback global = `DeferredLoading` (import `LoadingScreen` remplacé) |
+| `android/app/src/main/res/drawable/splash_bg.xml` | Splash natif : fond blanc + icône Capacitor → fond bleu nuit `#0D3145` + tuile logo centrée |
+| `android/app/src/main/res/drawable-*/splash_logo.png` | **Nouveaux** : tuile logo (mdpi 132 px → xxxhdpi 528 px), fond du JPEG détouré pour se fondre dans la tuile |
+
+### Description technique
+- **Cause des écrans multiples** : quatre rendus de chargement différents se succédaient. (1) le splash natif Android était encore celui de Capacitor (fond **blanc** + icône bleue) ; (2) le preloader d'`index.html` et (3) le `SplashScreen` React s'affichaient tous les deux ; (4) le module de la route étant chargé en `lazy`, le fallback `Suspense` réapparaissait juste après le splash. En navigation avec rechargement complet (`window.location`), toute la chaîne repartait.
+- **Un seul visuel** : `index.html` (CSS critique + markup) et `BrandLoader` partagent exactement les mêmes classes, donc le preloader natif est remplacé par le splash React sans rupture. Le splash natif Android reprend la même couleur de fond (`#0D3145`) et la même tuile logo.
+- **Plus qu'un splash par session** : `AppRouter` initialise `showSplash` à partir de `sessionStorage['sc-splash-seen']`. À la première ouverture, le splash s'affiche et précharge la route (`warmRouteModule` : `PassengerApp`, `DriverApp`, `AdminApp`, `LandingScreen` ou `LandingPage`) entre 0,8 s et 2,6 s. Aux rechargements suivants, **aucun splash** : le preloader a déjà couvert le démarrage.
+- **Fallback différé** : `DeferredLoading` ne monte le loader qu'après 400 ms. Chunk en cache (cas normal) → rien ne s'affiche ; chunk lent → le même écran (jamais un autre spinner).
+- **Android** : `splash_bg.xml` utilise une `<shape>` bleu nuit + `@drawable/splash_logo` centré. Les PNG sont générés avec une tuile blanche arrondie (rayon 23 %) et le logo détouré (pixels neutres clairs passés en alpha 0), donc aucun rectangle gris visible. **L'APK doit être reconstruit** pour bénéficier de ce changement.
+
+### Impact produit / comportement visible
+- Ouverture de l'app : **un seul** écran SmartCabb, du splash natif jusqu'à l'écran d'accueil (plus de flash blanc, plus d'icône Capacitor).
+- Navigation entre les pages : **aucun écran de chargement** dans le cas normal ; si un module tarde (> 400 ms), c'est toujours le même écran SmartCabb qui apparaît, jamais un spinner différent.
+- Le splash n'est plus rejoué à chaque rechargement complet : une seule fois par session.
+
+### Risques & rollback
+- **Risque** : si un module met plus de 400 ms à charger sur un réseau très lent, un écran de chargement apparaît en cours de navigation — c'est volontaire et identique au splash.
+- **Risque** : un splash natif mal rendu sur certains Android 12+ (le système peut imposer sa propre animation d'icône) ; le fond reste bleu nuit.
+- **Rollback global** : `git revert 9f14db1`.
+- **Rollback partiel** : remettre `const SuspenseFallback = () => <LoadingScreen />;` dans `App.tsx` (loader immédiat) et `useState(true)` dans `AppRouter` (splash à chaque ouverture).
+- **Rollback Android** : restaurer l'ancien `splash_bg.xml` (fond blanc + `@mipmap/ic_launcher_foreground`) ; les PNG `splash_logo.png` peuvent rester (inutilisés).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur (hors `_headers/Code-component-*.tsx`, pré-existantes)
+- [x] `npx vite build` — OK
+- [x] Premier chargement d'une session : splash React affiché (`sessionStorage['sc-splash-seen'] = '1'`), preloader déjà retiré
+- [x] Rechargement dans la même session : `document.querySelector('.sc-boot') === null` et contenu applicatif rendu → **un seul écran**
+- [x] Mesures du loader (viewport 527 px) : tuile 112 px centrée, marque 23 px, barre 96 × 3 px, pied de page à 81 % / 87 % de la hauteur, aucun débordement horizontal
+- [x] Aucune erreur console
+- [ ] Rendu visuel sur appareil Android réel après reconstruction de l'APK (splash natif → WebView)
+
+---
+
 ## 2026-11-04 — Vitrine : CTA « Réserver une course », photo chauffeur en fond de hero, App Store « très bientôt » et animations au défilement
 
 - **Commit** : `fefa519` (`main` → `origin/main`)
