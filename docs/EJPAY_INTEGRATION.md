@@ -346,15 +346,40 @@ Aucune migration SQL n'accompagne cette intégration : le rollback ne touche pas
 
 ---
 
-## 12. Ce qui reste à faire (phase 2 — interface)
+## 12. Phase 2 — interface branchée sur Ejpay
 
-Le backend est prêt ; l'interface sera branchée ensuite :
+**Décision produit** : Ejpay **remplace Flutterwave partout** dans l'application. La carte bancaire, non traitée par Ejpay, est retirée des écrans de paiement.
 
-1. `components/passenger/PaymentScreen.tsx` : remplacer l'appel Flutterwave par `POST /ejpay/collect` puis polling `GET /ejpay/status/:orderId` toutes les 3 s (afficher « Validez sur votre téléphone », chronomètre, bouton « Annuler »).
-2. Recharge de portefeuille passager (`kind: "wallet_topup"`).
-3. Retrait chauffeur (`POST /ejpay/payout` via un écran admin ou une Edge Function protégée — **jamais** depuis le client avec le secret).
-4. Écran admin « Transactions Mobile Money » : `GET /ejpay/orders`, badge de statut, bouton « Rafraîchir », `GET /ejpay/wallets`.
-5. Décision à prendre : Ejpay **remplace** Flutterwave pour le Mobile Money uniquement, ou pour tous les moyens de paiement ?
+### Nouveaux fichiers
+
+| Fichier | Rôle |
+|---|---|
+| `lib/ejpay-service.ts` | Client HTTP (config, collecte, statut, polling, helpers admin). Aucun secret côté navigateur. |
+| `lib/payment-providers/ejpay-provider-pure.ts` | Provider branché dans `paymentService` (même contrat que les autres providers). |
+| `hooks/useEjpayCheckout.ts` | Orchestration : `collect` → attente du résultat (`PENDING` → `SUCCESS`/`FAILED`) avec chronomètre et annulation. |
+| `components/passenger/EjpayWaitingModal.tsx` | Écran « Validez sur votre téléphone » (montant, opérateur, temps écoulé, annuler). |
+
+### Écrans branchés
+
+| Écran | Flux | `kind` Ejpay |
+|---|---|---|
+| `components/passenger/PaymentScreen.tsx` | Paiement de course + paiement mixte | `ride_payment` |
+| `components/passenger/RechargeModal.tsx` | Recharge du portefeuille (sélecteur d'opérateur ajouté) | `wallet_topup` |
+| `components/passenger/ScheduledRides.tsx` | Acompte 50 % d'une réservation | `deposit` |
+| `components/driver/DriverWalletScreen.tsx` | Forfait chauffeur (sélecteur d'opérateur + numéro) | `other` |
+
+Changements transverses :
+
+- `lib/payment-service.ts` : `mobile_money` et `card` routés vers `ejpayProvider` ; la carte renvoie un refus explicite (`CARD_NOT_SUPPORTED`).
+- `components/admin/GlobalSettingsScreen.tsx` + `lib/config-sync.ts` : le commutateur « Flutterwave activé » devient **« Ejpay activé (Mobile Money) »**, adossé au drapeau `ejpayEnabled` (faux par défaut).
+- Carte bancaire retirée des écrans de paiement (`PaymentScreen`, `ScheduledRides`, `RideScreen`, `ProfileScreen`) et des textes (CGU, paiement mixte).
+- Plus aucune popup de paiement : la validation se fait sur le téléphone du client.
+
+### Ce qui reste optionnel
+
+1. Écran admin « Transactions Mobile Money » : `GET /ejpay/orders`, `GET /ejpay/wallets`, `POST /orders/:id/refresh` (helpers déjà disponibles dans `lib/ejpay-service.ts`).
+2. Retrait chauffeur automatique vers Mobile Money : `POST /ejpay/payout` doit être déclenché par un admin (secret serveur), pas depuis le client.
+3. Push FCM « paiement reçu » côté passager (le push chauffeur existe déjà pour les retraits).
 
 ---
 

@@ -73,7 +73,7 @@ export function RideScreen() {
   const [driverArriving, setDriverArriving] = useState(false);
   const [rideInProgress, setRideInProgress] = useState(false);
   const [arrivalTime, setArrivalTime] = useState(3);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'mobile_money' | 'card' | 'cash' | 'wallet'>('wallet');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'mobile_money' | 'cash' | 'wallet'>('wallet');
   const [driverData, setDriverData] = useState<DriverData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showDriverFoundDialog, setShowDriverFoundDialog] = useState(false);
@@ -1568,35 +1568,6 @@ return () => {
                     </div>
                     {selectedPaymentMethod === 'mobile_money' && (
                       <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    )}
-                  </button>
-
-                  {/* Carte bancaire */}
-                  <button
-                    onClick={() => setSelectedPaymentMethod('card')}
-                    className={`w-full p-4 rounded-xl border-2 transition-all duration-300 flex items-center space-x-4 ${
-                      selectedPaymentMethod === 'card'
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-border hover:border-blue-200 hover:bg-blue-50/50'
-                    }`}
-                  >
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                      selectedPaymentMethod === 'card' ? 'bg-blue-500' : 'bg-blue-100'
-                    }`}>
-                      <CreditCard className={`w-6 h-6 ${
-                        selectedPaymentMethod === 'card' ? 'text-white' : 'text-blue-600'
-                      }`} />
-                    </div>
-                    <div className="flex-1 text-left">
-                      <p className="font-semibold text-foreground">Carte bancaire</p>
-                      <p className="text-sm text-muted-foreground">Visa, Mastercard</p>
-                    </div>
-                    {selectedPaymentMethod === 'card' && (
-                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
                         <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>

@@ -4,16 +4,17 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
 import {
-  Wallet, Banknote, Smartphone, CreditCard, Split,
-  X, CheckCircle, AlertCircle, Clock, DollarSign,
+  Wallet, Banknote, Smartphone, Split,
+  X, CheckCircle,
   Loader2, Phone
 } from '../../lib/icons';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
 import { toast } from '../../lib/toast';
-import { paymentService } from '../../lib/payment-service';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
+import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
+import { EjpayWaitingModal } from './EjpayWaitingModal';
 import { VodacomMpesaLogo, OrangeMoneyLogo, AirtelMoneyLogo, AfrimoneyLogo } from '../mobile-money-logos';
 import { calculateDriverEarnings } from '../../lib/pricing';
 
@@ -61,10 +62,6 @@ export function PaymentScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [selectedNetwork, setSelectedNetwork] = useState<typeof MOBILE_MONEY_NETWORKS[0] | null>(null);
-  const [fullName, setFullName] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
-  const [cvv, setCvv] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
   const [cashCollected, setCashCollected] = useState(false);
 
   // États paiement mixte
@@ -76,6 +73,14 @@ export function PaymentScreen() {
   const [showNetworkSelection, setShowNetworkSelection] = useState(false);
   const [showMobileMoneyModal, setShowMobileMoneyModal] = useState(false);
   const [showMixedPaymentModal, setShowMixedPaymentModal] = useState(false);
+
+  // 💳 Paiement Mobile Money (Ejpay) — attente de validation sur le téléphone
+  const ejpay = useEjpayCheckout();
+  const [checkoutInfo, setCheckoutInfo] = useState<{
+    amount: number;
+    msisdn: string;
+    operatorName: string;
+  } | null>(null);
 
   // Polling durée
   const [isLoadingDuration, setIsLoadingDuration] = useState(false);
@@ -299,77 +304,31 @@ export function PaymentScreen() {
         }
       };
 
-      const result = await paymentService.initPayment(paymentData);
+      setCheckoutInfo({
+        amount: mobileMoneyAmount,
+        msisdn: mixedPhoneNumber,
+        operatorName: mixedNetwork.name,
+      });
 
-      if (result.success && result.paymentUrl) {
+      const outcome = await ejpay.pay(paymentData);
+
+      if (outcome.status === 'completed') {
+        await completeRide('mixed', outcome.transactionId, cashAmountNum, mobileMoneyAmount);
+        // ✅ TRADUIT
+        toast.success(t('payment_successful'));
         setShowMixedPaymentModal(false);
-
-        const width = 500, height = 700;
-        const left = (window.screen.width - width) / 2;
-        const top = (window.screen.height - height) / 2;
-
-        const paymentWindow = window.open(
-          result.paymentUrl,
-          'FlutterwavePayment',
-          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-        );
-
-        if (!paymentWindow) {
-          toast.error(t('error'));
-          setIsProcessing(false);
-          return;
-        }
-
-        const checkPaymentStatus = async () => {
-          if (!result.transactionId) return false;
-          try {
-            const verification = await paymentService.verifyPayment(result.transactionId);
-            if (verification.isValid && (verification.status === 'successful' || verification.status === 'completed')) {
-              await completeRide('mixed', result.transactionId, cashAmountNum, mobileMoneyAmount);
-              // ✅ TRADUIT
-              toast.success(t('payment_successful'));
-              setIsProcessing(false);
-              if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
-              setTimeout(() => { setCurrentScreen('rating'); }, 1500);
-              return true;
-            } else if (verification.status === 'failed') {
-              toast.error(t('error'));
-              setIsProcessing(false);
-              if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
-              return true;
-            }
-            return false;
-          } catch { return false; }
-        };
-
-        let attempts = 0;
-        const intervalId = setInterval(async () => {
-          attempts++;
-          if (paymentWindow.closed) {
-            clearInterval(intervalId);
-            const finalCheck = await checkPaymentStatus();
-            if (!finalCheck) {
-              let extraAttempts = 0;
-              const extraInterval = setInterval(async () => {
-                extraAttempts++;
-                if (extraAttempts >= 15) { clearInterval(extraInterval); setIsProcessing(false); return; }
-                const status = await checkPaymentStatus();
-                if (status) clearInterval(extraInterval);
-              }, 2000);
-            }
-            return;
-          }
-          const isDone = await checkPaymentStatus();
-          if (isDone) clearInterval(intervalId);
-          if (attempts >= 60) {
-            clearInterval(intervalId);
-            toast.error(t('error'));
-            setIsProcessing(false);
-            if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
-          }
-        }, 2000);
+        setTimeout(() => { setCurrentScreen('rating'); }, 1500);
+      } else if (outcome.status === 'cancelled') {
+        toast.info(outcome.message);
+        setIsProcessing(false);
+      } else if (outcome.status === 'timeout') {
+        // Le crédit arrivera dès validation : on n'invalide pas la commande.
+        toast.info(outcome.message);
+        setIsProcessing(false);
+        setShowMixedPaymentModal(false);
       } else {
-        throw new Error(result.error || result.message || t('error'));
+        toast.error(outcome.message || t('error'));
+        setIsProcessing(false);
       }
     } catch (error) {
       console.error('❌ Erreur paiement mixte:', error);
@@ -401,77 +360,30 @@ export function PaymentScreen() {
         metadata: { type: 'ride_payment', network: selectedNetwork.id, networkName: selectedNetwork.name }
       };
 
-      const result = await paymentService.initPayment(paymentData);
+      setCheckoutInfo({
+        amount: ridePrice,
+        msisdn: phoneNumber,
+        operatorName: selectedNetwork.name,
+      });
 
-      if (result.success && result.paymentUrl) {
+      const outcome = await ejpay.pay(paymentData);
+
+      if (outcome.status === 'completed') {
+        await completeRide('mobile_money', outcome.transactionId);
+        // ✅ TRADUIT
+        toast.success(t('payment_successful'));
         setShowMobileMoneyModal(false);
-
-        const width = 500, height = 700;
-        const left = (window.screen.width - width) / 2;
-        const top = (window.screen.height - height) / 2;
-
-        const paymentWindow = window.open(
-          result.paymentUrl,
-          'FlutterwavePayment',
-          `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-        );
-
-        if (!paymentWindow) {
-          toast.error(t('error'));
-          setIsProcessing(false);
-          return;
-        }
-
-        const checkPaymentStatus = async () => {
-          if (!result.transactionId) return false;
-          try {
-            const verification = await paymentService.verifyPayment(result.transactionId);
-            if (verification.isValid && (verification.status === 'successful' || verification.status === 'completed')) {
-              await completeRide('mobile_money', result.transactionId);
-              // ✅ TRADUIT
-              toast.success(t('payment_successful'));
-              setIsProcessing(false);
-              if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
-              setTimeout(() => { setCurrentScreen('rating'); }, 1500);
-              return true;
-            } else if (verification.status === 'failed') {
-              toast.error(t('error'));
-              setIsProcessing(false);
-              if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
-              return true;
-            }
-            return false;
-          } catch { return false; }
-        };
-
-        let attempts = 0;
-        const intervalId = setInterval(async () => {
-          attempts++;
-          if (paymentWindow.closed) {
-            clearInterval(intervalId);
-            const finalCheck = await checkPaymentStatus();
-            if (!finalCheck) {
-              let extraAttempts = 0;
-              const extraInterval = setInterval(async () => {
-                extraAttempts++;
-                if (extraAttempts >= 15) { clearInterval(extraInterval); setIsProcessing(false); return; }
-                const status = await checkPaymentStatus();
-                if (status) clearInterval(extraInterval);
-              }, 2000);
-            }
-            return;
-          }
-          const isDone = await checkPaymentStatus();
-          if (isDone) clearInterval(intervalId);
-          if (attempts >= 60) {
-            clearInterval(intervalId);
-            toast.error(t('error'));
-            setIsProcessing(false);
-            if (paymentWindow && !paymentWindow.closed) paymentWindow.close();
-          }
-        }, 2000);
+        setTimeout(() => { setCurrentScreen('rating'); }, 1500);
+      } else if (outcome.status === 'cancelled') {
+        toast.info(outcome.message);
+        setIsProcessing(false);
+      } else if (outcome.status === 'timeout') {
+        toast.info(outcome.message);
+        setIsProcessing(false);
+        setShowMobileMoneyModal(false);
       } else {
-        throw new Error(result.error || result.message || t('error'));
+        toast.error(outcome.message || t('error'));
+        setIsProcessing(false);
       }
     } catch (error) {
       console.error('❌ Erreur paiement Mobile Money:', error);
@@ -548,19 +460,24 @@ export function PaymentScreen() {
       icon: Split,
       description: `${t('cash')} + ${t('mobile_money')}`,
       color: 'bg-blue-100 text-blue-600'
-    },
-    {
-      id: 'card',
-      // ✅ TRADUIT
-      name: t('card'),
-      icon: CreditCard,
-      description: 'Visa, Mastercard',
-      color: 'bg-gray-100 text-gray-600'
     }
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+
+      {/* 💳 Attente de validation Mobile Money (Ejpay) */}
+      <EjpayWaitingModal
+        open={ejpay.phase === 'waiting'}
+        elapsedMs={ejpay.elapsedMs}
+        message={ejpay.message}
+        amount={checkoutInfo?.amount}
+        msisdn={checkoutInfo?.msisdn}
+        operatorName={checkoutInfo?.operatorName}
+        onCancel={() => {
+          ejpay.cancel();
+        }}
+      />
 
       {/* ── HEADER — ✅ TRADUIT ── */}
       <div className="bg-white border-b p-3 sm:p-4">

@@ -6,7 +6,7 @@
 
 import type { PaymentMethod, PaymentInitData, PaymentResult, PaymentVerification } from './payment-providers/base-provider';
 import { cashProvider } from './payment-providers/cash-provider-pure';
-import { flutterwaveProvider } from './payment-providers/flutterwave-provider-pure';
+import { ejpayProvider } from './payment-providers/ejpay-provider-pure';
 import { supabase } from './supabase'; // ✅ UTILISER LE SINGLETON
 
 // Types
@@ -44,14 +44,14 @@ class PaymentService {
         return cashProvider;
       
       case 'mobile_money':
-        // Utiliser Flutterwave si configuré, sinon cash
-        return flutterwaveProvider.isConfigured() 
-          ? flutterwaveProvider 
-          : cashProvider;
-      
+        // ✅ Mobile Money RDC : EJ PAY (M-Pesa, Orange, Airtel, Afrimoney).
+        // Le serveur reste l'autorité : si `ejpayEnabled` est faux, la route
+        // /ejpay/collect répond 503 et le message remonte tel quel.
+        return ejpayProvider;
+
       case 'card':
-        // Pour le moment, utiliser Flutterwave
-        return flutterwaveProvider;
+        // Ejpay ne traite pas les cartes : le provider renvoie un refus explicite.
+        return ejpayProvider;
       
       default:
         return cashProvider;

@@ -164,8 +164,7 @@ export const TermsOfService = memo(function TermsOfService() {
                 <p className="font-medium mb-2">Les paiements peuvent être effectués par :</p>
                 <ul className="space-y-1 ml-4">
                   <li>💵 <strong>Espèces</strong> (à remettre au chauffeur)</li>
-                  <li>💳 <strong>Carte de crédit</strong> (via Flutterwave)</li>
-                  <li>📱 <strong>Mobile Money</strong> disponibles en RDC :
+                  <li>📱 <strong>Mobile Money</strong> (via Ejpay) disponibles en RDC :
                     <ul className="ml-6 mt-1 text-xs space-y-1">
                       <li>- Airtel Money</li>
                       <li>- Orange Money</li>

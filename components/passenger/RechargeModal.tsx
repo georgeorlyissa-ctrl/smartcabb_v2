@@ -17,10 +17,19 @@ import {
   Clock
 } from '../../lib/icons';
 import { convertUSDtoCDF, formatCDF, getExchangeRate } from '../../lib/pricing';
-import { paymentService } from '../../lib/payment-service';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
+import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
+import { EjpayWaitingModal } from './EjpayWaitingModal';
 import { DebugPaymentModal } from '../DebugPaymentModal';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+
+// Opérateurs Mobile Money (identifiants repris par lib/ejpay-service)
+const RECHARGE_NETWORKS = [
+  { id: 'orange_money', name: 'Orange Money' },
+  { id: 'mpesa', name: 'M-Pesa (Vodacom)' },
+  { id: 'airtel_money', name: 'Airtel Money' },
+  { id: 'afrimoney', name: 'Afrimoney (Africell)' },
+];
 
 // Étapes du processus de paiement
 type PaymentStep = 'amount' | 'method' | 'details' | 'confirm' | 'processing' | 'success' | 'error';
@@ -52,10 +61,19 @@ export function RechargeModal({
   const [rechargeAmount, setRechargeAmount] = useState<number>(20);
   const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'cash'>('mobile_money');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [network, setNetwork] = useState('');
   const [showDebug, setShowDebug] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [transactionId, setTransactionId] = useState('');
+
+  // 💳 Paiement Mobile Money (Ejpay) — attente de validation sur le téléphone
+  const ejpay = useEjpayCheckout();
+  const [checkoutInfo, setCheckoutInfo] = useState<{
+    amount: number;
+    msisdn: string;
+    operatorName: string;
+  } | null>(null);
 
   const suggestedAmounts = [20, 50, 100, 200];
 
@@ -89,6 +107,10 @@ export function RechargeModal({
       // Validation du numéro de téléphone
       if (!phoneNumber || phoneNumber.length < 9) {
         setErrorMessage('Veuillez entrer un numéro de téléphone valide (minimum 9 chiffres)');
+        return;
+      }
+      if (!network) {
+        setErrorMessage('Veuillez choisir votre opérateur Mobile Money');
         return;
       }
       // Aller vers la confirmation au lieu d'initier le paiement
@@ -139,154 +161,49 @@ export function RechargeModal({
             userId: userId,
             type: 'wallet_recharge',
             amountUSD: rechargeAmount,
+            network: network,
           }
         };
 
-        console.log('💳 Initialisation paiement Flutterwave:', paymentData);
+        console.log('💳 [EJPAY] Recharge portefeuille:', paymentData);
 
-        const result = await paymentService.initPayment(paymentData);
+        if (!network) {
+          setCurrentStep('details');
+          setErrorMessage('Choisissez votre opérateur Mobile Money');
+          setIsProcessing(false);
+          return;
+        }
 
-        console.log('🔍 Résultat paiement:', result);
-        console.log('🔍 Résultat COMPLET:', JSON.stringify(result, null, 2));
+        setCheckoutInfo({
+          amount: amountCDF,
+          msisdn: phoneNumber,
+          operatorName: RECHARGE_NETWORKS.find((n) => n.id === network)?.name || network,
+        });
 
-        if (result.success && result.redirectUrl) {
-          console.log('✅ Redirection vers Flutterwave:', result.redirectUrl);
-          console.log('   - Transaction ID:', result.transactionId);
-          console.log('   - Provider Reference:', result.providerReference);
-          
-          // Redirection vers Flutterwave
-          setTransactionId(result.transactionId || '');
-          
-          // 🪟 Ouvrir Flutterwave dans une popup (petite fenêtre)
-          const width = 500;
-          const height = 700;
-          const left = (window.screen.width - width) / 2;
-          const top = (window.screen.height - height) / 2;
-          
-          const paymentWindow = window.open(
-            result.redirectUrl, 
-            'FlutterwavePayment',
-            `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-          );
-          
-          if (!paymentWindow) {
-            setCurrentStep('error');
-            setErrorMessage('Veuillez autoriser les popups pour ce site');
-            setIsProcessing(false);
-            return;
-          }
-          
-          // 🔍 Polling pour détecter la fermeture de la popup et vérifier le paiement
-          const checkPaymentStatus = async () => {
-            if (!result.transactionId) return false;
-            
-            try {
-              const verification = await paymentService.verifyPayment(result.transactionId);
-              
-              console.log('🔍 Vérification paiement:', verification);
-              
-              // Accepter 'successful' ou 'completed' comme succès
-              if (verification.isValid && (verification.status === 'successful' || verification.status === 'completed')) {
-                // Paiement réussi
-                setIsProcessing(false);
-                setCurrentStep('success');
-                onSuccess(amountCDF, result.transactionId, paymentMethod);
-                
-                // Fermer la popup si elle est encore ouverte
-                if (paymentWindow && !paymentWindow.closed) {
-                  paymentWindow.close();
-                }
-                
-                // Fermer le modal après 3 secondes
-                setTimeout(() => {
-                  handleClose();
-                }, 3000);
-                return true; // Arrêter le polling
-              } else if (verification.status === 'failed') {
-                // Paiement échoué
-                setCurrentStep('error');
-                setErrorMessage(verification.error || 'Le paiement a échoué. Veuillez réessayer.');
-                setIsProcessing(false);
-                
-                // Fermer la popup si elle est encore ouverte
-                if (paymentWindow && !paymentWindow.closed) {
-                  paymentWindow.close();
-                }
-                return true; // Arrêter le polling
-              }
-              // Si pending/processing, continuer à vérifier
-              return false;
-            } catch (error) {
-              console.error('❌ Erreur vérification:', error);
-              return false;
-            }
-          };
-          
-          // Vérifier toutes les 2 secondes si la popup est fermée ou si le paiement est terminé
-          const maxAttempts = 60; // 2 minutes
-          let attempts = 0;
-          
-          const intervalId = setInterval(async () => {
-            attempts++;
-            
-            // Vérifier si la popup est fermée
-            if (paymentWindow.closed) {
-              console.log('🪟 Popup fermée, vérification du paiement...');
-              clearInterval(intervalId);
-              
-              // Vérifier le statut une dernière fois
-              const finalCheck = await checkPaymentStatus();
-              
-              if (!finalCheck) {
-                // Si le paiement n'est pas encore terminé, continuer à vérifier
-                setCurrentStep('processing');
-                
-                // Continuer à vérifier pendant 30 secondes supplémentaires
-                let extraAttempts = 0;
-                const extraInterval = setInterval(async () => {
-                  extraAttempts++;
-                  
-                  if (extraAttempts >= 15) {
-                    clearInterval(extraInterval);
-                    setCurrentStep('error');
-                    setErrorMessage('Le paiement prend trop de temps. Veuillez vérifier votre historique de transactions.');
-                    setIsProcessing(false);
-                    return;
-                  }
-                  
-                  const isDone = await checkPaymentStatus();
-                  if (isDone) {
-                    clearInterval(extraInterval);
-                  }
-                }, 2000);
-              }
-              return;
-            }
-            
-            // Timeout après 2 minutes
-            if (attempts >= maxAttempts) {
-              clearInterval(intervalId);
-              setCurrentStep('error');
-              setErrorMessage('Le paiement prend trop de temps. Veuillez fermer la fenêtre et vérifier votre historique.');
-              setIsProcessing(false);
-              
-              if (paymentWindow && !paymentWindow.closed) {
-                paymentWindow.close();
-              }
-              return;
-            }
-            
-            // Vérifier le statut du paiement toutes les 2 secondes
-            const shouldStop = await checkPaymentStatus();
-            if (shouldStop) {
-              clearInterval(intervalId);
-            }
-          }, 2000);
-          
+        // 💳 Ejpay : la validation se fait sur le téléphone du client
+        const outcome = await ejpay.pay(paymentData);
+
+        if (outcome.status === 'completed') {
+          setTransactionId(outcome.transactionId || '');
+          setIsProcessing(false);
+          setCurrentStep('success');
+          onSuccess(amountCDF, outcome.transactionId || '', paymentMethod);
+
+          // Fermer le modal après 3 secondes
+          setTimeout(() => {
+            handleClose();
+          }, 3000);
+        } else if (outcome.status === 'cancelled') {
+          setCurrentStep('details');
+          setErrorMessage(outcome.message);
+          setIsProcessing(false);
+        } else if (outcome.status === 'timeout') {
+          setCurrentStep('processing');
+          setErrorMessage(outcome.message);
+          setIsProcessing(false);
         } else {
-          // Erreur lors de l'initialisation
           setCurrentStep('error');
-          setErrorMessage(result.message || 'Erreur lors de l\'initialisation du paiement');
+          setErrorMessage(outcome.message || 'Le paiement a échoué. Veuillez réessayer.');
           setIsProcessing(false);
         }
       } else {
@@ -372,6 +289,17 @@ export function RechargeModal({
           className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-lg max-h-[90vh] overflow-y-auto"
         >
           <div className="p-6">
+            {/* 💳 Attente de validation Mobile Money (Ejpay) */}
+            <EjpayWaitingModal
+              open={ejpay.phase === 'waiting'}
+              elapsedMs={ejpay.elapsedMs}
+              message={ejpay.message}
+              amount={checkoutInfo?.amount}
+              msisdn={checkoutInfo?.msisdn}
+              operatorName={checkoutInfo?.operatorName}
+              onCancel={() => ejpay.cancel()}
+            />
+
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl text-foreground">
@@ -522,7 +450,7 @@ export function RechargeModal({
                     <div className="text-left flex-1">
                       <p className="font-semibold text-foreground">Mobile Money</p>
                       <p className="text-xs text-muted-foreground">M-Pesa, Airtel Money, Orange Money</p>
-                      <p className="text-xs text-green-600 mt-1">✨ Instantané et sécurisé via Flutterwave</p>
+                      <p className="text-xs text-green-600 mt-1">✨ Instantané et sécurisé via Mobile Money</p>
                     </div>
                     {paymentMethod === 'mobile_money' && (
                       <div className="w-6 h-6 bg-secondary rounded-full flex items-center justify-center">
@@ -574,6 +502,28 @@ export function RechargeModal({
                           Entrez le numéro de téléphone associé à votre compte M-Pesa, Airtel Money ou Orange Money
                         </p>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="text-sm text-muted-foreground mb-2 block">
+                      Opérateur Mobile Money
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {RECHARGE_NETWORKS.map((op) => (
+                        <button
+                          key={op.id}
+                          type="button"
+                          onClick={() => setNetwork(op.id)}
+                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                            network === op.id
+                              ? 'border-secondary bg-secondary/5 shadow-sm text-foreground'
+                              : 'border-border hover:border-secondary/50 text-muted-foreground'
+                          }`}
+                        >
+                          {op.name}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
@@ -670,10 +620,18 @@ export function RechargeModal({
 
                     {/* Numéro de téléphone (si Mobile Money) */}
                     {paymentMethod === 'mobile_money' && (
-                      <div className="flex justify-between items-center pb-3 border-b">
-                        <span className="text-muted-foreground">Numéro Mobile Money</span>
-                        <span className="font-semibold text-foreground">{phoneNumber}</span>
-                      </div>
+                      <>
+                        <div className="flex justify-between items-center pb-3 border-b">
+                          <span className="text-muted-foreground">Opérateur</span>
+                          <span className="font-semibold text-foreground">
+                            {RECHARGE_NETWORKS.find((n) => n.id === network)?.name || '—'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b">
+                          <span className="text-muted-foreground">Numéro Mobile Money</span>
+                          <span className="font-semibold text-foreground">{phoneNumber}</span>
+                        </div>
+                      </>
                     )}
 
                     {/* Nouveau solde après recharge */}

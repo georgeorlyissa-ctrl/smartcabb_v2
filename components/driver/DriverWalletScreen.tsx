@@ -23,6 +23,8 @@ import {
   Download
 } from '../../lib/icons';
 import { toast } from '../../lib/toast';
+import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
+import { EjpayWaitingModal } from '../passenger/EjpayWaitingModal';
 
 // ✅ v517.77 - Helper pour formater les montants CDF de manière sécurisée
 const formatCDF = (amount: number | null | undefined): string => {
@@ -30,9 +32,25 @@ const formatCDF = (amount: number | null | undefined): string => {
   return `${safeAmount.toLocaleString('fr-FR')} CDF`;
 };
 
+// Opérateurs Mobile Money (identifiants repris par lib/ejpay-service)
+const DRIVER_NETWORKS = [
+  { id: 'mpesa', name: 'M-Pesa (Vodacom)' },
+  { id: 'orange_money', name: 'Orange Money' },
+  { id: 'airtel_money', name: 'Airtel Money' },
+  { id: 'afrimoney', name: 'Afrimoney (Africell)' },
+];
+
 export function DriverWalletScreen() {
   const { setCurrentScreen, currentDriver } = useAppState();
-  const { initiatePayment, loading: paymentLoading } = usePayment();
+  // 💳 Paiement Mobile Money (Ejpay) du forfait chauffeur
+  const ejpay = useEjpayCheckout();
+  const [payNetwork, setPayNetwork] = useState('mpesa');
+  const [payPhone, setPayPhone] = useState('');
+  const [checkoutInfo, setCheckoutInfo] = useState<{
+    amount: number;
+    msisdn: string;
+    operatorName: string;
+  } | null>(null);
   const [selectedPackage, setSelectedPackage] = useState<WalletPackage | null>(null);
   const [walletInfo, setWalletInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -150,42 +168,49 @@ export function DriverWalletScreen() {
     try {
       console.log('💳 Démarrage recharge:', selectedPackage);
 
-      // Initialiser le paiement Flutterwave
+      const phone = (payPhone || currentDriver.phone || '').trim();
+      if (phone.replace(/\D/g, '').length < 9) {
+        toast.error('Numéro Mobile Money invalide');
+        setProcessingPayment(false);
+        return;
+      }
+
+      // 💳 Ejpay : encaissement Mobile Money (validation sur le téléphone)
       const paymentData = {
         amount: selectedPackage.amount,
         currency: 'CDF' as const,
-        rideId: `WALLET_${currentDriver.id}_${Date.now()}`,
         passengerId: currentDriver.id,
         driverId: currentDriver.id,
         method: 'mobile_money' as const,
         customerEmail: currentDriver.email,
-        customerPhone: currentDriver.phone || '+243000000000',
+        customerPhone: phone,
         customerName: currentDriver.name,
+        reference: `DRIVERWALLET_${currentDriver.id}_${Date.now()}`,
+        description: `Forfait chauffeur ${selectedPackage.days} jours`,
         metadata: {
-          type: 'wallet_recharge',
+          type: 'driver_wallet_recharge',
           packageId: selectedPackage.id,
-          days: selectedPackage.days
-        }
+          days: selectedPackage.days,
+          network: payNetwork,
+        },
       };
 
-      const result = await initiatePayment(paymentData);
+      setCheckoutInfo({
+        amount: selectedPackage.amount,
+        msisdn: phone,
+        operatorName: DRIVER_NETWORKS.find((n) => n.id === payNetwork)?.name || payNetwork,
+      });
 
-      if (result.success) {
-        if (result.redirectUrl) {
-          // Ouvrir Flutterwave
-          toast.info('Complétez le paiement dans la fenêtre qui s\'ouvre');
-          window.open(result.redirectUrl, '_blank');
+      const outcome = await ejpay.pay(paymentData);
 
-          // Simuler l'activation après paiement (en production, utiliser webhook)
-          setTimeout(async () => {
-            await activateWallet(selectedPackage);
-          }, 15000); // 15 secondes
-        } else {
-          // Paiement immédiat (CASH ou autre)
-          await activateWallet(selectedPackage);
-        }
+      if (outcome.status === 'completed') {
+        await activateWallet(selectedPackage);
+      } else if (outcome.status === 'timeout') {
+        toast.info('Paiement en attente : le forfait sera activé dès confirmation.');
+      } else if (outcome.status === 'cancelled') {
+        toast.info(outcome.message);
       } else {
-        toast.error(result.message || 'Erreur lors du paiement');
+        toast.error(outcome.message || 'Erreur lors du paiement');
       }
     } catch (error: any) {
       console.error('❌ Erreur recharge:', error);
@@ -322,6 +347,16 @@ export function DriverWalletScreen() {
       animate={{ opacity: 1 }}
       className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50"
     >
+      {/* 💳 Attente de validation Mobile Money (Ejpay) */}
+      <EjpayWaitingModal
+        open={ejpay.phase === 'waiting'}
+        elapsedMs={ejpay.elapsedMs}
+        message={ejpay.message}
+        amount={checkoutInfo?.amount}
+        msisdn={checkoutInfo?.msisdn}
+        operatorName={checkoutInfo?.operatorName}
+        onCancel={() => ejpay.cancel()}
+      />
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="flex items-center justify-between p-4">
@@ -596,13 +631,33 @@ export function DriverWalletScreen() {
                 <Smartphone className="w-12 h-12 opacity-50" />
               </div>
 
+              {/* Opérateur + numéro Mobile Money */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <select
+                  value={payNetwork}
+                  onChange={(e) => setPayNetwork(e.target.value)}
+                  className="w-full rounded-lg px-2 py-2 text-sm text-gray-800 bg-white"
+                >
+                  {DRIVER_NETWORKS.map((n) => (
+                    <option key={n.id} value={n.id}>{n.name}</option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  value={payPhone}
+                  onChange={(e) => setPayPhone(e.target.value)}
+                  placeholder={currentDriver?.phone || '0812345678'}
+                  className="w-full rounded-lg px-2 py-2 text-sm text-gray-800 bg-white"
+                />
+              </div>
+
               <Button
                 onClick={handleRecharge}
-                disabled={processingPayment || paymentLoading}
+                disabled={processingPayment || ejpay.isBusy}
                 className="w-full h-14 bg-white text-blue-600 hover:bg-gray-100"
                 size="lg"
               >
-                {processingPayment || paymentLoading ? (
+                {processingPayment || ejpay.isBusy ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                     Traitement en cours...
@@ -616,7 +671,7 @@ export function DriverWalletScreen() {
               </Button>
 
               <p className="text-xs text-center mt-3 opacity-75">
-                Paiement sécurisé via M-Pesa, Airtel Money ou Orange Money
+                Paiement sécurisé via M-Pesa, Airtel Money, Orange Money ou Afrimoney
               </p>
             </Card>
           </motion.div>

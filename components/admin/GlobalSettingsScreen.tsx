@@ -345,12 +345,14 @@ export function GlobalSettingsScreen() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Flutterwave activé</Label>
-                    <p className="text-xs text-gray-500">Paiement par carte/mobile money</p>
+                    <Label>Ejpay activé (Mobile Money)</Label>
+                    <p className="text-xs text-gray-500">
+                      M-Pesa, Orange Money, Airtel Money, Afrimoney — désactivé par défaut
+                    </p>
                   </div>
                   <Switch
-                    checked={localConfig.flutterwaveEnabled}
-                    onCheckedChange={(checked) => handleChange('flutterwaveEnabled', checked)}
+                    checked={Boolean(localConfig.ejpayEnabled)}
+                    onCheckedChange={(checked) => handleChange('ejpayEnabled', checked)}
                   />
                 </div>
               </div>

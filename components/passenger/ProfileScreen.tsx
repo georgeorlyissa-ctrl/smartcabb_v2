@@ -738,7 +738,6 @@ export function ProfileScreen() {
             <div className="space-y-2 py-2">
               {[
                 { id: 'mobile_money', icon: Smartphone, label: 'Mobile Money (Airtel Money, M-Pesa)', desc: 'Paiement rapide et securise' },
-                { id: 'card', icon: CreditCard, label: 'Carte bancaire', desc: 'Paiement par carte bancaire' },
                 { id: 'cash', icon: Banknote, label: 'Paiement en especes', desc: 'Paiement en especes au chauffeur' }
               ].map((method) => (
                 <button

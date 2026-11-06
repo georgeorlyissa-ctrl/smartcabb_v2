@@ -73,7 +73,7 @@ export function MixedPaymentSelector({
         </div>
         <div>
           <h3 className="font-semibold">Paiement mixte</h3>
-          <p className="text-sm text-gray-600">Répartissez entre espèces et Flutterwave</p>
+          <p className="text-sm text-gray-600">Répartissez entre espèces et Mobile Money</p>
         </div>
       </div>
 
@@ -152,7 +152,7 @@ export function MixedPaymentSelector({
         <Card className="p-4 bg-green-50 border-green-200">
           <div className="flex items-center space-x-2 mb-2">
             <Smartphone className="w-4 h-4 text-green-600" />
-            <span className="text-sm font-medium text-green-800">Flutterwave</span>
+            <span className="text-sm font-medium text-green-800">Mobile Money</span>
           </div>
           <div className="space-y-2">
             <p className="text-lg font-bold text-green-800">
@@ -198,7 +198,7 @@ export function MixedPaymentSelector({
         <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <p className="text-sm text-yellow-800">
             <strong>Important :</strong> Assurez-vous d'avoir le montant exact en espèces. 
-            Le solde sera payé par Flutterwave.
+            Le solde sera payé par Mobile Money.
           </p>
         </div>
       )}

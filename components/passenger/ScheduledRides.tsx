@@ -11,8 +11,9 @@ import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
 import { toast } from '../../lib/toast';
 import { YangoStyleSearch } from './YangoStyleSearch';
-import { paymentService } from '../../lib/payment-service';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
+import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
+import { EjpayWaitingModal } from './EjpayWaitingModal';
 import { convertUSDtoCDF, convertCDFtoUSD } from '../../lib/pricing';
 import { announceReservationReceived } from '../../lib/notification-sound';
 import { addLocalNotification } from '../AppNotificationsScreen';
@@ -91,16 +92,23 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
   // Acompte 50% + CGU location (réservation ferme)
   const [cguAccepted, setCguAccepted] = useState(false);
-  const [depositMethod, setDepositMethod] = useState<'mobile_money' | 'card' | 'wallet' | 'cash'>('mobile_money');
+  const [depositMethod, setDepositMethod] = useState<'mobile_money' | 'wallet' | 'cash'>('mobile_money');
   const [depositNetwork, setDepositNetwork] = useState(DEPOSIT_NETWORKS[0].id);
   const [depositPhone, setDepositPhone] = useState('');
   const [payingDeposit, setPayingDeposit] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const depositAmount = Math.round((newRide.estimated_price || 0) * 0.5);
 
+  // 💳 Paiement Mobile Money (Ejpay) — attente de validation sur le téléphone
+  const ejpay = useEjpayCheckout();
+  const [checkoutInfo, setCheckoutInfo] = useState<{
+    amount: number;
+    msisdn: string;
+    operatorName: string;
+  } | null>(null);
+
   const DEPOSIT_METHODS = [
     { value: 'mobile_money' as const, icon: '📱', label: 'Mobile Money' },
-    { value: 'card' as const, icon: '💳', label: 'Carte bancaire' },
     { value: 'wallet' as const, icon: '👛', label: 'Portefeuille' },
     { value: 'cash' as const, icon: '💵', label: 'Espèces' },
   ];
@@ -370,12 +378,12 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     setPayingDeposit(true);
 
     try {
-      // 1. Payer l'acompte de 50% via le moyen existant (Flutterwave)
+      // 1. Payer l'acompte de 50% via Mobile Money (Ejpay)
       const network = DEPOSIT_NETWORKS.find((n) => n.id === depositNetwork);
       const paymentData: PaymentInitData = {
         amount: depositAmount,
         currency: 'CDF',
-        method: depositMethod === 'card' ? 'card' : 'mobile_money',
+        method: 'mobile_money',
         customerEmail: state.currentUser?.email || 'passager@smartcabb.com',
         customerName: state.currentUser?.name || 'Passager',
         customerPhone: depositPhone,
@@ -391,66 +399,28 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
         }
       };
 
-      const result = await paymentService.initPayment(paymentData);
-      if (!result.success || !result.paymentUrl) {
-        // Message technique brut (ex: SERVER_ERROR) → consigne claire côté client
-        const raw = `${result.message || ''} ${result.error || ''}`;
-        const gatewayDown = /SERVER_ERROR|NOT_CONFIGURED|INVALID_RESPONSE|INIT_ERROR|NETWORK_ERROR|Route not found|404|500/i.test(raw);
-        throw new Error(
-          gatewayDown
-            ? 'Paiement Mobile Money / Carte indisponible pour le moment. Choisissez Espèces ou Portefeuille, ou appelez le +243 960 624 008.'
-            : (result.message && !/^[A-Z_]+$/.test(result.message) ? result.message : 'Paiement refusé. Vérifiez le numéro et réessayez, ou choisissez Espèces.')
-        );
-      }
-
-      const width = 500, height = 700;
-      const left = (window.screen.width - width) / 2;
-      const top = (window.screen.height - height) / 2;
-      const paymentWindow = window.open(
-        result.paymentUrl,
-        'SmartCabbDeposit',
-        `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-      );
-      if (!paymentWindow) {
-        throw new Error('Fenêtre de paiement bloquée par le navigateur');
-      }
-
-      // 2. Attendre la confirmation du paiement (vérification toutes les 2s, 60s max)
-      const depositPaid = await new Promise<boolean>((resolve) => {
-        let attempts = 0;
-        const iv = setInterval(async () => {
-          attempts++;
-          try {
-            if (paymentWindow.closed) {
-              clearInterval(iv);
-              resolve(false);
-              return;
-            }
-            if (!result.transactionId) return;
-            const verification = await paymentService.verifyPayment(result.transactionId);
-            if (verification.isValid && (verification.status === 'successful' || verification.status === 'completed')) {
-              clearInterval(iv);
-              if (!paymentWindow.closed) paymentWindow.close();
-              resolve(true);
-            } else if (verification.status === 'failed') {
-              clearInterval(iv);
-              if (!paymentWindow.closed) paymentWindow.close();
-              resolve(false);
-            }
-          } catch {}
-          if (attempts >= 30) {
-            clearInterval(iv);
-            if (!paymentWindow.closed) paymentWindow.close();
-            resolve(false);
-          }
-        }, 2000);
+      setCheckoutInfo({
+        amount: depositAmount,
+        msisdn: depositPhone,
+        operatorName: network?.name || 'Mobile Money',
       });
 
-      if (!depositPaid) {
+      // 💳 Ejpay : le client valide l’acompte sur son téléphone
+      const outcome = await ejpay.pay(paymentData);
+
+      if (outcome.status === 'cancelled') {
         toast.error('Acompte non reçu : la réservation n\u2019est pas confirmée');
         return;
       }
 
+      if (outcome.status === 'timeout') {
+        toast.info('Paiement en attente de validation sur votre téléphone : la réservation sera confirmée dès réception de l\u2019acompte.');
+        return;
+      }
+
+      if (outcome.status !== 'completed') {
+        throw new Error(outcome.message || 'Acompte non reçu : la réservation n\u2019est pas confirmée');
+      }
       // 3. Acompte reçu → réservation FERME
       await insertConfirmedRide();
     } catch (error) {
@@ -750,6 +720,16 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
       {/* Dialog de planification */}
       <Dialog open={showAddDialog} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          {/* 💳 Attente de validation Mobile Money (Ejpay) */}
+          <EjpayWaitingModal
+            open={ejpay.phase === 'waiting'}
+            elapsedMs={ejpay.elapsedMs}
+            message={ejpay.message}
+            amount={checkoutInfo?.amount}
+            msisdn={checkoutInfo?.msisdn}
+            operatorName={checkoutInfo?.operatorName}
+            onCancel={() => ejpay.cancel()}
+          />
           <DialogHeader>
             <DialogTitle>Réserver une course</DialogTitle>
             <DialogDescription>
@@ -978,7 +958,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
               {/* Moyen de paiement */}
               <div>
                 <Label className="text-xs">Moyen de paiement de l'acompte</Label>
-                <div className="grid grid-cols-4 gap-1.5 mt-1.5">
+                <div className="grid grid-cols-3 gap-1.5 mt-1.5">
                   {DEPOSIT_METHODS.map((m) => (
                     <button
                       key={m.value}
@@ -1025,11 +1005,6 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                     />
                   </div>
                 </div>
-              )}
-              {depositMethod === 'card' && (
-                <p className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
-                  Paiement sécurisé par carte via la fenêtre Flutterwave.
-                </p>
               )}
               {depositMethod === 'wallet' && (
                 <p className="text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2">
