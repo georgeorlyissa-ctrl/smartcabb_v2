@@ -42,6 +42,55 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-06 — Intégration Ejpay (Mobile Money RDC) — phase 1 : backend désactivé par défaut
+
+- **Commit** : `fdeae1a` (`main` → `origin/main`)
+- **Auteur** : Équipe SmartCabb
+- **Type** : feat (backend) + security
+- **Objectif** : encaisser et décaisser via **EJ PAY v3.6.7** (EJSARL) — Vodacom M-Pesa, Orange Money, Airtel Money, Africell Afrimoney — en CDF et USD, sans jamais exposer de secret côté client, sans double débit possible, et sans activer le service tant que la recette n'est pas faite.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ejpay-core.ts` | **Nouveau** — client OAuth 2.0, appels C2B/B2C/bulk/statut/wallets, vérification HMAC-SHA512, normalisation MSISDN, modèle `EjpayOrder` + stockage KV |
+| `supabase/functions/make-server-2eb02e52/ejpay-routes.ts` | **Nouveau** — routes `/ejpay/*`, règlement métier (wallet, course, acompte, retrait), `X-Admin-Secret` |
+| `supabase/functions/make-server-2eb02e52/index.ts` | Montage `app.route("/make-server-2eb02e52/ejpay", ejpayRoutes)` + import |
+| `docs/EJPAY_INTEGRATION.md` | **Nouveau** — secrets, activation, contrat d'API, cycle de paiement, plan de test, rollback, dépannage |
+
+### Description technique
+- **Authentification** : OAuth 2.0 `client_credentials` sur le Keycloak d'EJ PAY (`auth.ejsarl.cd/realms/ej-payment`), scope `payment:write payment:read`. Le jeton vit 300 s ; il est renouvelé à **90 %** de sa durée, mis en cache en mémoire puis dans le KV (`ejpay_token_cache`) pour être partagé entre isolates. Un `401` déclenche **un seul** retry avec un jeton neuf.
+- **Routes exposées** (préfixe `/make-server-2eb02e52/ejpay`) : `GET /config` (état, opérateurs, minimums), `POST /collect` (C2B), `GET /status/:orderId` (`?refresh=1` force la vérification), `POST /webhook`, `POST /payout` (B2C), `GET /orders`, `GET /wallets`, `POST /orders/:orderId/refresh`.
+- **Asynchrone assumé** : `POST /payment/c2b` renvoie toujours `PENDING` (statutCode 1). Seul le callback signé, ou le polling de `GET /payment/{reference}`, donne le résultat. `GET /status` rafraîchit automatiquement un ordre `PENDING` de plus de 8 s.
+- **Signature** : `X-EJPay-Signature` = HMAC-SHA512 hex du **corps brut**, comparé en temps constant (`crypto.subtle` + XOR accumulateur). La route lit `c.req.text()` avant tout `JSON.parse`, journalise chaque callback (`ejpay_event:<orderId>:<ts>`) et répond 200 en moins de 10 s ; elle ne renvoie 500 qu'en cas d'exception interne pour déclencher un nouvel essai (traitement idempotent).
+- **Idempotence** : `orderId` est la clé (`ejpay_order:<orderId>`). Un ordre `PENDING` réutilisé → `200 duplicate` **sans nouvel appel Ejpay** ; un ordre `SUCCESS`/`FAILED` réutilisé → `409`. Le règlement métier est gardé par `settledAt`, donc un callback rejoué ne crédite jamais deux fois.
+- **Règlement métier** : `wallet_topup` → crédit `walletBalance`/`balance` (`passenger:<id>` + `profile:<id>`) + `wallet_tx:<orderId>` ; `ride_payment` → course en `paymentStatus: paid`, `paymentMethod: ejpay`, `paymentReference`, `paidAt`, `amountPaid` ; `deposit` → `scheduled_rides.deposit_received = true` + méthode + date ; `payout` → `wallet_tx` en `completed` + push FCM au chauffeur.
+- **Retrait chauffeur** : le bonus est **réservé (débité) avant** l'appel Ejpay ; refus immédiat ou callback `FAILED` → recrédit automatique (`wallet_tx` de type `withdraw_refund`, garde `refundedAt`).
+- **Contrôles de montant** : sur `kind = "ride_payment"`, le montant est refusé s'il dépasse le prix de la course (+1 de tolérance) ; sur callback/polling, un montant reçu différent du montant attendu bascule l'ordre en `REVIEW` **sans crédit automatique**.
+- **Sécurité** : `payout`, `orders`, `wallets`, `refresh` exigent `X-Admin-Secret` (`EJPAY_ADMIN_SECRET`, repli `ADMIN_CREATION_SECRET`), comparaison en temps constant. Aucun identifiant Ejpay côté client. Rate-limit global de l'Edge Function conservé.
+- **Activation** : drapeau `ejpayEnabled` dans `smartcabb_global_config` (`POST /config/update`), **faux par défaut** ; `collect`/`payout` répondent `503 EJPAY_DISABLED` tant qu'il est inactif. `ejpayEnabled()` exige aussi `EJPAY_CLIENT_ID`/`EJPAY_CLIENT_SECRET`.
+- **Numéros** : normalisation en `243XXXXXXXXX` (accepte `+243…`, `00243…`, `243…`, `0XXXXXXXXX`, `XXXXXXXXX`) — format exigé par le guide.
+- **Aucune migration SQL** : tout vit dans le KV existant (`kv_store_2eb02e52`).
+
+### Impact produit / comportement visible
+- **Aucun changement visible pour l'instant** : le service est déployé inactif et aucune interface ne l'appelle encore.
+- Une fois activé : le passager pourra payer/recharger via Mobile Money (validation sur son téléphone), le chauffeur pourra être payé sur son wallet, l'admin disposera de la liste des transactions et des soldes marchand.
+- Les événements `ejpay_payment` / `ejpay_payment_failed` apparaîtront dans le fil d'activité admin.
+
+### Risques & rollback
+- **Risque** : un callback sans signature valide est ignoré (401) — vérifier `EJPAY_WEBHOOK_SECRET` avant la mise en production.
+- **Risque** : un ordre peut rester `PENDING` si le client ne valide pas et que l'app est fermée avant le dernier polling → bouton `POST /orders/:orderId/refresh` côté admin.
+- **Risque** : `EJPAY_ADMIN_SECRET` non défini → repli sur `ADMIN_CREATION_SECRET` (rotation liée).
+- **Rollback immédiat** : `POST /config/update` `{"config":{"ejpayEnabled":false}}` — aucun redéploiement nécessaire.
+- **Rollback total** : `git revert fdeae1a` puis push sur `main` ; suppression des secrets `EJPAY_*` ; nettoyage optionnel des clés KV `ejpay_order:*` / `ejpay_event:*`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK (18,95 s)
+- [ ] Recette sandbox/production : `POST /collect` sur petit montant avec un vrai numéro, vérification du prompt, du passage à `SUCCESS` et du crédit unique (procédure détaillée dans `docs/EJPAY_INTEGRATION.md` § 9)
+- [ ] Déploiement Edge Function vérifié (`GET /ejpay/config` → `configured: true`)
+
+---
+
 ## 2026-11-04 — « Choisir un véhicule » : SmartCabb Standard à la même taille que les autres catégories
 
 - **Commit** : `bc3933e` (`main` → `origin/main`)
