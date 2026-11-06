@@ -42,6 +42,63 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-06 — Ejpay (Mobile Money) — phase 2 : Flutterwave remplacé dans toute l'application
+
+- **Commit** : `803b1d3` (`main` → `origin/main`)
+- **Auteur** : Équipe SmartCabb
+- **Type** : feat (frontend) + refactor + security
+- **Objectif** : brancher l'interface sur la passerelle Ejpay livrée en phase 1 (`fdeae1a`) et **remplacer Flutterwave partout** (décision produit), sans jamais exposer de secret et sans fenêtre de redirection. Ejpay ne traite pas les cartes : l'option carte est retirée des parcours de paiement.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/ejpay-service.ts` | **Nouveau** — client HTTP : config (cache 60 s), `collect`, `status`, `waitForEjpayOrder`, helpers admin (`listEjpayOrders`, `getEjpayWallets`, `refreshEjpayOrder`), table des opérateurs et normalisation des identifiants réseau |
+| `lib/payment-providers/ejpay-provider-pure.ts` | **Nouveau** — provider au contrat `paymentService` : `initPayment` (C2B), `verifyPayment` (statut), `refundPayment` refusé côté client |
+| `hooks/useEjpayCheckout.ts` | **Nouveau** — orchestration `collect` → attente du résultat (3 s, 3 min max) avec chronomètre, annulation (`AbortController`) et verdict normalisé |
+| `components/passenger/EjpayWaitingModal.tsx` | **Nouveau** — écran « Validez sur votre téléphone » (montant, opérateur, numéro, temps écoulé, annuler) |
+| `lib/payment-service.ts` | `mobile_money` et `card` routés vers `ejpayProvider` (plus de repli silencieux sur le cash) |
+| `components/passenger/PaymentScreen.tsx` | Course et paiement mixte : popup + polling manuel remplacés par `useEjpayCheckout` + `EjpayWaitingModal` ; carte retirée des méthodes |
+| `components/passenger/RechargeModal.tsx` | Recharge portefeuille sur Ejpay ; **sélecteur d'opérateur ajouté** ; corrige au passage un test `result.redirectUrl` jamais rempli par le provider |
+| `components/passenger/ScheduledRides.tsx` | Acompte 50 % sur Ejpay ; option « Carte bancaire » supprimée ; grille 3 colonnes |
+| `components/driver/DriverWalletScreen.tsx` | Forfait chauffeur sur Ejpay ; sélecteur d'opérateur + numéro ; suppression de l'activation « après 15 s » non conditionnée au paiement ; corrige un `usePayment` non importé |
+| `components/admin/GlobalSettingsScreen.tsx` + `lib/config-sync.ts` | « Flutterwave activé » remplacé par **« Ejpay activé (Mobile Money) »** (flag `ejpayEnabled`, défaut `false`) |
+| `components/passenger/RideScreen.tsx`, `components/passenger/ProfileScreen.tsx` | Option « Carte bancaire » retirée des sélecteurs |
+| `components/MixedPaymentSelector.tsx`, `components/shared/TermsOfService.tsx`, `website/cgu.html` | Textes : « Flutterwave » → « Mobile Money » ; carte signalée indisponible dans les CGU |
+| `docs/EJPAY_INTEGRATION.md` | Nouvelle section 12 « Phase 2 — interface branchée sur Ejpay » |
+
+### Description technique
+- **Un seul point de bascule** : tous les écrans passaient déjà par `paymentService.initPayment()` / `verifyPayment()`. Le provider Ejpay implémente le même contrat, donc le remplacement de Flutterwave tient en un import et une branche de `getProvider()`.
+- **Pas de redirection** : `initPayment` renvoie `status: 'pending'` + `transactionId = orderId` (pas de `paymentUrl`). Le hook interroge `GET /ejpay/status/:orderId` toutes les 3 s ; le backend interroge lui-même Ejpay au-delà de 8 s, donc l'app ne stresse pas le fournisseur.
+- **Kind déduit du contexte** : `metadata.type` `ride_payment*` → `ride_payment`, `wallet_recharge` → `wallet_topup`, `reservation_deposit` → `deposit`, `driver_wallet_recharge` → `other` (l'activation du forfait reste locale, déclenchée par le succès du paiement).
+- **Order id** : `reference` de l'écran nettoyée (`[A-Za-z0-9_-]`, 64 car.) et utilisée comme clé d'idempotence ; les références contiennent déjà `Date.now()`, donc chaque tentative est unique.
+- **Opérateurs** : les écrans utilisent `mpesa` / `orange_money` / `airtel_money` / `afrimoney` ; `toOperatorId()` les ramène vers 9 / 10 / 17 / 19.
+- **Fin d'attente** : `SUCCESS` → écran de succès ; `FAILED` → message d'erreur ; `REVIEW` → message « vérification manuelle » ; `TIMEOUT` → overlay fermé + message d'information (le webhook créditera plus tard) ; `CANCELLED` → retour au formulaire.
+- **Sécurité** : aucun secret Ejpay côté navigateur (uniquement la clé anon Supabase) ; le montant d'une course est contrôlé côté serveur ; le remboursement exige un admin (`refundPayment` refuse côté client).
+- **Admin** : le drapeau `ejpayEnabled` reste **faux par défaut**, donc le déploiement de cette phase ne modifie aucun comportement tant que le service n'est pas activé.
+
+### Impact produit / comportement visible
+- Paiement Mobile Money : plus de popup ; le client valide sur son téléphone et voit « Validez sur votre téléphone » avec un chronomètre.
+- Recharge et acompte de réservation demandent désormais explicitement l'opérateur (M-Pesa, Orange, Airtel, Afrimoney).
+- La carte bancaire n'est plus proposée (elle n'était de toute façon pas fonctionnelle : `flutterwaveEnabled` n'était pas exploité par les écrans).
+- Admin → Réglages globaux : interrupteur « Ejpay activé (Mobile Money) ».
+
+### Risques & rollback
+- **Risque** : si le service est activé sans recette, les paiements Mobile Money échouent avec un message explicite (`503 EJPAY_DISABLED`, `502` fournisseur).
+- **Risque** : un paiement validé après la fenêtre de 3 min n'est plus suivi par l'écran (il est réglé par le webhook) → message d'information, pas de double débit.
+- **Risque** : la carte n'étant plus disponible, les clients qui l'utilisaient doivent passer par Mobile Money, le portefeuille ou les espèces.
+- **Rollback immédiat** : Admin → Réglages globaux → désactiver « Ejpay activé » (ou `POST /config/update` `{"config":{"ejpayEnabled":false}}`).
+- **Rollback code** : `git revert 803b1d3` puis push sur `main`.
+- **Rollback fournisseur** : restaurer `flutterwaveProvider` dans `lib/payment-service.ts` (l'ancien provider est toujours présent).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] Typage ciblé des nouveaux fichiers (`tsc -p tsconfig.check.json`, dossier `_headers` exclu) : 0 erreur sur `lib/ejpay-service.ts`, `ejpay-provider-pure.ts`, `useEjpayCheckout.ts`, `EjpayWaitingModal.tsx`
+- [x] `npx vite build` OK (12,98 s)
+- [ ] Recette réelle : parcours course + recharge + acompte avec un numéro de test et le drapeau activé
+- [ ] Vérification visuelle de la modale d'attente sur mobile
+
+---
+
 ## 2026-11-06 — Intégration Ejpay (Mobile Money RDC) — phase 1 : backend désactivé par défaut
 
 - **Commit** : `fdeae1a` (`main` → `origin/main`)
