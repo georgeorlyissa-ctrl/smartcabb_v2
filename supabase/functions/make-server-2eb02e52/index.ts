@@ -31,6 +31,7 @@ import smsRoutes from "./sms-routes.ts";
 import loyaltyRoutes from "./loyalty-routes.ts";
 import paymentRoutes from "./payment-routes.ts";
 import reservationRoutes from "./reservation-routes.ts";
+import ejpayRoutes from "./ejpay-routes.ts";
 
 const app = new Hono();
 
@@ -124,6 +125,8 @@ app.route("/make-server-2eb02e52/loyalty", loyaltyRoutes);
 app.route("/make-server-2eb02e52/payments", paymentRoutes);
 // ✅ Route réservations (notifications passager à l'acceptation conducteur)
 app.route("/make-server-2eb02e52/reservations", reservationRoutes);
+// ✅ Route Ejpay — Mobile Money (inactive tant que `ejpayEnabled` est faux)
+app.route("/make-server-2eb02e52/ejpay", ejpayRoutes);
 
 // Route 404
 app.notFound((c) => {
