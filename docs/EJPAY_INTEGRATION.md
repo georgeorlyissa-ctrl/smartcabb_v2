@@ -362,8 +362,8 @@ Codes de statut Ejpay : `1` = PENDING, `2` = SUCCESS, `3` = FAILED (le guide con
 - **Recharge manuelle verrouillée** : `POST /drivers/:id/wallet/recharge` et `POST /passengers/:id/wallet/recharge` renvoient
   `403 MANUAL_RECHARGE_DISABLED` sans en-tête `x-admin-secret` (valeur `EJPAY_ADMIN_SECRET`, à défaut
   `ADMIN_CREATION_SECRET`). Ces routes ne servent plus qu'aux opérations d'administration ; les utilisateurs passent
-  exclusivement par Ejpay. Le bouton « Portefeuille » côté chauffeur redirige désormais vers l'écran des forfaits
-  (`driver-wallet`) au lieu de proposer un crédit local.
+  exclusivement par Ejpay. Le bouton « Portefeuille » côté chauffeur redirige désormais vers l'écran de recharge
+  (`driver-wallet`, montant libre ≥ 5 000 CDF) au lieu de proposer un crédit local.
 - **Rate limiting global** de l'Edge Function (100 req / 15 min / IP) déjà en place.
 
 > Limite connue : si Ejpay encaisse mais qu'aucun callback n'arrive **et** que l'app est fermée avant le dernier polling, l'ordre reste `PENDING` jusqu'à la prochaine interrogation. Le bouton « Rafraîchir » de l'écran admin (`POST /orders/:orderId/refresh`) sert exactement à ce cas.
@@ -438,7 +438,7 @@ Aucune migration SQL n'accompagne cette intégration : le rollback ne touche pas
 | `components/passenger/PaymentScreen.tsx` | Paiement de course + paiement mixte | `ride_payment` |
 | `components/passenger/RechargeModal.tsx` | Recharge du portefeuille (sélecteur d'opérateur ajouté) | `wallet_topup` |
 | `components/passenger/ScheduledRides.tsx` | Acompte 50 % d'une réservation | `deposit` |
-| `components/driver/DriverWalletScreen.tsx` | Forfait chauffeur (sélecteur d'opérateur + numéro) | `driver_wallet_topup` |
+| `components/driver/DriverWalletScreen.tsx` | Recharge chauffeur (montant libre ≥ 5 000 CDF, sélecteur d'opérateur + numéro) | `driver_wallet_topup` |
 
 Changements transverses :
 
@@ -458,8 +458,10 @@ Changements transverses :
 
 ### Recharge chauffeur — règlement côté serveur
 
-- `kind = driver_wallet_topup`, `order.driverId` porté par l'ordre, `metadata.days` = durée du forfait.
-- Au règlement (`settleOrder`) : `creditDriverWallet()` crédite `driver:<id>.balance` **et** `creditBalance`, prolonge `wallet_expiry_date` de `days`, écrit `wallet_tx:<orderId>` et envoie un push.
+- **Recharge simple, sans forfait ni durée** : montant libre saisi par le chauffeur, minimum **5 000 CDF** (plafond 1 000 000 CDF).
+- `kind = driver_wallet_topup`, `order.driverId` porté par l'ordre, **`metadata.days` absent**.
+- Au règlement (`settleOrder`) : `creditDriverWallet()` crédite `driver:<id>.balance` **et** `creditBalance`, écrit `wallet_tx:<orderId>` et envoie un push. Sans `days`, `wallet_expiry_date` n'est **jamais** prolongé : l'éligibilité du chauffeur repose uniquement sur son solde.
+- **Éligibilité** : le chauffeur ne peut se mettre en ligne (et ne peut recevoir une course) que si `balance ≥ getMinimumCreditForCategory(catégorie)` — 15 % du tarif de base : 2 520 CDF (standard), 4 200 CDF (confort), 5 040 CDF (plus), 67 200 CDF (business). Après une course, s'il repasse sous ce seuil, le backend le remet automatiquement hors ligne.
 - L'application **ne crédite plus** le portefeuille elle-même : elle relit `GET /drivers/:id` pour afficher le solde réel (source de vérité serveur).
 - Idempotence : `settledAt` empêche tout double crédit, y compris si le webhook et le polling arrivent ensemble.
 

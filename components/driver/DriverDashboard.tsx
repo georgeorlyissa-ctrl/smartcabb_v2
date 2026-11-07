@@ -560,26 +560,35 @@ export function DriverDashboard() {
               </button>
             </div>
             <div className="p-4 space-y-4">
-              <div className="rounded-xl border border-gray-200 p-4">
-                <p className="text-sm text-gray-500">Solde du portefeuille</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {Number(driver.balance || 0).toLocaleString('fr-FR')} CDF
-                </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Forfait actif jusqu'au{' '}
-                  {driver.wallet_expiry_date
-                    ? new Date(driver.wallet_expiry_date).toLocaleDateString('fr-FR')
-                    : '—'}
-                </p>
-              </div>
+              {(() => {
+                const minimumCredit = getMinimumCreditForCategory(driver.vehicle?.category || 'smart_standard');
+                const balance = Number(driver.balance || 0);
+                const eligible = balance >= minimumCredit;
+                const shortfall = Math.max(0, minimumCredit - balance);
+                return (
+                  <>
+                    <div className="rounded-xl border border-gray-200 p-4">
+                      <p className="text-sm text-gray-500">Solde du portefeuille</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {balance.toLocaleString('fr-FR')} CDF
+                      </p>
+                      <p className={`text-xs mt-1 ${eligible ? 'text-green-700' : 'text-red-600'}`}>
+                        {eligible
+                          ? `Éligible aux courses — crédit minimum ${minimumCredit.toLocaleString('fr-FR')} CDF`
+                          : `Non éligible — il manque ${shortfall.toLocaleString('fr-FR')} CDF (minimum ${minimumCredit.toLocaleString('fr-FR')} CDF)`}
+                      </p>
+                    </div>
 
-              <div className="rounded-xl bg-orange-50 border border-orange-200 p-4">
-                <p className="text-sm font-medium text-orange-900">Recharger par Mobile Money</p>
-                <p className="text-xs text-orange-800 mt-1">
-                  Choisissez un forfait (Starter, Standard, Pro). Le paiement est validé sur votre
-                  téléphone, puis crédité automatiquement.
-                </p>
-              </div>
+                    <div className="rounded-xl bg-orange-50 border border-orange-200 p-4">
+                      <p className="text-sm font-medium text-orange-900">Recharger par Mobile Money</p>
+                      <p className="text-xs text-orange-800 mt-1">
+                        Recharge libre à partir de 5 000 CDF. Le paiement est validé sur votre
+                        téléphone, puis crédité automatiquement.
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
 
               <Button
                 className="w-full bg-orange-600 hover:bg-orange-700"
@@ -590,7 +599,7 @@ export function DriverDashboard() {
                 }}
               >
                 <Wallet className="w-4 h-4 mr-2" />
-                Voir les forfaits et recharger
+                Recharger mon compte
               </Button>
             </div>
           </motion.div>

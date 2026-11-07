@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Portefeuille chauffeur simplifié : recharge libre ≥ 5 000 CDF, éligibilité par solde
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : supprimer les forfaits (Starter / Standard / Pro) au profit d'une recharge simple à montant libre, avec un **minimum de 5 000 CDF**, et s'appuyer sur la logique d'éligibilité existante (solde minimum par catégorie + mise hors ligne automatique après course).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/driver/DriverWalletScreen.tsx` | **Réécrit** : plus de forfaits ni de durée ; montant libre (presets 5 000 / 10 000 / 20 000 / 50 000), solde + badge Éligible/Non éligible + manque à gagner, paiement Ejpay sans `days`, relecture du solde serveur |
+| `components/driver/DriverDashboardNew.tsx` | Modale Portefeuille : « Forfait actif jusqu'au » remplacé par le seuil d'éligibilité et le manque à gagner, CTA « Recharger mon compte » |
+| `components/driver/DriverDashboard.tsx` | Idem sur l'ancien tableau de bord |
+| `docs/EJPAY_INTEGRATION.md` | Section recharge chauffeur : suppression de `metadata.days`, éligibilité par solde |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Suppression des forfaits** : la constante `WALLET_PACKAGES` (Starter / Standard / Pro), le sélecteur de forfait et toute notion de durée/expiration disparaissent de l'écran chauffeur.
+- **Montant libre** : champ numérique + 4 montants rapides, bornes `5 000 ≤ montant ≤ 1 000 000` CDF, aperçu « Nouveau solde après recharge » et mention de l'éligibilité si le seuil est franchi.
+- **Éligibilité** : `getMinimumCreditForCategory(catégorie)` (15 % du tarif de base, source `lib/pricing-data.ts`) pilote le badge **Éligible / Non éligible** et le manque à gagner. Aucune logique d'éligibilité n'a été réécrite : `handleToggleOnline` et la mise hors ligne automatique du backend restent la référence.
+- **Paiement** : `useEjpayCheckout().pay()` avec `metadata.type = 'driver_wallet_recharge'` (résolu en `kind = driver_wallet_topup` côté provider) et `metadata` **sans `days`**. Après `SUCCESS`, le client relit `GET /drivers/:id` (3 tentatives espacées de 1,5 s) pour afficher le solde réel ; aucun crédit côté navigateur.
+- **Backend inchangé** : `creditDriverWallet()` ne prolonge `wallet_expiry_date` que si `order.metadata.days > 0`. Sans `days`, seul le solde est crédité (+ `creditBalance`, `wallet_tx`, push). L'idempotence reste garantie par `settledAt`.
+- **Modales Portefeuille** : affichage du solde, seuil applicable à la catégorie du véhicule et montant manquant ; le bouton mène à l'écran de recharge.
+
+### Impact produit / comportement visible
+- Chauffeur : un seul écran, « Recharger mon compte », montant libre à partir de 5 000 CDF, opérateur + numéro + logos officiels. Le badge indique immédiatement si le compte peut recevoir des courses et combien il manque.
+- Les anciens forfaits et dates d'expiration ne bloquent plus rien : l'éligibilité dépend **uniquement** du solde.
+- Après une course, si le solde repasse sous le seuil, le chauffeur est toujours mis hors ligne automatiquement par le backend ; il recharge pour redevenir éligible.
+
+### Risques & rollback
+- **Risque** : un ancien `wallet_expiry_date` reste stocké côté serveur mais n'est plus utilisé pour l'éligibilité (aucun effet fonctionnel).
+- **Rollback** : `git revert` du commit. Les ordres Ejpay déjà réglés ne sont jamais rejoués (`settledAt`), donc aucun double crédit possible.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] Aperçu navigateur (`vite preview`) : écran de recharge affiché, solde, manque à gagner, presets, logos opérateurs
+- [ ] Recharge réelle chauffeur ≥ 5 000 CDF (à valider par l'utilisateur sur téléphone)
+- [ ] Déploiement vérifié (Vercel / Edge Function)
+
+---
+
 ## 2026-11-07 — « Bon retour » : écran d'accueil personnalisé à la reconnexion
 
 - **Commit** : `cb35c02` (branche `main`, poussé sur `origin`)
