@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — Ejpay : clarification du callback (aucun webhook à déclarer dans le dashboard)
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `e229262` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : docs
 - **Objectif** : lever la confusion sur la « déclaration du webhook » dans le dashboard Ejpay. Le guide API 3.6.7 ne prévoit aucun champ d'URL de callback : l'URL est envoyée dans le corps de chaque requête métier.
