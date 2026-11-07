@@ -1029,7 +1029,7 @@ export function AdminDashboard() {
     {
       id: 'action-sms-settings',
       title: 'Paramètres SMS',
-      description: 'Configuration Africa\'s Talking SMS',
+      description: 'Configuration EJ SMS (EJSARL)',
       icon: MessageSquare,
       action: () => setCurrentScreen('sms-settings'),
       count: null,

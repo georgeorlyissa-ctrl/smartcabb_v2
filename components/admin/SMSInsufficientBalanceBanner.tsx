@@ -58,7 +58,7 @@ export function SMSInsufficientBalanceBanner() {
                 ⚠️ Solde SMS insuffisant
               </h3>
               <p className="text-sm text-orange-800 mb-3">
-                Votre compte <strong>Africa's Talking</strong> n'a plus de crédit SMS. 
+                Votre compte <strong>EJ SMS (EJSARL)</strong> n'a plus de crédit SMS.
                 Les notifications par SMS (codes OTP, alertes de courses, etc.) ne peuvent plus être envoyées.
               </p>
               
@@ -67,9 +67,9 @@ export function SMSInsufficientBalanceBanner() {
                   💡 Comment résoudre ce problème :
                 </p>
                 <ol className="text-xs text-orange-800 space-y-1 ml-4 list-decimal">
-                  <li>Connectez-vous à votre compte Africa's Talking</li>
-                  <li>Accédez à la section "Recharge" / "Top Up"</li>
-                  <li>Ajoutez du crédit SMS (minimum recommandé: $10)</li>
+                  <li>Connectez-vous au panel EJ SMS (sms.ejsarl.cd)</li>
+                  <li>Accédez à la section « Crédits » / « Recharge »</li>
+                  <li>Achetez des crédits SMS (1 crédit = 1 SMS)</li>
                   <li>Attendez quelques minutes pour que le solde soit mis à jour</li>
                   <li>Rafraîchissez cette page pour vérifier</li>
                 </ol>
@@ -78,7 +78,7 @@ export function SMSInsufficientBalanceBanner() {
               {/* Actions */}
               <div className="flex flex-wrap items-center gap-3">
                 <Button
-                  onClick={() => window.open('https://account.africastalking.com', '_blank')}
+                  onClick={() => window.open('https://sms.ejsarl.cd', '_blank')}
                   className="bg-orange-600 hover:bg-orange-700 text-white"
                   size="sm"
                 >

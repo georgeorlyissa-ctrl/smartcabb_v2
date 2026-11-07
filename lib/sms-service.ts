@@ -1,6 +1,6 @@
 /**
  * Service de notifications SMS pour SmartCabb
- * Supporte Africa's Talking (RDC) et Twilio
+ * Envoi via EJ SMS (EJSARL) — OAuth 2.0, opérateurs RDC
  */
 
 import { projectId, publicAnonKey } from '../utils/supabase/info';
@@ -43,7 +43,7 @@ function isDuplicateSMS(to: string, message: string, type: string): boolean {
   return false;
 }
 
-export type SMSProvider = 'africas-talking' | 'twilio';
+export type SMSProvider = 'ejsms';
 
 export interface SMSConfig {
   provider: SMSProvider;
@@ -567,12 +567,12 @@ export async function getSMSConfig(): Promise<SMSConfig> {
     );
 
     if (!response.ok) {
-      return { provider: 'africas-talking', enabled: false };
+      return { provider: 'ejsms', enabled: false };
     }
 
     return await response.json();
   } catch (error) {
     console.error('Erreur lors de la récupération de la config SMS:', error);
-    return { provider: 'africas-talking', enabled: false };
+    return { provider: 'ejsms', enabled: false };
   }
 }

@@ -1,8 +1,8 @@
 /**
  * 🔐 ROUTES OTP - SMARTCABB
- * POST /otp/send   — Envoyer un code OTP (WhatsApp en priorité, fallback SMS)
+ * POST /otp/send   — Envoyer un code OTP par SMS via EJ SMS
  * POST /otp/verify — Vérifier le code OTP et obtenir un jeton de vérification
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 import { Hono } from "npm:hono";
@@ -11,7 +11,6 @@ import {
   OTP_PURPOSES,
   canSendOTP,
   createOTP,
-  sendOTPViaWhatsApp,
   sendOTPViaSMS,
   verifyOTP,
 } from "./otp-core.ts";
@@ -45,23 +44,16 @@ app.post("/send", async (c) => {
 
     const code = await createOTP(normalized, purpose as string);
 
-    // WhatsApp en priorité
-    const whatsapp = await sendOTPViaWhatsApp(normalized, code, purpose as string);
-    if (whatsapp.ok) {
-      return c.json({ success: true, channel: "whatsapp", message: "Code envoyé par WhatsApp" });
-    }
-    console.warn("⚠️ [OTP] WhatsApp indisponible, fallback SMS:", whatsapp.error);
-
-    // Fallback SMS
+    // Envoi unique par SMS via EJ SMS
     const sms = await sendOTPViaSMS(normalized, code, purpose as string);
     if (sms.ok) {
       return c.json({ success: true, channel: "sms", message: "Code envoyé par SMS" });
     }
 
-    console.error("❌ [OTP] Aucun canal disponible:", { whatsapp: whatsapp.error, sms: sms.error });
+    console.error("❌ [OTP] Envoi SMS impossible:", sms.error);
     return c.json({
       success: false,
-      error: `Envoi du code impossible (WhatsApp: ${whatsapp.error || "n/a"}, SMS: ${sms.error || "n/a"})`,
+      error: `Envoi du code impossible (SMS: ${sms.error || "n/a"})`,
     }, 500);
   } catch (error) {
     console.error("❌ [OTP/SEND] Erreur inattendue:", error);

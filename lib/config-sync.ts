@@ -65,7 +65,7 @@ export const DEFAULT_CONFIG: GlobalConfig = {
   postpaidFee: 5000,
   ejpayEnabled: false,
   smsEnabled: true,
-  smsProvider: 'africas_talking',
+  smsProvider: 'ejsms',
   notificationsEnabled: true,
   otpRequired: false,
   admin2faRequired: true,

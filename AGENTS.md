@@ -18,4 +18,6 @@
 
 ## Secrets / env vars Supabase
 - Ne jamais commiter de secret dans le repo. Les secrets se configurent dans Supabase Dashboard → Settings → Edge Functions → Secrets.
-- Secrets connus : `ADMIN_CREATION_SECRET`, `ADMIN_2FA_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (App Password Gmail), `AFRICAS_TALKING_WHATSAPP_WA_NUMBER`, `AFRICAS_TALKING_USERNAME`, `AFRICAS_TALKING_API_KEY`.
+- Secrets connus : `ADMIN_CREATION_SECRET`, `ADMIN_2FA_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (App Password Gmail), `EJSMS_CLIENT_ID`, `EJSMS_CLIENT_SECRET`, `EJSMS_SENDER` (`SMARTCABB`), `EJSMS_WEBHOOK_SECRET`. Optionnels : `EJSMS_SCOPE`, `EJSMS_TOKEN_URL`, `EJSMS_API_BASE`, `EJSMS_CALLBACK_URL`.
+- Les anciens secrets `AFRICAS_TALKING_*` (SMS/WhatsApp) ne sont plus utilisés : EJ SMS (EJSARL) est l'unique fournisseur SMS.
+- Détail de l'intégration : `docs/EJSMS_INTEGRATION.md`.

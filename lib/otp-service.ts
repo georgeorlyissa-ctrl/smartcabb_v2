@@ -3,8 +3,8 @@ import { projectId, publicAnonKey } from '../utils/supabase/info';
 /**
  * 🔐 SERVICE OTP CLIENT - SMARTCABB
  * Envoie et vérifie les codes OTP via le backend (/otp/send, /otp/verify)
- * Canal : WhatsApp en priorité, fallback SMS
- * @version 1.0.0
+ * Canal : SMS via EJ SMS (EJSARL)
+ * @version 2.0.0
  */
 
 const OTP_API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/otp`;
@@ -13,7 +13,7 @@ export type OTPPurpose = 'registration' | 'reset-password' | 'login';
 
 export interface SendOTPResult {
   success: boolean;
-  channel?: 'whatsapp' | 'sms';
+  channel?: 'sms';
   error?: string;
   retryAfterSeconds?: number;
 }
@@ -25,7 +25,7 @@ export interface VerifyOTPResult {
 }
 
 /**
- * Demande l'envoi d'un code OTP (WhatsApp, fallback SMS)
+ * Demande l'envoi d'un code OTP par SMS (EJ SMS)
  */
 export async function sendOTPCode(
   phone: string,

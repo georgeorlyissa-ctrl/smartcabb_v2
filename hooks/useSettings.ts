@@ -8,7 +8,7 @@ export interface AppSettings {
   commissionRate: number;
   
   // SMS
-  smsProvider: 'africas_talking' | 'twilio' | 'disabled';
+  smsProvider: 'ejsms' | 'disabled';
   smsEnabled: boolean;
   
   // Tarification
@@ -32,7 +32,7 @@ export interface AppSettings {
 // Valeurs par défaut
 const DEFAULT_SETTINGS: AppSettings = {
   commissionRate: 10,
-  smsProvider: 'africas_talking',
+  smsProvider: 'ejsms',
   smsEnabled: true,
   nightTimeStart: '21:00',
   nightTimeEnd: '06:00',

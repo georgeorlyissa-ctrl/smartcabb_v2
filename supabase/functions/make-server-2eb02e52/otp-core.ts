@@ -1,11 +1,12 @@
 /**
  * 🔐 OTP CORE - SMARTCABB
  * Logique de vérification de numéro par OTP (inscription, reset mot de passe, login)
- * Envoi WhatsApp (Africa's Talking WhatsApp Business API) avec fallback SMS
- * @version 1.0.0
+ * Envoi par SMS via EJ SMS (EJSARL) — OAuth 2.0
+ * @version 2.0.0
  */
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { sendEjSms } from "./ej-sms-core.ts";
 
 const KV_TABLE = "kv_store_2eb02e52";
 const CONFIG_KEY = "smartcabb_global_config";
@@ -132,90 +133,25 @@ function purposeText(purpose: string): string {
 }
 
 /**
- * Envoie le code via WhatsApp (Africa's Talking WhatsApp Business API)
- * POST https://chat.africastalking.com/whatsapp/message/send
- */
-export async function sendOTPViaWhatsApp(
-  phone: string,
-  code: string,
-  purpose: string
-): Promise<{ ok: boolean; error?: string }> {
-  const username = Deno.env.get("AFRICAS_TALKING_USERNAME") || "";
-  const apiKey = Deno.env.get("AFRICAS_TALKING_API_KEY") || "";
-  const waNumber = Deno.env.get("AFRICAS_TALKING_WHATSAPP_WA_NUMBER") || "";
-
-  if (!username || !apiKey || !waNumber) {
-    return { ok: false, error: "WhatsApp non configuré (AFRICAS_TALKING_WHATSAPP_WA_NUMBER manquant)" };
-  }
-
-  const message = `SmartCabb : Votre code de verification est ${code}. ${purposeText(purpose)} Ne partagez jamais ce code avec qui que ce soit.`;
-
-  try {
-    const response = await fetch("https://chat.africastalking.com/whatsapp/message/send", {
-      method: "POST",
-      headers: {
-        apiKey,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        username,
-        waNumber,
-        phoneNumber: phone,
-        body: { message },
-      }),
-    });
-
-    const data = await response.json().catch(() => null);
-    if (!response.ok) {
-      console.error("❌ [OTP/WHATSAPP] Erreur AT:", response.status, data);
-      return { ok: false, error: data?.message || `WhatsApp API erreur ${response.status}` };
-    }
-    console.log("✅ [OTP/WHATSAPP] Code envoyé par WhatsApp à", phone);
-    return { ok: true };
-  } catch (e) {
-    console.error("❌ [OTP/WHATSAPP] Exception:", e);
-    return { ok: false, error: e instanceof Error ? e.message : "Erreur réseau WhatsApp" };
-  }
-}
-
-/**
- * Envoie le code par SMS (Africa's Talking SMS API) - fallback
- * POST https://api.africastalking.com/version1/messaging
+ * Envoie le code par SMS via EJ SMS (EJSARL) — canal unique.
+ * POST https://api.ejsarl.cd/sms/send
  */
 export async function sendOTPViaSMS(
   phone: string,
   code: string,
   purpose: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const username = Deno.env.get("AFRICAS_TALKING_USERNAME") || "";
-  const apiKey = Deno.env.get("AFRICAS_TALKING_API_KEY") || "";
-
-  if (!username || !apiKey) {
-    return { ok: false, error: "SMS non configuré (env manquantes)" };
-  }
-
   const message = `SmartCabb : Votre code de verification est ${code}. ${purposeText(purpose)} Ne partagez jamais ce code.`;
 
   try {
-    const form = new URLSearchParams({ username, to: phone, message });
-    const response = await fetch("https://api.africastalking.com/version1/messaging", {
-      method: "POST",
-      headers: {
-        apiKey,
-        Accept: "application/json",
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: form.toString(),
-    });
+    const result = await sendEjSms({ to: phone, message });
 
-    const data = await response.json().catch(() => null);
-    const recipient = data?.SMSMessageData?.Recipients?.[0];
-    if (!response.ok || recipient?.status !== "Success") {
-      console.error("❌ [OTP/SMS] Erreur AT:", response.status, data);
-      return { ok: false, error: recipient?.status || data?.message || `SMS API erreur ${response.status}` };
+    if (!result.ok) {
+      console.error("❌ [OTP/SMS] Erreur EJ SMS:", result.status, result.error, result.raw);
+      return { ok: false, error: result.error || `SMS API erreur ${result.status || ""}`.trim() };
     }
-    console.log("✅ [OTP/SMS] Code envoyé par SMS à", phone);
+
+    console.log("✅ [OTP/SMS] Code envoyé par SMS à", phone, "réf.", result.reference || "n/a");
     return { ok: true };
   } catch (e) {
     console.error("❌ [OTP/SMS] Exception:", e);

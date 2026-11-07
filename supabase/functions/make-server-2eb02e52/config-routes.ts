@@ -50,7 +50,7 @@ const DEFAULT_CONFIG = {
   postpaidEnabled:        true,
   postpaidFee:            5000,
   smsEnabled:             true,
-  smsProvider:            "africas_talking",
+  smsProvider:            "ejsms",
   otpRequired:            false,
   admin2faRequired:       true,
   notificationsEnabled:   true,

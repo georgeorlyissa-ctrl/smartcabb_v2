@@ -1,20 +1,20 @@
 /**
  * 📅 ROUTES RÉSERVATIONS - SMARTCABB
- * ⚠️ Fichier autonome : helpers KV inlinés (aucun import local sauf firebase-admin et phone-utils)
+ * ⚠️ Fichier autonome : helpers KV inlinés (aucun import local sauf firebase-admin, phone-utils et ej-sms-core)
  *
  * POST /:id/notify-accept — Notifie le passager quand le conducteur accepte :
  *   1. Push app (FCM) avec les détails du chauffeur (sécurité)
- *   2. WhatsApp via Africa's Talking (si service activé)
- *   3. SMS en repli (si WhatsApp indisponible et SMS configuré)
+ *   2. SMS via EJ SMS (EJSARL)
  *
  * Monté dans index.ts sous /make-server-2eb02e52/reservations
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification, isFirebaseAdminConfigured } from "./firebase-admin.ts";
 import { normalizePhoneNumber } from "./phone-utils.ts";
+import { sendEjSms } from "./ej-sms-core.ts";
 
 const app = new Hono();
 
@@ -103,57 +103,15 @@ async function getUserNotifs(userId: string) {
   } catch (e) { console.error("User notifs:", e); return []; }
 }
 
-// ─── Africa's Talking : WhatsApp puis SMS ─────────────────────────────────────
-function atConfig() {
-  return {
-    username: Deno.env.get("AFRICAS_TALKING_USERNAME") || "",
-    apiKey: Deno.env.get("AFRICAS_TALKING_API_KEY") || "",
-    waNumber: Deno.env.get("AFRICAS_TALKING_WHATSAPP_WA_NUMBER") || "",
-  };
-}
-
-async function sendWhatsApp(phone: string, message: string): Promise<{ sent: boolean; reason?: string }> {
-  const { username, apiKey, waNumber } = atConfig();
-  if (!username || !apiKey || !waNumber) {
-    return { sent: false, reason: "WhatsApp non activé (service Africa's Talking à activer)" };
-  }
-  try {
-    const resp = await fetch("https://chat.africastalking.com/whatsapp/message/send", {
-      method: "POST",
-      headers: { apiKey, Accept: "application/json", "Content-Type": "application/json" },
-      body: JSON.stringify({ username, waNumber, phoneNumber: phone, body: { message } }),
-    });
-    const data = await resp.json().catch(() => null);
-    if (!resp.ok) {
-      console.error("❌ [RESERVATION/WHATSAPP] Erreur AT:", resp.status, data);
-      return { sent: false, reason: data?.message || `WhatsApp erreur ${resp.status}` };
-    }
-    console.log("✅ [RESERVATION/WHATSAPP] Envoyé à", phone);
-    return { sent: true };
-  } catch (e) {
-    return { sent: false, reason: e instanceof Error ? e.message : "Erreur réseau WhatsApp" };
-  }
-}
-
+// ─── Notification par SMS via EJ SMS ─────────────────────────────────────────
 async function sendSMS(phone: string, message: string): Promise<{ sent: boolean; reason?: string }> {
-  const { username, apiKey } = atConfig();
-  if (!username || !apiKey) {
-    return { sent: false, reason: "SMS non configuré" };
-  }
   try {
-    const form = new URLSearchParams({ username, to: phone, message });
-    const resp = await fetch("https://api.africastalking.com/version1/messaging", {
-      method: "POST",
-      headers: { apiKey, Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-      body: form.toString(),
-    });
-    const data = await resp.json().catch(() => null);
-    const recipient = data?.SMSMessageData?.Recipients?.[0];
-    if (!resp.ok || recipient?.status !== "Success") {
-      console.error("❌ [RESERVATION/SMS] Erreur AT:", resp.status, data);
-      return { sent: false, reason: recipient?.status || data?.message || `SMS erreur ${resp.status}` };
+    const result = await sendEjSms({ to: phone, message });
+    if (!result.ok) {
+      console.error("❌ [RESERVATION/SMS] Erreur EJ SMS:", result.status, result.error, result.raw);
+      return { sent: false, reason: result.error || `SMS erreur ${result.status || ""}`.trim() };
     }
-    console.log("✅ [RESERVATION/SMS] Envoyé à", phone);
+    console.log("✅ [RESERVATION/SMS] Envoyé à", phone, "réf.", result.reference || "n/a");
     return { sent: true };
   } catch (e) {
     return { sent: false, reason: e instanceof Error ? e.message : "Erreur réseau SMS" };
@@ -235,17 +193,10 @@ app.post("/:id/notify-accept", async (c) => {
       channels.push = { sent: false, reason: "Push non configuré" };
     }
 
-    // 4b. WhatsApp, sinon SMS (service activable plus tard, échec gracieux)
+    // 4b. SMS via EJ SMS (échec gracieux : la réservation reste valide)
     if (phone) {
-      const wa = await sendWhatsApp(phone, message);
-      channels.whatsapp = wa;
-      if (!wa.sent) {
-        channels.sms = await sendSMS(phone, message);
-      } else {
-        channels.sms = { sent: false, reason: "Non requis (WhatsApp envoyé)" };
-      }
+      channels.sms = await sendSMS(phone, message);
     } else {
-      channels.whatsapp = { sent: false, reason: "Numéro passager introuvable" };
       channels.sms = { sent: false, reason: "Numéro passager introuvable" };
     }
 

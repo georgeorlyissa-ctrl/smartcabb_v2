@@ -9,6 +9,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification } from "./firebase-admin.ts";
 import { listOrders, ejpayWallets } from "./ejpay-core.ts";
 import { reconcileOrder } from "./ejpay-routes.ts";
+import { getEjSmsBalance } from "./ej-sms-core.ts";
 import {
   getAdmin2FAEmail,
   isAdmin2FARequired,
@@ -350,7 +351,7 @@ const DEFAULT_SETTINGS = {
   exchangeRate: 2500, commissionRate: 10, nightTimeStart: "21:00",
   nightTimeEnd: "06:00", freeWaitingMinutes: 3, distantZoneMultiplier: 2,
   postpaidEnabled: true, postpaidFee: 5000,
-  smsEnabled: true, smsProvider: "africas_talking", notificationsEnabled: true,
+  smsEnabled: true, smsProvider: "ejsms", notificationsEnabled: true,
   appVersion: "1.0.0", maintenanceMode: false, commissionEnabled: true,
   minimumCommission: 500, paymentFrequency: "immediate", autoDeduction: true,
   postpaidInterestRate: 15,
@@ -382,16 +383,18 @@ app.post("/settings/save", async (c) => {
   }
 });
 
-// ─── GET /sms/balance — Solde Africa's Talking ───────────────────────────────
+// ─── GET /sms/balance — Solde de crédits EJ SMS ───────────────────────────────
 app.get("/sms/balance", async (c) => {
   try {
-    const username = Deno.env.get("AFRICAS_TALKING_USERNAME") || "";
-    const apiKey   = Deno.env.get("AFRICAS_TALKING_API_KEY")  || "";
-
     // Lire statistiques SMS depuis le KV (logs d'envoi)
     const smsLogs = await kvGetByPrefix("sms_log:");
-    const totalSent     = smsLogs.filter((l: any) => l.status === "sent"   || l.success === true).length;
-    const totalFailed   = smsLogs.filter((l: any) => l.status === "failed" || l.success === false).length;
+    const isSent = (l: any) =>
+      l.success === true || ["SENT", "DELIVERED"].includes(String(l.status || "").toUpperCase());
+    const isFailed = (l: any) =>
+      l.success === false || String(l.status || "").toUpperCase() === "FAILED";
+
+    const totalSent      = smsLogs.filter(isSent).length;
+    const totalFailed    = smsLogs.filter(isFailed).length;
     const totalAttempted = smsLogs.length;
 
     const byType: Record<string, number> = {};
@@ -404,78 +407,48 @@ app.get("/sms/balance", async (c) => {
       ? `${Math.round((totalSent / totalAttempted) * 100)}%`
       : "100%";
 
-    // Appel à l'API Africa's Talking si les credentials existent
-    let atBalance = 0;
-    let atCurrency = "KES";
-    let atError: string | undefined;
+    // Solde réel des crédits SMS chez EJ SMS
+    const result = await getEjSmsBalance();
+    const credits = result.ok ? (result.credits ?? 0) : 0;
+    const balanceError = result.ok ? undefined : (result.error || "Solde EJ SMS indisponible");
 
-    if (username && apiKey) {
-      try {
-        const atResp = await fetch(
-          `https://api.africastalking.com/version1/user?username=${encodeURIComponent(username)}`,
-          {
-            headers: {
-              "Accept":    "application/json",
-              "apiKey":    apiKey,
-            },
-          }
-        );
-
-        if (atResp.ok) {
-          const atData = await atResp.json();
-          const balanceStr: string = atData?.UserData?.balance ?? "0";
-          // Format: "KES 12.50" ou "USD 3.00"
-          const parts = balanceStr.trim().split(" ");
-          if (parts.length >= 2) {
-            atCurrency = parts[0];
-            atBalance  = parseFloat(parts[1]) || 0;
-          } else {
-            atBalance = parseFloat(balanceStr) || 0;
-          }
-        } else {
-          atError = `AT API HTTP ${atResp.status}`;
-        }
-      } catch (atErr: any) {
-        atError = atErr.message;
-        console.warn("⚠️ Africa's Talking balance error:", atErr.message);
-      }
-    } else {
-      atError = "Credentials Africa's Talking non configurés";
-    }
-
-    const costPerSms  = 0.0035; // ~$0.0035 USD par SMS (Kenya)
-    const remainingSms = atBalance > 0 ? Math.floor(atBalance / costPerSms) : 0;
+    const costPerSms = 1; // 1 crédit par segment et par destinataire
+    const remainingSms = credits;
 
     return c.json({
-      success:  true,
-      balance:  atBalance,
-      currency: atCurrency,
+      success: true,
+      provider: "ejsms",
+      balance: credits,
+      currency: "credits",
       balance_data: {
-        amount:          atBalance,
-        currency:        atCurrency,
-        formattedBalance: `${atCurrency} ${atBalance.toFixed(2)}`,
-        error:           atError,
+        amount: credits,
+        currency: "credits",
+        formattedBalance: `${credits.toLocaleString("fr-FR")} crédits`,
+        error: balanceError,
       },
       estimation: {
         costPerSms,
         remainingSms,
         estimatedCost: {
-          perSms:    `$${costPerSms}`,
-          per100Sms: `$${(costPerSms * 100).toFixed(2)}`,
-          per1000Sms: `$${(costPerSms * 1000).toFixed(2)}`,
+          perSms: "1 crédit",
+          per100Sms: "100 crédits",
+          per1000Sms: "1 000 crédits",
         },
       },
       usage: { totalSent, totalFailed, totalAttempted, successRate, byType },
+      status: result.ok ? result.statut || null : null,
+      dateUpdate: result.ok ? result.dateUpdate || null : null,
       lastUpdated: new Date().toISOString(),
     });
   } catch (error) {
     console.error("❌ Erreur sms/balance:", error);
     return c.json({
       success: false,
+      provider: "ejsms",
       error: String(error),
-      balance: 0, currency: "USD",
-      balance_data: { amount: 0, currency: "USD", formattedBalance: "USD 0.00" },
-      estimation: { costPerSms: 0.0035, remainingSms: 0, estimatedCost: { perSms: "$0.0035", per100Sms: "$0.35", per1000Sms: "$3.50" } },
+      balance: 0, currency: "credits",
+      balance_data: { amount: 0, currency: "credits", formattedBalance: "0 crédit" },
+      estimation: { costPerSms: 1, remainingSms: 0, estimatedCost: { perSms: "1 crédit", per100Sms: "100 crédits", per1000Sms: "1 000 crédits" } },
       usage: { totalSent: 0, totalFailed: 0, totalAttempted: 0, successRate: "0%", byType: {} },
       lastUpdated: new Date().toISOString(),
     }, 500);

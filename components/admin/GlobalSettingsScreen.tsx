@@ -408,8 +408,7 @@ export function GlobalSettingsScreen() {
                       onChange={(e) => handleChange('smsProvider', e.target.value as any)}
                       className="w-full mt-1 px-3 py-2 border rounded-md"
                     >
-                      <option value="africas_talking">Africa's Talking</option>
-                      <option value="twilio">Twilio</option>
+                      <option value="ejsms">EJ SMS (EJSARL)</option>
                       <option value="disabled">Désactivé</option>
                     </select>
                   </div>

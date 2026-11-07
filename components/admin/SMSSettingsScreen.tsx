@@ -1,6 +1,6 @@
 /**
  * Écran de gestion des paramètres SMS
- * Pour configurer Africa's Talking ou Twilio
+ * Envoi via EJ SMS (EJSARL)
  */
 
 import { useState, useEffect } from 'react';
@@ -19,7 +19,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 interface SMSSettings {
   sms_enabled: boolean;
-  sms_provider: 'africas-talking' | 'twilio';
+  sms_provider: 'ejsms';
 }
 
 interface SMSLog {
@@ -39,7 +39,7 @@ interface SMSSettingsScreenProps {
 export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
   const [settings, setSettings] = useState<SMSSettings>({
     sms_enabled: false,
-    sms_provider: 'africas-talking',
+    sms_provider: 'ejsms',
   });
   const [logs, setLogs] = useState<SMSLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +75,7 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
             .insert({
               id: '1',
               sms_enabled: true,
-              sms_provider: 'africas-talking'
+              sms_provider: 'ejsms'
             });
 
           if (insertError && insertError.code !== '23505') {
@@ -91,7 +91,7 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
             if (newData) {
               setSettings({
                 sms_enabled: newData.sms_enabled ?? true,
-                sms_provider: newData.sms_provider || 'africas-talking',
+                sms_provider: newData.sms_provider || 'ejsms',
               });
               console.log('✅ Paramètres SMS chargés après création:', newData);
               setLoading(false);
@@ -107,7 +107,7 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
             const parsed = JSON.parse(savedSettings);
             setSettings({
               sms_enabled: parsed.smsNotifications ?? false,
-              sms_provider: 'africas-talking',
+              sms_provider: 'ejsms',
             });
             console.log('⚠️ Paramètres SMS chargés depuis localStorage (fallback):', parsed);
             toast.warning('Paramètres chargés depuis le cache local. Cliquez sur 🔄 pour recharger depuis la base.');
@@ -126,7 +126,7 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
       if (data) {
         setSettings({
           sms_enabled: data.sms_enabled ?? true, // Par défaut TRUE
-          sms_provider: data.sms_provider || 'africas-talking',
+          sms_provider: data.sms_provider || 'ejsms',
         });
         console.log('✅ Paramètres SMS chargés depuis Supabase:', data);
       }
@@ -263,7 +263,7 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
       console.error('❌ Erreur test SMS:', error);
       
       if (error instanceof Error && error.name === 'AbortError') {
-        toast.error('Le serveur met trop de temps à répondre. Vérifiez vos identifiants Africa\'s Talking.');
+        toast.error('Le serveur met trop de temps à répondre. Vérifiez vos identifiants EJ SMS.');
       } else {
         toast.error('Erreur de connexion: ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
       }
@@ -340,7 +340,7 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
               <div>
                 <h1 className="text-xl">Notifications SMS</h1>
                 <p className="text-sm text-gray-600">
-                  Configurer Africa's Talking ou Twilio
+                  Envoi via EJ SMS (EJSARL)
                 </p>
               </div>
             </div>
@@ -393,7 +393,7 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
               <Label>Provider SMS</Label>
               <Select
                 value={settings.sms_provider}
-                onValueChange={(value: 'africas-talking' | 'twilio') =>
+                onValueChange={(value: 'ejsms') =>
                   setSettings({ ...settings, sms_provider: value })
                 }
               >
@@ -401,10 +401,9 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="africas-talking">
-                    Africa's Talking (Recommandé pour la RDC)
+                  <SelectItem value="ejsms">
+                    EJ SMS (EJSARL) — opérateurs RDC
                   </SelectItem>
-                  <SelectItem value="twilio">Twilio</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -413,30 +412,22 @@ export function SMSSettingsScreen({ onBack }: SMSSettingsScreenProps) {
             <Alert>
               <Info className="w-4 h-4" />
               <AlertDescription>
-                {settings.sms_provider === 'africas-talking' ? (
-                  <div className="space-y-2">
-                    <p className="font-medium">Africa's Talking Configuration:</p>
-                    <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>Créer un compte sur <a href="https://africastalking.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">africastalking.com</a></li>
-                      <li>Obtenir votre API Key</li>
-                      <li>Dans Supabase: Settings → Edge Functions → Secrets</li>
-                      <li>Ajouter: <code className="bg-gray-100 px-1 rounded">AFRICAS_TALKING_API_KEY</code></li>
-                      <li>Ajouter: <code className="bg-gray-100 px-1 rounded">AFRICAS_TALKING_USERNAME</code> (optionnel)</li>
-                    </ol>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="font-medium">Twilio Configuration:</p>
-                    <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>Créer un compte sur <a href="https://www.twilio.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">twilio.com</a></li>
-                      <li>Obtenir Account SID, Auth Token et Phone Number</li>
-                      <li>Dans Supabase: Settings → Edge Functions → Secrets</li>
-                      <li>Ajouter: <code className="bg-gray-100 px-1 rounded">TWILIO_ACCOUNT_SID</code></li>
-                      <li>Ajouter: <code className="bg-gray-100 px-1 rounded">TWILIO_AUTH_TOKEN</code></li>
-                      <li>Ajouter: <code className="bg-gray-100 px-1 rounded">TWILIO_PHONE_NUMBER</code></li>
-                    </ol>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <p className="font-medium">Configuration EJ SMS (EJSARL) :</p>
+                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                    <li>Se connecter au panel <a href="https://sms.ejsarl.cd" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">sms.ejsarl.cd</a> et vérifier le solde de crédits</li>
+                    <li>Récupérer <strong>Client ID</strong> et <strong>Client Secret</strong> dans « API Credentials »</li>
+                    <li>Dans Supabase : Settings → Edge Functions → Secrets</li>
+                    <li>Ajouter : <code className="bg-gray-100 px-1 rounded">EJSMS_CLIENT_ID</code></li>
+                    <li>Ajouter : <code className="bg-gray-100 px-1 rounded">EJSMS_CLIENT_SECRET</code></li>
+                    <li>Ajouter : <code className="bg-gray-100 px-1 rounded">EJSMS_SENDER</code> = <code className="bg-gray-100 px-1 rounded">SMARTCABB</code></li>
+                    <li>Ajouter : <code className="bg-gray-100 px-1 rounded">EJSMS_WEBHOOK_SECRET</code> (signature des accusés de réception)</li>
+                  </ol>
+                  <p className="text-xs text-gray-600">
+                    Les numéros sont envoyés au format <code className="bg-gray-100 px-1 rounded">243XXXXXXXXX</code>.
+                    Les accusés de réception (DLR) arrivent sur <code className="bg-gray-100 px-1 rounded">/sms/dlr</code> et sont vérifiés en HMAC-SHA512.
+                  </p>
+                </div>
               </AlertDescription>
             </Alert>
 

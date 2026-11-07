@@ -127,7 +127,7 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
       if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
       if (next === 'accepted') {
         toast.success('Course acceptée ✓ — passager notifié...');
-        // Notifie le passager (push + WhatsApp/SMS) avec tes coordonnées sécurité
+        // Notifie le passager (push + SMS) avec tes coordonnées sécurité
         try {
           const resp = await fetch(
             `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/reservations/${ride.id}/notify-accept`,
@@ -140,10 +140,9 @@ export function DriverScheduledRides({ onBack }: { onBack?: () => void }) {
           const ch = j.channels || {};
           const sent: string[] = [];
           if (ch.push?.sent) sent.push('push app');
-          if (ch.whatsapp?.sent) sent.push('WhatsApp');
           if (ch.sms?.sent) sent.push('SMS');
           if (sent.length > 0) toast.success(`Passager notifié (${sent.join(' + ')})`);
-          else toast.info('Passager : notification app à son ouverture (push/WhatsApp indisponibles pour l’instant)');
+          else toast.info('Passager : notification app à son ouverture (push/SMS indisponibles pour l’instant)');
         } catch (e) {
           console.warn('Notify passager:', e);
         }

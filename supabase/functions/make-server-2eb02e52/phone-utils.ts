@@ -1,11 +1,14 @@
 /**
  * 📱 PHONE UTILITIES
- * Normalise les numéros de téléphone pour l'envoi SMS via Africa's Talking
- * 
- * Africa's Talking requiert le format: +243XXXXXXXXX
+ * Normalise les numéros de téléphone RDC pour l'application.
+ *
+ * Format interne canonique : +243XXXXXXXXX
  * - DOIT commencer par +
  * - Code pays: 243 (RDC)
  * - 9 chiffres après le code pays
+ *
+ * ⚠️ EJ SMS attend `243XXXXXXXXX` **sans +** : la conversion finale est faite
+ * par `toMsisdn()` dans `ej-sms-core.ts`.
  */
 
 /**
@@ -64,7 +67,7 @@ export function normalizePhoneNumber(phone: string | null | undefined): string |
 }
 
 /**
- * Valide qu'un numéro est au bon format pour Africa's Talking
+ * Valide qu'un numéro est au format canonique +243XXXXXXXXX
  * @param phone - Numéro normalisé
  * @returns true si valide, false sinon
  */
