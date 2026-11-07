@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — Portefeuille chauffeur simplifié : recharge libre ≥ 5 000 CDF, éligibilité par solde
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `9fcec83` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat
 - **Objectif** : supprimer les forfaits (Starter / Standard / Pro) au profit d'une recharge simple à montant libre, avec un **minimum de 5 000 CDF**, et s'appuyer sur la logique d'éligibilité existante (solde minimum par catégorie + mise hors ligne automatique après course).
