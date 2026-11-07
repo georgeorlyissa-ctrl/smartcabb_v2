@@ -7,6 +7,8 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification } from "./firebase-admin.ts";
+import { listOrders, ejpayWallets } from "./ejpay-core.ts";
+import { reconcileOrder } from "./ejpay-routes.ts";
 import {
   getAdmin2FAEmail,
   isAdmin2FARequired,
@@ -1845,6 +1847,68 @@ app.post("/cleanup-stale-rides", async (c) => {
     });
   } catch (error) {
     console.error("❌ Erreur cleanup-stale-rides:", error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
+// ─── Mobile Money (Ejpay) — visibilité admin ─────────────────────────────────
+
+/** Liste les transactions Mobile Money (lecture seule, aucune donnée bancaire). */
+app.get("/ejpay/orders", async (c) => {
+  try {
+    const status = (c.req.query("status") || "").toUpperCase();
+    const limitRaw = Number(c.req.query("limit") || 200);
+    const limit = Math.min(Math.max(Number.isFinite(limitRaw) ? limitRaw : 200, 1), 500);
+
+    let orders = await listOrders(limit);
+    if (status && status !== "ALL") {
+      orders = orders.filter((o) => o.status === status);
+    }
+
+    const totals = orders.reduce(
+      (acc: Record<string, number>, o) => {
+        acc.count += 1;
+        if (o.status === "SUCCESS") acc.successAmount += Number(o.amount) || 0;
+        if (o.status === "PENDING") acc.pending += 1;
+        if (o.status === "FAILED") acc.failed += 1;
+        if (o.status === "REVIEW") acc.review += 1;
+        return acc;
+      },
+      { count: 0, successAmount: 0, pending: 0, failed: 0, review: 0 },
+    );
+
+    return c.json({ success: true, orders, totals });
+  } catch (error) {
+    console.error("❌ [ADMIN/EJPAY/ORDERS]", error);
+    return c.json({ success: false, error: String(error) }, 500);
+  }
+});
+
+/** Soldes marchand chez Ejpay (peut être vide tant que le compte n'est pas alimenté). */
+app.get("/ejpay/wallets", async (c) => {
+  const resp = await ejpayWallets();
+  if (!resp.ok) {
+    return c.json({ success: false, error: resp.error || "Soldes indisponibles" }, 502);
+  }
+  return c.json({ success: true, wallets: resp.data ?? [] });
+});
+
+/** Force une réconciliation avec Ejpay (utile si le callback a été perdu). */
+app.post("/ejpay/orders/:orderId/refresh", async (c) => {
+  try {
+    const result = await reconcileOrder(c.req.param("orderId"));
+    if (!result.order) {
+      return c.json({ success: false, error: result.error || "Transaction introuvable" }, 404);
+    }
+    return c.json({
+      success: true,
+      orderId: result.order.orderId,
+      status: result.order.status,
+      settledAt: result.order.settledAt || null,
+      reason: result.order.reason || null,
+    });
+  } catch (error) {
+    console.error("❌ [ADMIN/EJPAY/REFRESH]", error);
     return c.json({ success: false, error: String(error) }, 500);
   }
 });

@@ -210,6 +210,12 @@ Base : `https://<projet>.supabase.co/functions/v1/make-server-2eb02e52/ejpay`
 | `GET` | `/wallets` | `X-Admin-Secret` | Soldes marchand chez Ejpay |
 | `POST` | `/orders/:orderId/refresh` | `X-Admin-Secret` | Réconciliation manuelle d'un ordre |
 
+> **Interface admin (sans secret côté navigateur).** Le panel admin utilise des proxys sous
+> `.../make-server-2eb02e52/admin` : `GET /admin/ejpay/orders` (liste + totaux),
+> `GET /admin/ejpay/wallets` (soldes marchand) et `POST /admin/ejpay/orders/:orderId/refresh`.
+> Ils n'exigent pas `X-Admin-Secret` (même modèle que les autres routes admin, protégées par la
+> session admin côté application) et évitent d'exposer `EJPAY_ADMIN_SECRET` dans le bundle.
+
 ### `GET /health` — diagnostic support
 
 Réponse (champs principaux) :
@@ -426,7 +432,7 @@ Aucune migration SQL n'accompagne cette intégration : le rollback ne touche pas
 | `components/passenger/PaymentScreen.tsx` | Paiement de course + paiement mixte | `ride_payment` |
 | `components/passenger/RechargeModal.tsx` | Recharge du portefeuille (sélecteur d'opérateur ajouté) | `wallet_topup` |
 | `components/passenger/ScheduledRides.tsx` | Acompte 50 % d'une réservation | `deposit` |
-| `components/driver/DriverWalletScreen.tsx` | Forfait chauffeur (sélecteur d'opérateur + numéro) | `other` |
+| `components/driver/DriverWalletScreen.tsx` | Forfait chauffeur (sélecteur d'opérateur + numéro) | `driver_wallet_topup` |
 
 Changements transverses :
 
@@ -437,9 +443,16 @@ Changements transverses :
 
 ### Ce qui reste optionnel
 
-1. Écran admin « Transactions Mobile Money » : `GET /ejpay/orders`, `GET /ejpay/wallets`, `POST /orders/:id/refresh` (helpers déjà disponibles dans `lib/ejpay-service.ts`).
+1. ~~Écran admin « Transactions Mobile Money »~~ → **livré** : `components/admin/EjpayTransactionsScreen.tsx` (menu admin « Transactions Mobile Money », route `admin-ejpay`), adossé aux proxys `/admin/ejpay/*`.
 2. Retrait chauffeur automatique vers Mobile Money : `POST /ejpay/payout` doit être déclenché par un admin (secret serveur), pas depuis le client.
 3. Push FCM « paiement reçu » côté passager (le push chauffeur existe déjà pour les retraits).
+
+### Recharge chauffeur — règlement côté serveur
+
+- `kind = driver_wallet_topup`, `order.driverId` porté par l'ordre, `metadata.days` = durée du forfait.
+- Au règlement (`settleOrder`) : `creditDriverWallet()` crédite `driver:<id>.balance` **et** `creditBalance`, prolonge `wallet_expiry_date` de `days`, écrit `wallet_tx:<orderId>` et envoie un push.
+- L'application **ne crédite plus** le portefeuille elle-même : elle relit `GET /drivers/:id` pour afficher le solde réel (source de vérité serveur).
+- Idempotence : `settledAt` empêche tout double crédit, y compris si le webhook et le polling arrivent ensemble.
 
 ---
 

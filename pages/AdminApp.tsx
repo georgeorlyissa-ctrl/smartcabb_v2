@@ -44,6 +44,7 @@ const AdminRidesScreen = React.lazy(() => import('../components/admin/AdminRides
 const AdminDemandScreen = React.lazy(() => import('../components/admin/AdminDemandScreen').then(m => ({ default: m.AdminDemandScreen })));
 const AdminBlockedPassengersScreen = React.lazy(() => import('../components/admin/AdminBlockedPassengersScreen').then(m => ({ default: m.AdminBlockedPassengersScreen })));
 const AdminBroadcastScreen = React.lazy(() => import('../components/admin/AdminBroadcastScreen').then(m => ({ default: m.AdminBroadcastScreen })));
+const EjpayTransactionsScreen = React.lazy(() => import('../components/admin/EjpayTransactionsScreen').then(m => ({ default: m.EjpayTransactionsScreen })));
 
 function AdminAppContent() {
   const { state, setCurrentScreen, setCurrentView, updateUser } = useAppState();
@@ -194,6 +195,7 @@ function AdminAppContent() {
         {screenToShow === 'data-cleanup' && <DataCleanupPanel />}
         {screenToShow === 'pending-recharges' && <PendingRechargesScreenNew />}
         {screenToShow === 'admin-pending-recharges' && <PendingRechargesScreenNew />}
+        {screenToShow === 'admin-ejpay' && <EjpayTransactionsScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
         
         {/* Drivers list (alias) */}
         {screenToShow === 'drivers-list' && <DriversListScreen onBack={() => setCurrentScreen('admin-dashboard')} />}

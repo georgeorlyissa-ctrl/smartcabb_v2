@@ -40,8 +40,8 @@ function resolveKind(data: PaymentInitData): EjpayKind {
   if (type.startsWith('ride_payment')) return 'ride_payment';
   if (type === 'reservation_deposit') return 'deposit';
   if (type === 'wallet_recharge' || type === 'wallet_topup') return 'wallet_topup';
-  // Forfait chauffeur : encaissement simple, l'activation est faite côté app.
-  if (type === 'driver_wallet_recharge') return 'other';
+  // Forfait chauffeur : crédité côté serveur au règlement du paiement.
+  if (type === 'driver_wallet_recharge') return 'driver_wallet_topup';
   return data.rideId ? 'ride_payment' : 'wallet_topup';
 }
 
@@ -109,6 +109,8 @@ export async function initPayment(data: PaymentInitData): Promise<PaymentResult>
       orderId,
       rideId: data.rideId ?? null,
       passengerId: data.passengerId ?? (data.metadata?.userId as string) ?? null,
+      driverId: (data.driverId as string) ?? (data.metadata?.driverId as string) ?? null,
+      days: typeof data.metadata?.days === 'number' ? (data.metadata?.days as number) : null,
       label: data.description ?? null,
       source: 'app',
     });

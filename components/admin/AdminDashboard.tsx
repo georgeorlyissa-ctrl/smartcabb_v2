@@ -42,6 +42,7 @@ import {
   Bell,
   CheckCircle,
   Wallet,
+  Smartphone,
   Database,
   MessageSquare,
   Trash2,
@@ -853,6 +854,15 @@ export function AdminDashboard() {
       action: () => setShowAddAdminModal(true),
       count: null,
       highlight: false
+    },
+    {
+      id: 'action-ejpay',
+      title: 'Transactions Mobile Money',
+      description: 'Ejpay : recharges, courses, statuts et réconciliation',
+      icon: Smartphone,
+      action: () => setCurrentScreen('admin-ejpay'),
+      count: null,
+      color: 'from-emerald-500 to-teal-500'
     },
     {
       id: 'action-postpaid',

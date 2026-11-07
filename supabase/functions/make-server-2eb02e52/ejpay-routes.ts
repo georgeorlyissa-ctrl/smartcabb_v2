@@ -155,6 +155,73 @@ async function creditPassengerWallet(passengerId: string, amount: number, order:
   return next;
 }
 
+/**
+ * Crédit du portefeuille chauffeur après confirmation Ejpay (forfait / recharge).
+ * Idempotence garantie par `settledAt` en amont. Le solde chauffeur vit sous
+ * `driver:<id>` avec `balance` et `creditBalance` maintenus à la même valeur.
+ */
+async function creditDriverWallet(driverId: string, amount: number, order: EjpayOrder): Promise<number> {
+  const driver = await kvGet<any>(`driver:${driverId}`);
+  if (!driver) {
+    console.warn("⚠️ [EJPAY/SETTLE] Chauffeur introuvable pour le crédit:", driverId);
+    return 0;
+  }
+
+  const balanceRaw = driver.balance ?? null;
+  const creditRaw = driver.creditBalance ?? null;
+  const current =
+    balanceRaw !== null && creditRaw !== null
+      ? Math.min(Number(balanceRaw), Number(creditRaw))
+      : Number(balanceRaw ?? creditRaw ?? 0);
+  const next = current + amount;
+
+  // Prolongation du forfait (jours fournis à l'initiation), stockée côté serveur.
+  const days = Number(order.metadata?.days ?? 0);
+  let expiry = driver.wallet_expiry_date ? new Date(driver.wallet_expiry_date) : null;
+  if (days > 0) {
+    const start = expiry && expiry.getTime() > Date.now() ? expiry : new Date();
+    start.setDate(start.getDate() + days);
+    expiry = start;
+  }
+
+  await kvSet(`driver:${driverId}`, {
+    ...driver,
+    balance: next,
+    creditBalance: next,
+    wallet_expiry_date: expiry ? expiry.toISOString() : driver.wallet_expiry_date ?? null,
+    updated_at: new Date().toISOString(),
+  });
+
+  await kvSet(`wallet_tx:${order.orderId}`, {
+    id: order.orderId,
+    driverId,
+    type: "recharge",
+    method: "ejpay",
+    amount,
+    currency: order.currency,
+    balanceBefore: current,
+    balanceAfter: next,
+    days: days > 0 ? days : null,
+    reference: order.reference,
+    status: "completed",
+    created_at: order.createdAt,
+    completed_at: new Date().toISOString(),
+  });
+
+  // Notifications (push + SMS) non bloquantes pour le chauffeur.
+  try {
+    if (driver.fcmToken) {
+      await sendFCMNotification(driver.fcmToken, {
+        title: "✅ Recharge confirmée",
+        body: `${amount.toLocaleString("fr-FR")} ${order.currency} crédités sur votre portefeuille.`,
+        data: { type: "driver_wallet_recharge", orderId: order.orderId },
+      });
+    }
+  } catch { /* push non bloquant */ }
+
+  return next;
+}
+
 async function settleOrder(order: EjpayOrder, payload: any): Promise<EjpayOrder> {
   if (order.settledAt) return order; // déjà réglé → jamais deux fois
 
@@ -197,6 +264,8 @@ async function settleOrder(order: EjpayOrder, payload: any): Promise<EjpayOrder>
         }
       } catch { /* push non bloquant */ }
     }
+  } else if (order.kind === "driver_wallet_topup" && order.driverId) {
+    await creditDriverWallet(order.driverId, amount, order);
   } else if (order.kind === "wallet_topup" && order.passengerId) {
     await creditPassengerWallet(order.passengerId, amount, order);
   } else if (order.kind === "ride_payment" && order.rideId) {
@@ -369,7 +438,7 @@ app.post("/collect", async (c) => {
     }
 
     const body = await c.req.json().catch(() => ({}));
-    const kind: EjpayKind = ["wallet_topup", "ride_payment", "deposit", "other"].includes(body.kind)
+    const kind: EjpayKind = ["wallet_topup", "driver_wallet_topup", "ride_payment", "deposit", "other"].includes(body.kind)
       ? body.kind
       : "wallet_topup";
 
@@ -450,9 +519,10 @@ app.post("/collect", async (c) => {
       reason: null,
       rideId: body.rideId || null,
       passengerId: body.passengerId || body.userId || null,
-      driverId: null,
+      driverId: kind === "driver_wallet_topup" ? (body.driverId || body.passengerId || null) : null,
       metadata: {
         expectedAmount,
+        days: Number.isFinite(Number(body.days)) && Number(body.days) > 0 ? Number(body.days) : null,
         clientLabel: body.label ? String(body.label).slice(0, 120) : null,
         source: body.source ? String(body.source).slice(0, 40) : "app",
       },
@@ -517,6 +587,45 @@ app.post("/collect", async (c) => {
   }
 });
 
+// ─── Réconciliation (statut distant → ordre local) ──────────────────────────
+
+/** Interroge Ejpay et applique le statut distant. Utilisé par `/status` (app) et l'admin. */
+export async function reconcileOrder(
+  orderId: string,
+): Promise<{ ok: boolean; order?: EjpayOrder; error?: string }> {
+  const order = await getOrder(orderId);
+  if (!order) return { ok: false, error: "Transaction introuvable" };
+  if (!order.reference || order.settledAt) return { ok: true, order };
+
+  const remote = await ejpayStatus(order.reference);
+  if (!remote.ok || !remote.data) {
+    return { ok: false, error: remote.error || "Statut Ejpay indisponible", order };
+  }
+
+  const data: any = remote.data;
+  const remoteStatus = paymentStatusOf(readStatutCode(data), data.status);
+  order.remote = { ...(order.remote || {}), ...data, checkedAt: new Date().toISOString() };
+
+  const remoteAmount = Number(data.amount);
+  const amountMismatch =
+    Number.isFinite(remoteAmount) && remoteAmount > 0 && Math.abs(remoteAmount - Number(order.amount)) > 1;
+
+  if (remoteStatus === "SUCCESS" && !amountMismatch) {
+    await settleOrder(order, data);
+  } else if (remoteStatus === "FAILED") {
+    await failOrder(order, data);
+  } else if (amountMismatch) {
+    order.status = "REVIEW";
+    order.reason = `Montant reçu (${remoteAmount}) différent du montant attendu (${order.amount})`;
+    await saveOrder(order);
+    console.warn("⚠️ [EJPAY/STATUS] Écart de montant:", orderId, order.reason);
+  } else {
+    await saveOrder(order);
+  }
+
+  return { ok: true, order };
+}
+
 // ─── GET /status/:orderId ───────────────────────────────────────────────────
 
 app.get("/status/:orderId", async (c) => {
@@ -531,30 +640,22 @@ app.get("/status/:orderId", async (c) => {
       order.reference && (wantsRefresh || (order.status === "PENDING" && ageMs > 8000));
 
     if (shouldRefresh && order.reference) {
-      const remote = await ejpayStatus(order.reference);
-      if (remote.ok && remote.data) {
-        const data: any = remote.data;
-        const remoteStatus = paymentStatusOf(readStatutCode(data), data.status);
-        order.remote = { ...(order.remote || {}), ...data, checkedAt: new Date().toISOString() };
-
-        // Montant/statut cohérents ? Sinon on laisse en revue manuelle.
-        const remoteAmount = Number(data.amount);
-        const amountMismatch =
-          Number.isFinite(remoteAmount) && remoteAmount > 0 && Math.abs(remoteAmount - Number(order.amount)) > 1;
-
-        if (remoteStatus === "SUCCESS" && !amountMismatch) {
-          await settleOrder(order, data);
-        } else if (remoteStatus === "FAILED") {
-          await failOrder(order, data);
-        } else if (amountMismatch) {
-          order.status = "REVIEW";
-          order.reason = `Montant reçu (${remoteAmount}) différent du montant attendu (${order.amount})`;
-          await saveOrder(order);
-          console.warn("⚠️ [EJPAY/STATUS] Écart de montant:", orderId, order.reason);
-        } else {
-          await saveOrder(order);
-        }
-      }
+      const result = await reconcileOrder(orderId);
+      if (result.order) return c.json({
+        success: true,
+        orderId: result.order.orderId,
+        reference: result.order.reference,
+        status: result.order.status,
+        statutCode: result.order.statutCode,
+        reason: result.order.reason,
+        amount: result.order.amount,
+        currency: result.order.currency,
+        kind: result.order.kind,
+        direction: result.order.direction,
+        operator: { id: result.order.operatorId, name: result.order.operatorName },
+        settledAt: result.order.settledAt || null,
+        createdAt: result.order.createdAt,
+      });
     }
 
     return c.json({

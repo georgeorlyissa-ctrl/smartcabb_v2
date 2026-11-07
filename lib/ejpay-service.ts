@@ -25,7 +25,7 @@ const BASE_URL = `https://${projectId}.supabase.co/functions/v1/make-server-2eb0
 
 export type EjpayStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'REVIEW';
 export type EjpayCurrency = 'CDF' | 'USD';
-export type EjpayKind = 'wallet_topup' | 'ride_payment' | 'deposit' | 'other';
+export type EjpayKind = 'wallet_topup' | 'driver_wallet_topup' | 'ride_payment' | 'deposit' | 'other';
 
 export interface EjpayOperator {
   id: number;
@@ -55,6 +55,10 @@ export interface EjpayCollectInput {
   orderId?: string;
   rideId?: string | null;
   passengerId?: string | null;
+  /** Chauffeur bénéficiaire (`driver_wallet_topup`). */
+  driverId?: string | null;
+  /** Durée du forfait chauffeur, en jours (stockée pour l'activation serveur). */
+  days?: number | null;
   label?: string | null;
   source?: string;
 }
@@ -192,6 +196,8 @@ export async function collectEjpayPayment(input: EjpayCollectInput): Promise<Ejp
         orderId: input.orderId,
         rideId: input.rideId ?? null,
         passengerId: input.passengerId ?? null,
+        driverId: input.driverId ?? null,
+        days: input.days ?? null,
         label: input.label ?? null,
         source: input.source || 'app',
       }),

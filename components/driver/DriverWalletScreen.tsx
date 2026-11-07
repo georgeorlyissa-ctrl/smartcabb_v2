@@ -166,7 +166,6 @@ export function DriverWalletScreen() {
       const paymentData = {
         amount: selectedPackage.amount,
         currency: 'CDF' as const,
-        passengerId: currentDriver.id,
         driverId: currentDriver.id,
         method: 'mobile_money' as const,
         customerEmail: currentDriver.email,
@@ -211,32 +210,23 @@ export function DriverWalletScreen() {
     if (!currentDriver?.id) return;
 
     try {
-      // Calculer la nouvelle date d'expiration (affichage local : le serveur
-      // ne stocke que le solde, la durée est portée par le forfait).
-      const currentExpiry = walletInfo?.wallet_expiry_date
-        ? new Date(walletInfo.wallet_expiry_date)
-        : new Date();
-
-      const now = new Date();
-      const startDate = currentExpiry > now ? currentExpiry : now;
-      const newExpiry = new Date(startDate);
-      newExpiry.setDate(newExpiry.getDate() + pkg.days);
-
-      // Créditer le portefeuille chauffeur côté serveur (source de vérité)
-      const response = await fetch(
-        `${API_BASE}/drivers/${currentDriver.id}/wallet/recharge`,
-        {
-          method: 'POST',
-          headers: API_HEADERS,
-          body: JSON.stringify({ amount: pkg.amount }),
-        },
-      );
+      // Le crédit est appliqué côté serveur au règlement Ejpay (driver_wallet_topup) :
+      // on relit la fiche conducteur, source de vérité (solde + expiration du forfait).
+      const response = await fetch(`${API_BASE}/drivers/${currentDriver.id}`, {
+        headers: API_HEADERS,
+      });
       const data = await response.json();
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.error || `Recharge refusée (${response.status})`);
+      if (!response.ok || !data?.success || !data.driver) {
+        throw new Error(data?.error || `Lecture du solde impossible (${response.status})`);
       }
 
-      const newBalance = Number(data.creditBalance ?? data.newCreditBalance ?? 0);
+      const driver = data.driver;
+      const newBalance = Number(driver.balance ?? driver.creditBalance ?? 0);
+      const serverExpiry = driver.wallet_expiry_date ? new Date(driver.wallet_expiry_date) : null;
+      const fallbackExpiry = new Date();
+      fallbackExpiry.setDate(fallbackExpiry.getDate() + pkg.days);
+      const newExpiry = serverExpiry ?? fallbackExpiry;
+
       setWalletInfo({
         wallet_balance: newBalance,
         wallet_expiry_date: newExpiry.toISOString(),

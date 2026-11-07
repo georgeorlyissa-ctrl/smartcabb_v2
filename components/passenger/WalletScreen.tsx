@@ -490,22 +490,25 @@ export function WalletScreen() {
         />
       )}
 
-      {/* Diagnostic Mobile Money (Ejpay) — aucun paiement créé */}
-      <EjpayDiagnosticModal
-        show={showDebugModal}
-        onClose={() => setShowDebugModal(false)}
-      />
+      {/* Diagnostic Mobile Money (Ejpay) — outil de dev, masqué en production */}
+      {import.meta.env.DEV && (
+        <>
+          <EjpayDiagnosticModal
+            show={showDebugModal}
+            onClose={() => setShowDebugModal(false)}
+          />
 
-      {/* Diagnostic Button (Fixed) */}
-      <motion.button
-        onClick={() => setShowDebugModal(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40"
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        title="Diagnostic Mobile Money"
-      >
-        <Bug className="w-6 h-6" />
-      </motion.button>
+          <motion.button
+            onClick={() => setShowDebugModal(true)}
+            className="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            title="Diagnostic Mobile Money"
+          >
+            <Bug className="w-6 h-6" />
+          </motion.button>
+        </>
+      )}
 
       {/* Refresh Button (Fixed) */}
       <motion.button

@@ -384,7 +384,7 @@ export function toEjpayMsisdn(input: string | null | undefined): string | null {
 
 // ─── Suivi des ordres (idempotence + réconciliation) ────────────────────────
 
-export type EjpayKind = "wallet_topup" | "ride_payment" | "deposit" | "payout" | "other";
+export type EjpayKind = "wallet_topup" | "driver_wallet_topup" | "ride_payment" | "deposit" | "payout" | "other";
 export type EjpayStatus = "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED" | "REVIEW";
 
 export interface EjpayOrder {

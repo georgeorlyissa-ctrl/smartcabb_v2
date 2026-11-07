@@ -42,6 +42,53 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Mobile Money : recharge chauffeur créditée côté serveur + écran admin « Transactions »
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat | security
+- **Objectif** : permettre le test réel côté chauffeur (le crédit n'était pas appliqué au bon portefeuille) et donner à l'admin une visibilité sur les encaissements Ejpay, sans exposer de secret dans le navigateur.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ejpay-core.ts` | Nouveau `kind` `driver_wallet_topup` |
+| `supabase/functions/make-server-2eb02e52/ejpay-routes.ts` | `collect` accepte `driver_wallet_topup` + `driverId`/`days` ; `creditDriverWallet()` ; `reconcileOrder()` extrait et réutilisé par `/status` |
+| `supabase/functions/make-server-2eb02e52/admin-routes.ts` | Proxys admin : `GET /admin/ejpay/orders`, `GET /admin/ejpay/wallets`, `POST /admin/ejpay/orders/:orderId/refresh` |
+| `lib/ejpay-service.ts` | `EjpayKind` + champs `driverId` / `days` transmis à `/collect` |
+| `lib/payment-providers/ejpay-provider-pure.ts` | `driver_wallet_recharge` → `driver_wallet_topup`, `driverId`/`days` transmis |
+| `components/driver/DriverWalletScreen.tsx` | Plus de crédit manuel après paiement : relecture de `GET /drivers/:id` (solde + expiration serveur) |
+| `components/passenger/WalletScreen.tsx` | Bouton 🐞 de diagnostic masqué en production (`import.meta.env.DEV`) |
+| `components/admin/EjpayTransactionsScreen.tsx` | **Nouveau** écran admin (totaux, filtres, tableau, réconciliation, soldes marchand) |
+| `components/admin/AdminDashboard.tsx`, `pages/AdminApp.tsx` | Action « Transactions Mobile Money » + route `admin-ejpay` |
+| `docs/EJPAY_INTEGRATION.md`, `docs/CHANGELOG_TECHNIQUE.md` | Routes admin, flux chauffeur, cette entrée |
+
+### Description technique
+- **Bug corrigé (chauffeur)** : l'ancien flux envoyait `passengerId = driverId` avec `kind = other` ; au règlement, rien n'était crédité côté serveur, le crédit venait d'un appel client à `POST /drivers/:id/wallet/recharge`. Désormais `kind = driver_wallet_topup` et `order.driverId` est renseigné ; `settleOrder` appelle `creditDriverWallet()` (solde `balance` + `creditBalance`, `wallet_expiry_date += days`, `wallet_tx`, push FCM). Le client ne fait plus que relire la fiche conducteur → plus de double crédit possible.
+- **Idempotence** : inchangée, `settledAt` protège le crédit (webhook + polling).
+- **Réconciliation** : logique extraite dans `reconcileOrder(orderId)` (utilisée par `GET /status/:orderId` et par l'admin). Gère `SUCCESS`, `FAILED` et l'écart de montant (`REVIEW`).
+- **Admin** : les proxys `/admin/ejpay/*` réutilisent `listOrders`, `ejpayWallets` et `reconcileOrder` ; `EJPAY_ADMIN_SECRET` reste exclusivement côté serveur. L'écran affiche les totaux (encaissé, en attente, échoués, à vérifier), filtre par statut, permet un refresh par ligne et affiche les soldes marchand (`solde`/`devise` du format Ejpay).
+
+### Impact produit / comportement visible
+- Chauffeur : la recharge du forfait est créditée immédiatement après confirmation Ejpay, avec la bonne date d'expiration ; message de succès et SMS inchangés.
+- Admin : nouvelle entrée **« Transactions Mobile Money »** dans le tableau de bord, avec toutes les transactions (passager, chauffeur, course, acompte), leurs statuts et un bouton de réconciliation.
+- Passager : le bouton 🐞 de diagnostic n'apparaît plus en production (disponible en local/dev).
+
+### Risques & rollback
+- **Risque** : les anciens ordres `other` (forfaits chauffeur payés avant ce commit) ne sont pas re-crédités ; ils restent visibles dans l'admin.
+- **Risque connu (pré-existant, non traité ici)** : `POST /drivers/:id/wallet/recharge` n'exige pas d'authentification ; un chauffeur pourrait s'auto-créditer. À protéger dans un prochain lot (impacte `DriverWalletManager` admin).
+- **Rollback** : `git revert` ; aucun changement de schéma KV ni migration.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] Edge Function redéployée
+- [x] `GET /admin/ejpay/orders` → 1 transaction `SUCCESS` 1 000 CDF (test passager réel), totaux `successAmount: 1000`
+- [x] `GET /admin/ejpay/wallets` → Orange Money, `solde: 970 CDF` (1 000 − 30 de commission)
+- [ ] Recharge chauffeur réelle (5 000 CDF) et vérification du crédit + expiration
+
+---
+
 ## 2026-11-07 — Suppression des derniers restes Flutterwave (modale de debug, routes et provider morts)
 
 - **Commit** : `db366bc` (branche `main`, poussé sur `origin`)
