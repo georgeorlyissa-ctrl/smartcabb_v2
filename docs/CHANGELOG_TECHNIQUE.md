@@ -42,6 +42,52 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Ejpay : mise en service (secrets, déploiement, vérifications serveur)
+
+- **Commit** : à pousser (`main` → `origin/main`)
+- **Auteur** : Équipe SmartCabb
+- **Type** : chore (exploitation) + docs
+- **Objectif** : rendre l'intégration Ejpay réellement opérationnelle : secrets saisis, Edge Function redéployée, authentification et contrat vérifiés, URLs corrigées.
+
+### Ce qui a été fait (hors dépôt)
+| Action | Détail |
+|---|---|
+| Secrets Supabase | `EJPAY_CLIENT_ID`, `EJPAY_CLIENT_SECRET`, `EJPAY_WEBHOOK_SECRET`, `EJPAY_ADMIN_SECRET` posés sur le projet `zaerjqchzqmcxqblkfkg` (valeurs **jamais** commitées) |
+| Déploiement | `supabase functions deploy make-server-2eb02e52` — les routes `/ejpay/*` n'étaient pas déployées (404 avant l'opération) |
+| Vérification 1 | `GET /ejpay/config` → `configured: true`, `enabled: false`, opérateurs 9/10/17/19, minimums 100 CDF / 1 USD |
+| Vérification 2 | OAuth `client_credentials` sur `auth.ejsarl.cd` → jeton obtenu (`expires_in: 300`) : identifiants valides |
+| Vérification 3 | `GET /ejpay/wallets` (X-Admin-Secret) → `200 success: true`, tableau vide (aucun solde marchand encore alimenté) |
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `docs/EJPAY_INTEGRATION.md` | Référence de projet corrigée : `wmrksqludchpvitakyci` (inexistant) → **`zaerjqchzqmcxqblkfkg`** (URLs de webhook, `config/update`, `config`, `supabase link`) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Le projet Supabase réel de l'application est `zaerjqchzqmcxqblkfkg` (`utils/supabase/info.ts`, `supabase projects list`). La référence `wmrksqludchpvitakyci` utilisée dans la première version de la doc ne résout pas en DNS : elle est remplacée partout.
+- URL de webhook à déclarer chez Ejpay :
+  `https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52/ejpay/webhook`
+- `verify_jwt = false` est bien présent pour `make-server-2eb02e52` (`supabase/config.toml`), donc Ejpay peut appeler le webhook sans jeton Supabase (la sécurité repose sur la signature HMAC).
+- Aucun changement de code applicatif dans cette étape : uniquement configuration et documentation.
+
+### Impact produit
+- Les paquets de paiement sont désormais **déployés** et **configurés** ; seul le drapeau `ejpayEnabled` reste à `false` jusqu'à la recette.
+- Aucun comportement visible pour les utilisateurs tant que le drapeau n'est pas activé.
+
+### Risques & rollback
+- **Risque** : les secrets ont transité par un canal de discussion → recommandation de **régénérer** `EJPAY_CLIENT_SECRET` et `EJPAY_WEBHOOK_SECRET` dans le dashboard Ejpay une fois la recette terminée, puis de les remettre à jour dans Supabase.
+- **Rollback** : `POST /config/update` `{"config":{"ejpayEnabled":false}}` ; suppression des secrets `EJPAY_*` ; `git revert` pour la doc.
+
+### Tests / vérifications
+- [x] `GET /ejpay/config` → `configured: true, enabled: false`
+- [x] OAuth Ejpay → jeton 300 s obtenu
+- [x] `GET /ejpay/wallets` → 200 (aucun solde configuré côté marchand)
+- [ ] Recette réelle à 100 CDF (en attente d'un numéro de test)
+- [ ] Webhook déclaré dans le dashboard Ejpay
+
+---
+
 ## 2026-11-07 — Fin du remplacement de Flutterwave : libellés, types et réparation du wallet chauffeur
 
 - **Commit** : à pousser (`main` → `origin/main`)

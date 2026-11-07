@@ -73,7 +73,7 @@ Stockage (KV `kv_store_2eb02e52`, aucune migration SQL nécessaire) :
 
 ```bash
 supabase login
-supabase link --project-ref wmrksqludchpvitakyci
+supabase link --project-ref zaerjqchzqmcxqblkfkg
 supabase secrets set \
   EJPAY_CLIENT_ID="..." \
   EJPAY_CLIENT_SECRET="..." \
@@ -92,10 +92,10 @@ supabase secrets set \
 ## 4. URL du webhook à déclarer chez Ejpay
 
 ```
-https://wmrksqludchpvitakyci.supabase.co/functions/v1/make-server-2eb02e52/ejpay/webhook
+https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52/ejpay/webhook
 ```
 
-> Remplacez `wmrksqludchpvitakyci` par la référence réelle du projet si elle change.
+> Remplacez `zaerjqchzqmcxqblkfkg` par la référence réelle du projet si elle change.
 > L'URL est aussi calculée dynamiquement et renvoyée dans le champ `callbackUrl` de chaque paiement, donc Ejpay peut l'utiliser telle quelle. Déclarez-la malgré tout dans le dashboard Ejpay comme URL de callback par défaut.
 
 Contraintes imposées par le guide :
@@ -118,7 +118,7 @@ Le code est déployé **inactif**. Deux conditions sont nécessaires pour qu'un 
 ### Activer
 
 ```bash
-curl -X POST "https://wmrksqludchpvitakyci.supabase.co/functions/v1/make-server-2eb02e52/config/update" \
+curl -X POST "https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52/config/update" \
   -H "Content-Type: application/json" \
   -d '{"config":{"ejpayEnabled":true}}'
 ```
@@ -128,7 +128,7 @@ curl -X POST "https://wmrksqludchpvitakyci.supabase.co/functions/v1/make-server-
 ### Vérifier
 
 ```bash
-curl "https://wmrksqludchpvitakyci.supabase.co/functions/v1/make-server-2eb02e52/ejpay/config"
+curl "https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52/ejpay/config"
 ```
 
 Réponse attendue :
