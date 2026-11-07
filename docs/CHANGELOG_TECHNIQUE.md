@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — Suppression des derniers restes Flutterwave (modale de debug, routes et provider morts)
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `db366bc` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : refactor
 - **Objectif** : l'écran Portefeuille affichait encore une modale « Debug Paiement Flutterwave » (bouton 🐞), qui appelait des routes supprimées et parlait de `FLUTTERWAVE_SECRET_KEY`. Supprimer tous les restes de Flutterwave du code.
