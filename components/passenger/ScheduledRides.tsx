@@ -10,6 +10,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { useAppState } from '../../hooks/useAppState';
 import { useTranslation } from '../../hooks/useTranslation';
 import { toast } from '../../lib/toast';
+import { OperatorLogo } from '../shared/OperatorLogo';
 import { YangoStyleSearch } from './YangoStyleSearch';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
 import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
@@ -984,15 +985,24 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <Label className="text-xs">Réseau Mobile Money</Label>
-                    <select
-                      value={depositNetwork}
-                      onChange={(e) => setDepositNetwork(e.target.value)}
-                      className="mt-1 w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white"
-                    >
-                      {DEPOSIT_NETWORKS.map((n) => (
-                        <option key={n.id} value={n.id}>{n.name}</option>
-                      ))}
-                    </select>
+                    <div className="mt-1 flex items-center gap-2">
+                      <div className="w-11 h-9 shrink-0 flex items-center justify-center border border-gray-300 rounded-lg bg-white p-1">
+                        <OperatorLogo
+                          network={depositNetwork}
+                          name={DEPOSIT_NETWORKS.find((n) => n.id === depositNetwork)?.name}
+                          height={22}
+                        />
+                      </div>
+                      <select
+                        value={depositNetwork}
+                        onChange={(e) => setDepositNetwork(e.target.value)}
+                        className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                      >
+                        {DEPOSIT_NETWORKS.map((n) => (
+                          <option key={n.id} value={n.id}>{n.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   <div>
                     <Label className="text-xs">Numéro payeur</Label>

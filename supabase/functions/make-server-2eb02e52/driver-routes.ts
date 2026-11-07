@@ -54,6 +54,16 @@ async function kvGetByPrefix(prefix: string): Promise<any[]> {
   } catch (e) { console.error("KV getByPrefix exception:", e); return []; }
 }
 
+// ─── Sécurité : les crédits manuels exigent le secret admin ──────────────────
+
+function hasValidAdminSecret(c: any): boolean {
+  const expected =
+    Deno.env.get("EJPAY_ADMIN_SECRET") || Deno.env.get("ADMIN_CREATION_SECRET") || "";
+  if (!expected) return false;
+  const header = c.req.header("x-admin-secret") || "";
+  return header === expected;
+}
+
 // ─── Utilitaires téléphone inlinés ───────────────────────────────────────────
 
 function normalizePhoneNumber(phone: string | null | undefined): string | null {
@@ -302,7 +312,17 @@ app.post("/:driverId/balance", async (c) => {
 });
 
 // ─── POST /:driverId/wallet/recharge — Recharger le crédit conducteur ─────────
+// ⚠️ Outil d'administration uniquement : exige `x-admin-secret`.
+// Les chauffeurs rechargent leur forfait via Mobile Money (Ejpay).
 app.post("/:driverId/wallet/recharge", async (c) => {
+  if (!hasValidAdminSecret(c)) {
+    return c.json({
+      success: false,
+      error: "Recharge manuelle désactivée — utilisez Mobile Money (Ejpay)",
+      code: "MANUAL_RECHARGE_DISABLED",
+    }, 403);
+  }
+
   try {
     const driverId = c.req.param("driverId");
     const { amount } = await c.req.json();

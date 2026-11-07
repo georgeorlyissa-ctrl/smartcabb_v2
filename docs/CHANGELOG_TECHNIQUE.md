@@ -42,6 +42,53 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Sécurité : recharge manuelle verrouillée + logos des opérateurs Mobile Money
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security | feat
+- **Objectif** : fermer la faille d'auto-crédit gratuit (`POST /wallet/recharge` public, utilisé par la modale « Portefeuille » chauffeur) et remplacer les libellés texte des opérateurs par leurs logos officiels.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | Helper `hasValidAdminSecret()` + garde `403` sur `POST /:driverId/wallet/recharge` |
+| `supabase/functions/make-server-2eb02e52/passenger-routes.ts` | Idem sur `POST /:id/wallet/recharge` |
+| `components/driver/DriverDashboard.tsx` | Modale Portefeuille → CTA vers `driver-wallet` (plus de crédit local) |
+| `components/driver/DriverDashboardNew.tsx` | Idem |
+| `components/driver/DriverWalletManager.tsx` | **Supprimé** (UI d'auto-recharge) |
+| `components/shared/OperatorLogo.tsx` | **Nouveau** : résolution clé/id Ejpay → logo dans `public/logos/` |
+| `components/mobile-money-logos.tsx` | Les 4 composants de logo rendent désormais les images réelles |
+| `components/passenger/RechargeModal.tsx` | Grille opérateurs en logos + nom sous le logo |
+| `components/passenger/ScheduledRides.tsx` | Aperçu logo à côté du sélecteur d'opérateur |
+| `components/driver/DriverWalletScreen.tsx` | Aperçu logo à côté du sélecteur d'opérateur |
+| `docs/EJPAY_INTEGRATION.md`, `docs/CHANGELOG_TECHNIQUE.md` | Sécurité, fichiers, cette entrée |
+
+### Description technique
+- **Verrouillage** : `driver-routes.ts` et `passenger-routes.ts` exposent maintenant `hasValidAdminSecret(c)` (même logique que `ejpay-routes.ts` : `EJPAY_ADMIN_SECRET`, à défaut `ADMIN_CREATION_SECRET`, en-tête `x-admin-secret`, comparaison stricte). La garde est évaluée **avant** la lecture du corps ; réponse `403 { code: "MANUAL_RECHARGE_DISABLED" }` sinon. Aucun appelant légitime ne subsiste : `DriverWalletManager.tsx` est supprimé et la route passager n'avait aucun appelant.
+- **Modale Portefeuille** : les deux dashboards chauffeur affichent le solde + la date d'expiration (lecture seule) et un bouton « Voir les forfaits et recharger » qui ferme la modale et navigue vers `driver-wallet` (encaissement Ejpay `driver_wallet_topup`).
+- **Logos** : `OperatorLogo` normalise la clé (`orange_money`, `M-Pesa`, `17`…) vers un fichier de `public/logos/`, avec `onError` → repli silencieux sur le texte. `RechargeModal` affiche logo + nom dans une grille 2 colonnes ; les `<select>` natifs (ScheduledRides, DriverWalletScreen) affichent l'aperçu du logo sélectionné à côté, les `<option>` restant en texte (contrainte HTML).
+
+### Impact produit / comportement visible
+- Un chauffeur ne peut plus créditer son portefeuille sans payer : la modale mène au paiement Mobile Money.
+- Toute tentative d'appel direct de l'endpoint sans secret renvoie `403`.
+- Les sélecteurs d'opérateurs (recharge passager, course, acompte réservation, forfait chauffeur) affichent les logos officiels avec le nom conservé.
+
+### Risques & rollback
+- **Risque** : une intégration admin externe qui appelait `/wallet/recharge` sans `x-admin-secret` recevrait `403`. Aucune dans le dépôt.
+- **Risque** : si `ADMIN_CREATION_SECRET` et `EJPAY_ADMIN_SECRET` sont absents, la route reste fermée (comportement voulu, fail-safe).
+- **Rollback** : `git revert` ; les logos sont de simples assets statiques, aucun impact données.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK (bundle chauffeur −9 kB après suppression de `DriverWalletManager`)
+- [x] Edge Function redéployée
+- [x] `POST .../drivers/TEST_DRIVER/wallet/recharge` → `403 MANUAL_RECHARGE_DISABLED`
+- [x] `POST .../passengers/TEST_PASSENGER/wallet/recharge` → `403 MANUAL_RECHARGE_DISABLED`
+- [ ] Vérification visuelle des logos en production (Vercel)
+
+---
+
 ## 2026-11-07 — Mobile Money : recharge chauffeur créditée côté serveur + écran admin « Transactions »
 
 - **Commit** : `c963565` (branche `main`, poussé sur `origin`)

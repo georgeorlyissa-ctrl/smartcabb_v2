@@ -12,7 +12,6 @@ import { stopAllNotifications } from '../../lib/notification-sound';
 import { RideTimer } from '../RideTimer';
 import { EmergencyAlert } from '../EmergencyAlert';
 import { CommissionSettings } from '../CommissionSettings';
-import { DriverWalletManager } from './DriverWalletManager';
 import { supabase } from '../../lib/supabase';
 import { VEHICLE_PRICING, isDayTime, VehicleCategory } from '../../lib/pricing';
 import { getMinimumCreditForCategory } from '../../lib/pricing-config';
@@ -560,14 +559,39 @@ export function DriverDashboard() {
                 <XCircle className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-4">
-              <DriverWalletManager
-                driverId={driver.id}
-                creditBalance={driver.balance || 0}
-                earningsBalance={driver.earningsBalance || 0}
-                bonusBalance={driver.bonusBalance || 0}
-                onBalanceUpdate={(c, e, b) => setDriver({ ...driver, balance: c, earningsBalance: e, bonusBalance: b })}
-              />
+            <div className="p-4 space-y-4">
+              <div className="rounded-xl border border-gray-200 p-4">
+                <p className="text-sm text-gray-500">Solde du portefeuille</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {Number(driver.balance || 0).toLocaleString('fr-FR')} CDF
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Forfait actif jusqu'au{' '}
+                  {driver.wallet_expiry_date
+                    ? new Date(driver.wallet_expiry_date).toLocaleDateString('fr-FR')
+                    : '—'}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-orange-50 border border-orange-200 p-4">
+                <p className="text-sm font-medium text-orange-900">Recharger par Mobile Money</p>
+                <p className="text-xs text-orange-800 mt-1">
+                  Choisissez un forfait (Starter, Standard, Pro). Le paiement est validé sur votre
+                  téléphone, puis crédité automatiquement.
+                </p>
+              </div>
+
+              <Button
+                className="w-full bg-orange-600 hover:bg-orange-700"
+                size="lg"
+                onClick={() => {
+                  setShowWalletManager(false);
+                  setCurrentScreen('driver-wallet');
+                }}
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Voir les forfaits et recharger
+              </Button>
             </div>
           </motion.div>
         </div>

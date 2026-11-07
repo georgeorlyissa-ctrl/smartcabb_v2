@@ -24,6 +24,7 @@ import {
 import { toast } from '../../lib/toast';
 import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
 import { EjpayWaitingModal } from '../passenger/EjpayWaitingModal';
+import { OperatorLogo } from '../shared/OperatorLogo';
 
 // ✅ v517.77 - Helper pour formater les montants CDF de manière sécurisée
 const formatCDF = (amount: number | null | undefined): string => {
@@ -592,15 +593,24 @@ export function DriverWalletScreen() {
 
               {/* Opérateur + numéro Mobile Money */}
               <div className="grid grid-cols-2 gap-2 mb-3">
-                <select
-                  value={payNetwork}
-                  onChange={(e) => setPayNetwork(e.target.value)}
-                  className="w-full rounded-lg px-2 py-2 text-sm text-gray-800 bg-white"
-                >
-                  {DRIVER_NETWORKS.map((n) => (
-                    <option key={n.id} value={n.id}>{n.name}</option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-2">
+                  <div className="w-10 h-9 shrink-0 flex items-center justify-center rounded-lg bg-white p-1">
+                    <OperatorLogo
+                      network={payNetwork}
+                      name={DRIVER_NETWORKS.find((n) => n.id === payNetwork)?.name}
+                      height={20}
+                    />
+                  </div>
+                  <select
+                    value={payNetwork}
+                    onChange={(e) => setPayNetwork(e.target.value)}
+                    className="w-full rounded-lg px-2 py-2 text-sm text-gray-800 bg-white"
+                  >
+                    {DRIVER_NETWORKS.map((n) => (
+                      <option key={n.id} value={n.id}>{n.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <input
                   type="tel"
                   value={payPhone}

@@ -45,6 +45,16 @@ async function kvGetByPrefix(prefix: string): Promise<any[]> {
   } catch (e) { console.error("KV getByPrefix exception:", e); return []; }
 }
 
+// ─── Sécurité : les crédits manuels exigent le secret admin ──────────────────
+
+function hasValidAdminSecret(c: any): boolean {
+  const expected =
+    Deno.env.get("EJPAY_ADMIN_SECRET") || Deno.env.get("ADMIN_CREATION_SECRET") || "";
+  if (!expected) return false;
+  const header = c.req.header("x-admin-secret") || "";
+  return header === expected;
+}
+
 // ─── GET / — Tous les passagers ──────────────────────────────────────────────
 app.get("/", async (c) => {
   try {
@@ -253,7 +263,17 @@ app.post("/update/:id", async (c) => {
 });
 
 // ─── POST /:id/wallet/recharge — Recharger le portefeuille passager ───────────
+// ⚠️ Outil d'administration uniquement : exige `x-admin-secret`.
+// Les passagers rechargent via Mobile Money (Ejpay).
 app.post("/:id/wallet/recharge", async (c) => {
+  if (!hasValidAdminSecret(c)) {
+    return c.json({
+      success: false,
+      error: "Recharge manuelle désactivée — utilisez Mobile Money (Ejpay)",
+      code: "MANUAL_RECHARGE_DISABLED",
+    }, 403);
+  }
+
   try {
     const id = c.req.param("id");
     const { amount } = await c.req.json();

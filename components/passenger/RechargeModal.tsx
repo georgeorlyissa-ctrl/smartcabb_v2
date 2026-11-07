@@ -20,6 +20,7 @@ import { convertUSDtoCDF, formatCDF, getExchangeRate } from '../../lib/pricing';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
 import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
 import { EjpayWaitingModal } from './EjpayWaitingModal';
+import { OperatorLogo } from '../shared/OperatorLogo';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 // Opérateurs Mobile Money (identifiants repris par lib/ejpay-service)
@@ -563,13 +564,14 @@ export function RechargeModal({
                           key={op.id}
                           type="button"
                           onClick={() => setNetwork(op.id)}
-                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-all flex flex-col items-center justify-center gap-2 min-h-[84px] ${
                             network === op.id
                               ? 'border-secondary bg-secondary/5 shadow-sm text-foreground'
                               : 'border-border hover:border-secondary/50 text-muted-foreground'
                           }`}
                         >
-                          {op.name}
+                          <OperatorLogo network={op.id} name={op.name} height={28} />
+                          <span className="text-center leading-tight">{op.name}</span>
                         </button>
                       ))}
                     </div>

@@ -359,6 +359,11 @@ Codes de statut Ejpay : `1` = PENDING, `2` = SUCCESS, `3` = FAILED (le guide con
 - **Contrôle de montant** : un callback dont le montant diffère de plus de 1 unité du montant attendu passe en `REVIEW` (aucun crédit automatique) et reste visible pour l'admin.
 - **Anti-surfacturation** sur les courses (`kind = "ride_payment"`).
 - **Opérations sortantes** (`payout`, `orders`, `wallets`, `refresh`) protégées par `X-Admin-Secret`.
+- **Recharge manuelle verrouillée** : `POST /drivers/:id/wallet/recharge` et `POST /passengers/:id/wallet/recharge` renvoient
+  `403 MANUAL_RECHARGE_DISABLED` sans en-tête `x-admin-secret` (valeur `EJPAY_ADMIN_SECRET`, à défaut
+  `ADMIN_CREATION_SECRET`). Ces routes ne servent plus qu'aux opérations d'administration ; les utilisateurs passent
+  exclusivement par Ejpay. Le bouton « Portefeuille » côté chauffeur redirige désormais vers l'écran des forfaits
+  (`driver-wallet`) au lieu de proposer un crédit local.
 - **Rate limiting global** de l'Edge Function (100 req / 15 min / IP) déjà en place.
 
 > Limite connue : si Ejpay encaisse mais qu'aucun callback n'arrive **et** que l'app est fermée avant le dernier polling, l'ordre reste `PENDING` jusqu'à la prochaine interrogation. Le bouton « Rafraîchir » de l'écran admin (`POST /orders/:orderId/refresh`) sert exactement à ce cas.
@@ -424,6 +429,7 @@ Aucune migration SQL n'accompagne cette intégration : le rollback ne touche pas
 | `lib/payment-providers/ejpay-provider-pure.ts` | Provider branché dans `paymentService` (même contrat que les autres providers). |
 | `hooks/useEjpayCheckout.ts` | Orchestration : `collect` → attente du résultat (`PENDING` → `SUCCESS`/`FAILED`) avec chronomètre et annulation. |
 | `components/passenger/EjpayWaitingModal.tsx` | Écran « Validez sur votre téléphone » (montant, opérateur, temps écoulé, annuler). |
+| `components/shared/OperatorLogo.tsx` | Logos réels des opérateurs (`/logos/mpesa.png`, `orange-money.png`, `airtel-money.jpg`, `logo-afrimoney.png`), résolution par clé (`mpesa`, `orange_money`, …) ou par id Ejpay (9, 10, 17, 19). Repli silencieux sur le nom texte si l'image manque. |
 
 ### Écrans branchés
 
@@ -440,6 +446,9 @@ Changements transverses :
 - `components/admin/GlobalSettingsScreen.tsx` + `lib/config-sync.ts` : le commutateur « Flutterwave activé » devient **« Ejpay activé (Mobile Money) »**, adossé au drapeau `ejpayEnabled` (faux par défaut).
 - Carte bancaire retirée des écrans de paiement (`PaymentScreen`, `ScheduledRides`, `RideScreen`, `ProfileScreen`) et des textes (CGU, paiement mixte).
 - Plus aucune popup de paiement : la validation se fait sur le téléphone du client.
+- **Logos opérateurs** : `components/mobile-money-logos.tsx` (utilisé par `PaymentScreen`) et `components/shared/OperatorLogo.tsx`
+  (utilisé par `RechargeModal`, `ScheduledRides`, `DriverWalletScreen`) affichent les logos officiels servis depuis
+  `public/logos/`. Le nom de l'opérateur reste affiché en texte (accessibilité et repli).
 
 ### Ce qui reste optionnel
 
