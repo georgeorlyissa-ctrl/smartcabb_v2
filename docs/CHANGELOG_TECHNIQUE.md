@@ -42,6 +42,41 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Ejpay : rotation du Client Secret en production
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security
+- **Objectif** : remplacer le Client Secret Ejpay (identique depuis la mise en service) par une valeur régénérée depuis le dashboard, sans interruption de service.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `docs/EJPAY_INTEGRATION.md` | Nouvelle procédure « Rotation du Client Secret » (commandes, test OAuth, effet immédiat) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- `Regenerate secret` exécuté côté dashboard Ejpay → nouvelle valeur `EJPAY_CLIENT_SECRET` (32 caractères).
+- Secret posé via `supabase secrets set EJPAY_CLIENT_SECRET=… --project-ref zaerjqchzqmcxqblkfkg`, puis `supabase functions deploy make-server-2eb02e52`.
+- Aucun changement de code : `ejpay-core.ts` lit le secret via `Deno.env.get("EJPAY_CLIENT_SECRET")`.
+
+### Impact produit / comportement visible
+- Aucun impact visible (passager, chauffeur, admin).
+- Les tokens déjà émis restent valides jusqu'à expiration (~5 min), puis le nouveau secret est utilisé.
+
+### Risques & rollback
+- **Risque** : secret erroné → `401` sur l'OAuth, donc `collect`/`payout` en échec (`502`/`503` côté API). Les ordres existants restent consultables.
+- **Rollback** : l'ancien secret est définitivement révoqué côté Ejpay ; en cas d'erreur, régénérer à nouveau dans le dashboard et reposer la valeur.
+
+### Tests / vérifications
+- [x] OAuth avec le **nouveau** secret → `200`, `token_type=Bearer`, `expires_in=300`, scopes `payment:bulk payment:write payment:read`
+- [x] OAuth avec l'**ancien** secret → `401` (révoqué)
+- [x] `GET /ejpay/config` → `configured: true`, `enabled: true`, `callbackConfigured: true`
+- [x] `GET /ejpay/wallets` sans `X-Admin-Secret` → `401` (protection active)
+- [x] Edge Function redéployée
+
+---
+
 ## 2026-11-07 — Ejpay : clarification du callback (aucun webhook à déclarer dans le dashboard)
 
 - **Commit** : `e229262` (branche `main`, poussé sur `origin`)

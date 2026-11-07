@@ -81,6 +81,30 @@ supabase secrets set \
   EJPAY_ADMIN_SECRET="$(openssl rand -hex 32)"
 ```
 
+### Rotation du Client Secret
+
+1. Dashboard Ejpay → **API Credentials** → **Regenerate secret** → noter la valeur (affichée une seule fois).
+2. La poser dans Supabase et redéployer :
+
+```bash
+supabase secrets set EJPAY_CLIENT_SECRET="<nouvelle valeur>" --project-ref zaerjqchzqmcxqblkfkg
+supabase functions deploy make-server-2eb02e52 --project-ref zaerjqchzqmcxqblkfkg
+```
+
+3. Vérifier l'OAuth (doit répondre `200` avec un `access_token`, `expires_in: 300`) :
+
+```bash
+curl -s -X POST https://auth.ejsarl.cd/realms/ej-payment/protocol/openid-connect/token \
+  -d grant_type=client_credentials \
+  -d client_id="$EJPAY_CLIENT_ID" \
+  -d client_secret="$EJPAY_CLIENT_SECRET" \
+  -d "scope=payment:write payment:read"
+```
+
+> L'ancien secret est invalidé **immédiatement** par Ejpay. Un token déjà émis reste valable jusqu'à son expiration (~5 min), ce qui explique qu'une opération puisse encore réussir juste après la rotation. Aucune donnée métier n'est affectée.
+>
+> **Rotation effectuée le 2026-11-07** : nouveau Client Secret posé, ancien confirmé révoqué (`401`), Edge Function redéployée.
+
 ### Dans le Dashboard
 
 1. **Settings → Edge Functions → Secrets → Add new secret** ;
