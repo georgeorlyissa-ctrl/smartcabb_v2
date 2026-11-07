@@ -12,6 +12,7 @@ import { SeoHead } from './components/SeoHead';
 import { AppProvider } from './hooks/useAppState';
 import { BackendSyncProvider } from './components/BackendSyncProvider';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { WelcomeBackGate } from './components/WelcomeBackGate';
 
 // ─── Routes vitrine : jamais de dark mode ───────────────────────────────────
 const VITRINE_ROUTES = ['/', '/services', '/drivers', '/contact', '/about', '/terms', '/privacy', '/legal'];
@@ -405,6 +406,7 @@ function App() {
           <LanguageProvider>
             <DarkModeGuard />
             <SeoHead />
+            <WelcomeBackGate />
             <div className="app-container">
               <OnlineStatusIndicator />
               <PWAInstallPrompt />

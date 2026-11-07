@@ -71,7 +71,7 @@ function PassengerAppContent() {
           <WelcomeBackScreen 
             userName={user?.name || user?.email?.split('@')[0] || undefined}
             userType="passenger"
-            onComplete={() => setCurrentScreen('login')}
+            onComplete={() => setCurrentScreen('map')}
           />
         );
       case 'login':

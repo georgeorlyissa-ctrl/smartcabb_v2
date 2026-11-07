@@ -42,6 +42,50 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — « Bon retour » : écran d'accueil personnalisé à la reconnexion
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : afficher un écran de bienvenue personnalisé (nom + photo) quand un utilisateur retrouve sa session ou se reconnecte, comme dans les applications mobiles grand public.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/WelcomeBackGate.tsx` | **Nouveau** : détecte la session restaurée / la connexion et affiche l'écran une fois par session |
+| `components/WelcomeBackScreen.tsx` | Modes `welcome` / `reconnect` (« Bienvenue » / « Bon retour »), durée configurable, bouton « Ce n'est pas moi ? », mise en page compacte sans chevauchement |
+| `App.tsx` | Montage de `<WelcomeBackGate />` dans l'`AppProvider` |
+| `pages/PassengerApp.tsx` | Correction de la cible de l'écran `welcome-back` (allait vers `login`, va vers `map`) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Déclencheurs** : le portail observe `state.currentUser` / `state.currentDriver` / `state.currentView`. Il s'active sur les routes `/app…` et `/driver…` uniquement (jamais sur le site vitrine ni dans l'admin). Aucun changement de routage : il s'affiche en surcouche `fixed inset-0 z-[999]`, ce qui évite tous les conflits avec la logique de navigation existante.
+- **Une fois par session** : marqueur `sessionStorage` `smartcabb_welcome_back_seen:<role>` contenant l'id du compte. Un rechargement dans le même onglet ne réaffiche pas l'écran ; fermer l'onglet/APK le réinitialise. Le marqueur est purgé dès que les deux slots de session sont vides (déconnexion passager ou `sessionStorage.clear()` du chauffeur).
+- **Première connexion vs retour** : marqueur persistant `smartcabb_known_user:<role>:<id>` en `localStorage`. Première fois → « Bienvenue » ; ensuite → « Bon retour » avec « Content de vous revoir… ».
+- **Chauffeur non approuvé** : aucun écran si `status`/`applicationStatus` vaut `pending`, `rejected` ou `suspended`.
+- **Compte différent** : bouton « Ce n'est pas moi ? » qui ferme l'écran, vide le slot concerné (`setCurrentUser(null)` ou `setCurrentDriver(null)`) et renvoie vers `login` / `driver-welcome`.
+- **Mise en page** : le bloc « Continuer » est passé du positionnement absolu au flux normal, espacements réduits et flèche décorative redondante retirée, pour tenir sur un viewport de 768 px sans chevauchement. L'écran reste scrollable sur les très petits écrans.
+
+### Impact produit / comportement visible
+- Passager : après connexion, ou en rouvrant l'app avec une session active, un écran vert affiche « Bon retour, <Prénom> 👋 » (ou « Bienvenue » la première fois), la photo/avatar, une barre de progression et un bouton « Continuer ». Redirection automatique après 2,8 s.
+- Chauffeur : même écran en bleu avec l'icône véhicule et « Prêt pour de nouvelles courses ? ».
+- Aucun impact sur les flux de paiement, la navigation ou les sessions existantes.
+
+### Risques & rollback
+- **Risque** : un utilisateur ayant les deux slots remplis (passager + chauffeur) et `currentView` absent ne verra pas l'écran (choix volontaire pour ne jamais afficher la mauvaise identité).
+- **Rollback** : `git revert` (aucune donnée serveur, uniquement du stockage local préfixé `smartcabb_welcome_back_seen` / `smartcabb_known_user`).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] Passager (`/app`) : « Bon retour, Michel » affiché, disparition automatique vérifiée
+- [x] Rechargement dans le même onglet : plus d'affichage (marqueur `sessionStorage` = id du compte)
+- [x] Chauffeur (`/driver`) : « Bon retour, Patrick », thème bleu, sous-titre courses
+- [x] Première connexion (marqueur `localStorage` absent) : « Bienvenue » au lieu de « Bon retour »
+- [ ] Vérification visuelle en production (Vercel) et sur APK
+
+---
+
 ## 2026-11-07 — Sécurité : recharge manuelle verrouillée + logos des opérateurs Mobile Money
 
 - **Commit** : `d5b7586` (branche `main`, poussé sur `origin`)

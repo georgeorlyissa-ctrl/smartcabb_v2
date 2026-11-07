@@ -11,6 +11,10 @@ interface WelcomeBackScreenProps {
   userType: 'passenger' | 'driver';
   userPhoto?: string;
   targetScreen?: string;
+  /** `reconnect` = « Bon retour » (session retrouvée), `welcome` = première connexion. */
+  mode?: 'welcome' | 'reconnect';
+  /** Durée avant redirection automatique (ms). */
+  autoContinueMs?: number;
   onComplete?: () => void;
   onContinue?: () => void;
   onChangeUser?: () => void;
@@ -21,6 +25,8 @@ export function WelcomeBackScreen({
   userType, 
   userPhoto,
   targetScreen,
+  mode = 'welcome',
+  autoContinueMs = 3000,
   onComplete,
   onContinue,
   onChangeUser
@@ -28,14 +34,15 @@ export function WelcomeBackScreen({
   const { setCurrentScreen } = useAppState();
   const [progress, setProgress] = useState(0);
   const animationRef = useRef<number | null>(null);
+  const isReconnect = mode === 'reconnect';
 
-  console.log('👋 WelcomeBackScreen - Affichage:', { userName, userType, targetScreen });
+  console.log('👋 WelcomeBackScreen - Affichage:', { userName, userType, targetScreen, mode });
 
   // ✅ Animation simple avec navigation UNE SEULE FOIS
   useEffect(() => {
     let startTime: number;
     let hasNavigated = false;
-    const duration = 3000;
+    const duration = Math.max(800, autoContinueMs);
 
     const animate = (currentTime: number) => {
       if (!startTime) startTime = currentTime;
@@ -90,18 +97,22 @@ export function WelcomeBackScreen({
 
   const messages = {
     passenger: {
-      greetingWithName: 'Bienvenue',
-      greetingWithoutName: 'Bienvenue !',
-      subtitleWithName: 'Où allez-vous aujourd\'hui ?',
+      greetingWithName: isReconnect ? 'Bon retour' : 'Bienvenue',
+      greetingWithoutName: isReconnect ? 'Bon retour !' : 'Bienvenue !',
+      subtitleWithName: isReconnect
+        ? 'Content de vous revoir. Où allez-vous aujourd\'hui ?'
+        : 'Où allez-vous aujourd\'hui ?',
       subtitleWithoutName: 'Connectez-vous pour commencer votre trajet',
-      action: 'Préparation de l\'interface',
+      action: isReconnect ? 'Reconnexion à votre compte' : 'Préparation de l\'interface',
     },
     driver: {
-      greetingWithName: 'Bienvenue',
-      greetingWithoutName: 'Bienvenue conducteur !',
-      subtitleWithName: 'Prêt pour de nouvelles courses ?',
+      greetingWithName: isReconnect ? 'Bon retour' : 'Bienvenue',
+      greetingWithoutName: isReconnect ? 'Bon retour conducteur !' : 'Bienvenue conducteur !',
+      subtitleWithName: isReconnect
+        ? 'Content de vous revoir. Prêt pour de nouvelles courses ?'
+        : 'Prêt pour de nouvelles courses ?',
       subtitleWithoutName: 'Connectez-vous pour accepter des courses',
-      action: 'Préparation de l\'interface',
+      action: isReconnect ? 'Reconnexion à votre compte' : 'Préparation de l\'interface',
     },
   };
 
@@ -109,7 +120,7 @@ export function WelcomeBackScreen({
   const hasUserName = Boolean(userName);
 
   return (
-    <div className={`min-h-screen bg-gradient-to-br ${colors.light} flex flex-col items-center justify-center px-6 relative overflow-hidden`}>
+    <div className={`min-h-screen bg-gradient-to-br ${colors.light} flex flex-col items-center justify-center px-6 py-4 relative overflow-hidden`}>
       {/* Cercles décoratifs */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
@@ -131,10 +142,10 @@ export function WelcomeBackScreen({
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex justify-center mb-8"
+          className="flex justify-center mb-2"
         >
           <div className="relative">
-            <SmartCabbLogo className="w-20 h-20" />
+            <SmartCabbLogo className="w-16 h-16" />
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
@@ -151,14 +162,14 @@ export function WelcomeBackScreen({
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-center mb-8"
+          className="text-center mb-2"
         >
-          <div className="relative inline-block mb-6">
+          <div className="relative inline-block mb-3">
             <motion.div
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.5, type: "spring", stiffness: 200, damping: 10 }}
-              className={`w-28 h-28 rounded-full overflow-hidden ring-4 ${colors.ring} shadow-2xl`}
+              className={`w-24 h-24 rounded-full overflow-hidden ring-4 ${colors.ring} shadow-2xl`}
             >
               {userPhoto ? (
                 <ImageWithFallback
@@ -208,7 +219,7 @@ export function WelcomeBackScreen({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mb-8"
+          className="mb-2"
         >
           <div className="relative">
             <div className="w-full h-2 bg-white/50 rounded-full overflow-hidden backdrop-blur-sm">
@@ -236,22 +247,6 @@ export function WelcomeBackScreen({
             </motion.p>
           </div>
         </motion.div>
-
-        {/* Icône de direction */}
-        <motion.div
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 1.2 }}
-          className="flex justify-center"
-        >
-          <motion.div
-            animate={{ x: [0, 10, 0] }}
-            transition={{ duration: 1, repeat: Infinity }}
-            className={`${colors.bg} rounded-full p-3 shadow-lg`}
-          >
-            <ArrowRight className="w-6 h-6 text-white" />
-          </motion.div>
-        </motion.div>
       </div>
 
       {/* Bouton Continuer en bas */}
@@ -259,9 +254,9 @@ export function WelcomeBackScreen({
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 1.5 }}
-        className="absolute bottom-20 left-0 right-0 text-center px-6"
+        className="relative z-10 mt-2 w-full max-w-md text-center"
       >
-        <p className="text-sm text-gray-500 mb-4">
+        <p className="text-sm text-gray-500 mb-1">
           SmartCabb • Transport intelligent
         </p>
         
@@ -278,8 +273,16 @@ export function WelcomeBackScreen({
             <ArrowRight className="w-5 h-5" />
           </Button>
           <p className="text-xs text-gray-400 mt-2">
-            Ou attendez {Math.max(0, Math.round(3 - (progress / 100) * 3))}s
+            Ou attendez {Math.max(0, Math.ceil((autoContinueMs / 1000) * (1 - progress / 100)))}s
           </p>
+          {onChangeUser && (
+            <button
+              onClick={onChangeUser}
+              className="mt-4 text-sm text-gray-500 underline underline-offset-2 hover:text-gray-700"
+            >
+              Ce n'est pas moi ?
+            </button>
+          )}
         </motion.div>
       </motion.div>
 
