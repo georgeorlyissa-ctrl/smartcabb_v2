@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — « Bon retour » : écran d'accueil personnalisé à la reconnexion
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `cb35c02` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat
 - **Objectif** : afficher un écran de bienvenue personnalisé (nom + photo) quand un utilisateur retrouve sa session ou se reconnecte, comme dans les applications mobiles grand public.
