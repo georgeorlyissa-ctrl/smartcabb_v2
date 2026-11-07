@@ -58,7 +58,9 @@ export function RechargeModal({
   onSuccess
 }: RechargeModalProps) {
   const [currentStep, setCurrentStep] = useState<PaymentStep>('amount');
-  const [rechargeAmount, setRechargeAmount] = useState<number>(20);
+  // Saisie en CDF par défaut : le Mobile Money local et le portefeuille sont en CDF.
+  const [inputCurrency, setInputCurrency] = useState<'CDF' | 'USD'>('CDF');
+  const [rechargeAmount, setRechargeAmount] = useState<number>(1000);
   const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'cash'>('mobile_money');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [network, setNetwork] = useState('');
@@ -75,12 +77,36 @@ export function RechargeModal({
     operatorName: string;
   } | null>(null);
 
-  const suggestedAmounts = [20, 50, 100, 200];
+  // Montants saisis dans la devise choisie. Le portefeuille est stocké en CDF :
+  // on convertit toujours vers CDF avant d'appeler Ejpay ou le backend.
+  const SUGGESTED_AMOUNTS: Record<'CDF' | 'USD', number[]> = {
+    CDF: [1000, 5000, 10000, 20000],
+    USD: [20, 50, 100, 200],
+  };
+  const MIN_AMOUNT: Record<'CDF' | 'USD', number> = { CDF: 100, USD: 1 };
+
+  const amountCDF = Math.round(
+    inputCurrency === 'CDF' ? rechargeAmount : convertUSDtoCDF(rechargeAmount)
+  );
+  const amountUSD = amountCDF / getExchangeRate();
+  const formatInputAmount = (value: number) =>
+    inputCurrency === 'CDF' ? formatCDF(value) : `${value}$ USD`;
+
+  const switchCurrency = (currency: 'CDF' | 'USD') => {
+    if (currency === inputCurrency) return;
+    setInputCurrency(currency);
+    setRechargeAmount(
+      currency === 'CDF'
+        ? Math.max(100, Math.round(amountCDF))
+        : Math.max(1, Math.round((amountCDF / getExchangeRate()) * 100) / 100)
+    );
+    setErrorMessage('');
+  };
 
   const handleClose = () => {
     if (isProcessing) return;
     setCurrentStep('amount');
-    setRechargeAmount(20);
+    setRechargeAmount(1000);
     setPhoneNumber('');
     setErrorMessage('');
     setTransactionId('');
@@ -89,8 +115,8 @@ export function RechargeModal({
 
   const handleNextStep = () => {
     if (currentStep === 'amount') {
-      if (rechargeAmount <= 0) {
-        setErrorMessage('Veuillez entrer un montant valide');
+      if (!Number.isFinite(rechargeAmount) || rechargeAmount < MIN_AMOUNT[inputCurrency]) {
+        setErrorMessage(`Montant minimum : ${formatInputAmount(MIN_AMOUNT[inputCurrency])}`);
         return;
       }
       setCurrentStep('method');
@@ -144,8 +170,6 @@ export function RechargeModal({
     setErrorMessage('');
 
     try {
-      const amountCDF = convertUSDtoCDF(rechargeAmount);
-
       if (paymentMethod === 'mobile_money') {
         // Mobile Money via Ejpay
         const paymentData: PaymentInitData = {
@@ -156,11 +180,12 @@ export function RechargeModal({
           customerName: userName,
           customerPhone: phoneNumber,
           reference: `WALLET_${Date.now()}_${userId}`,
-          description: `Recharge portefeuille SmartCabb - ${rechargeAmount}$ USD`,
+          description: `Recharge portefeuille SmartCabb - ${formatCDF(amountCDF)}`,
           metadata: {
             userId: userId,
             type: 'wallet_recharge',
-            amountUSD: rechargeAmount,
+            amountUSD: Number(amountUSD.toFixed(2)),
+            inputCurrency: inputCurrency,
             network: network,
           }
         };
@@ -224,7 +249,7 @@ export function RechargeModal({
                 userName: userName,
                 userPhone: phoneNumber || userEmail,
                 amount: amountCDF,
-                description: `Recharge en espèces de ${formatCDF(amountCDF)} (${rechargeAmount}$ USD) - En attente de validation admin`
+                description: `Recharge en espèces de ${formatCDF(amountCDF)} - En attente de validation admin`
               })
             }
           );
@@ -364,11 +389,31 @@ export function RechargeModal({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                 >
+                  {/* Sélecteur de devise */}
+                  <div className="mb-6">
+                    <p className="text-sm text-muted-foreground mb-2">Devise</p>
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl">
+                      {(['CDF', 'USD'] as const).map((currency) => (
+                        <button
+                          key={currency}
+                          onClick={() => switchCurrency(currency)}
+                          className={`py-2 rounded-lg text-sm font-semibold transition-all ${
+                            inputCurrency === currency
+                              ? 'bg-white text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {currency === 'CDF' ? 'CDF (Franc congolais)' : 'USD (Dollar)'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Suggested Amounts */}
                   <div className="mb-6">
-                    <p className="text-sm text-muted-foreground mb-3">Montants suggérés (USD)</p>
+                    <p className="text-sm text-muted-foreground mb-3">Montants suggérés ({inputCurrency})</p>
                     <div className="grid grid-cols-4 gap-2">
-                      {suggestedAmounts.map((amount) => (
+                      {SUGGESTED_AMOUNTS[inputCurrency].map((amount) => (
                         <button
                           key={amount}
                           onClick={() => setRechargeAmount(amount)}
@@ -378,7 +423,9 @@ export function RechargeModal({
                               : 'border-border hover:border-secondary/50'
                           }`}
                         >
-                          <p className="font-semibold text-foreground">{amount}$</p>
+                          <p className="font-semibold text-foreground">
+                            {inputCurrency === 'CDF' ? amount.toLocaleString('fr-FR') : `${amount}$`}
+                          </p>
                         </button>
                       ))}
                     </div>
@@ -387,23 +434,26 @@ export function RechargeModal({
                   {/* Custom Amount */}
                   <div className="mb-6">
                     <label className="text-sm text-muted-foreground mb-2 block">
-                      Ou entrez un montant personnalisé (USD)
+                      Ou entrez un montant personnalisé ({inputCurrency})
                     </label>
                     <input
                       type="number"
                       value={rechargeAmount}
                       onChange={(e) => setRechargeAmount(Number(e.target.value))}
                       className="w-full p-3 rounded-xl border-2 border-border focus:border-secondary focus:outline-none"
-                      placeholder="Montant en USD"
-                      min="1"
+                      placeholder={`Montant en ${inputCurrency}`}
+                      min={MIN_AMOUNT[inputCurrency]}
+                      step={inputCurrency === 'CDF' ? 1 : 0.5}
                     />
                     <p className="text-xs text-muted-foreground mt-2">
-                      ≈ {formatCDF(convertUSDtoCDF(rechargeAmount))}
+                      {inputCurrency === 'CDF'
+                        ? `≈ ${amountUSD.toFixed(2)} USD — minimum ${formatCDF(MIN_AMOUNT.CDF)}`
+                        : `≈ ${formatCDF(amountCDF)} — minimum 1 USD`}
                     </p>
                   </div>
 
                   {/* Discount Info */}
-                  {rechargeAmount >= 20 && !hasDiscount && (
+                  {amountUSD >= 20 && !hasDiscount && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -551,7 +601,7 @@ export function RechargeModal({
                       <div className="flex justify-between">
                         <span className="text-sm text-foreground">Montant:</span>
                         <span className="text-sm font-semibold text-foreground">
-                          {rechargeAmount}$ USD ({formatCDF(convertUSDtoCDF(rechargeAmount))})
+                          {formatCDF(amountCDF)} (≈ {amountUSD.toFixed(2)} USD)
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -595,8 +645,8 @@ export function RechargeModal({
                     <div className="flex justify-between items-center pb-3 border-b">
                       <span className="text-muted-foreground">Montant à recharger</span>
                       <div className="text-right">
-                        <p className="font-bold text-lg text-foreground">{rechargeAmount}$ USD</p>
-                        <p className="text-sm text-muted-foreground">≈ {formatCDF(convertUSDtoCDF(rechargeAmount))}</p>
+                        <p className="font-bold text-lg text-foreground">{formatCDF(amountCDF)}</p>
+                        <p className="text-sm text-muted-foreground">≈ {amountUSD.toFixed(2)} USD</p>
                       </div>
                     </div>
 
@@ -641,7 +691,7 @@ export function RechargeModal({
                       </span>
                       <div className="text-right">
                         <p className="font-bold text-lg text-green-600">
-                          {formatCDF(currentBalance + convertUSDtoCDF(rechargeAmount))}
+                          {formatCDF(currentBalance + amountCDF)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Solde actuel: {formatCDF(currentBalance)}
@@ -651,7 +701,7 @@ export function RechargeModal({
                   </div>
 
                   {/* Avantage réduction si applicable */}
-                  {rechargeAmount >= 20 && !hasDiscount && (
+                  {amountUSD >= 20 && !hasDiscount && (
                     <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
                       <div className="flex items-start gap-3">
                         <Gift className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -740,7 +790,7 @@ export function RechargeModal({
                   <div className={`bg-gradient-to-r ${paymentMethod === 'cash' ? 'from-orange-50 to-amber-50 border border-orange-200' : 'from-secondary/10 to-primary/10'} rounded-xl p-4`}>
                     <p className="text-sm text-muted-foreground mb-1">Montant {paymentMethod === 'cash' ? 'demandé' : 'rechargé'}</p>
                     <p className={`text-2xl font-bold ${paymentMethod === 'cash' ? 'text-orange-600' : 'text-primary'} mb-2`}>
-                      {formatCDF(convertUSDtoCDF(rechargeAmount))}
+                      {formatCDF(amountCDF)}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       ID Transaction: {transactionId.substring(0, 20)}...

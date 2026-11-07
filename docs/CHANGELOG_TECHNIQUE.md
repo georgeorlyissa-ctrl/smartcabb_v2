@@ -42,6 +42,45 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Recharge passager : saisie en CDF par défaut (USD en option)
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : la modale de recharge n'acceptait que des montants en USD (20 / 50 / 100 / 200 $), ce qui rendait impossible un test à 100 CDF et obligeait à convertir mentalement. Le Mobile Money et le portefeuille sont libellés en CDF : la saisie doit l'être aussi.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/RechargeModal.tsx` | Sélecteur de devise CDF/USD, montants suggérés en CDF, minimum 100 CDF, conversions et libellés CDF |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Nouvel état `inputCurrency` (`'CDF' | 'USD'`), **CDF par défaut**, montant initial `1000`.
+- `amountCDF` (dérivé) = montant saisi si CDF, sinon `convertUSDtoCDF(rechargeAmount)` ; c'est **toujours** cette valeur qui part vers Ejpay (`currency: 'CDF'`) et le backend espèces. `amountUSD` sert uniquement à l'affichage et au seuil de réduction.
+- Montants suggérés : CDF `1000 / 5000 / 10000 / 20000`, USD `20 / 50 / 100 / 200` (le parcours USD reste disponible à l'identique).
+- Minimums : `100` CDF (aligné sur `minAmount` Ejpay) et `1` USD ; message d'erreur explicite.
+- Le seuil de réduction 5 % reste basé sur 20 USD équivalents (`amountUSD >= 20`).
+- `switchCurrency()` convertit la valeur en cours à la bascule (CDF → USD arrondi au cent, USD → CDF arrondi à l'unité).
+- Descriptions et métadonnées Ejpay : `description` en CDF, `metadata.amountUSD` + `metadata.inputCurrency` conservés pour l'audit.
+- `metadata.type: 'wallet_recharge'` inchangé → `resolveKind()` du provider mappe toujours vers `wallet_topup`, et `passengerId` est pris dans `metadata.userId` : le crédit serveur (`creditPassengerWallet`) fonctionne comme avant.
+
+### Impact produit / comportement visible
+- Le passager choisit la devise, voit l'équivalent dans l'autre devise, et peut recharger **100 CDF minimum** (test réel possible).
+- Réduction 5 % et solde affiché inchangés (le portefeuille reste stocké en CDF).
+
+### Risques & rollback
+- **Risque** : un opérateur peut imposer un minimum supérieur à 100 CDF (refus `FAILED` ou `PENDING` non validé). Fallback : tester 500 ou 1000 CDF.
+- **Rollback** : `git revert` du commit ; aucun changement backend, aucune migration.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (seules les erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [ ] Recharge réelle 100 CDF dans l'app (validation sur le téléphone du client)
+- [ ] Vérifier le crédit du portefeuille et `ejpay_event:*` avec `signatureOk: true`
+
+---
+
 ## 2026-11-07 — Ejpay : rotation du Client Secret en production
 
 - **Commit** : `aa49536` (branche `main`, poussé sur `origin`)
