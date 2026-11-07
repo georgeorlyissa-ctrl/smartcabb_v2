@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — SMS/OTP : sécurisation des routes et anti-abus des crédits
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `aeb6205` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security
 - **Objectif** : empêcher que les routes SMS publiques (Edge Function en `verify_jwt = false`) soient utilisées pour épuiser les crédits EJ SMS ou lire les numéros de téléphone, alors que 30 crédits de test vont être accordés.
