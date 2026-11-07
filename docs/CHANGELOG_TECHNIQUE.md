@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — Recharge passager : saisie en CDF par défaut (USD en option)
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `41f899a` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat
 - **Objectif** : la modale de recharge n'acceptait que des montants en USD (20 / 50 / 100 / 200 $), ce qui rendait impossible un test à 100 CDF et obligeait à convertir mentalement. Le Mobile Money et le portefeuille sont libellés en CDF : la saisie doit l'être aussi.
