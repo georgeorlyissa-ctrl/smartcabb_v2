@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — EJ SMS : diagnostic de configuration et vérification du compte
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `9c7074c` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : chore
 - **Objectif** : diagnostiquer le refus `Invalid client or Invalid client credentials` puis le `404 Aucun solde SMS` rencontrés à la mise en service d'EJ SMS, sans jamais exposer les secrets.
