@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — Mobile Money : recharge chauffeur créditée côté serveur + écran admin « Transactions »
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `c963565` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat | security
 - **Objectif** : permettre le test réel côté chauffeur (le crédit n'était pas appliqué au bon portefeuille) et donner à l'admin une visibilité sur les encaissements Ejpay, sans exposer de secret dans le navigateur.
