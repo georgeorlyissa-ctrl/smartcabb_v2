@@ -6,6 +6,7 @@
  */
 
 import { Hono } from "npm:hono";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhoneNumber, isValidPhoneNumber } from "./phone-utils.ts";
 import {
   OTP_PURPOSES,
@@ -17,10 +18,78 @@ import {
 
 const app = new Hono();
 
+// ─── Garde d'authentification / anti-abus ─────────────────────────────────────
+// L'Edge Function est en `verify_jwt = false` : on vérifie nous-mêmes que
+// l'appelant est l'application (anon key) ou un utilisateur connecté, puis on
+// borne le débit pour éviter de vider les crédits SMS.
+
+function bearerToken(c: any): string {
+  const header = c.req.header("Authorization") || c.req.header("authorization") || "";
+  const match = /^Bearer\s+(.+)$/i.exec(String(header).trim());
+  return match ? match[1].trim() : "";
+}
+
+function safeEqual(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function requireAppOrUser(c: any): Promise<boolean> {
+  const token = bearerToken(c);
+  if (!token) return false;
+
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  if (anon && safeEqual(token, anon)) return true;
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+    const { data, error } = await supabase.auth.getUser(token);
+    return !error && Boolean(data?.user);
+  } catch {
+    return false;
+  }
+}
+
+const OTP_RATE_WINDOW_MS = 10 * 60 * 1000;
+const OTP_RATE_PER_IP = 10;
+const otpRateBuckets = new Map<string, number[]>();
+
+function checkIpRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const hits = (otpRateBuckets.get(ip) || []).filter((t) => now - t < OTP_RATE_WINDOW_MS);
+  if (hits.length >= OTP_RATE_PER_IP) {
+    otpRateBuckets.set(ip, hits);
+    return false;
+  }
+  hits.push(now);
+  otpRateBuckets.set(ip, hits);
+  return true;
+}
+
+function clientIp(c: any): string {
+  const forwarded = c.req.header("x-forwarded-for") || "";
+  return String(forwarded).split(",")[0].trim() || "unknown";
+}
+
 // ─── POST /send — Envoyer un code OTP ─────────────────────────────────────────
 
 app.post("/send", async (c) => {
   try {
+    if (!(await requireAppOrUser(c))) {
+      return c.json({ success: false, error: "Authentification requise" }, 401);
+    }
+
+    const ip = clientIp(c);
+    if (!checkIpRateLimit(ip)) {
+      console.warn("⚠️ [OTP] Limite par IP atteinte:", ip);
+      return c.json({ success: false, error: "Trop de demandes, réessayez dans quelques minutes" }, 429);
+    }
+
     const body = await c.req.json().catch(() => ({}));
     const { phone, purpose = "registration" } = body;
 
@@ -68,6 +137,10 @@ app.post("/send", async (c) => {
 
 app.post("/verify", async (c) => {
   try {
+    if (!(await requireAppOrUser(c))) {
+      return c.json({ success: false, error: "Authentification requise" }, 401);
+    }
+
     const body = await c.req.json().catch(() => ({}));
     const { phone, purpose = "registration", code } = body;
 

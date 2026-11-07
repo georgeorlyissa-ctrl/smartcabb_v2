@@ -3,7 +3,8 @@ import { motion } from '../../lib/motion';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { MessageSquare, RefreshCw, TrendingUp, CheckCircle, Send, XCircle, AlertTriangle } from '../../lib/admin-icons';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { projectId } from '../../utils/supabase/info';
+import { supabase } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
 
 interface SMSBalanceData {
@@ -42,11 +43,17 @@ export function SMSBalanceCard() {
     setError(null);
 
     try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        setError('Session administrateur requise');
+        return;
+      }
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/sms/balance`,
         {
           method: 'GET',
-          headers: { 'Authorization': `Bearer ${publicAnonKey}` }
+          headers: { 'Authorization': `Bearer ${session.session.access_token}` }
         }
       );
 

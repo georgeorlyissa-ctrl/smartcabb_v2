@@ -143,7 +143,23 @@ Montés sous `/functions/v1/make-server-2eb02e52` :
 | `GET` | `/sms/logs` | 100 derniers logs `sms_log:*` (admin) |
 | `POST` | `/sms/test` | SMS de test admin `{ phoneNumber, message? }` |
 | `POST` | `/sms/dlr` | Webhook DLR signé |
-| `GET` | `/admin/sms/balance` | Solde + statistiques d'usage (dashboard admin) |
+| `GET` | `/admin/sms/balance` | Solde + statistiques d'usage (dashboard admin, **JWT admin**) |
+
+### Sécurité des routes
+
+L'Edge Function est déployée avec `verify_jwt = false`, donc chaque route vérifie elle-même l'appelant :
+
+| Route | Accès |
+|---|---|
+| `GET /sms/config` | anon key **ou** utilisateur connecté ; `diagnostics` réservé à l'admin |
+| `POST /sms/send` | anon key **ou** utilisateur connecté + limite 30 envois/10 min par IP et 3/10 min par destinataire, message ≤ 480 caractères |
+| `GET /sms/balance`, `GET /sms/logs`, `POST /sms/test` | **JWT de session admin** (`user_metadata.role` ou `app_metadata.role = "admin"`) |
+| `GET /admin/sms/balance` | **JWT de session admin** |
+| `POST /sms/dlr` | signature HMAC-SHA512 obligatoire (`X-EJSms-Signature`) |
+| `POST /otp/send`, `POST /otp/verify` | anon key **ou** utilisateur connecté + limite 10 demandes/10 min par IP |
+| `POST /reservations/:id/notify-accept` | anon key **ou** utilisateur connecté |
+
+> Les limites de débit sont stockées en mémoire d'isolate : elles bloquent les rafales et les scripts, sans constituer un quota distribué parfait.
 
 Chaque envoi écrit `sms_log:<id ou reference>` :
 

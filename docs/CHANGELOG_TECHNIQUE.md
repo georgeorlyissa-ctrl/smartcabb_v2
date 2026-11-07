@@ -42,6 +42,51 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — SMS/OTP : sécurisation des routes et anti-abus des crédits
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security
+- **Objectif** : empêcher que les routes SMS publiques (Edge Function en `verify_jwt = false`) soient utilisées pour épuiser les crédits EJ SMS ou lire les numéros de téléphone, alors que 30 crédits de test vont être accordés.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/sms-routes.ts` | Garde `requireAdmin` / `requireAppOrUser`, diagnostic réservé admin, limites de débit, plafond de message |
+| `supabase/functions/make-server-2eb02e52/otp-routes.ts` | Jeton obligatoire sur `/otp/send` et `/otp/verify`, limite 10 demandes/10 min par IP |
+| `supabase/functions/make-server-2eb02e52/reservation-routes.ts` | Jeton obligatoire sur `/:id/notify-accept` |
+| `supabase/functions/make-server-2eb02e52/admin-routes.ts` | `hasValidAdminJwt()` sur `/admin/sms/balance` |
+| `components/admin/SMSBalanceCard.tsx` | Envoie le jeton de session admin au lieu de l'anon key |
+| `docs/EJSMS_INTEGRATION.md` | Tableau des accès par route |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **`/sms/logs`, `/sms/test`, `/sms/balance`, `/admin/sms/balance`** : JWT de session obligatoire, rôle `admin` lu dans `user_metadata.role` **ou** `app_metadata.role`. Retour `401` sans jeton, `403` si non-admin.
+- **`/sms/config`** : anon key ou utilisateur accepté ; le bloc `diagnostics` n'est renvoyé qu'à un admin.
+- **`/sms/send`** : anon key ou utilisateur connecté (l'inscription envoie des SMS avant connexion) ; message limité à 480 caractères ; limite **30 envois / 10 min / IP** et **3 / 10 min / destinataire** (map en mémoire d'isolate).
+- **`/otp/send` / `/otp/verify`** : jeton obligatoire (anon key ou session) ; limite **10 demandes / 10 min / IP**, en plus du cooldown existant de 60 s par numéro.
+- **`/reservations/:id/notify-accept`** : jeton obligatoire avant tout envoi push/SMS.
+- Comparaisons de clés en **temps constant** (`safeEqual`) pour l'anon key.
+
+### Impact produit / comportement visible
+- Aucun changement pour l'utilisateur légitime : l'app envoie déjà l'anon key ou le jeton de session.
+- Un appel anonyme à `/sms/logs` ou `/sms/test` renvoie désormais `401` au lieu d'exécuter l'action.
+- Les rafales d'OTP ou de SMS sont freinées (`429`).
+
+### Risques & rollback
+- **Risque** : un client ancien appelant `/sms/send` sans en-tête `Authorization` recevrait `401`. Tous les appels du repo envoient déjà l'anon key.
+- **Risque** : si le rôle admin est stocké ailleurs que dans `user_metadata`/`app_metadata`, les écrans admin SMS renverront `403`.
+- **Rollback** : revert du commit ; les routes redeviennent publiques (non recommandé).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors `_headers`)
+- [x] `npx vite build`
+- [ ] `GET /sms/logs` sans jeton → `401`
+- [ ] `GET /sms/logs` avec anon key → `403`
+- [ ] `GET /sms/config` avec anon key → `200` sans `diagnostics`
+
+---
+
 ## 2026-11-07 — EJ SMS : diagnostic de configuration et vérification du compte
 
 - **Commit** : `9c7074c` (branche `main`, poussé sur `origin`)

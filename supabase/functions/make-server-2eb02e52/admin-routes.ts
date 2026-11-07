@@ -28,6 +28,27 @@ function hasValidAdminSecret(c: any): boolean {
   return header === expected;
 }
 
+/** Vérifie un JWT de session Supabase et exige le rôle `admin`. */
+async function hasValidAdminJwt(c: any): Promise<boolean> {
+  const header = c.req.header("Authorization") || c.req.header("authorization") || "";
+  const match = /^Bearer\s+(.+)$/i.exec(String(header).trim());
+  if (!match) return false;
+
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+    const { data, error } = await supabase.auth.getUser(match[1].trim());
+    if (error || !data?.user) return false;
+    const role = data.user.user_metadata?.role || data.user.app_metadata?.role || "passenger";
+    return role === "admin";
+  } catch (e) {
+    console.error("❌ [ADMIN/AUTH] Erreur vérification jeton:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
 // ─── Table KV ────────────────────────────────────────────────────────────────
 const KV_TABLE = "kv_store_2eb02e52";
 
@@ -386,6 +407,10 @@ app.post("/settings/save", async (c) => {
 // ─── GET /sms/balance — Solde de crédits EJ SMS ───────────────────────────────
 app.get("/sms/balance", async (c) => {
   try {
+    if (!(await hasValidAdminJwt(c))) {
+      return c.json({ success: false, error: "Compte administrateur requis" }, 401);
+    }
+
     // Lire statistiques SMS depuis le KV (logs d'envoi)
     const smsLogs = await kvGetByPrefix("sms_log:");
     const isSent = (l: any) =>

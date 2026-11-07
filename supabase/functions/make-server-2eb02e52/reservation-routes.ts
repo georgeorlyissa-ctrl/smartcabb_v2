@@ -103,6 +103,35 @@ async function getUserNotifs(userId: string) {
   } catch (e) { console.error("User notifs:", e); return []; }
 }
 
+// ─── Garde d'authentification (fonction déployée en verify_jwt = false) ──────
+function bearerToken(c: any): string {
+  const header = c.req.header("Authorization") || c.req.header("authorization") || "";
+  const match = /^Bearer\s+(.+)$/i.exec(String(header).trim());
+  return match ? match[1].trim() : "";
+}
+
+function safeEqual(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function requireAppOrUser(c: any): Promise<boolean> {
+  const token = bearerToken(c);
+  if (!token) return false;
+
+  const anon = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  if (anon && safeEqual(token, anon)) return true;
+
+  try {
+    const { data, error } = await sbAdmin().auth.getUser(token);
+    return !error && Boolean(data?.user);
+  } catch {
+    return false;
+  }
+}
+
 // ─── Notification par SMS via EJ SMS ─────────────────────────────────────────
 async function sendSMS(phone: string, message: string): Promise<{ sent: boolean; reason?: string }> {
   try {
@@ -129,6 +158,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 // ─── POST /:id/notify-accept ─────────────────────────────────────────────────
 app.post("/:id/notify-accept", async (c) => {
   try {
+    if (!(await requireAppOrUser(c))) {
+      return c.json({ success: false, error: "Authentification requise" }, 401);
+    }
+
     const id = c.req.param("id");
 
     // 1. Réservation (doit être acceptée par le conducteur)
