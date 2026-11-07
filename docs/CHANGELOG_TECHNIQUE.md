@@ -42,6 +42,62 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — SMS : remplacement d'Africa's Talking par EJ SMS (EJSARL)
+
+- **Commit** : `b1f596e` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : basculer l'ensemble des SMS transactionnels (codes OTP, confirmation de réservation, notifications) sur **EJ SMS (EJSARL)**, retirer Africa's Talking et Twilio, et sécuriser les accusés de réception par une signature HMAC-SHA512.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ej-sms-core.ts` | **Nouveau** : client EJ SMS (token OAuth caché, `toMsisdn`, envoi, solde, vérification de signature) |
+| `supabase/functions/make-server-2eb02e52/sms-routes.ts` | **Réécrit** : `/config`, `/send`, `/balance`, `/logs`, `/test`, webhook `/dlr` signé |
+| `supabase/functions/make-server-2eb02e52/otp-core.ts` | WhatsApp supprimé, `sendOTPViaSMS()` passe par EJ SMS |
+| `supabase/functions/make-server-2eb02e52/otp-routes.ts` | Canal unique SMS, plus de fallback WhatsApp |
+| `supabase/functions/make-server-2eb02e52/reservation-routes.ts` | `sendSMS()` via EJ SMS, canal `channels.sms` uniquement |
+| `supabase/functions/make-server-2eb02e52/admin-routes.ts` | `/sms/balance` en crédits EJ SMS + statistiques, `smsProvider: "ejsms"` |
+| `supabase/functions/make-server-2eb02e52/config-routes.ts` | `smsProvider: "ejsms"` par défaut |
+| `supabase/functions/make-server-2eb02e52/phone-utils.ts` | Commentaires : format canonique `+243`, conversion EJ SMS déléguée |
+| `components/admin/SMSSettingsScreen.tsx` | Fournisseur `ejsms` unique + instructions EJ SMS |
+| `components/admin/SMSInsufficientBalanceBanner.tsx` | Textes et lien vers le panel EJ SMS |
+| `components/admin/TestSMSConfigScreen.tsx` | Diagnostic basé sur `/sms/config` |
+| `components/admin/GlobalSettingsScreen.tsx`, `components/admin/AdminDashboard.tsx` | Libellés/menu EJ SMS |
+| `components/driver/DriverScheduledRides.tsx` | Toast sans WhatsApp |
+| `lib/sms-service.ts`, `lib/otp-service.ts`, `lib/config-sync.ts`, `hooks/useSettings.ts` | Type/provider `ejsms`, canal SMS unique |
+| `docs/EJSMS_INTEGRATION.md` | **Nouveau** : documentation complète de l'intégration |
+| `AGENTS.md` | Nouveaux secrets `EJSMS_*`, retrait d'`AFRICAS_TALKING_*` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Authentification** : OAuth 2.0 `client_credentials` sur `auth.ejsarl.cd/realms/ej-sms`, scope `sms:send sms:read`. Jeton de 300 s renouvelé à 90 %, cache mémoire puis KV (`ejsms_token_cache`), un seul retry sur `401`.
+- **Envoi** : `POST /sms/send` avec `{ sender, message, msisdn, callbackUrl }`. Conversion systématique `+243XXXXXXXXX` → `243XXXXXXXXX` par `toMsisdn()` ; l'app conserve le format `+243`.
+- **Solde** : `GET /sms/credits/balance` → `{ entrepriseId, solde, statut, dateUpdate }`, exposé en crédits (1 crédit = 1 SMS).
+- **OTP** : un seul canal, SMS. `sendOTPViaWhatsApp()` supprimé ; le contrat de réponse devient `channel: "sms"`.
+- **Réservations** : `channels.whatsapp` supprimé ; seul `channels.sms` est renvoyé (échec gracieux, la réservation reste valide).
+- **DLR** : `POST /sms/dlr` lit le corps **brut**, vérifie `X-EJSms-Signature` (HMAC-SHA512 hex, comparaison temps constant), met à jour `sms_log:<reference>` ou écrit `sms_dlr:<reference>` pour audit, répond 200 en moins de 10 s.
+- **Logs** : chaque envoi écrit `sms_log:<id|reference>` avec `status` normalisé (`PENDING`, `SENT`, `DELIVERED`, `FAILED`, `CANCELLED`, `SCHEDULED`) et `provider: "ejsms"`.
+
+### Impact produit / comportement visible
+- Les codes OTP et les confirmations de réservation arrivent désormais **par SMS uniquement** (plus de WhatsApp).
+- L'admin voit le solde en **crédits EJ SMS** et l'historique des envois dans « Paramètres SMS ».
+- L'écran de paramètres ne propose plus que EJ SMS ; la bannière de solde insuffisant renvoie vers `sms.ejsarl.cd`.
+
+### Risques & rollback
+- **Risque** : aucune livraison tant que les secrets `EJSMS_*` ne sont pas créés et que le compte EJ SMS n'a pas de crédits.
+- **Risque** : DLR rejetés en `401` si `EJSMS_WEBHOOK_SECRET` diffère du secret du panel.
+- **Rollback** : `git revert b1f596e` puis redéployer l'Edge Function ; recréer les secrets `AFRICAS_TALKING_*` si l'ancien fournisseur doit être réactivé.
+- **Secrets à créer** : `EJSMS_CLIENT_ID`, `EJSMS_CLIENT_SECRET`, `EJSMS_SENDER=SMARTCABB`, `EJSMS_WEBHOOK_SECRET`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` (succès)
+- [ ] Test réel OTP/SMS après création des secrets et achat de crédits
+- [ ] Test DLR signé depuis le panel EJ SMS
+
+---
+
 ## 2026-11-07 — Portefeuille chauffeur simplifié : recharge libre ≥ 5 000 CDF, éligibilité par solde
 
 - **Commit** : `9fcec83` (branche `main`, poussé sur `origin`)
