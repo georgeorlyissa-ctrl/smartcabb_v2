@@ -137,7 +137,7 @@ Montés sous `/functions/v1/make-server-2eb02e52` :
 
 | Méthode | Route | Rôle |
 |---|---|---|
-| `GET` | `/sms/config` | `{ provider: "ejsms", enabled, configured }` — `configured` indique seulement la présence des identifiants |
+| `GET` | `/sms/config` | `{ provider: "ejsms", enabled, configured, diagnostics }` — `configured` indique seulement la présence des identifiants ; `diagnostics` expose des booléens/longueurs (jamais les valeurs) pour détecter un ID mal collé |
 | `POST` | `/sms/send` | Envoi unitaire `{ to \| phoneNumber, message, type }` |
 | `GET` | `/sms/balance` | Solde de crédits EJ SMS |
 | `GET` | `/sms/logs` | 100 derniers logs `sms_log:*` (admin) |
@@ -216,6 +216,7 @@ curl -X POST "https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-
 | `401` au token | Identifiants invalides ou realm incorrect | Vérifier les API Credentials EJ SMS |
 | `Numéro invalide (attendu 243XXXXXXXXX)` | Numéro non RDC / mal formé | Utiliser `+243…` dans l'app |
 | `Solde EJ SMS indisponible` | Token OK mais API KO ou scope manquant | Vérifier `sms:read` |
+| `Aucun solde SMS` (HTTP 404) | **Aucun pack de crédits acheté** sur le compte | Acheter des crédits dans le panel EJ SMS ; vérifier avec `GET /sms/credits/movements` (doit renvoyer une liste non vide) |
 | DLR toujours `PENDING` | `callbackUrl` non atteignable | Vérifier l'URL publique et `verify_jwt = false` |
 | Webhook `401 Signature invalide` | `EJSMS_WEBHOOK_SECRET` absent/incorrect | Recopier le secret du panel EJ SMS |
 | SMS non reçus malgré `PENDING` | Sender non validé ou absence de crédits | Vérifier `SMARTCABB` et le solde |

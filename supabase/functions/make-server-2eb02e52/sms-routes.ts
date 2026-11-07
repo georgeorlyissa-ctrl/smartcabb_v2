@@ -14,6 +14,7 @@ import { normalizePhoneNumber, isValidPhoneNumber } from "./phone-utils.ts";
 import { get as kvGet, set as kvSet, getByPrefix as kvGetByPrefix } from "./kv-wrapper.ts";
 import {
   ejSmsConfigured,
+  ejSmsDiagnostics,
   getEjSmsBalance,
   sendEjSms,
   verifyEjSmsSignature,
@@ -68,6 +69,7 @@ app.get("/config", async (c) => {
       provider: "ejsms",
       enabled: stored?.smsEnabled !== false,
       configured: ejSmsConfigured(),
+      diagnostics: ejSmsDiagnostics(),
     });
   } catch (error) {
     console.error("❌ [SMS/CONFIG] Erreur:", error);

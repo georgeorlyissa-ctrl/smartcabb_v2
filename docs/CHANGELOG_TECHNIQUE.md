@@ -42,6 +42,43 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — EJ SMS : diagnostic de configuration et vérification du compte
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : chore
+- **Objectif** : diagnostiquer le refus `Invalid client or Invalid client credentials` puis le `404 Aucun solde SMS` rencontrés à la mise en service d'EJ SMS, sans jamais exposer les secrets.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ej-sms-core.ts` | Ajout de `ejSmsDiagnostics()` (présence, longueurs, format, espaces parasites, sender, scope, URLs) |
+| `supabase/functions/make-server-2eb02e52/sms-routes.ts` | `GET /sms/config` renvoie `diagnostics` |
+| `docs/EJSMS_INTEGRATION.md` | Diagnostic documenté, cas `Aucun solde SMS` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- `ejSmsDiagnostics()` ne lit que des métadonnées : `clientIdPresent`, `clientIdLength`, `clientIdFormatValid` (`^ejsms-[\w-]+$`), `clientIdHasOuterWhitespace`, `clientSecretPresent`, `clientSecretLength`, `clientSecretHasOuterWhitespace`, `sender`, `scope`, `tokenUrl`, `callbackUrl`, `apiBase`. Aucune valeur, aucun préfixe de secret.
+- `GET /sms/config` (public, `verify_jwt = false`) inclut ce bloc ; il reste sans risque car aucune donnée exploitable n'y figure.
+- Cause racine identifiée en production : `EJSMS_CLIENT_ID` stocké en majuscules (`EJSM…`) alors que Keycloak est sensible à la casse → `Invalid client`. Après correction en `ejsms-…`, le token OAuth est délivré.
+- Second constat : `GET /sms/credits/balance` renvoie `404 Aucun solde SMS` et `GET /sms/credits/movements` renvoie `[]` → **aucun pack de crédits acheté** sur le compte.
+
+### Impact produit / comportement visible
+- Aucun changement fonctionnel : seul l'endpoint de diagnostic est enrichi.
+- Tant qu'aucun crédit n'est acheté, les envois OTP/SMS échouent côté fournisseur (échec gracieux côté app).
+
+### Risques & rollback
+- **Risque** : information de configuration (présence des secrets) visible sur un endpoint public.
+- **Rollback** : retirer le champ `diagnostics` de `/sms/config` et redéployer.
+
+### Tests / vérifications
+- [x] Token OAuth obtenu (`access_token` ~1054 caractères) avec le Client ID corrigé
+- [x] `GET /sms/credits/movements` → `[]` (aucun achat)
+- [x] `GET /sms/credits/balance` → `404 Aucun solde SMS`
+- [ ] Achat de crédits puis `GET /sms/balance` attendu en `200`
+
+---
+
 ## 2026-11-07 — SMS : remplacement d'Africa's Talking par EJ SMS (EJSARL)
 
 - **Commit** : `b1f596e` (branche `main`, poussé sur `origin`)

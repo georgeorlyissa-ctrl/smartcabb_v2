@@ -81,6 +81,34 @@ export function ejSmsCallbackUrl(): string {
   return `${base}/functions/v1/make-server-2eb02e52/sms/dlr`;
 }
 
+// ─── Diagnostic (jamais de valeur secrète) ──────────────────────────────────
+
+/**
+ * Résumé non sensible de la configuration EJ SMS.
+ * Permet de détecter un secret absent, un espace/guillemet parasite ou un
+ * Client ID qui n'a pas le format `ejsms-<entrepriseId>`, sans jamais exposer
+ * la moindre valeur.
+ */
+export function ejSmsDiagnostics() {
+  const { clientId, clientSecret } = ejSmsCredentials();
+  const secret = Deno.env.get("EJSMS_CLIENT_SECRET") || "";
+
+  return {
+    clientIdPresent: Boolean(clientId),
+    clientIdLength: clientId.length,
+    clientIdFormatValid: /^ejsms-[\w-]+$/.test(clientId),
+    clientIdHasOuterWhitespace: clientId !== clientId.trim() || /^"|"$/.test(clientId),
+    clientSecretPresent: Boolean(clientSecret),
+    clientSecretLength: secret.length,
+    clientSecretHasOuterWhitespace: secret !== secret.trim() || /^"|"$/.test(secret),
+    sender: ejSmsSender(),
+    scope: ejSmsScope(),
+    tokenUrl: ejSmsTokenUrl(),
+    callbackUrl: ejSmsCallbackUrl(),
+    apiBase: ejSmsApiBase(),
+  };
+}
+
 // ─── Numéro au format EJ SMS (243XXXXXXXXX, sans +) ─────────────────────────
 
 /**
