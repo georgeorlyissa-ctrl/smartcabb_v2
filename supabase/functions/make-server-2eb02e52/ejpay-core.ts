@@ -111,6 +111,9 @@ export async function ejpayEnabled(): Promise<boolean> {
 
 /** URL publique du callback (doit répondre 200 en moins de 10 s). */
 export function ejpayCallbackUrl(): string {
+  // Surcharge explicite possible (ex. URL de préproduction ou domaine personnalisé).
+  const override = (Deno.env.get("EJPAY_CALLBACK_URL") || "").trim();
+  if (override) return override;
   const base = (Deno.env.get("SUPABASE_URL") || "").replace(/\/+$/, "");
   if (!base) return "";
   return `${base}/functions/v1/make-server-2eb02e52/ejpay/webhook`;

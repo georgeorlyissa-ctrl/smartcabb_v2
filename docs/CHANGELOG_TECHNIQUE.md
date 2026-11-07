@@ -42,6 +42,41 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Ejpay : clarification du callback (aucun webhook à déclarer dans le dashboard)
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : docs
+- **Objectif** : lever la confusion sur la « déclaration du webhook » dans le dashboard Ejpay. Le guide API 3.6.7 ne prévoit aucun champ d'URL de callback : l'URL est envoyée dans le corps de chaque requête métier.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `docs/EJPAY_INTEGRATION.md` | Section 4 réécrite : `callbackUrl` par requête, rôle réel du dashboard (secrets uniquement), point de vérification `callbackConfigured` |
+| `supabase/functions/make-server-2eb02e52/ejpay-core.ts` | `ejpayCallbackUrl()` accepte la surcharge `EJPAY_CALLBACK_URL` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Constat (guide Ejpay v3.6.7, sections 6.5 / 7.5 / 8.5)** : `callbackUrl` est un champ du corps JSON de `POST /payment/c2b`, `POST /payment/b2c` et du bulk. Le dashboard `https://pay.ejsarl.cd` (section **API Credentials**) ne sert qu'à lire/régénérer `Client Secret` et `Webhook Secret` (`whsec_…`). Il n'existe pas d'écran « Webhook URL ».
+- Notre Edge Function renseignait déjà `callbackUrl: ejpayCallbackUrl()` sur `collect` (l. 440) et `payout` (l. 732) ; `GET /ejpay/config` expose `callbackConfigured: true`.
+- Ajout d'une surcharge optionnelle : si `EJPAY_CALLBACK_URL` est défini, il est utilisé tel quel (utile pour un domaine personnalisé ou une préproduction), sinon l'URL est dérivée de `SUPABASE_URL`.
+
+### Impact produit / comportement visible
+- Aucun changement visible pour le passager ou le chauffeur.
+- L'exploitant n'a plus à chercher un réglage inexistant dans le dashboard : la seule action côté Ejpay est de conserver les secrets et de vérifier que l'entreprise est activée.
+
+### Risques & rollback
+- **Risque** : si `EJPAY_CALLBACK_URL` est défini avec une URL erronée, les callbacks ne parviennent plus (les paiements resteraient réglés par polling). La variable n'est pas définie en production actuellement.
+- **Rollback** : supprimer la variable `EJPAY_CALLBACK_URL` ou `git revert` du commit ; le comportement par défaut (`SUPABASE_URL` + route `/ejpay/webhook`) est inchangé.
+
+### Tests / vérifications
+- [ ] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `GET /ejpay/config` → `configured: true`, `enabled: true`, `callbackConfigured: true`
+- [x] Webhook testé avec HMAC-SHA512 valide → `200 {"success":true,"ignored":true}` ; signature invalide → `401`
+- [ ] Redéploiement de l'Edge Function après ce changement
+
+---
+
 ## 2026-11-07 — Ejpay : mise en service (secrets, déploiement, vérifications serveur)
 
 - **Commit** : à pousser (`main` → `origin/main`)

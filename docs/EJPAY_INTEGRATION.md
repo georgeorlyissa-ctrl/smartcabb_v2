@@ -89,14 +89,26 @@ supabase secrets set \
 
 ---
 
-## 4. URL du webhook à déclarer chez Ejpay
+## 4. URL de callback (webhook) — rien à déclarer dans le dashboard
 
 ```
 https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52/ejpay/webhook
 ```
 
 > Remplacez `zaerjqchzqmcxqblkfkg` par la référence réelle du projet si elle change.
-> L'URL est aussi calculée dynamiquement et renvoyée dans le champ `callbackUrl` de chaque paiement, donc Ejpay peut l'utiliser telle quelle. Déclarez-la malgré tout dans le dashboard Ejpay comme URL de callback par défaut.
+
+**Point important (guide API 3.6.7, sections 6.5 / 7.5 / 8.5)** : Ejpay **n'a pas de champ « Webhook URL » dans le dashboard**. L'URL de callback est un **paramètre du corps de chaque requête** (`callbackUrl`), aussi bien pour `POST /payment/c2b`, `POST /payment/b2c` que pour le bulk. Notre Edge Function la renseigne **automatiquement** à chaque appel via `ejpayCallbackUrl()` (valeur dérivée de `SUPABASE_URL`, surchargeable par la variable d'environnement `EJPAY_CALLBACK_URL` si un jour l'URL change).
+
+Conséquence pratique : **il n'y a aucune URL à coller quelque part sur `https://pay.ejsarl.cd`**. Le dashboard ne sert qu'à :
+
+| Élément | Où | Usage |
+|---|---|---|
+| `Client ID` / `Client Secret` | API Credentials | OAuth `client_credentials` (déjà posés dans les secrets Supabase) |
+| `Webhook Secret` (`whsec_…`) | API Credentials | clé HMAC-SHA512 qui signe les callbacks (déjà posée : `EJPAY_WEBHOOK_SECRET`) |
+| `Regenerate secret` | API Credentials | rotation immédiate (invalide l'ancien secret) |
+| Entreprise activée | tableau de bord | sinon les credentials ne sont pas émis |
+
+Vérification côté SmartCabb : `GET /ejpay/config` doit renvoyer `"callbackConfigured": true` (c'est le cas en production), et après un vrai paiement le KV doit contenir `ejpay_event:<orderId>:…` avec `signatureOk: true`.
 
 Contraintes imposées par le guide :
 
