@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — Sécurité : recharge manuelle verrouillée + logos des opérateurs Mobile Money
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `d5b7586` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security | feat
 - **Objectif** : fermer la faille d'auto-crédit gratuit (`POST /wallet/recharge` public, utilisé par la modale « Portefeuille » chauffeur) et remplacer les libellés texte des opérateurs par leurs logos officiels.
