@@ -20,8 +20,7 @@ export interface AppSettings {
   // Paiement
   postpaidEnabled: boolean;
   postpaidFee: number;
-  flutterwaveEnabled: boolean;
-  
+
   // Notifications
   notificationsEnabled: boolean;
   
@@ -41,7 +40,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   distantZoneMultiplier: 2,
   postpaidEnabled: true,
   postpaidFee: 5000,
-  flutterwaveEnabled: true,
   notificationsEnabled: true,
   appVersion: '1.0.0',
   maintenanceMode: false,

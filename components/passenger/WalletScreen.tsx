@@ -6,7 +6,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { getExchangeRate, convertUSDtoCDF, formatCDF } from '../../lib/pricing';
 import { WalletTransaction } from '../../types';
 import { RechargeModal } from './RechargeModal';
-import { DebugPaymentModal } from '../DebugPaymentModal';
+import { EjpayDiagnosticModal } from '../EjpayDiagnosticModal';
 import { Button } from '../ui/button';
 import { motion } from '../../lib/motion'; // ✅ FIX: Utiliser l'implémentation locale
 
@@ -490,19 +490,19 @@ export function WalletScreen() {
         />
       )}
 
-      {/* Debug Modal */}
-      <DebugPaymentModal
+      {/* Diagnostic Mobile Money (Ejpay) — aucun paiement créé */}
+      <EjpayDiagnosticModal
         show={showDebugModal}
         onClose={() => setShowDebugModal(false)}
       />
 
-      {/* Debug Button (Fixed) */}
+      {/* Diagnostic Button (Fixed) */}
       <motion.button
         onClick={() => setShowDebugModal(true)}
         className="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        title="Diagnostic paiement"
+        title="Diagnostic Mobile Money"
       >
         <Bug className="w-6 h-6" />
       </motion.button>

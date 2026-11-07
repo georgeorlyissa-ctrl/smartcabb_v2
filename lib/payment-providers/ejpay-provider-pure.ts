@@ -2,7 +2,7 @@
  * Provider EJPAY — Mobile Money RDC (fonctions pures, même contrat que les
  * autres providers de `lib/payment-providers`).
  *
- * Remplace Flutterwave dans `lib/payment-service.ts` : les écrans continuent
+ * Branché dans `lib/payment-service.ts` : les écrans continuent
  * d'appeler `paymentService.initPayment()` / `verifyPayment()`, seul le
  * transport change.
  *

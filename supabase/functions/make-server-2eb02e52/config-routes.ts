@@ -49,7 +49,6 @@ const DEFAULT_CONFIG = {
   distantZoneMultiplier:  2,
   postpaidEnabled:        true,
   postpaidFee:            5000,
-  flutterwaveEnabled:     true,
   smsEnabled:             true,
   smsProvider:            "africas_talking",
   otpRequired:            false,

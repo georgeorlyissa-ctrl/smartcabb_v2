@@ -186,7 +186,7 @@ export interface EmergencyAlert {
 }
 
 export interface PaymentOption {
-  id: 'flutterwave' | 'cash' | 'mixed' | 'postpaid';
+  id: 'mobile_money' | 'cash' | 'mixed' | 'postpaid';
   title: string;
   subtitle: string;
   description: string;

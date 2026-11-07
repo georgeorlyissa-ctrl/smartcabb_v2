@@ -42,6 +42,54 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Suppression des derniers restes Flutterwave (modale de debug, routes et provider morts)
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : refactor
+- **Objectif** : l'écran Portefeuille affichait encore une modale « Debug Paiement Flutterwave » (bouton 🐞), qui appelait des routes supprimées et parlait de `FLUTTERWAVE_SECRET_KEY`. Supprimer tous les restes de Flutterwave du code.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/EjpayDiagnosticModal.tsx` | **Nouveau** : diagnostic Mobile Money (activé / identifiants / OAuth / callback), sans créer de paiement |
+| `components/DebugPaymentModal.tsx` | **Supprimé** (modale Flutterwave) |
+| `components/passenger/WalletScreen.tsx` | Utilise `EjpayDiagnosticModal`, bouton renommé « Diagnostic Mobile Money » |
+| `components/passenger/RechargeModal.tsx` | Import et état `showDebug` morts retirés |
+| `lib/payment-providers/flutterwave-provider.ts` | **Supprimé** (jamais importé) |
+| `lib/payment-providers/flutterwave-provider-pure.ts` | **Supprimé** (jamais importé) |
+| `supabase/functions/make-server-2eb02e52/payment-routes.ts` | **Supprimé** (routes `/payments/flutterwave/*`) |
+| `supabase/functions/make-server-2eb02e52/index.ts` | Montage `/payments` retiré, import `paymentRoutes` supprimé |
+| `supabase/functions/make-server-2eb02e52/ejpay-routes.ts` | Nouvelle route `GET /ejpay/health` |
+| `hooks/useAdminConfig.ts`, `hooks/useSettings.ts`, `lib/config-sync.ts` | Flag mort `flutterwaveEnabled` retiré (types + défauts) |
+| `supabase/functions/make-server-2eb02e52/config-routes.ts`, `admin-routes.ts` | Flag mort `flutterwaveEnabled` retiré des configurations par défaut |
+| `types/index.ts` | `PaymentOption.id` : `'flutterwave'` → `'mobile_money'` |
+| `lib/payment-providers/base-provider.ts`, `ejpay-provider-pure.ts` | Commentaires Flutterwave nettoyés |
+| `docs/EJPAY_INTEGRATION.md`, `docs/CHANGELOG_TECHNIQUE.md` | Route `/health`, diagnostic in-app, cette entrée |
+
+### Description technique
+- **Diagnostic** : `EjpayDiagnosticModal` appelle `GET /ejpay/health` à l'ouverture (et via « Relancer »). La route est publique, ne fait aucun mouvement d'argent et renvoie `enabled`, `configured`, `oauthOk`/`oauthError` (via `getAccessToken()`, donc test réel du Client Secret), `callbackConfigured` + URL, opérateurs et minimums. Le rapport est copiable pour le support.
+- **Nettoyage** : `payment-service.ts` n'importait déjà que `cash` et `ejpay` ; les fichiers `flutterwave-provider*` et les routes `/payments/flutterwave/*` étaient donc du code mort. Les retirer évite qu'un ancien écran ou un lien oublié rappelle Flutterwave.
+- `flutterwaveEnabled` n'était lu par aucun écran (seulement des types/défauts) : suppression sans impact fonctionnel. Les configurations déjà stockées en KV peuvent conserver la clé, elle est simplement ignorée.
+
+### Impact produit / comportement visible
+- Le bouton 🐞 du portefeuille ouvre désormais **« Diagnostic Mobile Money (Ejpay) »** : 4 contrôles verts/rouges, opérateurs, minimums, URL de callback, rapport copiable.
+- Plus aucune mention de Flutterwave dans l'application.
+- Aucun changement dans les parcours de paiement.
+
+### Risques & rollback
+- **Risque** : un client externe appellerait encore `/payments/flutterwave/init` → `404`. Aucun appel interne ne le faisait (vérifié par grep).
+- **Rollback** : `git revert` du commit (les fichiers supprimés reviennent ; le flag `flutterwaveEnabled` n'est pas nécessaire au fonctionnement).
+
+### Tests / vérifications
+- [x] `grep` : plus aucune référence `flutterwave` dans le code (hors documentation historique)
+- [x] `npx tsc --noEmit` (seules les erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] `GET /ejpay/health` en production → `enabled: true`, `configured: true`, `oauthOk: true`, `callbackConfigured: true`
+- [x] Edge Function redéployée
+
+---
+
 ## 2026-11-07 — Recharge passager : saisie en CDF par défaut (USD en option)
 
 - **Commit** : `41f899a` (branche `main`, poussé sur `origin`)

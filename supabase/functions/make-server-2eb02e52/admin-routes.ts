@@ -347,7 +347,7 @@ const CONFIG_KEY = "smartcabb_global_config";
 const DEFAULT_SETTINGS = {
   exchangeRate: 2500, commissionRate: 10, nightTimeStart: "21:00",
   nightTimeEnd: "06:00", freeWaitingMinutes: 3, distantZoneMultiplier: 2,
-  postpaidEnabled: true, postpaidFee: 5000, flutterwaveEnabled: true,
+  postpaidEnabled: true, postpaidFee: 5000,
   smsEnabled: true, smsProvider: "africas_talking", notificationsEnabled: true,
   appVersion: "1.0.0", maintenanceMode: false, commissionEnabled: true,
   minimumCommission: 500, paymentFrequency: "immediate", autoDeduction: true,

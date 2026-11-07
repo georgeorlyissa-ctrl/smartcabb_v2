@@ -1,6 +1,6 @@
 /**
  * Interface de base pour tous les providers de paiement
- * Chaque provider (Flutterwave, M-Pesa, Cash, etc.) doit implémenter cette interface
+ * Chaque provider (Mobile Money, Cash, etc.) doit implémenter cette interface
  */
 
 export type PaymentMethod = 'cash' | 'mobile_money' | 'card' | 'mixed';
@@ -33,7 +33,7 @@ export interface PaymentResult {
   message: string;
   providerReference?: string;
   error?: string;
-  // Pour redirection (Flutterwave, etc.)
+  // Redirection éventuelle (non utilisée par Ejpay : validation sur le téléphone)
   redirectUrl?: string;
   // Données additionnelles
   metadata?: Record<string, any>;

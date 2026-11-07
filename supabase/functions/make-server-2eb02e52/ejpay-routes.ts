@@ -37,6 +37,7 @@ import {
   ejpayStatus,
   ejpayWallets,
   ejpayCallbackUrl,
+  getAccessToken,
   getOrder,
   listOrders,
   logWebhookEvent,
@@ -319,6 +320,39 @@ app.get("/config", async (c) => {
     operators: EJPAY_OPERATORS.map((o) => ({ id: o.id, key: o.key, name: o.name })),
     minAmount: { CDF: minAmount("CDF"), USD: minAmount("USD") },
     callbackConfigured: Boolean(ejpayCallbackUrl()),
+  });
+});
+
+// ─── GET /health — diagnostic public (aucune opération financière) ──────────
+
+app.get("/health", async (c) => {
+  const configured = ejpayConfigured();
+  const callbackUrl = ejpayCallbackUrl();
+
+  let oauthOk = false;
+  let oauthError: string | null = null;
+
+  if (configured) {
+    const token = await getAccessToken();
+    oauthOk = token.ok;
+    oauthError = token.ok ? null : token.error || `HTTP ${token.status ?? 0}`;
+  } else {
+    oauthError = "EJPAY_CLIENT_ID / EJPAY_CLIENT_SECRET manquants";
+  }
+
+  return c.json({
+    success: true,
+    provider: "ejpay",
+    version: "3.6.7",
+    enabled: await ejpayEnabled(),
+    configured,
+    oauthOk,
+    oauthError,
+    callbackConfigured: Boolean(callbackUrl),
+    callbackUrl: callbackUrl || null,
+    operators: EJPAY_OPERATORS.map((o) => ({ id: o.id, key: o.key, name: o.name })),
+    minAmount: { CDF: minAmount("CDF"), USD: minAmount("USD") },
+    checkedAt: new Date().toISOString(),
   });
 });
 

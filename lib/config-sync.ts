@@ -31,7 +31,6 @@ export interface GlobalConfig {
   // Paiement
   postpaidEnabled: boolean;
   postpaidFee: number;
-  flutterwaveEnabled: boolean;
   /** Active les paiements Mobile Money via Ejpay (désactivé par défaut). */
   ejpayEnabled: boolean;
   
@@ -64,7 +63,6 @@ export const DEFAULT_CONFIG: GlobalConfig = {
   distantZoneMultiplier: 2,
   postpaidEnabled: true,
   postpaidFee: 5000,
-  flutterwaveEnabled: true,
   ejpayEnabled: false,
   smsEnabled: true,
   smsProvider: 'africas_talking',

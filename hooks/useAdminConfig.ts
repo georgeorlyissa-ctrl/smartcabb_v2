@@ -29,7 +29,6 @@ export interface AdminConfig {
   distantZoneMultiplier: number;
   postpaidEnabled:       boolean;
   postpaidFee:           number;
-  flutterwaveEnabled:    boolean;
   smsEnabled:            boolean;
   notificationsEnabled:  boolean;
   maintenanceMode:       boolean;
@@ -47,7 +46,6 @@ const DEFAULTS: AdminConfig = {
   distantZoneMultiplier: 2,
   postpaidEnabled:       true,
   postpaidFee:           5000,
-  flutterwaveEnabled:    true,
   smsEnabled:            true,
   notificationsEnabled:  true,
   maintenanceMode:       false,

@@ -201,6 +201,7 @@ Base : `https://<projet>.supabase.co/functions/v1/make-server-2eb02e52/ejpay`
 | Méthode | Chemin | Auth | Description |
 |---|---|---|---|
 | `GET` | `/config` | publique | État (`enabled`, `configured`), opérateurs, devises, minimums |
+| `GET` | `/health` | publique | Diagnostic complet : OAuth réellement testé, callback, opérateurs (aucun paiement créé) |
 | `POST` | `/collect` | publique (rate-limit global) | Initie un encaissement C2B |
 | `GET` | `/status/:orderId` | publique | Statut local ; `?refresh=1` force une interrogation Ejpay |
 | `POST` | `/webhook` | signature HMAC | Callback Ejpay (corps brut) |
@@ -208,6 +209,29 @@ Base : `https://<projet>.supabase.co/functions/v1/make-server-2eb02e52/ejpay`
 | `GET` | `/orders` | `X-Admin-Secret` | Liste des transactions (`?status=`, `?limit=`) |
 | `GET` | `/wallets` | `X-Admin-Secret` | Soldes marchand chez Ejpay |
 | `POST` | `/orders/:orderId/refresh` | `X-Admin-Secret` | Réconciliation manuelle d'un ordre |
+
+### `GET /health` — diagnostic support
+
+Réponse (champs principaux) :
+
+```json
+{
+  "success": true,
+  "enabled": true,
+  "configured": true,
+  "oauthOk": true,
+  "oauthError": null,
+  "callbackConfigured": true,
+  "callbackUrl": "https://<projet>.supabase.co/functions/v1/make-server-2eb02e52/ejpay/webhook",
+  "operators": [{ "id": 9, "key": "mpesa", "name": "Vodacom M-Pesa" }],
+  "minAmount": { "CDF": 100, "USD": 1 },
+  "checkedAt": "2026-11-07T00:41:36.276Z"
+}
+```
+
+`oauthOk` prouve que le Client Secret **actuellement déployé** est accepté par Ejpay (le jeton est mis en cache ~5 min, donc pas d'appel à chaque requête). Aucun paiement n'est créé, aucun montant n'est débité.
+
+Côté application, le bouton orange 🐞 de l'écran Portefeuille ouvre **« Diagnostic Mobile Money (Ejpay) »** (`components/EjpayDiagnosticModal.tsx`), qui appelle cette route et affiche les 4 contrôles (activé / identifiants / OAuth / callback) avec un rapport copiable.
 
 ### `POST /collect`
 

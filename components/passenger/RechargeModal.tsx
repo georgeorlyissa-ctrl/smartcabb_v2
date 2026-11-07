@@ -20,7 +20,6 @@ import { convertUSDtoCDF, formatCDF, getExchangeRate } from '../../lib/pricing';
 import type { PaymentInitData } from '../../lib/payment-providers/base-provider';
 import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
 import { EjpayWaitingModal } from './EjpayWaitingModal';
-import { DebugPaymentModal } from '../DebugPaymentModal';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 
 // Opérateurs Mobile Money (identifiants repris par lib/ejpay-service)
@@ -64,7 +63,6 @@ export function RechargeModal({
   const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'cash'>('mobile_money');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [network, setNetwork] = useState('');
-  const [showDebug, setShowDebug] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [transactionId, setTransactionId] = useState('');
