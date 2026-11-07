@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-07 — Ejpay : rotation du Client Secret en production
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `aa49536` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security
 - **Objectif** : remplacer le Client Secret Ejpay (identique depuis la mise en service) par une valeur régénérée depuis le dashboard, sans interruption de service.
