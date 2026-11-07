@@ -94,7 +94,7 @@ export function WalletScreen() {
       amount: amountCDF,
       method: method,
       status: 'approved', // ✅ Statut approuvé immédiatement pour Mobile Money
-      description: `Recharge ${method === 'mobile_money' ? 'Mobile Money (Flutterwave)' : 'Espèces'} - ${amountUSD.toFixed(2)}$ USD`,
+      description: `Recharge ${method === 'mobile_money' ? 'Mobile Money' : 'Espèces'} - ${amountUSD.toFixed(2)}$ USD`,
       timestamp: new Date(),
       balanceAfter: newBalance,
       approvedAt: new Date()
@@ -502,7 +502,7 @@ export function WalletScreen() {
         className="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
-        title="Debug Flutterwave"
+        title="Diagnostic paiement"
       >
         <Bug className="w-6 h-6" />
       </motion.button>

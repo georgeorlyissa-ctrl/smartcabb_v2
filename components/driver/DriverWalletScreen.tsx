@@ -1,26 +1,25 @@
 import { useAppState } from '../../hooks/useAppState';
-import { useState } from 'react';
-import { 
-  ArrowLeft, 
-  Plus, 
-  TrendingUp, 
-  DollarSign, 
+import { useEffect, useState } from 'react';
+import { motion } from '../../lib/motion';
+import { Card } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { sendSMS } from '../../lib/sms-service';
+import {
+  ArrowLeft,
+  TrendingUp,
+  DollarSign,
   Calendar,
   CreditCard,
-  History,
   Wallet,
   AlertCircle,
-  RefreshCw,
-  Eye,
-  EyeOff,
   CheckCircle,
-  XCircle,
   Clock,
-  Filter,
-  Search,
-  ChevronRight,
-  Info,
-  Download
+  Gift,
+  FileText,
+  Smartphone,
+  Loader2
 } from '../../lib/icons';
 import { toast } from '../../lib/toast';
 import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
@@ -32,6 +31,44 @@ const formatCDF = (amount: number | null | undefined): string => {
   return `${safeAmount.toLocaleString('fr-FR')} CDF`;
 };
 
+// Forfaits de recharge du wallet chauffeur
+export interface WalletPackage {
+  id: string;
+  name: string;
+  description: string;
+  amount: number;
+  days: number;
+  popular?: boolean;
+  discount?: number;
+}
+
+const WALLET_PACKAGES: WalletPackage[] = [
+  {
+    id: 'starter_7',
+    name: 'Starter',
+    description: 'Pour découvrir la plateforme',
+    amount: 5000,
+    days: 7,
+  },
+  {
+    id: 'standard_14',
+    name: 'Standard',
+    description: 'Le choix de la majorité des chauffeurs',
+    amount: 9000,
+    days: 14,
+    popular: true,
+    discount: 10,
+  },
+  {
+    id: 'pro_30',
+    name: 'Pro',
+    description: 'Un mois complet, sans interruption',
+    amount: 15000,
+    days: 30,
+    discount: 30,
+  },
+];
+
 // Opérateurs Mobile Money (identifiants repris par lib/ejpay-service)
 const DRIVER_NETWORKS = [
   { id: 'mpesa', name: 'M-Pesa (Vodacom)' },
@@ -40,8 +77,16 @@ const DRIVER_NETWORKS = [
   { id: 'afrimoney', name: 'Afrimoney (Africell)' },
 ];
 
+// API backend (le portefeuille chauffeur vit dans le KV, côté serveur)
+const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52`;
+const API_HEADERS = {
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${publicAnonKey}`,
+};
+
 export function DriverWalletScreen() {
-  const { setCurrentScreen, currentDriver } = useAppState();
+  const { setCurrentScreen, state } = useAppState();
+  const currentDriver = state.currentDriver;
   // 💳 Paiement Mobile Money (Ejpay) du forfait chauffeur
   const ejpay = useEjpayCheckout();
   const [payNetwork, setPayNetwork] = useState('mpesa');
@@ -56,7 +101,8 @@ export function DriverWalletScreen() {
   const [loading, setLoading] = useState(true);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [postpaidStats, setPostpaidStats] = useState({
+  // Statistiques post-payé : aucune route publique ne les expose pour l'instant.
+  const [postpaidStats] = useState({
     pending_amount: 0,
     approved_amount: 0,
     paid_amount: 0,
@@ -67,93 +113,34 @@ export function DriverWalletScreen() {
 
   useEffect(() => {
     loadWalletInfo();
-    loadTransactions();
-    loadPostpaidStats();
-    
-    // Rafraîchir les stats toutes les 30 secondes
-    const interval = setInterval(() => {
-      loadPostpaidStats();
-    }, 30000);
-    
-    return () => clearInterval(interval);
   }, [currentDriver?.id]);
 
   const loadWalletInfo = async () => {
-    if (!currentDriver?.id) return;
+    if (!currentDriver?.id) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Récupérer les infos du driver
-      const { data: driverData, error } = await supabase
-        .from('drivers')
-        .select('wallet_balance, wallet_expiry_date, is_available')
-        .eq('id', currentDriver.id)
-        .single();
+      // Le portefeuille chauffeur vit côté serveur (KV) : on lit la fiche conducteur
+      const response = await fetch(`${API_BASE}/drivers/${currentDriver.id}`, {
+        headers: API_HEADERS,
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.success || !data.driver) {
+        throw new Error(data?.error || `Erreur ${response.status}`);
+      }
 
-      if (error) throw error;
-
-      setWalletInfo(driverData);
+      const driver = data.driver;
+      setWalletInfo((prev: any) => ({
+        wallet_balance: Number(driver.balance ?? driver.creditBalance ?? 0),
+        wallet_expiry_date: driver.wallet_expiry_date ?? prev?.wallet_expiry_date ?? null,
+        is_available: Boolean(driver.is_available ?? driver.isOnline ?? false),
+      }));
     } catch (error) {
       console.error('❌ Erreur chargement wallet:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadTransactions = async () => {
-    if (!currentDriver?.id) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('driver_id', currentDriver.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      setTransactions(data || []);
-    } catch (error) {
-      console.error('❌ Erreur chargement transactions:', error);
-    }
-  };
-  
-  const loadPostpaidStats = async () => {
-    if (!currentDriver?.id) return;
-
-    try {
-      // Récupérer les demandes de post-paiement pour ce conducteur
-      const { data, error } = await supabase
-        .from('postpaid_requests')
-        .select('*')
-        .eq('driver_id', currentDriver.id);
-
-      if (error) throw error;
-
-      // Calculer les statistiques
-      const stats = {
-        pending_amount: 0,
-        approved_amount: 0,
-        paid_amount: 0,
-        total_count: data?.length || 0,
-        pending_count: 0,
-        approved_count: 0,
-      };
-
-      data?.forEach((request) => {
-        if (request.status === 'pending') {
-          stats.pending_amount += request.total_amount;
-          stats.pending_count++;
-        } else if (request.status === 'approved') {
-          stats.approved_amount += request.remaining_balance;
-          stats.approved_count++;
-        } else if (request.status === 'paid') {
-          stats.paid_amount += request.total_amount;
-        }
-      });
-
-      setPostpaidStats(stats);
-    } catch (error) {
-      console.error('❌ Erreur chargement stats post-payé:', error);
     }
   };
 
@@ -224,77 +211,57 @@ export function DriverWalletScreen() {
     if (!currentDriver?.id) return;
 
     try {
-      // Calculer la nouvelle date d'expiration
-      const currentExpiry = walletInfo?.wallet_expiry_date 
-        ? new Date(walletInfo.wallet_expiry_date) 
+      // Calculer la nouvelle date d'expiration (affichage local : le serveur
+      // ne stocke que le solde, la durée est portée par le forfait).
+      const currentExpiry = walletInfo?.wallet_expiry_date
+        ? new Date(walletInfo.wallet_expiry_date)
         : new Date();
-      
+
       const now = new Date();
       const startDate = currentExpiry > now ? currentExpiry : now;
       const newExpiry = new Date(startDate);
       newExpiry.setDate(newExpiry.getDate() + pkg.days);
 
-      // Mettre à jour le wallet
-      const { error: updateError } = await supabase
-        .from('drivers')
-        .update({
-          wallet_balance: (walletInfo?.wallet_balance || 0) + pkg.amount,
-          wallet_expiry_date: newExpiry.toISOString(),
-          is_available: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', currentDriver.id);
+      // Créditer le portefeuille chauffeur côté serveur (source de vérité)
+      const response = await fetch(
+        `${API_BASE}/drivers/${currentDriver.id}/wallet/recharge`,
+        {
+          method: 'POST',
+          headers: API_HEADERS,
+          body: JSON.stringify({ amount: pkg.amount }),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || `Recharge refusée (${response.status})`);
+      }
 
-      if (updateError) throw updateError;
+      const newBalance = Number(data.creditBalance ?? data.newCreditBalance ?? 0);
+      setWalletInfo({
+        wallet_balance: newBalance,
+        wallet_expiry_date: newExpiry.toISOString(),
+        is_available: true,
+      });
 
-      // Enregistrer la transaction
-      const { error: txError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          driver_id: currentDriver.id,
+      // Historique de session (l'API n'expose pas la liste des mouvements)
+      setTransactions((prev) => [
+        {
+          id: `local_${Date.now()}`,
           amount: pkg.amount,
           type: 'recharge',
-          package_id: pkg.id,
           package_name: pkg.name,
           days_added: pkg.days,
           status: 'completed',
-          payment_method: 'mobile_money'
-        });
+          payment_method: 'mobile_money',
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ].slice(0, 10));
 
-      if (txError) throw txError;
-
-      // Créer une notification pour l'admin
-      const { error: notifError } = await supabase
-        .from('admin_notifications')
-        .insert({
-          type: 'wallet_recharge',
-          title: 'Nouvelle recharge de wallet',
-          message: `${currentDriver.name} a rechargé son wallet de ${pkg.amount.toLocaleString()} CDF (${pkg.name})`,
-          driver_id: currentDriver.id,
-          amount: pkg.amount,
-          read: false,
-          metadata: {
-            driverName: currentDriver.name,
-            driverPhone: currentDriver.phone,
-            packageName: pkg.name,
-            packageAmount: pkg.amount,
-            packageDays: pkg.days,
-            newExpiryDate: newExpiry.toISOString(),
-            activatedAutomatically: true
-          }
-        });
-
-      if (notifError) {
-        console.warn('⚠️ Erreur création notification admin:', notifError);
-      }
-
-      // Recharger les données
-      await loadWalletInfo();
-      await loadTransactions();
-
-      toast.success(`Recharge réussie ! Votre compte est actif jusqu'au ${newExpiry.toLocaleDateString('fr-FR')}`, {
-        duration: 5000
-      });
+      toast.success(
+        `Recharge réussie ! Votre compte est actif jusqu'au ${newExpiry.toLocaleDateString('fr-FR')}`,
+        { duration: 5000 },
+      );
 
       // 📱 Envoyer SMS de confirmation de recharge
       if (currentDriver?.phone) {
@@ -313,7 +280,9 @@ export function DriverWalletScreen() {
       setSelectedPackage(null);
     } catch (error) {
       console.error('❌ Erreur activation wallet:', error);
-      toast.error('Erreur lors de l\'activation du compte');
+      toast.error(
+        error instanceof Error ? error.message : 'Erreur lors de l\'activation du compte',
+      );
     }
   };
 
@@ -726,7 +695,7 @@ export function DriverWalletScreen() {
               <ol className="list-decimal list-inside space-y-1 text-xs">
                 <li>Choisissez votre forfait préféré</li>
                 <li>Cliquez sur "Payer avec Mobile Money"</li>
-                <li>Complétez le paiement sur Flutterwave</li>
+                <li>Validez le paiement sur votre téléphone</li>
                 <li>Votre compte est automatiquement activé</li>
                 <li>Commencez à recevoir des courses !</li>
               </ol>

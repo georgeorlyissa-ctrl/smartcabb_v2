@@ -13,16 +13,14 @@ import {
   Check,
   Shield,
   Clock,
-  CreditCard,
   Calculator,
-  Building2,
   Wallet
 } from '../../lib/icons';
 import { toast } from '../../lib/toast';
 
 export function PaymentMethodScreen() {
   const { setCurrentScreen, updateRide, state, createRide } = useAppState();
-  const [selectedMethod, setSelectedMethod] = useState<'flutterwave' | 'cash' | 'mixed' | 'wallet' | null>(null);
+  const [selectedMethod, setSelectedMethod] = useState<'mobile_money' | 'cash' | 'mixed' | 'wallet' | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'CDF'>('CDF');
   const [cashAmount, setCashAmount] = useState(0);
   const [mobileMoneyAmount, setMobileMoneyAmount] = useState(0);
@@ -31,7 +29,7 @@ export function PaymentMethodScreen() {
   const exchangeRate = getExchangeRate();
   
   // ✅ NOUVEAU : Récupérer le solde du passager
-  const userBalance = state.currentUser?.balance || 0;
+  const userBalance = state.currentUser?.walletBalance || 0;
   const ridePrice = state.currentRide?.estimatedPrice || 12500;
   const hasSufficientBalance = userBalance >= ridePrice;
 
@@ -57,15 +55,15 @@ export function PaymentMethodScreen() {
 
   const paymentMethods = [
     {
-      id: 'flutterwave' as const,
-      title: 'Flutterwave',
-      subtitle: 'Carte bancaire, Mobile Money',
-      description: 'Paiement en ligne sécurisé',
-      icon: CreditCard,
+      id: 'mobile_money' as const,
+      title: 'Mobile Money',
+      subtitle: 'M-Pesa, Orange Money, Airtel, Afrimoney',
+      description: 'Validation sur votre téléphone',
+      icon: Smartphone,
       color: 'bg-blue-600',
       borderColor: 'border-blue-200',
       bgColor: 'bg-blue-50',
-      features: ['Carte Visa/Mastercard', 'Mobile Money', 'Paiement sécurisé']
+      features: ['M-Pesa / Orange / Airtel', 'Afrimoney', 'Validation sur téléphone']
     },
     {
       id: 'cash' as const,
@@ -81,7 +79,7 @@ export function PaymentMethodScreen() {
     {
       id: 'mixed' as const,
       title: 'Paiement mixte',
-      subtitle: 'Espèces + Flutterwave',
+      subtitle: 'Espèces + Mobile Money',
       description: 'Combinez espèces et paiement en ligne',
       icon: Calculator,
       color: 'bg-purple-500',
@@ -127,7 +125,7 @@ export function PaymentMethodScreen() {
       // Mettre à jour la course existante avec la méthode de paiement
       if (updateRide) {
         updateRide(state.currentRide.id, {
-          paymentMethod: selectedMethod === 'flutterwave' ? 'mobile_money' : selectedMethod,
+          paymentMethod: selectedMethod,
           paymentDetails: paymentDetails,
           estimatedPrice: selectedCurrency === 'USD' ? priceInSelectedCurrency * exchangeRate : priceInSelectedCurrency
         });
@@ -160,9 +158,8 @@ export function PaymentMethodScreen() {
           estimatedPrice: selectedCurrency === 'USD' ? priceInSelectedCurrency * exchangeRate : priceInSelectedCurrency,
           estimatedDuration: 15,
           vehicleType: 'smart_standard',
-          paymentMethod: selectedMethod === 'flutterwave' ? 'mobile_money' : selectedMethod,
+          paymentMethod: selectedMethod,
           paymentDetails: paymentDetails,
-          driverId: null
         });
         
         toast.success('Course créée ! Recherche d\'un chauffeur...');
@@ -178,7 +175,7 @@ export function PaymentMethodScreen() {
   };
 
   // ✅ NOUVEAU : Gérer le clic direct sur un mode de paiement
-  const handlePaymentMethodClick = (methodId: 'flutterwave' | 'cash' | 'mixed' | 'wallet') => {
+  const handlePaymentMethodClick = (methodId: 'mobile_money' | 'cash' | 'mixed' | 'wallet') => {
     // Sélectionner le mode
     setSelectedMethod(methodId);
     
@@ -392,7 +389,7 @@ export function PaymentMethodScreen() {
                   </h3>
                   <p className="text-sm text-orange-700">
                     {selectedMethod === 'mixed' 
-                      ? 'Préparez le montant en espèces. Le solde sera payé par Flutterwave au moment de la course.'
+                      ? 'Préparez le montant en espèces. Le solde sera payé par Mobile Money au moment de la course.'
                       : 'Assurez-vous d\'avoir le montant exact. Le chauffeur peut avoir une capacité limitée pour rendre la monnaie.'
                     }
                   </p>

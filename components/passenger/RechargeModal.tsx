@@ -147,7 +147,7 @@ export function RechargeModal({
       const amountCDF = convertUSDtoCDF(rechargeAmount);
 
       if (paymentMethod === 'mobile_money') {
-        // Utiliser Flutterwave pour Mobile Money
+        // Mobile Money via Ejpay
         const paymentData: PaymentInitData = {
           amount: amountCDF,
           currency: 'CDF',
@@ -701,7 +701,7 @@ export function RechargeModal({
                   <h3 className="text-xl mb-2 text-foreground">Traitement en cours...</h3>
                   <p className="text-muted-foreground mb-4">
                     {paymentMethod === 'mobile_money'
-                      ? 'Complétez le paiement dans la fenêtre Flutterwave qui s\'est ouverte.'
+                      ? 'Validez la demande de paiement reçue sur votre téléphone (code secret Mobile Money).'
                       : 'Veuillez patienter pendant que nous traitons votre paiement.'}
                   </p>
                   {paymentMethod === 'mobile_money' && (

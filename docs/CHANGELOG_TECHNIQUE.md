@@ -42,6 +42,46 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-07 — Fin du remplacement de Flutterwave : libellés, types et réparation du wallet chauffeur
+
+- **Commit** : à pousser (`main` → `origin/main`)
+- **Auteur** : Équipe SmartCabb
+- **Type** : fix + refactor
+- **Objectif** : supprimer les dernières traces visibles de Flutterwave, aligner les types sur Mobile Money, et réparer `DriverWalletScreen` qui ne pouvait ni lire ni créditer le portefeuille (appels `supabase.from` inexistants + constantes manquantes).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/PaymentMethodScreen.tsx` | Méthode « Flutterwave / carte » remplacée par « Mobile Money » (M-Pesa, Orange, Airtel, Afrimoney) ; id `flutterwave` → `mobile_money` ; solde lu via `walletBalance` ; import `Building2`/`CreditCard` retiré |
+| `components/passenger/RechargeModal.tsx` | Texte d'attente : « validez sur votre téléphone » (plus de « fenêtre Flutterwave ») |
+| `components/passenger/WalletScreen.tsx` | Libellé de transaction « Mobile Money (Flutterwave) » → « Mobile Money » ; bouton debug renommé |
+| `components/driver/DriverWalletScreen.tsx` | **Réparation** : `WALLET_PACKAGES`, type `WalletPackage`, imports manquants (`motion`, `Card`, `Button`, `Badge`, `useEffect`, `Loader2`, `Smartphone`, `Gift`, `FileText`) ; lecture du solde via `GET /drivers/:id` ; crédit via `POST /drivers/:id/wallet/recharge` ; `currentDriver` lu depuis `state` |
+| `components/admin/BudgetDashboard.tsx` | Comparatif et fiche prestataire : Ejpay (pay.ejsarl.cd / api.ejsarl.cd) au lieu de Flutterwave |
+| `types/index.ts` | `Ride.paymentMethod` et `User.favoritePaymentMethod` : `mobile_money` / `wallet` remplacent `flutterwave` |
+
+### Description technique
+- `DriverWalletScreen` utilisait `supabase.from('drivers' | 'wallet_transactions' | 'admin_notifications')` alors que `lib/supabase.ts` n'expose que `auth` (client volontairement minimal) : chaque appel levait `Property 'from' does not exist`. Les écritures ont été remplacées par les routes serveur existantes :
+  - lecture : `GET /make-server-2eb02e52/drivers/:driverId` → `balance` / `creditBalance` ;
+  - crédit après paiement confirmé : `POST /make-server-2eb02e52/drivers/:driverId/wallet/recharge` `{ amount }`.
+- La date d'expiration du forfait reste calculée côté client (`wallet_expiry_date`) : le serveur ne stocke que le solde. L'historique affiché est celui de la session (aucune route publique ne liste les mouvements d'un chauffeur).
+- `WALLET_PACKAGES` (Starter 7 j / 5 000 CDF, Standard 14 j / 9 000 CDF, Pro 30 j / 15 000 CDF) est défini localement : la constante n'existait nulle part, ce qui provoquait un `ReferenceError` à l'ouverture de l'écran.
+- Aucun changement de schéma, aucune migration.
+
+### Impact produit
+- Le chauffeur peut de nouveau ouvrir « Mon wallet » sans plantage, voir son solde réel et activer un forfait après un paiement Mobile Money confirmé.
+- Plus aucune mention de Flutterwave dans les écrans passager, chauffeur ou admin.
+
+### Risques & rollback
+- **Risque** : l'historique des mouvements n'est plus persistant à l'écran (recharges de la session uniquement).
+- **Rollback** : `git revert <commit>` (l'ancien code reste dans l'historique).
+
+### Tests / vérifications
+- [x] `npx vite build` OK (14,53 s)
+- [x] Typage ciblé (`tsconfig` sans `_headers`) : plus aucune erreur `supabase.from`, `WALLET_PACKAGES`, `WalletPackage`, `FileText` ; restent les erreurs pré-existantes de variantes `Button`/`Badge`
+- [ ] Recette : ouverture du wallet chauffeur, paiement d'un forfait à 100 CDF, solde crédité une seule fois
+
+---
+
 ## 2026-11-06 — Ejpay (Mobile Money) — phase 2 : Flutterwave remplacé dans toute l'application
 
 - **Commit** : `803b1d3` (`main` → `origin/main`)

@@ -12,7 +12,7 @@ export function BudgetDashboard() {
   
   const revenue = monthlyRides * avgRidePrice;
   const fixedCosts = 40000; // SMS + Email
-  const transactionFees = monthlyRides * 240; // Commission Flutterwave
+  const transactionFees = monthlyRides * 240; // Commission Ejpay (Mobile Money)
   const smsCosts = monthlyRides * 2 * 125; // 2 SMS par course
   const totalCosts = fixedCosts + transactionFees + smsCosts;
   const costPercentage = revenue > 0 ? ((totalCosts / revenue) * 100).toFixed(1) : '0.0';
@@ -158,7 +158,7 @@ export function BudgetDashboard() {
           </h2>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-white/70">Commission Flutterwave</span>
+              <span className="text-white/70">Commission Ejpay (Mobile Money)</span>
               <span className="text-white">{transactionFees.toLocaleString()} FC</span>
             </div>
             <div className="flex justify-between items-center">
@@ -192,11 +192,11 @@ export function BudgetDashboard() {
               <tr className="bg-green-500/10">
                 <td className="py-3 text-white">
                   <span className="flex items-center gap-2">
-                    Flutterwave ✅
+                    Ejpay — Mobile Money ✅
                     <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Intégré</span>
                   </span>
                 </td>
-                <td className="py-3 text-white">1.4% + 100 FC</td>
+                <td className="py-3 text-white">Selon contrat marchand</td>
                 <td className="py-3 text-green-400">GRATUIT</td>
                 <td className="py-3 text-white">Excellent</td>
                 <td className="py-3 text-yellow-400">⭐⭐⭐⭐⭐</td>
@@ -313,7 +313,7 @@ export function BudgetDashboard() {
             <div className="space-y-2 text-sm">
               <div className="flex items-center gap-2">
                 <input type="checkbox" className="rounded" />
-                <span className="text-white/70">Inscription Flutterwave</span>
+                <span className="text-white/70">Inscription Ejpay</span>
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" className="rounded" />
@@ -372,7 +372,7 @@ export function BudgetDashboard() {
         <h2 className="text-white mb-4">Documents Requis</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="text-white/90 mb-3">Pour Flutterwave Business:</h3>
+            <h3 className="text-white/90 mb-3">Pour Ejpay Business:</h3>
             <ul className="space-y-2 text-white/70">
               <li className="flex items-center gap-2">
                 <span className="text-green-400">✓</span>
@@ -438,11 +438,11 @@ export function BudgetDashboard() {
           <div className="p-4 bg-white/5 rounded-lg">
             <h3 className="text-white/90 mb-2 flex items-center gap-2">
               <CreditCard className="w-4 h-4" />
-              Flutterwave
+              Ejpay
             </h3>
-            <p className="text-white/70 text-sm">Site: https://flutterwave.com</p>
-            <p className="text-white/70 text-sm">Support: support@flutterwave.com</p>
-            <p className="text-white/70 text-sm">Frais: 1.4% + 100 FC/transaction</p>
+            <p className="text-white/70 text-sm">Site: https://pay.ejsarl.cd</p>
+            <p className="text-white/70 text-sm">API: https://api.ejsarl.cd</p>
+            <p className="text-white/70 text-sm">Frais: selon contrat marchand</p>
           </div>
 
           <div className="p-4 bg-white/5 rounded-lg">

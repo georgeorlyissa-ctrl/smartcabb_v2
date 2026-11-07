@@ -7,7 +7,7 @@ export interface User {
   address?: string;
   registeredAt?: Date;
   totalRides?: number;
-  favoritePaymentMethod?: 'flutterwave' | 'cash' | 'mixed';
+  favoritePaymentMethod?: 'mobile_money' | 'cash' | 'mixed' | 'wallet';
   preferredLanguage?: 'fr' | 'en';
   preferredCurrency?: 'USD' | 'CDF';
   walletBalance?: number; // 💰 Solde du portefeuille en CDF
@@ -80,7 +80,7 @@ export interface Ride {
   actualPrice?: number;
   rating?: number;
   comment?: string;
-  paymentMethod?: 'flutterwave' | 'cash' | 'mixed' | 'postpaid';
+  paymentMethod?: 'mobile_money' | 'cash' | 'mixed' | 'wallet' | 'postpaid';
   paymentDetails?: {
     currency: 'USD' | 'CDF';
     cashAmount?: number;
