@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-09 — SOS : socle fiable (persistance, position réelle, statut honnête)
 
-- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Commit** : `2ca6adb` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat
 - **Objectif** : rendre le bouton SOS réellement fonctionnel. Jusqu'ici, les écrans passager appelaient une route `/emergency/sos` **inexistante** (404) tout en affichant « Alerte SOS envoyée ! Les services d'urgence ont été notifiés ». Aucune alerte n'était enregistrée, et le composant conducteur (`EmergencyAlert`) envoyait le SMS d'urgence **à l'autre partie de la course**.
