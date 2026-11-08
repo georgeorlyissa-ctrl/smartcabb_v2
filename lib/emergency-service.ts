@@ -70,6 +70,14 @@ export interface SosResult {
   error?: string;
 }
 
+type SosApiResponse = {
+  success: boolean;
+  alert?: SosAlert;
+  deduplicated?: boolean;
+  notified?: { sms?: boolean };
+  error?: string;
+};
+
 const DEFAULT_NUMBERS: EmergencyNumbers = {
   police: '112',
   ambulance: '115',
@@ -94,6 +102,7 @@ async function postJson<T>(
   path: string,
   body: Record<string, unknown>,
   timeoutMs = 12_000,
+  forceAnon = false,
 ): Promise<{ ok: boolean; status: number; data: T | null; error?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -102,7 +111,7 @@ async function postJson<T>(
     const response = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${await bearer()}`,
+        'Authorization': `Bearer ${forceAnon ? publicAnonKey : await bearer()}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
@@ -135,13 +144,16 @@ async function postJson<T>(
  * Déclenche une alerte SOS.
  */
 export async function sendSos(request: SosRequest): Promise<SosResult> {
-  const result = await postJson<{
-    success: boolean;
-    alert?: SosAlert;
-    deduplicated?: boolean;
-    notified?: { sms?: boolean };
-    error?: string;
-  }>('/emergency/sos', request as unknown as Record<string, unknown>);
+  const payload = request as unknown as Record<string, unknown>;
+
+  let result = await postJson<SosApiResponse>('/emergency/sos', payload);
+
+  // Session expirée : on retente immédiatement avec la clé publique de l'app.
+  // Une alerte SOS ne doit jamais échouer à cause d'un jeton périmé.
+  if (!result.ok && result.status === 401) {
+    console.warn('⚠️ [SOS] Session refusée, nouvelle tentative avec la clé de l’application');
+    result = await postJson<SosApiResponse>('/emergency/sos', payload, 12_000, true);
+  }
 
   if (!result.ok || !result.data?.success) {
     return { ok: false, error: result.error || result.data?.error || 'Alerte non transmise' };
@@ -159,10 +171,14 @@ export async function sendSos(request: SosRequest): Promise<SosResult> {
  * Annule une alerte que l'on vient de déclencher.
  */
 export async function cancelSos(alertId: string, userId?: string): Promise<boolean> {
-  const result = await postJson<{ success: boolean }>(`/emergency/${alertId}/cancel`, {
+  const payload = {
     ...(userId ? { userId } : {}),
     reason: 'Annulée par l’utilisateur',
-  });
+  };
+  let result = await postJson<{ success: boolean }>(`/emergency/${alertId}/cancel`, payload);
+  if (!result.ok && result.status === 401) {
+    result = await postJson<{ success: boolean }>(`/emergency/${alertId}/cancel`, payload, 12_000, true);
+  }
   return result.ok && Boolean(result.data?.success);
 }
 
