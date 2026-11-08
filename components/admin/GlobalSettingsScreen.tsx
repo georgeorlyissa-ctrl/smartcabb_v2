@@ -18,7 +18,8 @@ import {
   RefreshCw,
   Save,
   RotateCcw,
-  MessageSquare
+  MessageSquare,
+  Shield
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
 
@@ -430,6 +431,94 @@ export function GlobalSettingsScreen() {
                     </p>
                   </div>
                 )}
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Urgences (SOS) */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+          >
+            <Card className="p-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Urgences (SOS)</h3>
+                  <p className="text-sm text-gray-600">Numéros affichés et notification de l'équipe</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="emergencyPolice">Police</Label>
+                    <Input
+                      id="emergencyPolice"
+                      type="tel"
+                      value={localConfig.emergencyNumbers?.police || ''}
+                      onChange={(e) => handleChange('emergencyNumbers', {
+                        ...localConfig.emergencyNumbers,
+                        police: e.target.value,
+                      })}
+                      placeholder="112"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="emergencyAmbulance">Ambulance</Label>
+                    <Input
+                      id="emergencyAmbulance"
+                      type="tel"
+                      value={localConfig.emergencyNumbers?.ambulance || ''}
+                      onChange={(e) => handleChange('emergencyNumbers', {
+                        ...localConfig.emergencyNumbers,
+                        ambulance: e.target.value,
+                      })}
+                      placeholder="115"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="emergencySupport">Support SmartCabb</Label>
+                  <Input
+                    id="emergencySupport"
+                    type="tel"
+                    value={localConfig.emergencyNumbers?.support || ''}
+                    onChange={(e) => handleChange('emergencyNumbers', {
+                      ...localConfig.emergencyNumbers,
+                      support: e.target.value,
+                    })}
+                    placeholder="+243XXXXXXXXX"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Numéro de l'équipe sécurité, appelé par l'utilisateur depuis le dialogue SOS.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between border-t pt-4">
+                  <div>
+                    <Label>Notification SMS à chaque alerte</Label>
+                    <p className="text-xs text-gray-500">
+                      Envoie un SMS au support (1 crédit par alerte). Nécessite un numéro de support.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={Boolean(localConfig.emergencySmsEnabled)}
+                    onCheckedChange={(checked) => handleChange('emergencySmsEnabled', checked)}
+                  />
+                </div>
+
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
+                  Les alertes SOS sont enregistrées en base et restent visibles par les administrateurs,
+                  que le SMS soit activé ou non. L'autre partie de la course n'est jamais prévenue.
+                </div>
               </div>
             </Card>
           </motion.div>

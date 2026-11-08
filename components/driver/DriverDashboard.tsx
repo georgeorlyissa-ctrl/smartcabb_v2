@@ -10,7 +10,6 @@ import { useAppState } from '../../hooks/useAppState';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { stopAllNotifications } from '../../lib/notification-sound';
 import { RideTimer } from '../RideTimer';
-import { EmergencyAlert } from '../EmergencyAlert';
 import { CommissionSettings } from '../CommissionSettings';
 import { supabase } from '../../lib/supabase';
 import { VEHICLE_PRICING, isDayTime, VehicleCategory } from '../../lib/pricing';

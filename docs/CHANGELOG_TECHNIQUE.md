@@ -42,6 +42,75 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-09 — SOS : socle fiable (persistance, position réelle, statut honnête)
+
+- **Commit** : `à venir` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : rendre le bouton SOS réellement fonctionnel. Jusqu'ici, les écrans passager appelaient une route `/emergency/sos` **inexistante** (404) tout en affichant « Alerte SOS envoyée ! Les services d'urgence ont été notifiés ». Aucune alerte n'était enregistrée, et le composant conducteur (`EmergencyAlert`) envoyait le SMS d'urgence **à l'autre partie de la course**.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/migrations/20261108000000_emergency_alerts.sql` | Nouvelle table `emergency_alerts`, index, RLS, publication Realtime |
+| `supabase/migrations/20261109000000_cleanup_sos_test_rows.sql` | Suppression des alertes de test techniques |
+| `supabase/migrations/20260611000000_scheduled_rides.sql` | **Supprimé** : doublon de version avec `20260611000000_setup_scheduled_rides.sql`, bloquait `supabase db push` |
+| `supabase/functions/make-server-2eb02e52/emergency-routes.ts` | Nouvelles routes `/emergency/*` |
+| `supabase/functions/make-server-2eb02e52/index.ts` | Montage du routeur `/emergency` |
+| `supabase/functions/make-server-2eb02e52/config-routes.ts` | Clés `emergencyNumbers`, `emergencySmsEnabled` + normalisation `smsProvider` |
+| `lib/emergency-service.ts` | Client HTTP SOS, cache de config 5 min, gestion d'erreur explicite |
+| `components/emergency/SOSButton.tsx` | Bouton réutilisable passager/conducteur + état « SOS ACTIF » |
+| `components/emergency/SOSDialog.tsx` | Dialogue 4 étapes avec position GPS réelle et repli `tel:` |
+| `components/passenger/LiveTrackingScreen.tsx` | Suppression du faux SOS, utilisation de `SOSButton` |
+| `components/passenger/RideTrackingScreen.tsx` | Idem |
+| `components/driver/ActiveRideNavigationScreen.tsx` | Bouton SOS compact dans l'en-tête conducteur |
+| `components/admin/GlobalSettingsScreen.tsx` | Carte « Urgences (SOS) » (police, ambulance, support, SMS) |
+| `lib/config-sync.ts` | Type et défauts `emergencyNumbers` / `emergencySmsEnabled` |
+| `lib/sms-service.ts` | Suppression de `sendEmergencyAlert()` et des templates `emergency_alert_*` |
+| `components/EmergencyAlert.tsx` | **Supprimé** (jamais monté, notifiait l'autre partie) |
+| `components/driver/SOSEmergencyButton.tsx` | **Supprimé** (jamais utilisé, imports cassés) |
+| `docs/EMERGENCY_SOS.md` | Documentation de référence du dispositif |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Table** `emergency_alerts` : `user_id text`, `role`, `ride_id`, `type` (4 valeurs), `status` (5 valeurs), `lat/lng/accuracy`, `address`, `note`, `vehicle_info`, `counterpart_*`, `metadata jsonb`, cycle `created_at → ack_* → resolved_*`. RLS en lecture seule (propriétaire ou admin) ; écritures via service role uniquement. Table ajoutée à `supabase_realtime`.
+- **Routes** : `GET /config`, `POST /sos`, `POST /:id/cancel`, `POST /:id/ack`, `POST /:id/resolve`, `GET /alerts`, `GET /active`. `/sos` et `/cancel` acceptent l'anon key ou une session ; `/ack`, `/resolve`, `/alerts`, `/active` exigent un JWT admin (`user_metadata.role` ou `app_metadata.role`).
+- **Anti-abus** : 3 alertes / 10 min / utilisateur, 10 / 10 min / IP, anti-doublon 90 s (même alerte renvoyée avec `deduplicated: true`). L'identité d'une session vérifiée prime sur `body.userId`.
+- **Position** : `lib/graceful-geolocation` avec `enableHighAccuracy` et timeout 8 s. Si le GPS est indisponible, `lat/lng` restent `NULL` et `metadata.locationSource = 'default'` — **aucune fausse coordonnée** (l'ancien code envoyait la position du départ).
+- **UI** : un seul composant pour tous les écrans. Statut « Alerte enregistrée » uniquement après un `201` du backend ; en cas d'échec, message explicite + boutons `tel:` Police / Ambulance / Support, et bouton « Réessayer ». Annulation en deux temps (confirmation) pour éviter les annulations accidentelles.
+- **Notification** : par défaut aucune. Si `emergencySmsEnabled` est actif **et** `emergencyNumbers.support` renseigné, un SMS court part via EJ SMS. L'échec SMS n'empêche pas l'enregistrement de l'alerte.
+- **Config** : ajout de `emergencyNumbers { police, ambulance, support }` et `emergencySmsEnabled` dans `DEFAULT_CONFIG` backend et front. `smsProvider` est normalisé en `ejsms` (sauf `disabled`) à la lecture, car le KV contenait encore `africas_talking`.
+- **Migrations** : `20261012000000_add_rls_policies.sql` était présent en local mais absent de l'historique distant ; il a été appliqué. Le fichier `20260611000000_scheduled_rides.sql` (même version que `setup_scheduled_rides.sql`, contenu inclus dans ce dernier) a été supprimé pour débloquer `db push`.
+
+### Impact produit / comportement visible
+- Le bouton SOS **fonctionne** : l'alerte est enregistrée avec la vraie position et un identifiant de référence.
+- Plus de faux message « services d'urgence notifiés ».
+- Le conducteur dispose aussi d'un SOS (auparavant aucun bouton fonctionnel).
+- Le dialogue affiche les numéros Police / Ambulance / Support, modifiables par l'admin sans redéploiement.
+- L'autre partie de la course n'est jamais prévenue.
+
+### Risques & rollback
+- **Risque** : si `emergencyNumbers.support` est renseigné et `emergencySmsEnabled = true`, chaque alerte consomme 1 crédit EJ SMS. Valeur par défaut : `false`.
+- **Risque** : les numéros `112` / `115` restent à valider auprès des autorités ; modifiables dans Paramètres globaux.
+- **Risque** : la suppression de `20260611000000_scheduled_rides.sql` ne change rien en base (contenu déjà appliqué via `setup_scheduled_rides.sql`).
+- **Rollback** : `git revert` du commit ; `emergencySmsEnabled = false` ; la table peut rester en place sans effet de bord.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors `_headers`)
+- [x] `npx vite build`
+- [x] `GET /emergency/config` sans jeton → `401` ; avec anon key → `200`
+- [x] `POST /emergency/sos` sans jeton → `401` ; sans `userId` → `400`
+- [x] `POST /emergency/sos` avec anon key → `201` + alerte persistée
+- [x] Second envoi < 90 s → `deduplicated: true`
+- [x] `POST /:id/cancel` par l'auteur → `cancelled` ; par un autre → `403`
+- [x] `GET /emergency/alerts` / `/active` avec anon key → `401`
+- [x] `GET /rest/v1/emergency_alerts` avec anon key → `[]` (RLS active)
+- [x] Migration `20261108000000` appliquée (`supabase db push`)
+- [x] Edge Function déployée
+- [ ] Test utilisateur dans l'application (passager + conducteur)
+
+---
+
 ## 2026-11-08 — Landing : témoignage congolais, CTA « Réserver votre chauffeur » et retrait de la photo au taxi jaune
 
 - **Commit** : `f53232a` (branche `main`, poussé sur `origin`)

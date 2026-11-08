@@ -147,15 +147,6 @@ export const SMS_TEMPLATES = {
     `SmartCabb : Votre code de verification est ${code}. ${purpose}. Ne partagez jamais ce code avec qui que ce soit.`,
   
   // Alertes d'urgence
-  emergency_alert_passenger: (passengerName: string, location: string, driverName: string, vehicleInfo: string) => 
-    `URGENCE SmartCabb : ${passengerName} a active l'alerte SOS. Position : ${location}. Conducteur : ${driverName}, ${vehicleInfo}. Contactez immediatement le +243 999 999 999`,
-  
-  emergency_alert_driver: (driverName: string, location: string, passengerName: string) => 
-    `URGENCE SmartCabb : ${driverName} a active l'alerte SOS. Position : ${location}. Passager : ${passengerName}. Contactez immediatement le +243 999 999 999`,
-  
-  emergency_alert_support: (userName: string, userType: string, location: string, rideId: string) => 
-    `ALERTE SOS SmartCabb : ${userType} ${userName} signale une urgence. Position : ${location}. Course #${rideId}. Intervention immediate requise !`,
-  
   // Annulation de course
   ride_cancelled_passenger: (driverName: string, reason?: string) => 
     `SmartCabb : Votre course avec ${driverName} a ete annulee${reason ? ' pour la raison suivante : ' + reason : '.'}. Vous pouvez reserver une nouvelle course.`,
@@ -487,43 +478,6 @@ export async function sendOTPCode(
   });
   
   console.log('📤 sendOTPCode terminé');
-}
-
-/**
- * Envoie une alerte d'urgence SOS
- */
-export async function sendEmergencyAlert(
-  userType: 'passager' | 'conducteur',
-  userName: string,
-  userPhone: string,
-  otherPartyName: string,
-  otherPartyPhone: string,
-  vehicleInfo: string,
-  location: string,
-  rideId: string,
-  supportPhone: string = '+243999999999'
-): Promise<void> {
-  // Alerte à l'autre partie (conducteur ou passager)
-  if (userType === 'passager') {
-    await sendSMS({
-      to: otherPartyPhone,
-      message: SMS_TEMPLATES.emergency_alert_passenger(userName, location, otherPartyName, vehicleInfo),
-      type: 'emergency_alert',
-    });
-  } else {
-    await sendSMS({
-      to: otherPartyPhone,
-      message: SMS_TEMPLATES.emergency_alert_driver(userName, location, otherPartyName),
-      type: 'emergency_alert_driver',
-    });
-  }
-  
-  // Alerte au support SmartCabb
-  await sendSMS({
-    to: supportPhone,
-    message: SMS_TEMPLATES.emergency_alert_support(userName, userType, location, rideId),
-    type: 'emergency_alert',
-  });
 }
 
 /**

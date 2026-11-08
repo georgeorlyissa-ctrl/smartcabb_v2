@@ -51,6 +51,9 @@ const DEFAULT_CONFIG = {
   postpaidFee:            5000,
   smsEnabled:             true,
   smsProvider:            "ejsms",
+  // 🚨 SOS : numéros d'urgence affichés dans l'app et notification SMS du support
+  emergencyNumbers:       { police: "112", ambulance: "115", support: "" },
+  emergencySmsEnabled:    false,
   otpRequired:            false,
   admin2faRequired:       true,
   notificationsEnabled:   true,
@@ -81,6 +84,8 @@ app.get("/get", async (c) => {
 
       // Compléter les clés manquantes avec les valeurs par défaut (rétrocompatibilité)
       const completed: Record<string, any> = { ...DEFAULT_CONFIG, ...stored };
+      // EJ SMS est l'unique fournisseur : on normalise les anciennes valeurs.
+      if (completed.smsProvider !== "disabled") completed.smsProvider = "ejsms";
       if (Object.keys(completed).length !== Object.keys(stored).length) {
         await kvSet(CONFIG_KEY, completed);
         console.log("🧹 [CONFIG/GET] Config complétée avec les valeurs par défaut");

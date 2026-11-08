@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from '../../lib/toast';
 import { Phone, MessageCircle, Share2, AlertTriangle, MapPin, Clock } from '../icons/RideIcons';
 import { calculateRideMeterCost } from '../../lib/pricing';
+import { SOSButton } from '../emergency/SOSButton';
 
 interface Location {
   lat: number;
@@ -21,7 +22,6 @@ export function RideTrackingScreen() {
   const [driverLocation, setDriverLocation] = useState<Location | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [currentCost, setCurrentCost] = useState(0);
-  const [showSOSDialog, setShowSOSDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const currentRide = state.currentRide;
 
@@ -82,51 +82,6 @@ export function RideTrackingScreen() {
         console.error('Erreur copie:', error);
         toast.error('Impossible de copier les informations');
       }
-    }
-  };
-
-  // 🚨 Déclencher SOS
-  const handleSOS = async () => {
-    try {
-      const sosData = {
-        userId: state.currentUser?.id,
-        userName: state.currentUser?.name,
-        userPhone: state.currentUser?.phone,
-        rideId: currentRide?.id,
-        driverName: currentRide.driver?.name,
-        driverPhone: currentRide.driver?.phone,
-        vehicleInfo: `${currentRide.driver?.vehicle?.make} ${currentRide.driver?.vehicle?.model} - ${currentRide.driver?.vehicle?.licensePlate || 'N/A'}`,
-        currentLocation: driverLocation || currentRide.pickup,
-        timestamp: new Date().toISOString()
-      };
-
-      console.log('🚨 SOS déclenché:', sosData);
-      
-      // Envoyer l'alerte SOS au backend
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/emergency/sos`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(sosData)
-        }
-      );
-
-      if (response.ok) {
-        toast.success('🚨 Alerte SOS envoyée !', {
-          description: 'Les services d\'urgence ont été notifiés.',
-          duration: 5000
-        });
-        setShowSOSDialog(false);
-      } else {
-        toast.error('Erreur lors de l\'envoi de l\'alerte SOS');
-      }
-    } catch (error) {
-      console.error('Erreur SOS:', error);
-      toast.error('Impossible d\'envoyer l\'alerte SOS');
     }
   };
 
@@ -387,60 +342,22 @@ Contact : ${currentRide.driver?.phone}`;
                   <Share2 className="w-5 h-5 mr-2" />
                   Partager
                 </Button>
-                <Button
-                  onClick={() => setShowSOSDialog(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl shadow-md transition-all"
-                >
-                  <AlertTriangle className="w-5 h-5 mr-2" />
-                  SOS
-                </Button>
+                <SOSButton
+                  role="passenger"
+                  userId={state.currentUser?.id}
+                  userName={state.currentUser?.name}
+                  userPhone={state.currentUser?.phone}
+                  rideId={currentRide.id}
+                  vehicleInfo={`${currentRide.driver?.vehicle?.make || ''} ${currentRide.driver?.vehicle?.model || ''} - ${currentRide.driver?.vehicle?.licensePlate || 'plaque N/A'}`.trim()}
+                  counterpartName={currentRide.driver?.name}
+                  counterpartPhone={currentRide.driver?.phone}
+                  fallbackAddress={currentRide.pickup?.address || state.pickup?.address}
+                />
               </div>
             </div>
           </Card>
         </motion.div>
       </div>
-
-      {/* Dialog SOS */}
-      <Dialog open={showSOSDialog} onOpenChange={setShowSOSDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-5 h-5" />
-              Alerte SOS d'urgence
-            </DialogTitle>
-            <DialogDescription>
-              En cas de problème grave, cette alerte notifiera immédiatement les services d'urgence et vos contacts.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            <div className="bg-red-50 border border-red-200 p-3 rounded-lg text-sm text-red-800">
-              <p className="font-semibold mb-2">⚠️ Cette action va :</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Alerter les services d'urgence</li>
-                <li>Envoyer votre position GPS</li>
-                <li>Notifier vos contacts d'urgence</li>
-                <li>Enregistrer les infos du conducteur</li>
-              </ul>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={() => setShowSOSDialog(false)}
-                variant="outline"
-                className="py-3"
-              >
-                Annuler
-              </Button>
-              <Button
-                onClick={handleSOS}
-                className="bg-red-600 hover:bg-red-700 text-white py-3 font-semibold"
-              >
-                <AlertTriangle className="w-4 h-4 mr-2" />
-                Confirmer SOS
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Dialog Partage */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>

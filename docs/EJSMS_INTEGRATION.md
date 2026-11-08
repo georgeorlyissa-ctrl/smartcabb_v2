@@ -161,6 +161,14 @@ L'Edge Function est déployée avec `verify_jwt = false`, donc chaque route vér
 
 > Les limites de débit sont stockées en mémoire d'isolate : elles bloquent les rafales et les scripts, sans constituer un quota distribué parfait.
 
+### SMS d'urgence (SOS)
+
+`POST /emergency/sos` peut notifier l'équipe sécurité par SMS, uniquement si
+`emergencySmsEnabled = true` **et** `emergencyNumbers.support` est renseigné
+(Admin → Paramètres globaux → Urgences). L'alerte est enregistrée en base dans
+tous les cas ; un échec SMS (crédits épuisés, numéro invalide) n'empêche pas
+la création de l'alerte. Détail du dispositif : `docs/EMERGENCY_SOS.md`.
+
 Chaque envoi écrit `sms_log:<id ou reference>` :
 
 ```json

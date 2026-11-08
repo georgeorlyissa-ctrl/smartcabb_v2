@@ -22,6 +22,7 @@ import { FreeWaitingToggle } from '../FreeWaitingToggle';
 import { motion, AnimatePresence } from '../../lib/motion';
 import { calculateRideMeterCost } from '../../lib/pricing';
 import { IncidentModal } from '../IncidentModal';
+import { SOSButton } from '../emergency/SOSButton';
 
 interface Location {
   lat: number;
@@ -290,6 +291,28 @@ export function ActiveRideNavigationScreen() {
             <div className="text-2xl font-bold tabular-nums">{formatTime(elapsedTime)}</div>
             <p className="text-xs text-green-100">Temps écoulé</p>
           </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-[11px] text-green-100 flex-1">
+            En cas de danger, votre alerte transmet votre position à l’équipe SmartCabb.
+          </p>
+          <SOSButton
+            role="driver"
+            variant="compact"
+            userId={state.currentDriver?.id || state.userId}
+            userName={state.currentDriver?.name}
+            userPhone={state.currentDriver?.phone}
+            rideId={currentRide.id}
+            vehicleInfo={
+              state.currentDriver?.vehicleInfo
+                ? `${state.currentDriver.vehicleInfo.make} ${state.currentDriver.vehicleInfo.model} - ${state.currentDriver.vehicleInfo.plate}`
+                : undefined
+            }
+            counterpartName={currentRide.passengerName || currentRide.passenger_name}
+            counterpartPhone={currentRide.passengerPhone || currentRide.passenger_phone}
+            fallbackAddress={pickup.address}
+            className="shrink-0"
+          />
         </div>
       </div>
 
