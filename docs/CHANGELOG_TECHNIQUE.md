@@ -54,6 +54,7 @@ Assez de détail pour comprendre le code sans le relire.>
 |---|---|
 | `supabase/migrations/20261108000000_emergency_alerts.sql` | Nouvelle table `emergency_alerts`, index, RLS, publication Realtime |
 | `supabase/migrations/20261109000000_cleanup_sos_test_rows.sql` | Suppression des alertes de test techniques |
+| `supabase/migrations/20261109000001_cleanup_sos_test_rows.sql` | Seconde passe de nettoyage après vérification manuelle post-déploiement |
 | `supabase/migrations/20260611000000_scheduled_rides.sql` | **Supprimé** : doublon de version avec `20260611000000_setup_scheduled_rides.sql`, bloquait `supabase db push` |
 | `supabase/functions/make-server-2eb02e52/emergency-routes.ts` | Nouvelles routes `/emergency/*` |
 | `supabase/functions/make-server-2eb02e52/index.ts` | Montage du routeur `/emergency` |
