@@ -119,7 +119,6 @@ export function LandingPage() {
   const backgrounds = [
     { src: '/hero-driver.jpg', position: 'center 32%' },
     { src: '/photo2_smartcabb.jpeg', position: 'center' },
-    { src: '/Images_2.jpeg', position: 'center' },
     { src: '/fille_smartcabb.jpg', position: 'center' },
   ];
 
@@ -674,7 +673,7 @@ export function LandingPage() {
               title={language === 'fr' ? 'Réserver — Familiale & Business' : 'Book — Family & Business'}
             >
               <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.9" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path strokeLinecap="round" d="M8 3v4M16 3v4M3 10h18M8 15h3"/></svg>
-              {language === 'fr' ? 'Réserver une course' : 'Book a ride'}
+              {language === 'fr' ? 'Réserver votre chauffeur' : 'Book your driver'}
             </Link>
             <Link to="/app/driver/signup" className="sc-hero-btn sc-hero-btn-ghost">
               {t('hero.becomeDriver')}

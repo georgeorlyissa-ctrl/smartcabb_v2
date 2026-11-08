@@ -306,7 +306,7 @@ export function ServicesPage() {
                 </ul>
                 <p style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.6', marginBottom: '22px' }}>{r.note}</p>
                 <a href={RESERVE_URL} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                  📅 {fr ? 'Réserver une course' : 'Book a ride'}
+                  📅 {fr ? 'Réserver votre chauffeur' : 'Book your driver'}
                 </a>
               </div>
             ))}

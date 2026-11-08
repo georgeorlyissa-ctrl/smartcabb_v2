@@ -138,7 +138,7 @@ const translations = {
       client2: {
         name: 'Marie Tshimanga',
         role: 'Cadre bancaire',
-        text: 'Enfin une app congolaise de qualité ! Tarifs transparents et sécurité au rendez-vous.'
+        text: 'Enfin, une application proche de nos réalités congolaises.'
       },
       client3: {
         name: 'Patrick Kabamba',
@@ -340,7 +340,7 @@ const translations = {
       client2: {
         name: 'Marie Tshimanga',
         role: 'Banking Executive',
-        text: 'Finally a quality Congolese app! Transparent pricing and security guaranteed.'
+        text: 'Finally, an app close to our Congolese realities.'
       },
       client3: {
         name: 'Patrick Kabamba',
