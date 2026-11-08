@@ -42,6 +42,41 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-08 — Landing : témoignage congolais, CTA « Réserver votre chauffeur » et retrait de la photo au taxi jaune
+
+- **Commit** : `f53232a` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : ajuster le contenu marketing de la page d'accueil — reformuler le témoignage de Marie Tshimanga, aligner le libellé du bouton de réservation sur les standards du secteur, et retirer du carrousel d'arrière-plan la photo où l'on voit un taxi jaune.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `contexts/LanguageContext.tsx` | Témoignage `client2.text` FR/EN remplacé |
+| `pages/LandingPage.tsx` | CTA hero « Réserver votre chauffeur » ; `Images_2.jpeg` retiré du carrousel de fond |
+| `pages/ServicesPage.tsx` | CTA services « Réserver votre chauffeur » |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Témoignage** : `testimonials.client2.text` devient « Enfin, une application proche de nos réalités congolaises. » (EN : « Finally, an app close to our Congolese realities. »).
+- **CTA** : dans le hero, le libellé passe de « Réserver une course » à « Réserver votre chauffeur » (EN : « Book your driver »). Même changement sur le bouton des cartes services. Le lien reste `/app/passenger?screen=scheduled-rides`.
+- **Arrière-plan** : `backgrounds` ne contient plus que `hero-driver.jpg`, `photo2_smartcabb.jpeg` et `fille_smartcabb.jpg`. Le fondu enchaîné s'adapte automatiquement (modulo sur la nouvelle longueur). Le fichier `public/Images_2.jpeg` est conservé car il sert encore de `fallbackImage` sur `ContactPage`.
+
+### Impact produit / comportement visible
+- Le carrousel du hero ne montre plus la photo de la chaussée avec les taxis jaunes.
+- Le bouton de réservation affiche « Réserver votre chauffeur » sur l'accueil et la page Services.
+
+### Risques & rollback
+- **Risque** : faible, contenu marketing uniquement.
+- **Rollback** : `git revert f53232a`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors `_headers`)
+- [x] `npx vite build`
+- [ ] Vérification visuelle après déploiement Vercel
+
+---
+
 ## 2026-11-07 — SMS/OTP : sécurisation des routes et anti-abus des crédits
 
 - **Commit** : `aeb6205` (branche `main`, poussé sur `origin`)
