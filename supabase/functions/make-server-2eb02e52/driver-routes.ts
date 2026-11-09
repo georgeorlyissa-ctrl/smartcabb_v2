@@ -541,7 +541,7 @@ app.post("/signup", async (c) => {
     const {
       full_name, phone, password,
       vehicleMake, vehicleModel, vehiclePlate,
-      vehicleColor, vehicleCategory, profilePhoto, email,
+      vehicleColor, vehicleCategory, profilePhoto, vehiclePhoto, email,
     } = body;
 
     console.log("🚗 [DRIVERS/SIGNUP] Début inscription:", { full_name, phone, vehicleCategory });
@@ -554,6 +554,20 @@ app.post("/signup", async (c) => {
     }
     if (!vehicleMake || !vehicleModel || !vehiclePlate || !vehicleColor || !vehicleCategory) {
       return c.json({ success: false, error: "Toutes les informations du véhicule sont requises" }, 400);
+    }
+
+    // 🚗 Photo du véhicule obligatoire (à partir du formulaire v2).
+    // Les anciennes versions de l'APK ne l'envoient pas : on ne les bloque pas
+    // (signupVersion absent), pour ne pas casser les inscriptions en cours de déploiement.
+    const requiresVehiclePhoto = Number(body.signupVersion || 0) >= 2;
+    if (requiresVehiclePhoto && !vehiclePhoto) {
+      return c.json({
+        success: false,
+        error: "La photo du véhicule est obligatoire pour devenir chauffeur SmartCabb.",
+      }, 400);
+    }
+    if (!vehiclePhoto) {
+      console.warn("⚠️ [DRIVERS/SIGNUP] Inscription sans photo de véhicule (client ancien)");
     }
 
     const normalizedPhone = normalizePhoneNumber(phone);
@@ -658,7 +672,11 @@ app.post("/signup", async (c) => {
         license_plate: vehiclePlate,
         color: vehicleColor,
         category: vehicleCategory,
+        // 🚗 Photo du véhicule (Base64) — exigée par le formulaire d'inscription
+        photo: vehiclePhoto || null,
       },
+      // 🚗 Photo du véhicule à plat (compatibilité lecture admin / driver app)
+      vehicle_photo: vehiclePhoto || null,
       // ✅ Scoring intelligent : propreté du véhicule (1-5, défaut 3)
       cleanliness: 3,
       vehicle_cleanliness: 3,

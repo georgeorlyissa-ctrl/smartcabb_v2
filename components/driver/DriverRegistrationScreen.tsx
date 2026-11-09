@@ -240,6 +240,11 @@ export function DriverRegistrationScreen() {
       return;
     }
 
+    if (!vehiclePhoto) {
+      toast.error('Veuillez ajouter la photo du véhicule (obligatoire pour devenir chauffeur)');
+      return;
+    }
+
     // 🚫 SUPPRIMÉ : Vérification des documents (économie d'espace)
     // Les documents seront déposés physiquement au bureau
     // if (documents.length < 1) {
@@ -310,6 +315,7 @@ export function DriverRegistrationScreen() {
         vehicleColor: formData.vehicleColor,
         vehicleCategory,
         profilePhoto: profilePhotoPreview, // 📸 Photo en Base64
+        vehiclePhoto: vehiclePhotoPreview, // 🚗 Photo du véhicule en Base64 (obligatoire)
         otpToken: otpToken || undefined // 🔐 Jeton OTP (vérification du numéro)
       });
 
@@ -525,9 +531,9 @@ export function DriverRegistrationScreen() {
           <div className="bg-white rounded-xl p-4 space-y-4">
             <h3 className="font-medium text-gray-800">Informations du véhicule</h3>
 
-            {/* Photo du véhicule — SmartCabb logo par défaut */}
+            {/* Photo du véhicule — obligatoire pour valider le dossier chauffeur */}
             <div>
-              <Label>Photo du véhicule</Label>
+              <Label htmlFor="vehicle-photo-upload">Photo du véhicule *</Label>
               <div className="mt-2">
                 <input
                   type="file"
@@ -537,7 +543,12 @@ export function DriverRegistrationScreen() {
                   id="vehicle-photo-upload"
                 />
                 <label htmlFor="vehicle-photo-upload" className="cursor-pointer block">
-                  <div className="relative rounded-xl overflow-hidden border-2 border-dashed border-gray-200 hover:border-blue-400 transition-colors bg-gray-50 flex flex-col items-center justify-center" style={{ height: 160 }}>
+                  <div
+                    className={`relative rounded-xl overflow-hidden border-2 border-dashed transition-colors bg-gray-50 flex flex-col items-center justify-center ${
+                      vehiclePhotoPreview ? 'border-gray-200 hover:border-blue-400' : 'border-amber-300 hover:border-blue-400'
+                    }`}
+                    style={{ height: 160 }}
+                  >
                     {vehiclePhotoPreview ? (
                       <img
                         src={vehiclePhotoPreview}
@@ -548,7 +559,7 @@ export function DriverRegistrationScreen() {
                       <>
                         <SmartCabbLogo className="h-20 w-20 mx-auto mb-2 opacity-80" plain />
                         <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Camera className="w-3 h-3" /> Ajouter une photo (optionnel)
+                          <Camera className="w-3 h-3" /> Ajouter une photo (obligatoire)
                         </span>
                       </>
                     )}
@@ -562,6 +573,9 @@ export function DriverRegistrationScreen() {
                   </div>
                 </label>
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Obligatoire : la photo du véhicule (JPG, max 1 MB) est vérifiée par l'équipe avant la validation du compte chauffeur.
+              </p>
             </div>
             
             <div>

@@ -27,10 +27,11 @@ export async function signUpDriver(driverData: {
   vehicleCategory: 'smart_standard' | 'smart_confort' | 'smart_plus' | 'smart_business';
   licenseNumber?: string;
   profilePhoto?: string; // 📸 Photo en Base64
+  vehiclePhoto?: string; // 🚗 Photo du véhicule en Base64 (obligatoire côté formulaire)
   otpToken?: string; // 🔐 Jeton de vérification OTP du numéro (backend /otp/verify)
 }): Promise<AuthResult> {
   try {
-    const { fullName, email, phone, password, vehicleMake, vehicleModel, vehiclePlate, vehicleColor, vehicleCategory, profilePhoto, otpToken } = driverData;
+    const { fullName, email, phone, password, vehicleMake, vehicleModel, vehiclePlate, vehicleColor, vehicleCategory, profilePhoto, vehiclePhoto, otpToken } = driverData;
     
     console.log('📝 Inscription conducteur via serveur:', fullName, 'téléphone:', phone);
     
@@ -73,6 +74,8 @@ export async function signUpDriver(driverData: {
           vehicleColor,
           vehicleCategory,
           profilePhoto: profilePhoto || null, // 📸 Photo en Base64
+          vehiclePhoto: vehiclePhoto || null, // 🚗 Photo du véhicule en Base64
+          signupVersion: 2, // 🔖 v2 : photo du véhicule obligatoire côté serveur
           otpToken: otpToken || undefined // 🔐 Jeton OTP (vérification du numéro)
         })
       }

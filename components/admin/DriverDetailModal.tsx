@@ -993,6 +993,25 @@ export function DriverDetailModal({
                       <p className="mt-2 font-medium">{getVehicleDisplayName({ category: driverVehicle.category })}</p>
                     )}
                   </div>
+
+                  {/* 🚗 Photo du véhicule — obligatoire pour valider le dossier */}
+                  <div>
+                    <Label>Photo du véhicule</Label>
+                    {driverVehicle.photo || (driver as any)?.vehicle_photo ? (
+                      <div className="mt-2 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                        <img
+                          src={driverVehicle.photo || (driver as any)?.vehicle_photo}
+                          alt="Photo du véhicule"
+                          className="w-full max-h-72 object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span>Photo du véhicule manquante — dossier incomplet, ne pas valider le chauffeur.</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Card>
             ) : (
