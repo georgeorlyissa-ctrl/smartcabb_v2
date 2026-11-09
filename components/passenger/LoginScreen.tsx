@@ -293,15 +293,16 @@ export function LoginScreen() {
       
       // Attendre un peu avant de naviguer
       setTimeout(() => {
-        // Deep link en attente (ex: bouton Réserver du site) ?
+        // Deep link en attente (ex: boutons Commander / Réserver du site) ?
         try {
           const pending = localStorage.getItem('sc_pending_screen');
-          if (pending === 'scheduled-rides') {
+          if (pending === 'scheduled-rides' || pending === 'map') {
             localStorage.removeItem('sc_pending_screen');
-            setCurrentScreen('scheduled-rides');
-            console.log('✅ Redirection deep link vers scheduled-rides');
+            setCurrentScreen(pending);
+            console.log('✅ Redirection deep link vers', pending);
             return;
           }
+          localStorage.removeItem('sc_pending_screen');
         } catch {}
         setCurrentScreen('map');
         console.log('✅ setCurrentScreen(map) appelé');

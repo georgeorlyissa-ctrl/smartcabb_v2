@@ -35,7 +35,11 @@ export function Router({ children }: { children: ReactNode }) {
     } else {
       window.history.pushState({}, '', path);
     }
-    setPathname(path);
+    // ⚠️ Le chemin d'état sert au matching des routes : il ne doit jamais
+    // contenir la query string (?screen=...) ni le hash, sinon `/app/passenger?screen=map`
+    // ne matcherait pas `/app/passenger/*` et retomberait sur `/app/*`.
+    // L'URL complète reste disponible via window.location.search.
+    setPathname(path.split('#')[0].split('?')[0]);
   };
 
   return (

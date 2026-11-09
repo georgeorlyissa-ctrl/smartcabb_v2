@@ -315,18 +315,19 @@ function PassengerAppContent() {
       shouldUpdate = true;
     }
 
-    // ✅ Deep link : ?screen=scheduled-rides (bouton Réserver du site)
+    // ✅ Deep links publics : ?screen=map (Commander) et ?screen=scheduled-rides (Réserver)
     // Si connecté → y aller direct, sinon mémoriser pour après login
     try {
       const params = new URLSearchParams(window.location.search);
       const deepScreen = params.get('screen');
-      if (deepScreen === 'scheduled-rides') {
+      if (deepScreen === 'scheduled-rides' || deepScreen === 'map') {
         if (state.currentUser) {
-          setCurrentScreen('scheduled-rides');
+          setCurrentScreen(deepScreen);
           window.history.replaceState({}, '', window.location.pathname);
           return;
         }
-        localStorage.setItem('sc_pending_screen', 'scheduled-rides');
+        localStorage.setItem('sc_pending_screen', deepScreen);
+        window.history.replaceState({}, '', window.location.pathname);
       }
     } catch {}
 

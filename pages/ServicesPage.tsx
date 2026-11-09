@@ -8,7 +8,7 @@ import { Link } from '../lib/simple-router';
 import { ImageCarousel } from '../components/ImageCarousel';
 import { PageHero } from '../components/PageHero';
 
-const BOOK_URL = '/app/passenger';
+const BOOK_URL = '/commander';
 const RESERVE_URL = '/app/passenger?screen=scheduled-rides';
 
 const NAVY = '#0B1F33';

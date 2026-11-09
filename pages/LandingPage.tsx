@@ -663,12 +663,12 @@ export function LandingPage() {
 
           <motion.div className="sc-hero-actions"
             initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38, duration: 0.55 }}>
-            <Link to="/app/passenger" className="sc-hero-btn sc-hero-btn-primary">
+            <Link to="/commander" className="sc-hero-btn sc-hero-btn-primary">
               <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               {t('hero.bookRide')}
             </Link>
             <Link
-              to="/app/passenger?screen=scheduled-rides"
+              to="/reserver"
               className="sc-hero-btn sc-hero-btn-soft"
               title={language === 'fr' ? 'Réserver — Familiale & Business' : 'Book — Family & Business'}
             >
@@ -810,7 +810,7 @@ export function LandingPage() {
               </h2>
               <p className={`reveal-left d3 ${whyInView ? 'in' : ''}`} style={{ fontSize: '18px', color: '#64748b', marginBottom: '32px', maxWidth: '480px', lineHeight: 1.7 }}>{t('why.subtitle')}</p>
               <div className={`reveal-left d4 ${whyInView ? 'in' : ''}`}>
-                <Link to="/app/passenger" className="btn-hero-primary">{t('hero.bookRide')}</Link>
+                <Link to="/commander" className="btn-hero-primary">{t('hero.bookRide')}</Link>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>

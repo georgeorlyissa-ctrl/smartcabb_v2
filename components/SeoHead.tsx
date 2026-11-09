@@ -33,6 +33,20 @@ const SEO_MAP: Record<string, SeoEntry> = {
     canonical: `${SITE}/drivers`,
     index: true,
   },
+  '/commander': {
+    title: 'Commander une course à Kinshasa | Taxi & VTC SmartCabb 24/7',
+    description:
+      'Commandez une course SmartCabb à Kinshasa en quelques minutes : prix affiché à l’avance, chauffeurs vérifiés, suivi en temps réel, paiement M-Pesa, Orange Money, Airtel Money ou espèces. Disponible 24h/24.',
+    canonical: `${SITE}/commander`,
+    index: true,
+  },
+  '/reserver': {
+    title: 'Réserver votre chauffeur à Kinshasa | Aéroport, mariage, journée — SmartCabb',
+    description:
+      'Réservez votre chauffeur SmartCabb à Kinshasa à l’avance : transfert aéroport, location à la journée, mariages, familles et déplacements d’affaires. Acompte 50 %, véhicules climatisés, chauffeurs vérifiés.',
+    canonical: `${SITE}/reserver`,
+    index: true,
+  },
   '/about': {
     title: 'À propos de SmartCabb | Taxi & VTC de confiance à Kinshasa',
     description:

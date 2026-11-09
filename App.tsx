@@ -15,7 +15,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { WelcomeBackGate } from './components/WelcomeBackGate';
 
 // ─── Routes vitrine : jamais de dark mode ───────────────────────────────────
-const VITRINE_ROUTES = ['/', '/services', '/drivers', '/contact', '/about', '/terms', '/privacy', '/legal'];
+const VITRINE_ROUTES = ['/', '/services', '/drivers', '/commander', '/reserver', '/contact', '/about', '/terms', '/privacy', '/legal'];
 
 function DarkModeGuard() {
   const location = useLocation();
@@ -70,6 +70,8 @@ const LandingPage = lazyWithRetry(() => import('./pages/LandingPage').then(m => 
 const AdminCleanSystem = lazyWithRetry(() => import('./src/pages/AdminCleanSystem'));
 const ServicesPage = lazyWithRetry(() => import('./pages/ServicesPage').then(m => ({ default: m.ServicesPage })));
 const DriversLandingPage = lazyWithRetry(() => import('./pages/DriversLandingPage').then(m => ({ default: m.DriversLandingPage })));
+const OrderRidePage = lazyWithRetry(() => import('./pages/OrderRidePage').then(m => ({ default: m.OrderRidePage })));
+const BookDriverPage = lazyWithRetry(() => import('./pages/BookDriverPage').then(m => ({ default: m.BookDriverPage })));
 const ContactPage = lazyWithRetry(() => import('./pages/ContactPage').then(m => ({ default: m.ContactPage })));
 const AboutPage = lazyWithRetry(() => import('./pages/AboutPage').then(m => ({ default: m.AboutPage })));
 const TermsPage = lazyWithRetry(() => import('./pages/TermsPage').then(m => ({ default: m.TermsPage })));
@@ -434,6 +436,8 @@ function App() {
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/services" element={<ServicesPage />} />
                   <Route path="/drivers" element={<DriversLandingPage />} />
+                  <Route path="/commander" element={<OrderRidePage />} />
+                  <Route path="/reserver" element={<BookDriverPage />} />
                   <Route path="/contact" element={<ContactPage />} />
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/terms" element={<TermsPage />} />
