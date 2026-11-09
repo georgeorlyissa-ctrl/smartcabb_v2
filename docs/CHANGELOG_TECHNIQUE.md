@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-11 — SOS Lot B : écran admin temps réel, veilleur et alarme
 
-- **Commit** : `__COMMIT__` (branche `main`, poussé sur `origin`)
+- **Commit** : `e350cd7` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat
 - **Objectif** : permettre à l'équipe d'exploitation de voir, entendre et traiter les alertes SOS en temps réel sans surveiller la base ni appeler l'API manuellement. Le Lot A enregistrait bien les alertes, mais rien ne prévenait l'admin qu'une alerte venait d'arriver.
