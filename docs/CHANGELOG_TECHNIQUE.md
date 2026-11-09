@@ -42,6 +42,57 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-11 — Pages de conversion dédiées `/commander` et `/reserver`
+
+- **Commit** : `cdbd981` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : les deux boutons principaux de la page d'accueil (« Commander une course », « Réserver votre chauffeur ») envoyaient directement dans l'application, sans argumentaire ni continuité visuelle. On aligne leur parcours sur celui de « Devenir chauffeur » : une page publique dédiée qui vend le service, puis l'application avec le bon écran.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/public/LandingKit.tsx` | **Nouveau** : styles partagés `lk-*`, hook `useInViewCustom`, couleurs `SITE_BLUE` / `SITE_NAVY` |
+| `pages/OrderRidePage.tsx` | **Nouveau** : page `/commander` (hero, 3 étapes, 4 catégories, bénéfices, FAQ, CTA final) |
+| `pages/BookDriverPage.tsx` | **Nouveau** : page `/reserver` (hero, cas d'usage, 3 étapes, tarifs journée/aéroport, inclus, FAQ, CTA) |
+| `App.tsx` | Imports lazy `OrderRidePage` / `BookDriverPage`, routes `/commander` et `/reserver`, ajout à `VITRINE_ROUTES` |
+| `pages/LandingPage.tsx` | Hero : « Commander » → `/commander`, « Réserver » → `/reserver` ; CTA « Pourquoi » → `/commander` |
+| `pages/ServicesPage.tsx` | `BOOK_URL` → `/commander` |
+| `pages/PassengerApp.tsx` | Deep links `?screen=map` **et** `?screen=scheduled-rides` (connecté = direct, sinon mémorisation + nettoyage de l'URL) |
+| `components/passenger/LoginScreen.tsx` | Consomme n'importe quel `sc_pending_screen` (`map` / `scheduled-rides`) puis le supprime |
+| `lib/simple-router.tsx` | `navigate()` ne stocke plus la query string ni le hash dans `pathname` |
+| `components/SeoHead.tsx` | Entrées SEO `/commander` et `/reserver` (title, description, canonical) |
+| `public/sitemap.xml` | Ajout des deux URLs, priorité 0.9 |
+| `docs/PAGES_CONVERSION.md` | **Nouveau** : parcours, deep links, tarifs, tests |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Pages** : composants autonomes réutilisant `SiteNavigation`, `PageHero`, `ProfessionalFooter`, `ChatWidget`. Aucune requête réseau, aucun état global, donc aucun risque de régression métier. Les styles `lk-*` sont injectés via `LandingKitStyles` (classes préfixées pour éviter toute collision avec Tailwind ou les styles du landing).
+- **Contenu commercial** : tarifs repris de `PRICING_CONFIG` et de `RESERVATION_TARIFFS_USD` — journée 60 / 80 / 100 / 160 $, aéroport 40 / 50 / 65 / 160 $, acompte 50 %, carburant à la charge du client en location journalière, hors Kinshasa sur devis.
+- **Liens entrants** : la landing n'a plus aucun CTA « Commander » qui pointe vers `/app/passenger` (les boutons « Connexion » restent inchangés). `ServicesPage` redirige aussi ses CTA « Commander » vers la nouvelle page.
+- **Deep links** : `PassengerApp` lit `window.location.search` au montage. Connecté → `setCurrentScreen(<écran>)` + `history.replaceState` pour retirer la query. Déconnecté → `localStorage.sc_pending_screen`, consommé par `LoginScreen` après authentification. Le `removeItem` est désormais systématique pour ne pas rejouer une redirection périmée.
+- **Correctif routeur** : `navigate()` faisait `setPathname(path)` avec la query. `<Routes>` compare `pathname` à `/app/passenger/*`, donc `/app/passenger?screen=map` tombait sur `/app/*` → `Navigate` vers `/app/landing`, deep link perdu. Le `pathname` d'état est maintenant `path.split('#')[0].split('?')[0]`, tandis que `history.pushState` conserve l'URL complète (donc `window.location.search` reste lisible).
+- **SEO / dark mode** : `SeoHead` gère désormais title/description/canonical des deux routes et le sitemap les liste ; `VITRINE_ROUTES` les inclut pour neutraliser le dark mode.
+
+### Impact produit / comportement visible
+- Cliquer « Commander une course » ouvre une page explicative (prix, catégories, garanties, FAQ) au lieu de demander immédiatement une connexion.
+- Cliquer « Réserver votre chauffeur » ouvre une page dédiée à la réservation planifiée (cas d'usage, tarifs, acompte 50 %).
+- Depuis ces pages, le CTA final ouvre l'application sur le bon écran, y compris après connexion.
+- Aucune redirection cassée pour les anciens liens `?screen=scheduled-rides` : ils restent supportés.
+
+### Risques & rollback
+- **Risque** : contenu marketing (tarifs) à maintenir en cohérence avec la grille réelle ; si la grille change, mettre à jour `OrderRidePage` / `BookDriverPage` en plus de `pricing-data.ts`.
+- **Risque** : le correctif de `simple-router` touche toute la navigation ; il ne modifie que le matching (la query n'a jamais fait partie des routes déclarées), donc pas d'effet attendu sur les routes existantes.
+- **Rollback** : retirer les deux `<Route>` et les deux imports d'`App.tsx`, puis remettre les deux liens du hero de `LandingPage` vers `/app/passenger` et `/app/passenger?screen=scheduled-rides`. Les fichiers ajoutés peuvent rester en place sans effet.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` (chunks `OrderRidePage-*.js` et `BookDriverPage-*.js` produits)
+- [ ] Parcours connecté / déconnecté sur `/commander` et `/reserver` : validation manuelle en production
+- [ ] Contrôle visuel mobile (hero, grilles de cartes, FAQ)
+
+---
+
 ## 2026-11-11 — SOS Lot B : écran admin temps réel, veilleur et alarme
 
 - **Commit** : `e350cd7` (branche `main`, poussé sur `origin`)
