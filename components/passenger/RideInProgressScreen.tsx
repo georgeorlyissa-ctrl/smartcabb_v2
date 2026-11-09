@@ -526,7 +526,7 @@ export function RideInProgressScreen() {
       {/* 💰 COMPTEUR DE COURSE EN BAS — ✅ TRADUIT */}
       <div className="absolute bottom-0 left-0 right-0 z-40">
         <div className="bg-gradient-to-t from-black/80 to-transparent backdrop-blur-xl">
-          <div className="p-4 space-y-3">
+          <div className="p-4 pb-safe-bar space-y-3">
 
             {/* Zone facturation active */}
             {billingActive && (

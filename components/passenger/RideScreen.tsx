@@ -861,7 +861,7 @@ return () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex flex-col pb-safe-page">
       {/* 🆕 Dialogue d'alternative */}
       {alternativeCategory && (
         <AlternativeVehicleDialog

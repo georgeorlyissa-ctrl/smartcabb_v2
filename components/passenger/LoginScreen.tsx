@@ -332,7 +332,7 @@ export function LoginScreen() {
 
   try {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4 pb-safe-page">
         <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in duration-300">
           <div className="text-center mb-8">
             <SmartCabbLogo plain className="w-16 h-16 mx-auto mb-4" />

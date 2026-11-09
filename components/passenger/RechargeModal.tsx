@@ -310,7 +310,7 @@ export function RechargeModal({
           exit={{ y: '100%', opacity: 0 }}
           transition={{ type: 'spring', damping: 25 }}
           onClick={(e) => e.stopPropagation()}
-          className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-lg max-h-[90vh] overflow-y-auto"
+          className="bg-white rounded-t-3xl md:rounded-3xl w-full md:max-w-lg max-h-[92dvh] md:max-h-[90vh] overflow-y-auto"
         >
           <div className="p-6">
             {/* 💳 Attente de validation Mobile Money (Ejpay) */}
@@ -840,9 +840,9 @@ export function RechargeModal({
               </div>
             )}
 
-            {/* Navigation Buttons */}
+            {/* Navigation Buttons — collés en bas, toujours visibles au-dessus de la barre système */}
             {!['processing', 'success', 'error'].includes(currentStep) && (
-              <div className="flex items-center gap-3 mt-6">
+              <div className="sticky bottom-0 z-10 -mx-6 mt-6 flex items-center gap-3 border-t border-gray-100 bg-white/95 px-6 pt-3 pb-safe-bar backdrop-blur-sm">
                 {currentStep !== 'amount' && (
                   <Button
                     onClick={handlePreviousStep}

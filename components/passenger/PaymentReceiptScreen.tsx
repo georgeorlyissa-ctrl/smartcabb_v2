@@ -126,7 +126,7 @@ export function PaymentReceiptScreen() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-gray-50 flex flex-col"
+      className="min-h-screen bg-gray-50 flex flex-col pb-safe-page"
     >
       {/* Header */}
       <div className="bg-white border-b px-6 py-4">

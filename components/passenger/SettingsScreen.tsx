@@ -177,7 +177,7 @@ export function SettingsScreen() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: -300, opacity: 0 }}
       transition={{ type: 'spring', damping: 25 }}
-      className="min-h-screen bg-gray-50"
+      className="min-h-screen bg-gray-50 pb-safe-page"
     >
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">

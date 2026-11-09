@@ -454,7 +454,7 @@ export function DriverFoundScreen() {
       </div>
 
       {/* ── BOUTONS D'ACTION — ✅ TRADUIT ── */}
-      <div className="bg-white border-t border-border p-4 space-y-3">
+      <div className="bg-white border-t border-border p-4 pb-safe-page space-y-3">
 
         {/* WhatsApp */}
         <Button

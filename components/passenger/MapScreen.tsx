@@ -303,7 +303,7 @@ export function MapScreen() {
       </div>
 
       {/* ========== PANNEAU INFÉRIEUR ========== */}
-      <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-3xl shadow-2xl pb-[env(safe-area-inset-bottom)]" style={{ maxHeight: '52vh' }}>
+      <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white rounded-t-3xl shadow-2xl pb-safe" style={{ maxHeight: '52vh' }}>
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-8 h-1 bg-gray-300 rounded-full" />
         </div>

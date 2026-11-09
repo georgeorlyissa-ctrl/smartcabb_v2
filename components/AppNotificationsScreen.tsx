@@ -234,7 +234,7 @@ export function AppNotificationsScreen({
   }, [fetchInbox]);
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen bg-gray-50 pb-10 pb-safe-page">
       <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
         <div className="flex items-center gap-3 px-4 py-3">
           <Button variant="ghost" size="icon" onClick={onBack} className="flex-shrink-0">

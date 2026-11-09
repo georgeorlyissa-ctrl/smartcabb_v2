@@ -918,7 +918,7 @@ export function EstimateScreen() {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="flex-shrink-0 p-4 pt-3 border-t-2 border-secondary/30 bg-white shadow-[0_-8px_30px_-12px_rgba(0,0,0,0.35)]"
+        className="flex-shrink-0 p-4 pt-3 pb-safe-bar border-t-2 border-secondary/30 bg-white shadow-[0_-8px_30px_-12px_rgba(0,0,0,0.35)]"
       >
         {/* Prix résumé */}
         <div className="flex items-center justify-between mb-3 px-1">

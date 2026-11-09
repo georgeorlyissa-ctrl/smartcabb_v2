@@ -163,8 +163,11 @@ initAPKCSS();
 function App() {
   console.log(`🚀 SmartCabb v${BUILD_VERSION} - Build ${BUILD_TIMESTAMP} - Démarrage...`);
 
-  // 📱 Détection synchrone APK : via ?platform=apk
-  const isNativeApp = typeof window !== 'undefined' && window.location.search.includes('platform=apk');
+  // 📱 Détection synchrone APK : via ?platform=apk ou le bridge Capacitor
+  const isNativeApp = typeof window !== 'undefined' && (
+    window.location.search.includes('platform=apk') ||
+    !!(window as any).Capacitor?.isNativePlatform?.()
+  );
 
   if (isNativeApp && (window.location.pathname === '/' || window.location.pathname === '')) {
     window.history.replaceState(null, '', '/app/passenger');

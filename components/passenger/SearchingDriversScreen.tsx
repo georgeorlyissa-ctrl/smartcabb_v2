@@ -387,7 +387,7 @@ export function SearchingDriversScreen() {
       {/* ══════════════════════════════════════════════════════════
           🧾 BOTTOM SHEET — résumé trajet + chauffeurs + actions
           ══════════════════════════════════════════════════════════ */}
-      <div className="absolute bottom-0 left-0 right-0 z-20 pb-[env(safe-area-inset-bottom)]">
+      <div className="absolute bottom-0 left-0 right-0 z-20 pb-safe">
         <div className="bg-white/97 backdrop-blur-xl rounded-t-3xl shadow-2xl">
 
           {/* Poignée */}

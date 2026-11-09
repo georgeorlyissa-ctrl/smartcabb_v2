@@ -276,7 +276,7 @@ Contact : ${currentRide.driver?.phone}`;
           animate={{ y: 0 }}
           className="absolute bottom-0 left-0 right-0"
         >
-          <Card className="rounded-t-3xl shadow-2xl p-6 space-y-4">
+          <Card className="rounded-t-3xl shadow-2xl p-6 pb-safe-bar space-y-4">
             <div className="flex items-center justify-center mb-2">
               <div className="w-12 h-1 bg-gray-300 rounded-full" />
             </div>

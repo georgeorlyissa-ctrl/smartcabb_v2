@@ -11,7 +11,20 @@ window.__SMARTCABB_CLIENT_READY__ = false;
 // 🎯 APK mode detection: inject CSS BEFORE any React render
 (function() {
   try {
-    if (window.location.search.indexOf('platform=apk') !== -1 || window.location.href.indexOf('platform=apk') !== -1) {
+    var isApk = false;
+    try {
+      isApk = window.location.search.indexOf('platform=apk') !== -1
+        || window.location.href.indexOf('platform=apk') !== -1
+        || !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform())
+        || localStorage.getItem('sc_is_apk') === '1';
+    } catch (e) {}
+
+    if (isApk) {
+      // Mémorisé : même si l'URL perd ?platform=apk, l'app reste reconnue
+      try { localStorage.setItem('sc_is_apk', '1'); } catch (e) {}
+
+      // Marqueur global : active les marges de sécurité Android (barre système)
+      document.documentElement.classList.add('cap-apk');
       var s = document.createElement('style');
       s.id = 'apk-hide-style';
       s.textContent = '.hide-in-apk { display: none !important; }';

@@ -672,6 +672,56 @@ body { min-width: 320px; }
   padding-right: env(safe-area-inset-right);
 }
 
+/* 3 bis. Zone sûre BASSE pilotée par variable.
+   ⚠️ Dans la WebView Android (APK Capacitor), `env(safe-area-inset-bottom)`
+   vaut 0 alors que l'app dessine sous la barre de navigation système : les
+   derniers boutons des écrans se retrouvent coupés. La classe `cap-apk` est
+   posée très tôt par `public/client-init.js` (et par App.tsx) : elle force
+   une réserve équivalente à la barre système (~48px).
+   Utilitaires à utiliser sur les barres d'action collées en bas :
+     .pb-safe        → marge interne minimale + zone sûre
+     .pb-safe-bar    → barre d'action / footer sticky
+     .pb-safe-page   → dernier bloc d'une page défilante
+     .pb-safe-dialog → boîte de dialogue défilante */
+:root {
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html.cap-apk {
+  --app-safe-bottom: 48px;
+}
+
+.pb-safe {
+  padding-bottom: max(0.75rem, var(--app-safe-bottom)) !important;
+}
+.pb-safe-bar {
+  padding-bottom: calc(var(--app-safe-bottom) + 0.75rem) !important;
+}
+.pb-safe-page {
+  padding-bottom: calc(var(--app-safe-bottom) + 1.5rem) !important;
+}
+.pb-safe-dialog {
+  padding-bottom: max(1.5rem, var(--app-safe-bottom)) !important;
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Filet de sécurité : le dernier bloc d'un écran plein hauteur ne finit
+   jamais collé sous la barre système. Les pages déjà traitées avec
+   `.pb-safe-page` sont exclues pour éviter un double espacement. */
+.min-h-screen:not(.pb-safe-page) > *:last-child,
+.h-app > *:last-child,
+.min-h-app > *:last-child {
+  margin-bottom: max(0px, var(--app-safe-bottom));
+}
+
+/* Hauteurs d'application qui suivent la barre du navigateur mobile */
+.h-app { height: 100vh; height: 100dvh; }
+.min-h-app { min-height: 100vh; min-height: 100dvh; }
+
+/* APK : masquer les éléments de navigation web inutiles dans l'app native */
+.cap-apk .hide-in-apk { display: none !important; }
+
 /* 4. Conteneurs : largeur de lecture confortable et centrage.
       ⚠️ `.app-container` est le conteneur RACINE de l'application (App.tsx) :
       il doit rester pleine largeur. `.content-narrow` est l'utilitaire

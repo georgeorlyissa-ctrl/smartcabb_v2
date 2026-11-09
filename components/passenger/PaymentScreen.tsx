@@ -464,7 +464,7 @@ export function PaymentScreen() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 flex flex-col pb-safe-page">
 
       {/* 💳 Attente de validation Mobile Money (Ejpay) */}
       <EjpayWaitingModal

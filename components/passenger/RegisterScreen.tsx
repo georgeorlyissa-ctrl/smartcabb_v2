@@ -220,7 +220,7 @@ export function RegisterScreen() {
 
   return (
     <div 
-      className="min-h-screen bg-white flex flex-col"
+      className="min-h-screen bg-white flex flex-col pb-safe-page"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b">

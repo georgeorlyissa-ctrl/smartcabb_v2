@@ -840,7 +840,7 @@ export function DriverRegistrationScreen() {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="px-6 space-y-4 pb-[max(3.5rem,calc(env(safe-area-inset-bottom)+2.5rem))]"
+        className="px-6 space-y-4 pb-safe-page"
       >
         <Button
           onClick={handleSubmit}

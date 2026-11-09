@@ -60,7 +60,7 @@ export function LoyaltyScreen() {
   const progress = nextTier ? Math.min(100, Math.round((balance / nextTier.points) * 100)) : 100;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 pb-20 pb-safe-page">
       <div className="bg-gradient-to-br from-green-600 to-emerald-600 text-white px-6 pt-8 pb-10">
         <button onClick={() => setCurrentScreen('profile')} className="mb-4 text-white/80 text-sm">← Retour</button>
         <p className="text-white/80 text-sm">Mes points Smart Rewards</p>

@@ -133,7 +133,7 @@ export function RatingScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col pb-safe-page">
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="bg-gradient-to-br from-green-600 to-emerald-600 text-white pt-8 pb-6 px-6 text-center">

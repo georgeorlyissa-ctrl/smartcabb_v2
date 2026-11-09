@@ -500,7 +500,7 @@ export function WalletScreen() {
 
           <motion.button
             onClick={() => setShowDebugModal(true)}
-            className="fixed bottom-6 right-6 w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40"
+            className="fixed bottom-[calc(1.5rem+var(--app-safe-bottom))] right-6 w-14 h-14 bg-orange-500 hover:bg-orange-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.95 }}
             title="Diagnostic Mobile Money"
@@ -514,7 +514,7 @@ export function WalletScreen() {
       <motion.button
         onClick={refreshBalance}
         disabled={refreshing}
-        className="fixed bottom-6 left-6 w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 disabled:opacity-50"
+        className="fixed bottom-[calc(1.5rem+var(--app-safe-bottom))] left-6 w-14 h-14 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center z-40 disabled:opacity-50"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         title="Actualiser le solde"

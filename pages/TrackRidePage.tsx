@@ -144,7 +144,7 @@ export function TrackRidePage() {
       </div>
 
       {/* Fiche course */}
-      <div className="relative z-20 bg-white rounded-t-3xl shadow-2xl px-5 pt-3 pb-[env(safe-area-inset-bottom)] -mt-4">
+      <div className="relative z-20 bg-white rounded-t-3xl shadow-2xl px-5 pt-3 pb-safe -mt-4">
         {ride ? (
           <div className="py-3 space-y-2">
             {driverName && (

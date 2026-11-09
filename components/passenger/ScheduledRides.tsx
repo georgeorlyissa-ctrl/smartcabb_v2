@@ -582,7 +582,7 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
     CATEGORY_IMAGES[category] || CATEGORY_IMAGES.smart_standard;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4 pb-safe-page">
       {/* En-tête */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
