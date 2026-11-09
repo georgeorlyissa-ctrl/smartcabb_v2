@@ -6,6 +6,7 @@ import { AdminDiagnostic } from '../components/admin/AdminDiagnostic';
 import { AdminSessionTimeout } from '../components/admin/AdminSessionTimeout';
 import { UsersManagementScreen } from '../components/UsersManagementScreen';
 import { UsersDiagnosticScreen } from '../components/admin/UsersDiagnosticScreen';
+import { EmergencyAlertsWatcher } from '../components/admin/EmergencyAlertsWatcher';
 
 // Import lazy des écrans admin pour optimisation
 const AdminLoginScreen = React.lazy(() => import('../components/admin/AdminLoginScreen').then(m => ({ default: m.AdminLoginScreen })));
@@ -45,6 +46,7 @@ const AdminDemandScreen = React.lazy(() => import('../components/admin/AdminDema
 const AdminBlockedPassengersScreen = React.lazy(() => import('../components/admin/AdminBlockedPassengersScreen').then(m => ({ default: m.AdminBlockedPassengersScreen })));
 const AdminBroadcastScreen = React.lazy(() => import('../components/admin/AdminBroadcastScreen').then(m => ({ default: m.AdminBroadcastScreen })));
 const EjpayTransactionsScreen = React.lazy(() => import('../components/admin/EjpayTransactionsScreen').then(m => ({ default: m.EjpayTransactionsScreen })));
+const EmergencyAlertsScreen = React.lazy(() => import('../components/admin/EmergencyAlertsScreen').then(m => ({ default: m.EmergencyAlertsScreen })));
 
 function AdminAppContent() {
   const { state, setCurrentScreen, setCurrentView, updateUser } = useAppState();
@@ -96,7 +98,7 @@ function AdminAppContent() {
       'sms-settings', 'global-settings', 'admin-diagnostic', 'data-cleanup', 'pending-recharges', 'admin-users-management',
       'admin-sync', 'admin-account-sync', 'cancellations', 'admin-users-diagnostic',
       'admin-scheduled-rides', 'admin-demand', 'admin-blocked-passengers', 'admin-broadcast',
-      'admin-rides'
+      'admin-rides', 'admin-emergencies'
     ];
     
     // ✅ FIX: Si l'admin est connecté et a un écran admin valide, ne rien changer
@@ -145,7 +147,7 @@ function AdminAppContent() {
     'sms-settings', 'global-settings', 'admin-diagnostic', 'data-cleanup', 'pending-recharges', 'admin-users-management',
     'admin-sync', 'admin-account-sync', 'cancellations', 'admin-users-diagnostic',
     'admin-scheduled-rides', 'admin-demand', 'admin-blocked-passengers', 'admin-broadcast',
-    'admin-rides'
+    'admin-rides', 'admin-emergencies'
   ];
   
   // ✅ FALLBACK AMÉLIORÉ : Vérifier si l'écran est dans la liste des écrans admin valides
@@ -162,6 +164,11 @@ function AdminAppContent() {
 
       {/* ⏱️ Expiration auto après 30 min d'inactivité → retour au login */}
       <AdminSessionTimeout />
+
+      {/* 🚨 Veilleur SOS global : bannière + alarme même sur les autres écrans */}
+      {state.isAdmin && screenToShow !== 'admin-login' && screenToShow !== 'admin-register' && (
+        <EmergencyAlertsWatcher currentScreen={screenToShow} />
+      )}
       
       {/* RLS Fix Modal (non-blocking) */}
       {showRLSModal && <RLSFixModal />}
@@ -220,6 +227,7 @@ function AdminAppContent() {
         {screenToShow === 'admin-demand' && <AdminDemandScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
         {screenToShow === 'admin-blocked-passengers' && <AdminBlockedPassengersScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
         {screenToShow === 'admin-broadcast' && <AdminBroadcastScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
+        {screenToShow === 'admin-emergencies' && <EmergencyAlertsScreen onBack={() => setCurrentScreen('admin-dashboard')} />}
       </div>
     </>
   );

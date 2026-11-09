@@ -1,8 +1,8 @@
 # Dispositif SOS / Urgences — SmartCabb
 
-> Dernière mise à jour : 2026-11-09
-> Périmètre : **Lot A** — socle fiable (persistance, position réelle, statut honnête).
-> Les lots B (écran admin temps réel), C (contacts d'urgence) et D (mode discret) ne sont pas encore implémentés.
+> Dernière mise à jour : 2026-11-11
+> Périmètre : **Lots A et B** — socle fiable (persistance, position réelle, statut honnête) **et** écran d'administration temps réel.
+> Les lots C (contacts d'urgence) et D (mode discret) ne sont pas encore implémentés.
 
 ---
 
@@ -90,6 +90,47 @@ Ces valeurs sont lues à chaud depuis le KV (`smartcabb_global_config`) : **aucu
 
 ---
 
+## 4 bis. Écran admin temps réel (Lot B)
+
+### Accès
+
+`Admin → Actions rapides → 🚨 Urgences SOS` (écran `admin-emergencies`).
+
+La carte d'action rapide affiche un **compteur rouge pulsé** dès qu'une alerte est en cours.
+Le compteur est rafraîchi toutes les 30 s via `GET /emergency/active`.
+
+### Veilleur global (`EmergencyAlertsWatcher`)
+
+Monté en permanence dans `AdminApp` (hors écrans login/register), il :
+
+- interroge `GET /emergency/active` toutes les **20 s** et s'abonne au Realtime `emergency_alerts` ;
+- affiche une **bannière rouge persistante** (compteur + dernier demandeur + type + adresse) ;
+- joue `playSosAlarm()` : sirène 3 rafales, vibration longue, notification navigateur persistante et annonce vocale ;
+- **ré-alarme toutes les 2 minutes** tant que l'alerte reste `active` (non acquittée) ;
+- bascule en simple **pastille flottante « N SOS »** quand la bannière est masquée ;
+- se met en **sourdine lorsque l'écran Urgences est ouvert** (l'écran gère alors l'alarme) ;
+- mémorise les alertes déjà vues pour ne pas hurler à chaque rechargement de page.
+
+L'état « alarme active / coupée » est partagé avec l'écran via `localStorage` (`smartcabb_sos_sound`).
+
+### Écran `EmergencyAlertsScreen`
+
+| Élément | Comportement |
+|---|---|
+| KPI | En cours · Sans prise en charge · SLA > 60 s · Clôturées aujourd'hui |
+| Filtres | En cours (`active` + `acknowledged`) · Toutes · Clôturées |
+| Carte alerte | Type, rôle, nom, téléphone, course, adresse/coordonnées ± précision, note, véhicule, autre partie |
+| Chrono SLA | Temps écoulé en direct ; passe en rouge « SLA dépassé » au-delà de **60 s** sans acquittement |
+| Actions | `Appeler` (`tel:`), `Itinéraire` (Google Maps), `Acquitter`, `Clôturer` |
+| Clôture | Dialogue avec note (≤ 500 car.) et case **Faux positif / test** |
+| Actualisation | Realtime Supabase + polling de secours toutes les **15 s** + bouton Actualiser |
+| Alarme | Sirène + vibration + notification navigateur + voix sur nouvelle alerte ; ré-alarme toutes les 2 min |
+
+Les appels utilisent `lib/emergency-admin-service.ts` avec le **JWT de session admin**.
+Une session expirée ou un compte non admin affiche un message explicite (401/403).
+
+---
+
 ## 5. Fichiers
 
 | Fichier | Rôle |
@@ -100,8 +141,14 @@ Ces valeurs sont lues à chaud depuis le KV (`smartcabb_global_config`) : **aucu
 | `supabase/functions/make-server-2eb02e52/index.ts` | Montage `/emergency` |
 | `supabase/functions/make-server-2eb02e52/config-routes.ts` | Clés `emergencyNumbers`, `emergencySmsEnabled` |
 | `lib/emergency-service.ts` | Client HTTP + cache de configuration |
+| `lib/emergency-admin-service.ts` | Client admin : `/active`, `/alerts`, `ack`, `resolve` + helpers SLA |
+| `lib/notification-sound.ts` | `playSosAlarm()` — sirène, vibration, notification, voix |
 | `components/emergency/SOSButton.tsx` | Bouton réutilisable + état « SOS ACTIF » |
 | `components/emergency/SOSDialog.tsx` | Dialogue 4 étapes (confirmation, envoi, succès, échec) |
+| `components/admin/EmergencyAlertsScreen.tsx` | Écran admin temps réel (KPI, filtres, SLA, actions) |
+| `components/admin/EmergencyAlertsWatcher.tsx` | Veilleur global : bannière, pastille, alarme, ré-alarme |
+| `pages/AdminApp.tsx` | Écran `admin-emergencies` + montage du veilleur |
+| `components/admin/AdminDashboard.tsx` | Carte d'action rapide « Urgences SOS » + compteur |
 | `components/passenger/LiveTrackingScreen.tsx` | Bouton SOS unifié |
 | `components/passenger/RideTrackingScreen.tsx` | Bouton SOS unifié |
 | `components/driver/ActiveRideNavigationScreen.tsx` | Bouton SOS compact dans l'en-tête conducteur |
@@ -119,9 +166,10 @@ Ces valeurs sont lues à chaud depuis le KV (`smartcabb_global_config`) : **aucu
 
 ## 6. Limites connues / suites
 
-- **Aucun écran admin temps réel** pour l'instant : les alertes sont consultables uniquement via l'API (`/alerts`, `/active`) ou directement en base. → Lot B.
 - **Pas de contacts d'urgence personnels** ni de notification de proches. → Lot C.
 - **Pas de mode discret** ni de PIN de désactivation. → Lot D.
+- L'écran admin et le veilleur dépendent du **Realtime Supabase** ; un polling de secours (15–20 s) prend le relais si la session ne reçoit pas les événements (RLS / coupure réseau).
+- La sirène web ne peut pas démarrer avant une interaction utilisateur (politique navigateur) : le premier clic déverrouille l'audio (`unlockMobileAudio`).
 - Une alerte envoyée **hors ligne** n'est pas rejouée automatiquement : le dialogue propose « Réessayer » et les appels directs.
 - Les numéros par défaut (`112` / `115`) doivent être validés auprès des autorités congolaises ; ils sont modifiables sans redéploiement.
 
@@ -144,3 +192,19 @@ Ces valeurs sont lues à chaud depuis le KV (`smartcabb_global_config`) : **aucu
 | `GET /rest/v1/emergency_alerts` avec anon key | `[]` (RLS) |
 
 Alertes de test supprimées par la migration `20261109000000`.
+
+---
+
+## 8. Tests effectués — Lot B (2026-11-11)
+
+| Test | Résultat |
+|---|---|
+| `npx tsc --noEmit` | OK hors erreurs pré-existantes `_headers/Code-component-*.tsx` |
+| `npx vite build` | OK — chunk `EmergencyAlertsScreen-*.js` produit |
+| `GET /emergency/active` avec JWT admin | `200` + `{ count, alerts }` |
+| `POST /:id/ack` avec JWT admin | `200`, statut `acknowledged`, `ack_at` renseigné |
+| `POST /:id/resolve` (`false_alarm`) | `200`, statut `false_alarm`, `resolution_note` |
+| `GET /emergency/active` avec anon key | `401` (le client admin n'utilise que le JWT) |
+| Bannière + sirène sur nouvelle alerte | À valider manuellement en production |
+| Ré-alarme après 2 min sans acquittement | À valider manuellement en production |
+| Rafraîchissement Realtime de la liste | À valider manuellement en production (polling 15 s en secours) |

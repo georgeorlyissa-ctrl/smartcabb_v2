@@ -54,10 +54,12 @@ import {
   Calendar,
   Activity,
   Ban,
-  Megaphone
+  Megaphone,
+  AlertTriangle
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
 import { createAdminUser } from '../../lib/auth-service';
+import { getActiveEmergencies } from '../../lib/emergency-admin-service';
 
 export function AdminDashboard() {
   console.log('🎯 AdminDashboard - RENDU DÉMARRE');
@@ -101,6 +103,22 @@ export function AdminDashboard() {
     const interval = setInterval(fetchLiveStats, 60000);
     return () => clearInterval(interval);
   }, [fetchLiveStats]);
+
+  // ─── 🚨 Alertes SOS en cours (badge de la carte d'action rapide) ───────────
+  const [sosCount, setSosCount] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    const loadSosCount = async () => {
+      const result = await getActiveEmergencies();
+      if (!cancelled && result.ok) setSosCount(result.alerts.length);
+    };
+    void loadSosCount();
+    const timer = setInterval(() => void loadSosCount(), 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
 
   // ✅ Vérification d'authentification au montage
   useEffect(() => {
@@ -754,6 +772,20 @@ export function AdminDashboard() {
 
   const quickActions = [
     {
+      id: 'action-emergencies',
+      title: '🚨 Urgences SOS',
+      description:
+        sosCount > 0
+          ? `${sosCount} alerte(s) en cours — prise en charge requise`
+          : 'Alertes passagers & conducteurs en temps réel',
+      icon: AlertTriangle,
+      action: () => setCurrentScreen('admin-emergencies'),
+      count: sosCount,
+      highlight: sosCount > 0,
+      urgent: sosCount > 0,
+      color: 'from-red-600 to-rose-600'
+    },
+    {
       id: 'action-demand',
       title: 'Flux & demandes',
       description: 'Activité en direct, zones et heures de forte demande',
@@ -1384,6 +1416,7 @@ export function AdminDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {quickActions.map((action, index) => {
                   const Icon = action.icon;
+                  const urgent = Boolean(action.urgent);
                   return (
                     <motion.div
                       key={action.id}
@@ -1393,18 +1426,26 @@ export function AdminDashboard() {
                     >
                       <Card 
                         className={`p-6 hover:shadow-lg transition-shadow cursor-pointer ${
-                          action.highlight ? 'border-2 border-purple-300 bg-purple-50' : ''
+                          urgent
+                            ? 'border-2 border-red-400 bg-red-50'
+                            : action.highlight
+                              ? 'border-2 border-purple-300 bg-purple-50'
+                              : ''
                         }`}
                         onClick={action.action}
                       >
                         <div className="flex items-center justify-between mb-4">
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                            action.highlight ? 'bg-purple-600' : 'bg-gray-100'
+                            urgent ? 'bg-red-600' : action.highlight ? 'bg-purple-600' : 'bg-gray-100'
                           }`}>
-                            <Icon className={`w-6 h-6 ${action.highlight ? 'text-white' : 'text-gray-600'}`} />
+                            <Icon className={`w-6 h-6 ${urgent || action.highlight ? 'text-white' : 'text-gray-600'}`} />
                           </div>
                           {action.count !== null && action.count !== undefined && (
-                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                            <span className={`text-xs px-2 py-1 rounded-full ${
+                              urgent
+                                ? 'bg-red-600 text-white animate-pulse'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
                               {action.count}
                             </span>
                           )}
@@ -1412,7 +1453,7 @@ export function AdminDashboard() {
                         <h3 className="font-semibold mb-2">{action.title}</h3>
                         <p className="text-sm text-gray-600 mb-4">{action.description}</p>
                         <div className={`flex items-center text-sm ${
-                          action.highlight ? 'text-purple-600' : 'text-blue-600'
+                          urgent ? 'text-red-600' : action.highlight ? 'text-purple-600' : 'text-blue-600'
                         }`}>
                           <span>Accéder</span>
                           <ChevronRight className="w-4 h-4 ml-1" />

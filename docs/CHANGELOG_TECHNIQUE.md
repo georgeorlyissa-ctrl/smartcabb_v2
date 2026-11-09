@@ -42,6 +42,51 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-11 — SOS Lot B : écran admin temps réel, veilleur et alarme
+
+- **Commit** : `__COMMIT__` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : permettre à l'équipe d'exploitation de voir, entendre et traiter les alertes SOS en temps réel sans surveiller la base ni appeler l'API manuellement. Le Lot A enregistrait bien les alertes, mais rien ne prévenait l'admin qu'une alerte venait d'arriver.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/emergency-admin-service.ts` | **Nouveau** : client admin (`/active`, `/alerts`, `ack`, `resolve`), normalisation des alertes, helpers SLA (`secondsBetween`, `formatDuration`) |
+| `lib/notification-sound.ts` | Ajout de `playSosAlarm()` : sirène carrée, vibration longue, notification navigateur persistante, annonce vocale |
+| `components/admin/EmergencyAlertsScreen.tsx` | **Nouveau** : écran « Urgences SOS » (KPI, filtres, cartes, chrono SLA, appel/itinéraire, acquitter, clôturer, faux positif) |
+| `components/admin/EmergencyAlertsWatcher.tsx` | **Nouveau** : veilleur global (bannière rouge, pastille flottante, alarme, ré-alarme 2 min) |
+| `pages/AdminApp.tsx` | Écran `admin-emergencies` dans les deux listes valides, rendu lazy, montage du veilleur |
+| `components/admin/AdminDashboard.tsx` | Action rapide « Urgences SOS » en tête + compteur d'alertes actives et style urgent |
+| `docs/EMERGENCY_SOS.md` | Sections Lot B, fichiers, limites et tests |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Client admin** (`lib/emergency-admin-service.ts`) : toutes les requêtes utilisent le **JWT de session admin** (`supabase.auth.getSession()`), jamais la clé anon (les routes `/alerts`, `/active`, `ack`, `resolve` répondraient 403). Timeout 15 s, messages d'erreur explicites pour 401 (session expirée) et 403 (compte non admin). `normalizeAlert()` tolère les champs manquants et force les enums (`role`, `type`, `status`).
+- **Écran** (`EmergencyAlertsScreen`) : chargement `GET /emergency/alerts?limit=200`, filtrage local (en cours / toutes / clôturées). Chrono SLA recalculé chaque seconde ; une alerte `active` de plus de **60 s** passe en rouge « SLA dépassé ». Realtime Supabase (`postgres_changes` sur `emergency_alerts`) + polling de secours toutes les **15 s**. Acquittement (`/ack`) et clôture (`/resolve`) avec note et option `false_alarm`.
+- **Veilleur global** (`EmergencyAlertsWatcher`) : monté dans `AdminApp` hors login/register. Polling `GET /emergency/active` toutes les 20 s + Realtime. Sur nouvelle alerte (ou alerte `active` non acquittée depuis > 2 min), joue `playSosAlarm()` et affiche une bannière rouge. Les alertes présentes au premier chargement sont mémorisées **sans** alarme (pas de sirène à chaque actualisation de page). Sourdine automatique quand l'écran Urgences est ouvert pour éviter le double son. Le réglage « alarme active/coupée » est partagé via `localStorage` (`smartcabb_sos_sound`).
+- **Dashboard** : compteur `sosCount` rafraîchi toutes les 30 s via `getActiveEmergencies()` ; carte rouge pulsée quand > 0.
+- Aucune migration ni modification backend : les routes et la table du Lot A sont réutilisées telles quelles.
+
+### Impact produit / comportement visible
+- L'admin voit immédiatement une bannière rouge « N alertes SOS en cours » et entend une sirène, même s'il est sur un autre écran.
+- L'écran « Urgences SOS » centralise le traitement : appel direct, itinéraire, acquittement, clôture motivée.
+- Les alertes non prises en charge sont ré-alarmées toutes les 2 minutes.
+- Aucune notification n'est envoyée au passager ou au conducteur : la règle de sécurité du Lot A reste inchangée.
+
+### Risques & rollback
+- **Risque** : sirène répétée si une alerte de test reste `active` ; double son si le veilleur et l'écran sont montés simultanément (mitigé par `currentScreen`). Sirène bloquée par la politique navigateur avant le premier clic (comportement standard, pas une régression).
+- **Rollback** : retirer `admin-emergencies` des deux listes de `pages/AdminApp.tsx` et l'action rapide du dashboard ; les fichiers ajoutés peuvent rester sans effet. Aucune donnée n'est modifiée par le Lot B (lecture + `ack`/`resolve` déjà existants).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` (chunk `EmergencyAlertsScreen-*.js` produit)
+- [x] `GET /emergency/active`, `POST /:id/ack`, `POST /:id/resolve` avec JWT admin (Lot A, revérifiés)
+- [ ] Bannière + sirène + ré-alarme : validation manuelle en production
+- [ ] Realtime : validation manuelle (polling de secours actif sinon)
+
+---
+
 ## 2026-11-09 — SOS : socle fiable (persistance, position réelle, statut honnête)
 
 - **Commit** : `2ca6adb` (branche `main`, poussé sur `origin`)

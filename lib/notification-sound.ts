@@ -520,5 +520,93 @@ export function announceReservationReceived(details?: {
   );
 }
 
+// ─── 🚨 Alerte SOS (administrateurs) ─────────────────────────────────────────
+
+/**
+ * Note de sirène dédiée au SOS : onde carrée (plus agressive qu'un sinus) et
+ * glissando descendant pour être immédiatement distinguée du bip de course.
+ */
+function playSosTone(frequency: number, startDelayMs: number, durationMs = 260, volume = 0.9): void {
+  if (!_soundAllowed) return;
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const play = () => {
+      const start = ctx.currentTime + startDelayMs / 1000;
+      const end = start + durationMs / 1000;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(frequency, start);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(180, frequency / 1.6), end);
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(volume, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, end);
+      osc.start(start);
+      osc.stop(end + 0.03);
+    };
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(play).catch(() => {});
+    } else {
+      play();
+    }
+  } catch (e) {
+    console.error('Erreur son SOS:', e);
+  }
+}
+
+/**
+ * 🚨 Alarme SOS — sirène + vibration longue + notification navigateur + voix.
+ * Utilisée par l'écran admin des urgences et le veilleur global.
+ */
+export function playSosAlarm(details?: {
+  type?: string;
+  role?: string;
+  userName?: string;
+  address?: string;
+}): void {
+  console.log('🚨 playSosAlarm');
+  _soundAllowed = true;
+
+  // 3 rafales de sirène (grave → aigu), espacées de 900 ms
+  const burst = (offset: number) => {
+    playSosTone(520, offset, 260, 0.9);
+    playSosTone(780, offset + 300, 260, 0.9);
+  };
+  burst(0);
+  burst(900);
+  burst(1800);
+
+  // Vibration insistante (mobile)
+  vibrate([500, 120, 500, 120, 900]);
+
+  const TYPE_LABELS: Record<string, string> = {
+    medical: 'urgence médicale',
+    security: 'problème de sécurité',
+    accident: 'accident',
+    harassment: 'harcèlement',
+  };
+  const who = details?.userName?.trim() || (details?.role === 'driver' ? 'un conducteur' : 'un passager');
+  const reason = TYPE_LABELS[details?.type || ''] || 'urgence';
+  const where = details?.address ? ` à ${details.address}` : '';
+  const body = `${who} — ${reason}${where}`;
+
+  // Notification navigateur non-bloquante (persistante : requireInteraction)
+  showBrowserNotification('🚨 ALERTE SOS — SmartCabb', body, {
+    tag: 'smartcabb-sos',
+    renotify: true,
+    data: details ?? {},
+  });
+
+  // Annonce vocale (ne bloque jamais l'alarme sonore)
+  void speakMessage(
+    `Alerte SOS. ${who} signale une ${reason}. Ouvrez le tableau de bord des urgences.`,
+    'fr-FR',
+  ).catch((e) => console.error('TTS SOS:', e));
+}
+
 // Alias rétro-compatibilité
 export { playRideNotification as playRideNotificationSound };
