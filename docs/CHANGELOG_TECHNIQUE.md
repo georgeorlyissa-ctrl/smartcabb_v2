@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-11 — Photo du véhicule obligatoire à l'inscription chauffeur
+
+- **Commit** : `307c007` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : la photo du véhicule était présentée comme « optionnelle » et, surtout, n'était jamais envoyée au serveur : elle restait dans le navigateur. Or la photo du véhicule est une condition pour devenir chauffeur SmartCabb. Elle devient obligatoire dans le formulaire, transmise à l'inscription et visible par l'admin lors de la validation du dossier.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/driver/DriverRegistrationScreen.tsx` | Libellé `Photo du véhicule *`, encart bordé ambre tant qu'aucune photo, texte « obligatoire », validation bloquante dans `handleSubmit`, envoi de `vehiclePhoto` |
+| `lib/auth-service-driver-signup.ts` | Nouveau champ `vehiclePhoto` (Base64) + `signupVersion: 2` dans le corps POST `/drivers/signup` |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | Lecture de `vehiclePhoto`, rejet `400` pour les clients v2 sans photo, persistance `vehicle.photo` et `vehicle_photo` |
+| `components/admin/DriverDetailModal.tsx` | Onglet « Véhicule » : affichage de la photo ou alerte « dossier incomplet, ne pas valider » |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Contrôles côté client** : `vehiclePhoto` (fichier `File`) est distinct de `formData`. La validation s'exécute après les informations véhicule et avant la photo de profil / les CGU / l'OTP : `if (!vehiclePhoto) { toast.error('Veuillez ajouter la photo du véhicule (obligatoire pour devenir chauffeur)'); return; }`. Le fichier est converti en Base64 par `FileReader` (`vehiclePhotoPreview`), comme la photo de profil. Contraintes inchangées : JPG/JPEG, max 1 Mo.
+- **Transport** : `signUpDriver()` accepte `vehiclePhoto?: string`, l'ajoute au JSON de `/drivers/signup` et envoie `signupVersion: 2`.
+- **Rétro-compatibilité serveur** : le champ n'est **exigé** que si `Number(body.signupVersion || 0) >= 2`. Un ancien APK (qui n'envoie pas `signupVersion`) continue de s'inscrire : l'Edge Function journalise simplement `⚠️ Inscription sans photo de véhicule (client ancien)`. Cela évite de bloquer les chauffeurs sur une version non mise à jour pendant la propagation du déploiement.
+- **Persistance** : `vehicle.photo` (objet véhicule imbriqué, format lu par l'admin) et `vehicle_photo` (champ à plat, compatibilité). Aucune migration : le profil conducteur est stocké dans le KV (`profile:{id}` / `driver:{id}`).
+- **Validation admin** : l'onglet « Véhicule » de `DriverDetailModal` lit `driver.vehicle?.photo || driver.vehicle_photo`. Si absent → encart ambre « Photo du véhicule manquante — dossier incomplet, ne pas valider le chauffeur ».
+
+### Impact produit / comportement visible
+- Le chauffeur ne peut plus soumettre son inscription sans photo de son véhicule.
+- La photo est réellement enregistrée avec le dossier, donc vérifiable par l'équipe avant approbation.
+- L'admin voit la photo (ou l'alerte) dans le dossier, onglet « Véhicule ».
+
+### Risques & rollback
+- **Risque** : taille du profil KV (+ jusqu'à ~1,4 Mo de Base64 par dossier) — même mécanisme que la photo de profil déjà en place.
+- **Risque** : un ancien APK contourne encore l'obligation (choix assumé pour éviter un blocage de service) ; l'alerte admin permet de refuser le dossier.
+- **Rollback** : retirer le bloc `if (!vehiclePhoto)` et le champ `vehiclePhoto` de `signUpDriver`, et le contrôle `signupVersion` dans `driver-routes.ts`. Les profils déjà créés conservent leur photo (champ optionnel à la lecture).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build`
+- [ ] Inscription complète avec photo : validation manuelle (formulaire `/app/driver/signup`)
+- [ ] Inscription sans photo : message d'erreur et blocage
+- [ ] Dossier admin : photo visible dans l'onglet « Véhicule » après inscription
+
+---
+
 ## 2026-11-11 — Pages de conversion dédiées `/commander` et `/reserver`
 
 - **Commit** : `cdbd981` (branche `main`, poussé sur `origin`)
