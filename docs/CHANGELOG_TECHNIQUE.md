@@ -42,6 +42,63 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-11 — Responsivité : le bas des pages n'est plus coupé par la barre système Android
+
+- **Commit** : `21b4579` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : sur plusieurs téléphones Android, le bas des écrans était inaccessible : le bouton « Réserver / Commander » de l'écran « Prix estimé » et le bouton « Suivant » de la fenêtre « Montant de recharge » se retrouvaient sous la barre de navigation système. Les barres d'action basses et les derniers blocs des pages devaient rester entièrement visibles.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `styles/globals.css` | **Entrée CSS réellement bundlée** : variable `--app-safe-bottom`, `html.cap-apk { --app-safe-bottom: 48px }`, utilitaires `.pb-safe`, `.pb-safe-bar`, `.pb-safe-page`, `.pb-safe-dialog`, `.pt-safe`, filet `.min-h-screen:not(.pb-safe-page) > *:last-child`, `.h-app` / `.min-h-app`, `.cap-apk .hide-in-apk` |
+| `public/client-init.js` | Détection APK avant le premier rendu React (`?platform=apk`, `Capacitor.isNativePlatform()`, `localStorage.sc_is_apk`) + pose de `html.cap-apk` |
+| `App.tsx` | `isNativeApp` élargi au bridge Capacitor (et plus seulement `?platform=apk`) |
+| `components/passenger/EstimateScreen.tsx` | Footer sticky prix + « Commander » : `pb-safe-bar` |
+| `components/passenger/RechargeModal.tsx` | Sheet `max-h-[92dvh]`, barre « Retour / Suivant » rendue `sticky bottom-0` avec `pb-safe-bar` |
+| `components/ui/dialog.tsx` | `DialogContent` : `max-h-[92dvh] overflow-y-auto pb-safe-dialog` (toutes les modales) |
+| `components/passenger/MapScreen.tsx` | Carte basse : `pb-[env(safe-area-inset-bottom)]` → `pb-safe` |
+| `components/passenger/SearchingDriversScreen.tsx` | Barre basse de recherche : `pb-safe` |
+| `components/passenger/RideInProgressScreen.tsx` | Compteur de course bas : `pb-safe-bar` |
+| `components/passenger/RideTrackingScreen.tsx` | Carte de suivi basse : `pb-safe-bar` |
+| `components/passenger/WalletScreen.tsx` | Boutons flottants (diagnostic / actualiser) remontés via `bottom-[calc(1.5rem+var(--app-safe-bottom))]` |
+| `components/driver/DriverDashboardNew.tsx` | Barre de navigation fixe : `pb-safe` |
+| `pages/TrackRidePage.tsx` | Carte basse publique : `pb-safe` |
+| `components/passenger/DriverFoundScreen.tsx` | Boutons d'action bas : `pb-safe-page` |
+| `components/driver/DriverRegistrationScreen.tsx` | Pied de formulaire : `pb-safe-page` |
+| `components/passenger/PaymentScreen.tsx`, `PaymentMethodScreen.tsx`, `PaymentReceiptScreen.tsx`, `RatingScreen.tsx`, `RideCompletedScreen.tsx`, `ProfileScreen.tsx`, `RideScreen.tsx`, `LoginScreen.tsx`, `RegisterScreen.tsx`, `SupportScreen.tsx`, `RideHistoryScreen.tsx`, `PromoCodeScreen.tsx`, `LoyaltyScreen.tsx`, `ScheduledRides.tsx`, `components/AppNotificationsScreen.tsx`, `SettingsScreen.tsx`, `PrivacySettingsScreen.tsx`, `PaymentSettingsScreen.tsx` | Racine d'écran : `pb-safe-page` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Cause racine** : l'app native est une WebView Capacitor configurée sur `https://www.smartcabb.com/app/passenger?platform=apk` (`capacitor.config.ts`). La WebView dessine en *edge-to-edge* sous la barre de navigation système (≈48 dp), alors que `env(safe-area-inset-bottom)` y vaut **0** : tout `fixed`/`sticky bottom-0` et tout dernier bloc de page passait sous la barre.
+- **Variable unique** : `:root { --app-safe-bottom: env(safe-area-inset-bottom, 0px) }` (0 sur desktop, valeur réelle sur iOS) puis `html.cap-apk { --app-safe-bottom: 48px }` pour Android/APK.
+- **Détection précoce** : `public/client-init.js` (chargé en `<script>` dans `index.html`, avant `main.tsx`) pose `cap-apk` dès que `?platform=apk`, `window.Capacitor.isNativePlatform()` ou `localStorage.sc_is_apk === '1'`. Le flag est mémorisé pour survivre à une navigation qui perd la query string. `App.tsx` conserve la même détection pour le reste de l'init native.
+- **Utilitaires** (avec `!important` pour primer sur les `p-4`/`pb-*` de Tailwind) : `.pb-safe` = `max(0.75rem, --app-safe-bottom)`, `.pb-safe-bar` = `--app-safe-bottom + 0.75rem`, `.pb-safe-page` = `--app-safe-bottom + 1.5rem`, `.pb-safe-dialog` = `max(1.5rem, --app-safe-bottom)`.
+- **⚠️ Fichier CSS important** : le seul CSS bundlé est `styles/globals.css` (importé par `main.tsx`, Tailwind v4). `index.css` à la racine **n'est importé par personne** : les règles y sont inertes, elles ont donc été écrites uniquement dans `globals.css` (vérifié : `app-safe-bottom`, `pb-safe-bar`, `pb-safe-page`, `pb-safe-dialog` présents dans `dist/assets/index-*.css`).
+- **Filet de sécurité** : `.min-h-screen:not(.pb-safe-page) > *:last-child { margin-bottom: max(0px, var(--app-safe-bottom)) }` — les pages non encore traitées remontent quand même leur dernier bloc. Les pages déjà passées en `pb-safe-page` sont exclues pour éviter un double espacement.
+- **Modales** : `max-h-[92dvh]` (au lieu de `90vh`) + `pb-safe-dialog` sur la base `DialogContent`, donc toutes les modales de l'app gagnent la marge ; la fenêtre de recharge rend sa barre de navigation `sticky bottom-0` pour que « Suivant » reste atteignable même sur un sheet plein écran.
+- **Correctif déployable sans rebuild APK** : l'APK charge le site distant ; un déploiement Vercel suffit.
+
+### Impact produit / comportement visible
+- Écran « Prix estimé » : le bloc prix + bouton « Commander » et la ligne « Réserver » restent entièrement visibles au-dessus de la barre système.
+- Portefeuille → « Recharger » : les montants suggérés défilent, la barre « Retour / Suivant » reste collée en bas et ne passe plus sous la barre Android.
+- Toutes les pages défilantes (profil, historique, paiement, réglages, support, notifications, inscription chauffeur…) terminent leur contenu au-dessus de la barre système.
+- Sur navigateur desktop/web : aucun changement visuel (variable = 0).
+
+### Risques & rollback
+- **Risque** : en mode `cap-apk`, la réserve forcée de 48px ajoute ~24px de vide sur les téléphones en navigation gestuelle (barre fine). Sur les écrans à fond coloré, ce vide laisse apparaître le fond de page sous le footer.
+- **Risque** : le filet `.min-h-screen > *:last-child` peut ajouter 48px sous un footer déjà traité ailleurs ; les pages principales sont exclues via `:not(.pb-safe-page)`.
+- **Rollback** : `git revert 21b4579`. Pour désactiver la réserve sans redéployer de code, retirer la classe `cap-apk` (Client Init) ou passer `--app-safe-bottom` à `env(safe-area-inset-bottom, 0px)` dans `html.cap-apk`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK et utilitaires présents dans `dist/assets/index-*.css` (`app-safe-bottom` ×9, `pb-safe-bar`, `pb-safe-page`, `pb-safe-dialog`, `cap-apk`)
+- [ ] Test manuel Android (APK) : écran « Prix estimé » (bouton « Commander » visible) et modal recharge (« Suivant » entièrement visible)
+- [ ] Déploiement Vercel vérifié
+
+---
+
 ## 2026-11-11 — Photo du véhicule obligatoire à l'inscription chauffeur
 
 - **Commit** : `307c007` (branche `main`, poussé sur `origin`)
