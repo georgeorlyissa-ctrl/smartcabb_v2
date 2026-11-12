@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { formatCDF, getExchangeRate } from '../../lib/pricing';
 import { syncUserProfile } from '../../lib/sync-service';
 import { sendSMS } from '../../lib/sms-service';
+import { SMART_REWARDS_ENABLED } from '../../lib/feature-flags';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { useAppState } from '../../hooks/useAppState';
 import { Button } from '../ui/button';
@@ -37,7 +38,7 @@ import { Input } from '../ui/input';
 import { FavoriteLocations } from './FavoriteLocations';
 
 export function ProfileScreen() {
-  const { setCurrentScreen, state, passengers, setCurrentUser, setCurrentView } = useAppState();
+  const { setCurrentScreen, state, passengers, setCurrentUser, mergeCurrentUser, setCurrentView } = useAppState();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showAddresses, setShowAddresses] = useState(false);
@@ -86,11 +87,10 @@ export function ProfileScreen() {
 
           if (data.success && data.balance !== undefined) {
             setWalletBalance(data.balance);
-            // Mettre à jour aussi dans le state global
-            setCurrentUser({
-              ...state.currentUser,
-              walletBalance: data.balance
-            });
+            // ⚠️ Mise à jour PARTIELLE : ne doit jamais réécrire nom / email /
+            // adresse avec l'ancienne valeur capturée par ce rafraîchissement
+            // automatique (sinon une sauvegarde de profil est écrasée).
+            mergeCurrentUser({ walletBalance: data.balance });
           }
         }
       } catch (error) {
@@ -171,6 +171,7 @@ export function ProfileScreen() {
         }
       } catch {}
       try {
+        if (!SMART_REWARDS_ENABLED) return;
         const l = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/loyalty/${state.currentUser.id}`,
           { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
@@ -247,6 +248,24 @@ export function ProfileScreen() {
       return;
     }
 
+    // ─── Validation avant envoi ────────────────────────────────────────────
+    // Un email saisi doit être complet : « hmapela8 » n'a jamais été accepté
+    // (ni par le serveur, ni par la messagerie). On bloque et on explique.
+    const name = editData.name.trim();
+    const email = editData.email.trim();
+    const phone = editData.phone.trim();
+    const address = editData.address.trim();
+
+    if (!name) {
+      toast.error('Le nom complet est obligatoire');
+      return;
+    }
+
+    if (email && !/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email)) {
+      toast.error('Email incomplet : ajoutez le @ et le domaine (ex. nom@gmail.com)');
+      return;
+    }
+
     setIsSaving(true);
 
     // 🔥 DEBUG: Afficher ce qui va être envoyé
@@ -269,10 +288,10 @@ export function ProfileScreen() {
     const previousUser = { ...state.currentUser };
     const updatedUser = {
       ...state.currentUser,
-      name: editData.name,
-      email: editData.email,
-      phone: editData.phone,
-      address: editData.address
+      name,
+      email,
+      phone,
+      address
     };
 
     // Mettre à jour le state immédiatement pour une réactivité instantanée
@@ -300,10 +319,10 @@ export function ProfileScreen() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          name: editData.name,
-          email: editData.email,
-          phone: editData.phone,
-          address: editData.address
+          name,
+          email,
+          phone,
+          address
         })
       });
 
@@ -331,10 +350,10 @@ export function ProfileScreen() {
         const existingData = JSON.parse(savedData);
         const updatedData = {
           ...existingData,
-          name: editData.name,
-          email: editData.email,
-          phone: editData.phone,
-          address: editData.address
+          name,
+          email,
+          phone,
+          address
         };
         localStorage.setItem(userKey, JSON.stringify(updatedData));
         console.log('✅ localStorage mis à jour:', updatedData);
@@ -343,11 +362,13 @@ export function ProfileScreen() {
       toast.success('Profil mis à jour avec succès ✅');
 
       // 📱 Envoyer SMS de confirmation (sans bloquer si échec)
-      if (editData.phone) {
+      // ⚠️ N'envoyer que si le numéro a réellement changé : évite un SMS à
+      // chaque correction d'email et économise les crédits EJ SMS.
+      if (phone && phone !== previousUser.phone) {
         try {
           await sendSMS({
-            to: editData.phone,
-            message: `SmartCabb : Votre profil a ete mis a jour avec succes. ${editData.name}`,
+            to: phone,
+            message: `SmartCabb : Votre profil a ete mis a jour avec succes. ${name}`,
             type: 'profile_updated',
           });
           console.log('✅ SMS de mise à jour profil envoyé');
@@ -368,6 +389,8 @@ export function ProfileScreen() {
         phone: previousUser.phone,
         address: previousUser.address || ''
       });
+      // On rouvre le formulaire pour permettre de corriger sans tout ressaisir
+      setIsEditing(true);
     } finally {
       setIsSaving(false);
     }
@@ -381,14 +404,17 @@ export function ProfileScreen() {
   ];
 
   const menuRows = [
-    {
-      icon: Gift,
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
-      title: 'Smart Rewards',
-      subtitle: loyaltyBalance > 0 ? `${loyaltyBalance.toLocaleString('fr-FR')} points` : 'Mes points et récompenses',
-      screen: 'loyalty',
-    },
+    // 🎁 Smart Rewards : masqué tant que le drapeau est désactivé
+    ...(SMART_REWARDS_ENABLED
+      ? [{
+          icon: Gift,
+          iconBg: 'bg-amber-100',
+          iconColor: 'text-amber-600',
+          title: 'Smart Rewards',
+          subtitle: loyaltyBalance > 0 ? `${loyaltyBalance.toLocaleString('fr-FR')} points` : 'Mes points et récompenses',
+          screen: 'loyalty',
+        }]
+      : []),
     {
       icon: Banknote,
       iconBg: 'bg-green-100',
@@ -637,6 +663,10 @@ export function ProfileScreen() {
                   <Input
                     id="email"
                     type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    spellCheck={false}
                     value={editData.email}
                     onChange={(e) => setEditData({...editData, email: e.target.value})}
                     className="mt-1"
@@ -673,6 +703,8 @@ export function ProfileScreen() {
                     id="address"
                     value={editData.address}
                     onChange={(e) => setEditData({...editData, address: e.target.value})}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
+                    enterKeyHint="done"
                     className="mt-1"
                     placeholder="Votre adresse à Kinshasa"
                   />
@@ -700,6 +732,45 @@ export function ProfileScreen() {
                   </span>
                 </div>
               </div>
+
+              {/* Actions d'édition — juste sous les champs pour rester
+                  accessibles au clavier (le bouton du haut sort de l'écran
+                  dès qu'on fait défiler le formulaire). */}
+              {isEditing && (
+                <div className="flex items-center gap-3 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditData({
+                        name: state.currentUser?.name || '',
+                        email: state.currentUser?.email || '',
+                        phone: state.currentUser?.phone || '',
+                        address: state.currentUser?.address || ''
+                      });
+                    }}
+                    disabled={isSaving}
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+                  >
+                    {isSaving ? 'Sauvegarde...' : 'Enregistrer'}
+                  </Button>
+                </div>
+              )}
+
+              {isEditing && (
+                <p className="text-xs text-gray-500">
+                  L'email doit être complet, par exemple <span className="font-medium">nom@gmail.com</span>.
+                </p>
+              )}
             </div>
           </Card>
         </motion.div>
@@ -743,7 +814,7 @@ export function ProfileScreen() {
                 <button
                   key={method.id}
                   onClick={() => {
-                    setCurrentUser({ ...state.currentUser, favoritePaymentMethod: method.id });
+                    mergeCurrentUser({ favoritePaymentMethod: method.id });
                     localStorage.setItem('smartcabb_preferred_payment', method.id);
                     setShowPaymentDialog(false);
                     toast.success(`Mode de paiement mis a jour`);

@@ -23,7 +23,6 @@ const QUICK_REPLIES: Record<string, { fr: QuickReply[]; en: QuickReply[] }> = {
       { label: 'Zones', value: 'Où êtes-vous disponible ?' },
       { label: 'Application', value: 'Comment télécharger l\'app ?' },
       { label: 'Paiement', value: 'Comment payer ?' },
-      { label: 'Fidélité', value: 'Points fidélité' },
       { label: 'Contact', value: 'Contact support' },
     ],
     en: [
@@ -32,7 +31,6 @@ const QUICK_REPLIES: Record<string, { fr: QuickReply[]; en: QuickReply[] }> = {
       { label: 'Areas', value: 'Where are you available?' },
       { label: 'App', value: 'How to download the app?' },
       { label: 'Payment', value: 'How to pay?' },
-      { label: 'Rewards', value: 'Loyalty points' },
       { label: 'Contact', value: 'Contact support' },
     ],
   },
@@ -223,16 +221,12 @@ It's regularly maintained and renewed, and we have hundreds of partner drivers i
 
   fidelite: {
     keywords: ['fidélité', 'fidelite', 'fidélisation', 'points', 'récompense', 'recompense', 'récompenses', 'gratuit', 'gratuite', 'reward', 'rewards', 'loyalty', 'smart rewards', 'cadeau'],
-    fr: `Avec Smart Rewards, chaque course terminée vous fait gagner des points : un dixième du prix payé, multiplié selon la catégorie, avec un bonus la nuit entre 21h et 6h. Votre première course rapporte +1000 points bonus.
+    fr: `Smart Rewards est momentanément désactivé : les points ne sont pas encore utilisables et la rubrique est masquée dans l'application. Nous vous préviendrons dès la réactivation.
 
-À 7500 points, vous débloquez une course Standard gratuite (plafonnée). D'autres paliers existent : -15% à 3000 pts, -30% à 6000 pts, puis des gratuites Confort, Plus et Business.
+En attendant, les codes promo restent disponibles au moment de la commande. Pour toute question, appelez le +243 960 624 008.`,
+    en: `Smart Rewards is temporarily disabled: points cannot be used yet and the section is hidden in the app. We will let you know as soon as it is back.
 
-Retrouvez votre solde dans Profil, rubrique Smart Rewards, et utilisez vos points au moment du paiement. Les points expirent après 12 mois d'inactivité.`,
-    en: `With Smart Rewards, every completed ride earns you points: one tenth of the fare, multiplied by category, with a night bonus between 9pm and 6am. Your first ride earns a +1000 point bonus.
-
-At 7,500 points, you unlock a free Standard ride (capped). Other tiers exist: -15% at 3,000 pts, -30% at 6,000 pts, then free Confort, Plus and Business rides.
-
-Find your balance in Profile, Smart Rewards section, and use your points at payment time. Points expire after 12 months of inactivity.`
+In the meantime, promo codes are still available when you order. For any question, call +243 960 624 008.`
   },
 
   compte: {
@@ -279,8 +273,8 @@ Find your balance in Profile, Smart Rewards section, and use your points at paym
 
   promos: {
     keywords: ['promo', 'promotion', 'code promo', 'coupon', 'réduction', 'reduction', 'remise', 'discount', 'offre', 'offres', 'deal'],
-    fr: `Les codes promo se saisissent au moment de la commande, avant de confirmer : la remise s'applique immédiatement au prix estimé. Cumulez aussi des points Smart Rewards à chaque course. Les offres en cours sont annoncées dans l'application.`,
-    en: `Promo codes are entered when ordering, before confirming: the discount applies immediately to the estimated price. Also earn Smart Rewards points on every ride. Current offers are announced in the app.`
+    fr: `Les codes promo se saisissent au moment de la commande, avant de confirmer : la remise s'applique immédiatement au prix estimé. Les offres en cours sont annoncées dans l'application.`,
+    en: `Promo codes are entered when ordering, before confirming: the discount applies immediately to the estimated price. Current offers are announced in the app.`
   },
 
   aeroport: {

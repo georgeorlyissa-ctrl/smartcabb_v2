@@ -27,6 +27,11 @@ interface AppContextType {
   state: AppState;
   setCurrentUser: (user: User | null) => void;
   updateUser?: (user: User | null) => void;
+  /** Mise à jour PARTIELLE de l'utilisateur courant : ne remplace que les
+   *  champs fournis. À utiliser pour les rafraîchissements périodiques
+   *  (solde, points…) afin de ne jamais écraser une donnée fraîchement
+   *  enregistrée par le profil (email, nom, adresse). */
+  mergeCurrentUser?: (patch: Partial<User>) => void;
   setCurrentDriver: (driver: Driver | null) => void;
   setCurrentAdmin: (admin: AppState['currentAdmin']) => void;
   setCurrentRide: (ride: Ride | null) => void;
@@ -247,6 +252,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, currentUser: user }));
   }, []);
 
+  const mergeCurrentUser = useCallback((patch: Partial<User>) => {
+    setState(prev => (
+      prev.currentUser
+        ? { ...prev, currentUser: { ...prev.currentUser, ...patch } }
+        : prev
+    ));
+  }, []);
+
   const setCurrentDriver = useCallback((driver: Driver | null) => {
     setState(prev => ({ ...prev, currentDriver: driver }));
   }, []);
@@ -424,6 +437,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     state,
     setCurrentUser,
     updateUser: setCurrentUser,
+    mergeCurrentUser,
     setCurrentDriver,
     setCurrentAdmin,
     setCurrentRide,

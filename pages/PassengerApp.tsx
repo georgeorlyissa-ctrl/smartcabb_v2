@@ -32,6 +32,7 @@ import { SupportScreen } from '../components/passenger/SupportScreen';
 import { MapScreenSimple } from '../components/passenger/MapScreenSimple';
 import { EstimateScreen } from '../components/passenger/EstimateScreen';
 import { LoyaltyScreen } from '../components/passenger/LoyaltyScreen';
+import { SMART_REWARDS_ENABLED } from '../lib/feature-flags';
 import { RideScreen } from '../components/passenger/RideScreen';
 import { DriverFoundScreen } from '../components/passenger/DriverFoundScreen';
 import { LiveTrackingMap } from '../components/passenger/LiveTrackingMap';
@@ -283,6 +284,14 @@ function PassengerAppContent() {
           </ErrorBoundary>
         );
       case 'loyalty':
+        // 🎁 Smart Rewards désactivé : on renvoie vers le profil
+        if (!SMART_REWARDS_ENABLED) {
+          return (
+            <ErrorBoundary>
+              <ProfileScreen />
+            </ErrorBoundary>
+          );
+        }
         return (
           <ErrorBoundary>
             <LoyaltyScreen />

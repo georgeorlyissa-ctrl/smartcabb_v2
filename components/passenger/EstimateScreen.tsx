@@ -17,6 +17,7 @@ import { PassengerCountSelector } from '../PassengerCountSelector';
 import { PromoCodeInput } from '../PromoCodeInput';
 import { BookForSomeoneElse } from './BookForSomeoneElse';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { SMART_REWARDS_ENABLED } from '../../lib/feature-flags';
 import { supabase } from '../../lib/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Input } from '../ui/input';
@@ -94,6 +95,8 @@ export function EstimateScreen() {
 
   useEffect(() => {
     const fetchLoyalty = async () => {
+      // 🎁 Smart Rewards désactivé : aucun appel réseau, aucun bloc affiché
+      if (!SMART_REWARDS_ENABLED) return;
       if (!state.currentUser?.id) return;
       try {
         const resp = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/loyalty/${state.currentUser.id}`, {
@@ -327,7 +330,7 @@ export function EstimateScreen() {
       : Math.max(0, basePrice - appliedPromo.discount)
     : basePrice;
 
-  const loyaltyDiscount = selectedLoyalty ? (
+  const loyaltyDiscount = SMART_REWARDS_ENABLED && selectedLoyalty ? (
     selectedLoyalty.type === 'discount'
       ? Math.min(Math.round(finalPrice * selectedLoyalty.discount), selectedLoyalty.cap)
       : Math.min(finalPrice, selectedLoyalty.cap)
@@ -373,7 +376,7 @@ export function EstimateScreen() {
 
     let loyaltyRedeemCode: string | null = null;
     let priceToCharge = priceAfterLoyalty;
-    if (selectedLoyalty) {
+    if (SMART_REWARDS_ENABLED && selectedLoyalty) {
       try {
         const resp = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/loyalty/redeem`, {
           method: 'POST',
@@ -871,8 +874,8 @@ export function EstimateScreen() {
               />
             </div>
 
-            {/* Smart Rewards */}
-            {loyaltyData?.loyalty && (
+            {/* Smart Rewards — masqué quand le drapeau est désactivé */}
+            {SMART_REWARDS_ENABLED && loyaltyData?.loyalty && (
               <div className="px-4">
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                   <div className="flex items-center justify-between mb-2">
