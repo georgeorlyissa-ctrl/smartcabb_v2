@@ -25,7 +25,8 @@ import { Card } from '../ui/card';
 import { Switch } from '../ui/switch';
 import { useAppState } from '../../hooks/useAppState';
 import { toast } from '../../lib/toast';
-import { User, Phone, AlertCircle, Users } from '../../lib/icons';
+import { User, Phone, AlertCircle, Users, ContactBook } from '../../lib/icons';
+import { pickPhoneContact } from '../../lib/contact-picker';
 
 interface BookForSomeoneElseProps {
   showForm: boolean;
@@ -41,6 +42,8 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
   const [beneficiaryName, setBeneficiaryName] = useState('');
   const [beneficiaryPhone, setBeneficiaryPhone] = useState('');
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  /** Pendant l'ouverture du sélecteur de contacts du téléphone */
+  const [pickingContact, setPickingContact] = useState(false);
 
   /**
    * Valider le numéro de téléphone RDC
@@ -126,10 +129,45 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
     }
   };
 
+  /**
+   * Importe le numéro (et le nom) depuis le répertoire du téléphone.
+   * Progressive enhancement : plugin natif Capacitor → Contact Picker API
+   * du navigateur ; sinon on guide l'utilisateur vers la saisie manuelle.
+   */
+  const handlePickContact = async () => {
+    if (pickingContact) return;
+    // On referme le clavier pour laisser toute la place au sélecteur système
+    try {
+      (document.activeElement as HTMLElement | null)?.blur();
+    } catch {}
+    setPickingContact(true);
+    try {
+      const result = await pickPhoneContact();
+
+      if (result.status === 'ok') {
+        setBeneficiaryPhone(result.contact.phone);
+        setErrors({});
+        // Le nom n'est complété que s'il n'a pas déjà été saisi à la main
+        if (!beneficiaryName.trim() && result.contact.name) {
+          setBeneficiaryName(result.contact.name);
+        }
+        toast.success('Contact importé depuis le répertoire');
+      } else if (result.status === 'denied') {
+        toast.error("Autorisez l'accès aux contacts pour choisir un numéro");
+      } else if (result.status === 'unsupported') {
+        toast.error('Sélection dans les contacts indisponible sur ce téléphone : saisissez le numéro');
+      } else if (result.status === 'error') {
+        toast.error(result.message || 'Impossible de lire ce contact');
+      }
+      // 'cancelled' : l'utilisateur a refermé le sélecteur, aucun message à afficher
+    } finally {
+      setPickingContact(false);
+    }
+  };
+
   useEffect(() => {
     updateBeneficiary();
   }, [beneficiaryName, beneficiaryPhone, bookingForSelf]);
-
   return (
     <Card className="p-4 space-y-3 bg-white">
       {/* Toggle : Pour moi / Pour quelqu'un d'autre */}
@@ -190,16 +228,30 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
               )}
             </div>
 
-            {/* Téléphone du bénéficiaire */}
+            {/* Téléphone du bénéficiaire — saisie manuelle ou répertoire */}
             <div>
-              <Label htmlFor="beneficiary-phone" className="text-sm">
-                Téléphone *
-              </Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label htmlFor="beneficiary-phone" className="text-sm">
+                  Téléphone *
+                </Label>
+                <button
+                  type="button"
+                  onClick={handlePickContact}
+                  disabled={pickingContact}
+                  className="flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 transition-colors active:bg-blue-100 disabled:opacity-60"
+                  aria-label="Choisir un numéro dans le répertoire du téléphone"
+                >
+                  <ContactBook className="w-3.5 h-3.5" />
+                  {pickingContact ? 'Ouverture…' : 'Contacts'}
+                </button>
+              </div>
               <div className="relative mt-1">
                 <Phone className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   id="beneficiary-phone"
                   type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   placeholder="+243 999..."
                   value={beneficiaryPhone}
                   onChange={(e) => {
@@ -217,7 +269,7 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
                 </p>
               )}
               <p className="text-xs text-gray-500 mt-1">
-                Ex: +243999999999 ou 0999999999
+                Ex: +243999999999 ou 0999999999 — ou touchez « Contacts »
               </p>
             </div>
           </motion.div>
