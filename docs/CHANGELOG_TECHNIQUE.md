@@ -42,6 +42,54 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-12 — Profil : enregistrement email/adresse réparé, boutons d'action, retour inscription, Smart Rewards désactivé
+
+- **Commit** : `fa97943` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : trois retours utilisateur. (1) Impossible d'enregistrer un email dans « Mon Profil ». (2) L'écran d'inscription n'avait pas de flèche retour dans l'APK. (3) La rubrique Smart Rewards devait être désactivée temporairement.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `hooks/useAppState.tsx` | Nouveau `mergeCurrentUser(patch)` : mise à jour **partielle** de l'utilisateur courant |
+| `components/passenger/ProfileScreen.tsx` | Validation + normalisation avant sauvegarde, boutons « Annuler / Enregistrer » sous les champs, rafraîchissement du solde sans écrasement, `inputMode`/`enterKeyHint` |
+| `components/passenger/RegisterScreen.tsx` | Flèche retour rétablie (classe `hide-in-apk` retirée) |
+| `lib/feature-flags.ts` | **Nouveau** : `SMART_REWARDS_ENABLED = false` |
+| `components/passenger/EstimateScreen.tsx` | Bloc remise fidélité masqué, aucun appel `/loyalty/*`, garde sur la remise |
+| `pages/PassengerApp.tsx` | Route `loyalty` → renvoie vers le profil quand le drapeau est off |
+| `components/ChatWidget.tsx` | Réponse « fidélité » réécrite (fonctionnalité en pause), raccourci « Fidélité / Rewards » retiré |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Cause du bug d'enregistrement (la vraie)** : l'effet de rafraîchissement du solde (`setInterval` 10 s) appelait `setCurrentUser({ ...state.currentUser, walletBalance })`. La closure figeait `state.currentUser` **au montage** : toutes les 10 secondes, l'ancien objet (ancien email, ancien nom, ancienne adresse) était réécrit dans le state et donc dans `localStorage`. L'enregistrement fonctionnait puis était silencieusement annulé. → remplacé par `mergeCurrentUser({ walletBalance })`, qui fusionne avec l'état courant (`setState(prev => …)`). Même correction pour le changement de moyen de paiement.
+- **Validation côté écran** : `name` obligatoire ; si un email est saisi il doit respecter `^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$` (le cas observé `hmapela8` est refusé avec un message explicite « ajoutez le @ et le domaine »). Les valeurs sont `trim()` avant envoi et avant écriture dans le state.
+- **Ergonomie** : boutons **Annuler / Enregistrer** ajoutés juste sous les champs (le bouton du haut sortait de l'écran dès qu'on faisait défiler, clavier ouvert) ; la touche « Terminé » du champ Adresse déclenche l'enregistrement ; en cas d'échec réseau, le formulaire reste ouvert (avant, il se refermait).
+- **SMS de confirmation** : envoyé uniquement si le **numéro a changé** (avant : à chaque modification, même d'email) → économie de crédits EJ SMS.
+- **Occupation conservée** : l'écriture serveur continue sur `POST /passengers/update/:id`, qui alimente `passenger:{id}` **et** `profile:{id}` ; c'est `profile:{id}` que renvoie `/auth/login`, donc l'email tient après reconnexion.
+- **Retour inscription** : `hide-in-apk` masquait le bouton dans l'app native (`client-init.js` injecte `.hide-in-apk { display:none }`). Classe retirée du bouton et de l'espaceur (l'espaceur masqué décalait le titre).
+- **Smart Rewards en pause** : drapeau unique dans `lib/feature-flags.ts`. Conséquences : rubrique retirée du profil, bloc de remise retiré de « Prix estimé » (tree-shaké du bundle), écran `/loyalty` qui renvoie le profil, aucun appel réseau. Les points restent en base, réactivation = repasser le drapeau à `true`.
+
+### Impact produit / comportement visible
+- Le passager peut modifier nom, email, adresse et enregistrer depuis le bas du formulaire ; la valeur reste après rafraîchissement et après reconnexion.
+- Email incomplet → message clair au lieu d'un enregistrement silencieux d'une valeur inutilisable.
+- Flèche retour visible sur l'écran « Inscription » (APK inclus).
+- Plus aucune mention de points/récompenses dans l'app (profil, réservation, chatbot).
+
+### Risques & rollback
+- **Risque** : les comptes qui avaient déjà un email invalide en base (ex. `hmapela8`) le conservent jusqu'à correction manuelle ; ils devront ressaisir un email valide.
+- **Risque** : réactivation des récompenses oubliée ; le flag est commenté et documenté.
+- **Rollback** : `git revert fa97943`. Réactiver les récompenses : `SMART_REWARDS_ENABLED = true` dans `lib/feature-flags.ts`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK — bundle sans « Smart Rewards », présence de « Enregistrer » et « Email incomplet »
+- [ ] Test manuel : Profil → Modifier → email `nom@gmail.com` → Enregistrer → recharger l'app → email conservé
+- [ ] Test manuel : inscription depuis l'APK → flèche retour visible
+- [ ] Test manuel : aucune rubrique Smart Rewards dans le profil ni sur « Prix estimé »
+
+---
+
 ## 2026-11-12 — « Réserver pour quelqu'un d'autre » : import du numéro depuis le répertoire
 
 - **Commit** : `2cb7811` (branche `main`, poussé sur `origin`)
