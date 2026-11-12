@@ -42,6 +42,49 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-12 — Réseaux sociaux : liens officiels centralisés (Facebook, Instagram, TikTok)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : le métier a fourni les vraies adresses de ses comptes. Les pieds de page pointaient vers des comptes inexistants (`facebook.com/smartcabb`, `twitter.com/smartcabb`, `youtube.com/@smartcabb`, `linkedin.com/company/smartcabb`) et le chatbot citait d'anciens noms de comptes.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/social-links.ts` | **Nouveau** : source unique `SOCIAL_LINKS` / `SOCIAL_PROFILES` / `SOCIAL_SAME_AS` |
+| `components/SocialFooter.tsx` | Liens et icônes générés depuis `SOCIAL_PROFILES` (FB, Instagram, TikTok) |
+| `components/ProfessionalFooter.tsx` | Idem, en conservant le style « pastille grise → couleur de marque au survol » |
+| `index.html` | `sameAs` JSON-LD mis à jour ; balises `twitter:site` / `twitter:creator` retirées (aucun compte X) |
+| `components/ChatWidget.tsx` | Réponse « contact » : Facebook, Instagram (smartcabb7), TikTok |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Centralisation** : `lib/social-links.ts` exporte désormais trois objets. `SOCIAL_LINKS` contient les URL, `SOCIAL_PROFILES` la description d'affichage (id, libellé, URL, classes de couleur, tracé SVG 24×24 de l'icône) et `SOCIAL_SAME_AS` la liste dérivée pour Schema.org. Ajouter ou retirer un réseau = une seule édition, les deux pieds de page suivent.
+- **URL retenues** : Facebook `profile.php?id=61596235596840` (page sans nom d'utilisateur), Instagram `instagram.com/smartcabb7` (paramètre de suivi `igsh`/`rpxt` supprimé), TikTok `vm.tiktok.com/ZS9fmufQFyFVM-vbxMq/` (lien de partage court fourni tel quel).
+- **X / YouTube / LinkedIn retirés** : ces comptes n'ont jamais été confirmés, les liens renvoyaient vers des pages inexistantes. Les balises `twitter:site` et `twitter:creator` sont supprimées en conséquence ; `twitter:card` et les balises `og:*` restent (aperçus de partage).
+- **Accessibilité** : `aria-label={profile.label}` et `aria-hidden="true"` sur les SVG. Les liens s'ouvrent toujours avec `target="_blank"` + `rel="noopener noreferrer"`.
+- **Non touché** : les boutons de `components/passenger/ShareRide.tsx` utilisent les *intentions de partage* de Facebook et X (`sharer.php`, `intent/tweet`) pour envoyer un lien de course : ce ne sont pas des liens de compte, ils restent valides.
+
+### Impact produit / comportement visible
+- Les pieds de page (public et application) n'affichent plus que trois icônes : Facebook, Instagram, TikTok, toutes fonctionnelles.
+- Les données structurées Google déclarent les mêmes trois profils (`sameAs`).
+- Le chatbot renvoie vers les bons comptes.
+- Aucune nouvelle APK nécessaire : l'app charge le site en direct (`capacitor.config.ts` → `https://www.smartcabb.com/app/passenger?platform=apk`), donc le correctif est actif dès le déploiement Vercel.
+
+### Risques & rollback
+- **Risque** : le lien TikTok est un lien de partage court (`vm.tiktok.com`) qui peut expirer. Le compte est `@smartcabb7` ; remplacer par l'URL de profil si le lien casse.
+- **Risque** : si un compte X / YouTube / LinkedIn officiel est ouvert plus tard, il faudra l'ajouter dans `SOCIAL_PROFILES` (et `sameAs` en découle).
+- **Rollback** : `git revert <hash>` ou rétablir les anciennes URL dans `lib/social-links.ts`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] Bundle `dist` : présence de `61596235596840`, `instagram.com/smartcabb7`, `vm.tiktok.com/ZS9fmufQFyFVM-vbxMq` ; absence de `facebook.com/smartcabb`, `twitter.com/smartcabb`, `youtube.com/@smartcabb`, `linkedin.com/company/smartcabb`, `SmartCabbRDC`
+- [ ] Test manuel : cliquer les trois icônes des deux pieds de page → ouvrent les bons comptes
+
+---
+
 ## 2026-11-12 — Profil : enregistrement email/adresse réparé, boutons d'action, retour inscription, Smart Rewards désactivé
 
 - **Commit** : `fa97943` (branche `main`, poussé sur `origin`)

@@ -153,10 +153,10 @@ Vehicles are regularly inspected and insured, and every trip is tracked by GPS. 
     keywords: ['contact', 'téléphone', 'email', 'joindre', 'appeler', 'call', 'reach', 'support', 'aide', 'help', 'service client', 'hotline', 'whatsapp'],
     fr: `Vous pouvez nous joindre par téléphone au +243 960 624 008, par email à admin@smartcabb.com, ou directement ici dans ce chat.
 
-Vous nous retrouverez aussi sur Facebook (SmartCabbRDC) et Instagram (smartcabb_cd). Notre siège se trouve à Kinshasa. Pour une réponse rapide, le téléphone ou ce chat restent les options les plus efficaces.`,
+Vous nous retrouverez aussi sur Facebook, Instagram (smartcabb7) et TikTok. Notre siège se trouve à Kinshasa. Pour une réponse rapide, le téléphone ou ce chat restent les options les plus efficaces.`,
     en: `You can reach us by phone at +243 960 624 008, by email at admin@smartcabb.com, or right here in this chat.
 
-You'll also find us on Facebook (SmartCabbRDC) and Instagram (smartcabb_cd). Our headquarters are in Kinshasa. For a fast response, calling or using this chat are your best options.`
+You'll also find us on Facebook, Instagram (smartcabb7) and TikTok. Our headquarters are in Kinshasa. For a fast response, calling or using this chat are your best options.`
   },
 
   bagages: {
