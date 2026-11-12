@@ -42,6 +42,54 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-12 — « Réserver pour quelqu'un d'autre » : import du numéro depuis le répertoire
+
+- **Commit** : `2cb7811` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : dans le formulaire « Réserver pour quelqu'un d'autre » (écran « Prix estimé »), le numéro du bénéficiaire devait être tapé à la main. L'utilisateur devait pouvoir choisir directement un contact dans le répertoire de son téléphone.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/contact-picker.ts` | **Nouveau** : `pickPhoneContact()` (plugin natif → Contact Picker API navigateur → `unsupported`), `normalizeRdcPhone()`, détection de disponibilité, traduction des erreurs natives |
+| `components/passenger/BookForSomeoneElse.tsx` | Bouton « 📇 Contacts » à côté du libellé « Téléphone * », `handlePickContact()` (ferme le clavier, remplit numéro + nom si vide), messages d'erreur explicites, `inputMode="tel"` + `autoComplete="tel"` |
+| `lib/icons.tsx` | Nouvelle icône `ContactBook` (carnet d'adresses) |
+| `package.json` / `package-lock.json` | Ajout de `@capacitor/contacts@^1.0.1` (plugin officiel, compatible Capacitor 8) |
+| `android/capacitor.settings.gradle`, `android/app/capacitor.build.gradle` | Enregistrement du plugin dans le projet Android (`npx cap sync android`) |
+| `android/app/src/main/AndroidManifest.xml` | `READ_CONTACTS` explicite ; `WRITE_CONTACTS` du plugin supprimée (`tools:node="remove"`) car l'app n'écrit jamais dans le répertoire |
+| `android/app/build.gradle` | `versionCode 6 → 7`, `versionName 1.3 → 1.4` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Stratégie à trois niveaux** dans `pickPhoneContact()` :
+  1. **Plugin natif** `@capacitor/contacts` si `Capacitor.isNativePlatform()` et `Capacitor.isPluginAvailable('Contacts')` : `Contacts.pickContact()` ouvre le vrai sélecteur système. C'est le chemin utilisé dans l'APK. Import dynamique (`await import('@capacitor/contacts')`) pour ne pas alourdir le bundle web.
+  2. **Contact Picker API** (`navigator.contacts.select(['name','tel'], { multiple: false })`) : Chrome Android. Aucune permission persistante, le système demande le contact à chaque fois.
+  3. Sinon `unsupported` → toast « Sélection dans les contacts indisponible sur ce téléphone : saisissez le numéro ».
+- **Normalisation** : `normalizeRdcPhone()` accepte `+243 99 99 99 999`, `00243999999999`, `0999999999`, `999999999`, avec espaces/tirets/parenthèses, et renvoie `+243XXXXXXXXX`. Si le contact a plusieurs numéros, le premier numéro RDC valide est retenu.
+- **Nom** : si le champ « Nom complet » est vide, il est prérempli avec le nom du contact (`displayName` / `name[1]`).
+- **Erreurs** : code natif `OS-PLUG-CONT-0006` = annulation (aucun message), `OS-PLUG-CONT-0020` = permission refusée (toast invitant à autoriser), `AbortError`/`SecurityError` côté web, `Unable to open a contact selector` (WebView sans sélecteur) → `unsupported`.
+- **APK** : le plugin est natif, il n'est donc actif qu'après reconstruction de l'APK. L'APK **1.4 (versionCode 7)** a été construit localement (`android/app/build/outputs/apk/release/app-release.apk`, 12,6 Mo, signé avec `smartcabb-release.keystore`). Le web déployé sur Vercel embarque déjà le bouton et la logique.
+
+### Impact produit / comportement visible
+- Un passager qui réserve pour quelqu'un d'autre touche « Contacts », choisit une personne dans son répertoire : le numéro (et le nom si vide) est rempli automatiquement.
+- Si le téléphone ne propose pas de sélecteur (ancien APK, navigateur de bureau), un message clair invite à saisir le numéro ; la saisie manuelle reste inchangée.
+- À l'installation de l'APK 1.4, Android demande l'autorisation « accès aux contacts » au premier usage ; aucune permission d'écriture n'est demandée.
+
+### Risques & rollback
+- **Risque** : demande `READ_CONTACTS` — Google Play restreint cette permission ; sans impact pour une distribution directe (APK). Si un jour publication Play Store, prévoir une déclaration d'usage ou retirer la fonctionnalité.
+- **Risque** : `versionCode 7` doit être répercuté dans la config de mise à jour (`apkUrl` + version servie par `ApkUpdatePrompt`) pour que les utilisateurs reçoivent la nouvelle APK.
+- **Rollback** : `git revert 2cb7811` puis rebuild APK (le plugin peut rester installé sans effet si le bouton est retiré).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] `npx cap sync android` : « Found 4 Capacitor plugins » dont `@capacitor/contacts@1.0.1`
+- [x] `gradlew assembleRelease` : **BUILD SUCCESSFUL**, manifeste fusionné avec `READ_CONTACTS` et sans `WRITE_CONTACTS`, `versionCode="7"`, `versionName="1.4"`
+- [ ] Test manuel Android : réserver pour quelqu'un d'autre → « Contacts » → sélection → numéro rempli
+
+---
+
 ## 2026-11-12 — Réserve de zone sûre basse réduite de 48 px à 32 px (APK Android)
 
 - **Commit** : `abfb7a4` (branche `main`, poussé sur `origin`)
