@@ -26,7 +26,7 @@ import { Switch } from '../ui/switch';
 import { useAppState } from '../../hooks/useAppState';
 import { toast } from '../../lib/toast';
 import { User, Phone, AlertCircle, Users, ContactBook } from '../../lib/icons';
-import { pickPhoneContact } from '../../lib/contact-picker';
+import { pickPhoneContact, getInstalledAppVersion } from '../../lib/contact-picker';
 
 interface BookForSomeoneElseProps {
   showForm: boolean;
@@ -44,6 +44,8 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
   /** Pendant l'ouverture du sélecteur de contacts du téléphone */
   const [pickingContact, setPickingContact] = useState(false);
+  /** Explication affichée quand le répertoire n'est pas accessible */
+  const [pickerHint, setPickerHint] = useState<string | null>(null);
 
   /**
    * Valider le numéro de téléphone RDC
@@ -147,17 +149,33 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
       if (result.status === 'ok') {
         setBeneficiaryPhone(result.contact.phone);
         setErrors({});
+        setPickerHint(null);
         // Le nom n'est complété que s'il n'a pas déjà été saisi à la main
         if (!beneficiaryName.trim() && result.contact.name) {
           setBeneficiaryName(result.contact.name);
         }
         toast.success('Contact importé depuis le répertoire');
       } else if (result.status === 'denied') {
-        toast.error("Autorisez l'accès aux contacts pour choisir un numéro");
+        const hint = "Autorisez l'accès aux contacts pour choisir un numéro";
+        setPickerHint(hint);
+        toast.error(hint);
       } else if (result.status === 'unsupported') {
-        toast.error('Sélection dans les contacts indisponible sur ce téléphone : saisissez le numéro');
+        // Sur une ancienne APK, le plugin natif n'existe pas : on explique
+        // clairement qu'une mise à jour est nécessaire plutôt que de laisser
+        // croire que le téléphone est incapable de lire le répertoire.
+        const version = result.reason === 'old_app' ? await getInstalledAppVersion() : null;
+        const hint =
+          result.reason === 'old_app'
+            ? `La sélection dans le répertoire nécessite SmartCabb 1.4 ou plus${
+                version ? ` (version installée : ${version})` : ''
+              }. Mettez à jour l'application pour activer ce bouton, ou saisissez le numéro à la main.`
+            : 'Sélection dans les contacts indisponible sur ce téléphone : saisissez le numéro';
+        setPickerHint(hint);
+        toast.error(hint);
       } else if (result.status === 'error') {
-        toast.error(result.message || 'Impossible de lire ce contact');
+        const hint = result.message || 'Impossible de lire ce contact';
+        setPickerHint(hint);
+        toast.error(hint);
       }
       // 'cancelled' : l'utilisateur a refermé le sélecteur, aucun message à afficher
     } finally {
@@ -257,6 +275,7 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
                   onChange={(e) => {
                     setBeneficiaryPhone(e.target.value);
                     setErrors({ ...errors, phone: undefined });
+                    if (pickerHint) setPickerHint(null);
                   }}
                   onBlur={updateBeneficiary}
                   className={`pl-9 h-10 ${errors.phone ? 'border-red-500' : ''}`}
@@ -271,6 +290,11 @@ export function BookForSomeoneElse({ showForm, onToggleForm, onBeneficiaryChange
               <p className="text-xs text-gray-500 mt-1">
                 Ex: +243999999999 ou 0999999999 — ou touchez « Contacts »
               </p>
+              {pickerHint && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5 mt-1 leading-snug">
+                  {pickerHint}
+                </p>
+              )}
             </div>
           </motion.div>
         )}

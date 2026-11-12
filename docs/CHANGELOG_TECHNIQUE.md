@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-12 — TikTok : URL de profil + diagnostic du sélecteur de contacts
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : (1) remplacer le lien de partage TikTok par l'URL de profil définitive. (2) Le bouton « Contacts » de « Réserver pour quelqu'un d'autre » affichait « Sélection indisponible sur ce téléphone » : rendre la détection plus robuste et expliquer clairement quand l'APK installé est trop ancien.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/social-links.ts` | TikTok → `https://www.tiktok.com/@smartcabb7` |
+| `index.html` | `sameAs` JSON-LD : même URL TikTok |
+| `lib/contact-picker.ts` | Appel direct du plugin natif sans garde `isPluginAvailable`, nouveau motif `old_app`, `getInstalledAppVersion()` |
+| `components/passenger/BookForSomeoneElse.tsx` | Message d'erreur explicite + encart persistant sous le champ téléphone |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **TikTok** : `https://vm.tiktok.com/ZS9fmufQFyFVM-vbxMq/` remplacé par `https://www.tiktok.com/@smartcabb7` dans la source unique `lib/social-links.ts` (les deux pieds de page suivent) et dans le `sameAs` de `index.html`. Le lien court pouvait expirer.
+- **Sélecteur de contacts — cause probable** : l'APK 1.3 (celle encore servie par le Play Store) ne contient pas le plugin natif `@capacitor/contacts`. Comme l'APK charge le site en direct, la version web récente affiche bien le bouton, mais l'appel échoue : la WebView Android n'implémente pas non plus `navigator.contacts`, d'où `unsupported` et le message générique.
+- **Robustesse** : `pickPhoneContact()` ne teste plus `Capacitor.isPluginAvailable('Contacts')` avant d'agir (cette garde pouvait produire un faux négatif si le pont natif n'était pas encore visible). Sur plateforme native, le plugin est importé et appelé directement ; une erreur « not implemented / not available » est traduite en `{ status: 'unsupported', reason: 'old_app' }`.
+- **Diagnostic** : nouveau `getInstalledAppVersion()` (via `@capacitor/app`) ; quand le motif est `old_app`, le message affiche la version réellement installée et demande la 1.4+. L'encart reste sous le champ (les toasts disparaissent trop vite) et s'efface dès que l'utilisateur tape un numéro.
+- **Web / Chrome Android** : le chemin `navigator.contacts.select` reste inchangé et fonctionne ; le message `old_app` n'apparaît que dans une coque native sans plugin.
+
+### Impact produit / comportement visible
+- TikTok pointe vers le profil officiel, plus de lien court susceptible d'expirer.
+- Sur un APK 1.3, le bouton « Contacts » indique désormais explicitement qu'une mise à jour est nécessaire, avec le numéro de version installée — au lieu de laisser croire que le téléphone ne sait pas lire le répertoire.
+- Sur l'APK 1.4 (versionCode 7) le sélecteur système s'ouvre normalement.
+
+### Risques & rollback
+- **Risque** : aucun sur le web ; les données ne sont pas touchées.
+- **Risque** : `getInstalledAppVersion()` dépend de `@capacitor/app`, présent dans l'APK ; en cas d'échec la fonction renvoie `null` et le message reste compréhensible.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK — bundle avec `tiktok.com/@smartcabb7`, sans `vm.tiktok.com`, présence du motif `old_app`
+- [x] Déploiement Vercel vérifié en direct
+- [ ] Test manuel sur l'APK 1.4 : bouton « Contacts » → sélecteur système → numéro injecté
+- [ ] Test manuel sur l'APK 1.3 : message « nécessite SmartCabb 1.4 (version installée : 1.3) »
+
+---
+
 ## 2026-11-12 — Réseaux sociaux : liens officiels centralisés (Facebook, Instagram, TikTok)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

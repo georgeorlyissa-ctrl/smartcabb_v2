@@ -8,8 +8,8 @@
  * page s'adaptent automatiquement.
  *
  * ⚠️ Liens fournis par le métier le 2026-11-12 :
- *  - TikTok : lien de partage court (vm.tiktok.com). Il peut expirer ; le
- *    compte est `@smartcabb7`. Remplacer par l'URL de profil si nécessaire.
+ *  - TikTok : profil `@smartcabb7` (URL de profil directe, plus le lien de
+ *    partage court `vm.tiktok.com` qui pouvait expirer).
  *  - Facebook : page identifiée par son id (pas de nom d'utilisateur).
  *  - Instagram : `smartcabb7` (paramètre de suivi retiré de l'URL).
  */
@@ -25,7 +25,7 @@ export interface SocialProfile {
 }
 
 export const SOCIAL_LINKS = {
-  tiktok: 'https://vm.tiktok.com/ZS9fmufQFyFVM-vbxMq/',
+  tiktok: 'https://www.tiktok.com/@smartcabb7',
   facebook: 'https://www.facebook.com/profile.php?id=61596235596840',
   instagram: 'https://www.instagram.com/smartcabb7',
 } as const;

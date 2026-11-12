@@ -26,7 +26,9 @@ export interface PickedContact {
 export type PickContactResult =
   | { status: 'ok'; contact: PickedContact }
   | { status: 'cancelled' }
-  | { status: 'unsupported' }
+  /** `reason` précise pourquoi : `old_app` = APK installé trop ancien
+   *  (plugin natif absent), `no_picker` = ni plugin ni API navigateur. */
+  | { status: 'unsupported'; reason?: 'old_app' | 'no_picker' }
   | { status: 'denied' }
   | { status: 'error'; message?: string };
 
@@ -89,13 +91,43 @@ function pickBestPhone(rawNumbers: string[]): string | undefined {
   return valid || normalized[0];
 }
 
-/** Le plugin natif est-il présent dans l'APK installé ? */
-export function isNativeContactPickerAvailable(): boolean {
+/** L'app tourne-t-elle dans la coque native (APK Capacitor) ? */
+export function isNativeApp(): boolean {
   try {
     const cap = (window as any)?.Capacitor;
     if (!cap) return false;
-    const native = typeof cap.isNativePlatform === 'function' ? cap.isNativePlatform() : false;
-    if (!native) return false;
+    return typeof cap.isNativePlatform === 'function' ? !!cap.isNativePlatform() : false;
+  } catch {
+    return false;
+  }
+}
+
+/** Version de l'app installée (ex. « 1.3 »), ou null si indisponible. */
+export async function getInstalledAppVersion(): Promise<string | null> {
+  if (!isNativeApp()) return null;
+  try {
+    const { App } = await import('@capacitor/app');
+    const info: any = await App.getInfo();
+    return info?.version || info?.versionName || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Erreur renvoyée par le pont JS quand le plugin natif n'est pas embarqué
+ * dans l'APK installé (typiquement une ancienne version de l'application).
+ */
+function isPluginMissingError(err: any): boolean {
+  const message = String(err?.message || err || '');
+  return /not implemented|unimplemented|not available|plugin.*not.*(found|registered|available)/i.test(message);
+}
+
+/** Le plugin natif est-il présent dans l'APK installé ? */
+export function isNativeContactPickerAvailable(): boolean {
+  try {
+    if (!isNativeApp()) return false;
+    const cap = (window as any).Capacitor;
     if (typeof cap.isPluginAvailable === 'function' && !cap.isPluginAvailable('Contacts')) {
       return false;
     }
@@ -145,10 +177,18 @@ function describeNativeError(err: any): PickContactResult {
  * Ne lève jamais d'exception : tout est traduit dans `PickContactResult`.
  */
 export async function pickPhoneContact(): Promise<PickContactResult> {
-  // 1) Plugin natif (APK)
-  if (isNativeContactPickerAvailable()) {
+  // 1) Plugin natif (APK). On n'utilise PAS `isPluginAvailable` comme garde :
+  //    on tente directement l'appel. Ainsi, si la détection du pont échoue
+  //    (cache, ancien bundle JS, WebView exotique) le sélecteur s'ouvre quand
+  //    même. Si le plugin n'est réellement pas dans l'APK, l'erreur native
+  //    « not implemented » est traduite en `unsupported / old_app`.
+  if (isNativeApp()) {
     try {
       const { Contacts } = await import('@capacitor/contacts');
+      if (typeof (Contacts as any)?.pickContact !== 'function') {
+        return { status: 'unsupported', reason: 'old_app' };
+      }
+
       const contact = await Contacts.pickContact();
       const numbers = (contact.phoneNumbers || [])
         .map((field) => field?.value || '')
@@ -167,6 +207,9 @@ export async function pickPhoneContact(): Promise<PickContactResult> {
         },
       };
     } catch (err) {
+      if (isPluginMissingError(err)) {
+        return { status: 'unsupported', reason: 'old_app' };
+      }
       return describeNativeError(err);
     }
   }
@@ -202,12 +245,12 @@ export async function pickPhoneContact(): Promise<PickContactResult> {
       if (name === 'SecurityError') return { status: 'denied' };
       // WebView sans sélecteur de contacts : « Unable to open a contact selector »
       if (/contact selector|not supported|not implemented/i.test(message)) {
-        return { status: 'unsupported' };
+        return { status: 'unsupported', reason: 'no_picker' };
       }
       return { status: 'error', message };
     }
   }
 
   // 3) Rien de disponible
-  return { status: 'unsupported' };
+  return { status: 'unsupported', reason: 'no_picker' };
 }
