@@ -677,7 +677,8 @@ body { min-width: 320px; }
    vaut 0 alors que l'app dessine sous la barre de navigation système : les
    derniers boutons des écrans se retrouvent coupés. La classe `cap-apk` est
    posée très tôt par `public/client-init.js` (et par App.tsx) : elle force
-   une réserve équivalente à la barre système (~48px).
+   une réserve de 32px, suffisante pour la barre gestuelle (~24px) sans créer
+   de vide visible sur les téléphones récents.
    Utilitaires à utiliser sur les barres d'action collées en bas :
      .pb-safe        → marge interne minimale + zone sûre
      .pb-safe-bar    → barre d'action / footer sticky
@@ -687,7 +688,7 @@ body { min-width: 320px; }
   --app-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 html.cap-apk {
-  --app-safe-bottom: 48px;
+  --app-safe-bottom: 32px;
 }
 
 .pb-safe {
