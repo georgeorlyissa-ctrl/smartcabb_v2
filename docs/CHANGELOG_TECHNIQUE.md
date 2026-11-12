@@ -42,6 +42,43 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-12 — Réserve de zone sûre basse réduite de 48 px à 32 px (APK Android)
+
+- **Commit** : `abfb7a4` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : la réserve forcée de 48 px, qui empêche le bas des pages de passer sous la barre système Android, créait ~24 px de vide visible sur les téléphones en navigation gestuelle (barre fine). Réduire la réserve tout en gardant les barres d'action entièrement visibles.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `styles/globals.css` | `html.cap-apk { --app-safe-bottom: 32px }` (au lieu de 48px) + commentaire mis à jour |
+
+### Description technique
+- Valeur **32 px** choisie pour couvrir la barre gestuelle Android (~24 dp) avec une marge de sécurité, sans laisser de vide important.
+- Les utilitaires conservent leur marge propre, donc les zones sensibles restent protégées :
+  - `.pb-safe` = `max(0.75rem, 32px)` → **32 px**
+  - `.pb-safe-bar` = `32px + 0.75rem` → **44 px** (footers sticky : « Commander », « Suivant » de la recharge, compteur de course)
+  - `.pb-safe-page` = `32px + 1.5rem` → **56 px** (dernier bloc des pages défilantes)
+  - `.pb-safe-dialog` = `max(1.5rem, 32px)` → **32 px**
+- Sur web/desktop, `--app-safe-bottom` reste `env(safe-area-inset-bottom, 0px)` : aucun impact.
+- Le CSS seul change : aucun rebuild APK nécessaire, l'APK charge le site distant.
+
+### Impact produit / comportement visible
+- Le vide sous les barres d'action en mode APK passe de ~48 px à ~32 px (44 px pour les footers sticky).
+- Les boutons du bas (« Commander », « Suivant » de la recharge, compteur de course, boutons flottants du portefeuille) restent au-dessus de la barre système.
+
+### Risques & rollback
+- **Risque** : sur les téléphones à **navigation 3 boutons** (barre d'environ 48 dp), il reste ~16 px sous un footer à 32 px — les footers sticky (44 px) restent corrects, mais un écran qui n'utilise que `.pb-safe` peut être très légèrement affleurant. Si un utilisateur remonte un bouton encore coupé, repasser à 40 px ou 48 px.
+- **Rollback** : `git revert abfb7a4` (ou remettre `48px` dans `html.cap-apk`).
+
+### Tests / vérifications
+- [x] `npx vite build` OK — `html.cap-apk{--app-safe-bottom:32px}` présent dans `dist/assets/index-*.css`
+- [ ] Test manuel Android (APK) : écran « Prix estimé » et modal « Montant de recharge » sur téléphone en navigation gestuelle **et** en navigation 3 boutons
+- [ ] Déploiement Vercel vérifié
+
+---
+
 ## 2026-11-11 — Responsivité : le bas des pages n'est plus coupé par la barre système Android
 
 - **Commit** : `21b4579` (branche `main`, poussé sur `origin`)
