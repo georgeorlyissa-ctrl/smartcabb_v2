@@ -50,6 +50,7 @@ export function ProfileScreen() {
   });
 
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
 
   // 🆕 États pour les statistiques
   const [rideStats, setRideStats] = useState({
@@ -189,16 +190,48 @@ export function ProfileScreen() {
   const passengerData = state.currentUser;
 
   // 🔄 Mettre à jour editData quand state.currentUser change
+  // ⚠️ Ne JAMAIS réécrire les champs pendant une saisie : le solde est
+  // rafraîchi toutes les 10 s (mergeCurrentUser), ce qui change l'objet
+  // `currentUser` et, sans cette garde, réinjectait l'ancien email dans le
+  // formulaire au milieu de la modification.
   useEffect(() => {
-    if (state.currentUser) {
-      setEditData({
-        name: state.currentUser.name || '',
-        email: state.currentUser.email || '',
-        phone: state.currentUser.phone || '',
-        address: state.currentUser.address || ''
-      });
-    }
-  }, [state.currentUser]);
+    if (!state.currentUser) return;
+    if (isEditing) return;
+    setEditData({
+      name: state.currentUser.name || '',
+      email: state.currentUser.email || '',
+      phone: state.currentUser.phone || '',
+      address: state.currentUser.address || ''
+    });
+  }, [state.currentUser, isEditing]);
+
+  // 🎯 Mode de paiement : recharger depuis le serveur pour les sessions
+  // restaurées depuis localStorage (avant l'enregistrement côté serveur).
+  useEffect(() => {
+    const userId = state.currentUser?.id;
+    if (!userId) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${userId}`,
+          { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        if (cancelled) return;
+
+        const serverValue =
+          data?.passenger?.favoritePaymentMethod || data?.passenger?.favorite_payment_method;
+        if (serverValue) {
+          mergeCurrentUser({ favoritePaymentMethod: serverValue });
+        }
+      } catch {}
+    })();
+
+    return () => { cancelled = true; };
+  }, [state.currentUser?.id]);
 
   // 🐛 DEBUG: Afficher les données wallet dans la console
   console.log('💰 ProfileScreen - Wallet Debug:', {
@@ -239,6 +272,57 @@ export function ProfileScreen() {
         return 'Paiement en espèces';
       default:
         return 'Non défini';
+    }
+  };
+
+  /**
+   * Enregistre le mode de paiement préféré.
+   * ⚠️ Il doit être persisté CÔTÉ SERVEUR : le state local et localStorage
+   * sont perdus à la déconnexion (le profil est rechargé depuis `profile:{id}`).
+   */
+  const handleSelectPaymentMethod = async (methodId: 'mobile_money' | 'cash') => {
+    const userId = state.currentUser?.id;
+    if (!userId) return;
+
+    const previous = state.currentUser?.favoritePaymentMethod;
+    mergeCurrentUser({ favoritePaymentMethod: methodId });
+
+    // Cache local : utile hors ligne / au prochain démarrage sur cet appareil
+    try {
+      localStorage.setItem('smartcabb_preferred_payment', methodId);
+      const userKey = `smartcabb_user_${userId}`;
+      const raw = localStorage.getItem(userKey);
+      const parsed = raw ? JSON.parse(raw) : {};
+      localStorage.setItem(userKey, JSON.stringify({ ...parsed, favoritePaymentMethod: methodId }));
+    } catch {}
+
+    setSavingPaymentMethod(true);
+    try {
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/update/${userId}`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${publicAnonKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ favoritePaymentMethod: methodId })
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || `Erreur ${response.status}`);
+      }
+
+      toast.success('Mode de paiement enregistré ✅');
+      setShowPaymentDialog(false);
+    } catch (error) {
+      console.error('❌ [PAYMENT] Enregistrement impossible:', error);
+      // Retour à la valeur précédente : on n'affiche pas un choix non sauvegardé
+      mergeCurrentUser({ favoritePaymentMethod: previous });
+      toast.error('Impossible d\'enregistrer le mode de paiement. Vérifiez votre connexion et réessayez.');
+    } finally {
+      setSavingPaymentMethod(false);
     }
   };
 
@@ -664,11 +748,12 @@ export function ProfileScreen() {
                     id="email"
                     type="email"
                     inputMode="email"
-                    autoComplete="email"
+                    autoComplete="off"
                     autoCapitalize="none"
                     spellCheck={false}
                     value={editData.email}
                     onChange={(e) => setEditData({...editData, email: e.target.value})}
+                    onFocus={(e) => e.currentTarget.select()}
                     className="mt-1"
                   />
                 ) : (
@@ -808,18 +893,14 @@ export function ProfileScreen() {
             </DialogHeader>
             <div className="space-y-2 py-2">
               {[
-                { id: 'mobile_money', icon: Smartphone, label: 'Mobile Money (Airtel Money, M-Pesa)', desc: 'Paiement rapide et securise' },
-                { id: 'cash', icon: Banknote, label: 'Paiement en especes', desc: 'Paiement en especes au chauffeur' }
+                { id: 'mobile_money' as const, icon: Smartphone, label: 'Mobile Money (Airtel Money, M-Pesa)', desc: 'Paiement rapide et securise' },
+                { id: 'cash' as const, icon: Banknote, label: 'Paiement en especes', desc: 'Paiement en especes au chauffeur' }
               ].map((method) => (
                 <button
                   key={method.id}
-                  onClick={() => {
-                    mergeCurrentUser({ favoritePaymentMethod: method.id });
-                    localStorage.setItem('smartcabb_preferred_payment', method.id);
-                    setShowPaymentDialog(false);
-                    toast.success(`Mode de paiement mis a jour`);
-                  }}
-                  className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all ${
+                  onClick={() => handleSelectPaymentMethod(method.id)}
+                  disabled={savingPaymentMethod}
+                  className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all disabled:opacity-60 ${
                     passengerData?.favoritePaymentMethod === method.id
                       ? 'border-secondary bg-secondary/5'
                       : 'border-gray-200 hover:border-gray-300'
@@ -833,7 +914,9 @@ export function ProfileScreen() {
                     <p className="text-xs text-gray-500">{method.desc}</p>
                   </div>
                   {passengerData?.favoritePaymentMethod === method.id && (
-                    <span className="text-xs text-secondary font-medium">Actif</span>
+                    <span className="text-xs text-secondary font-medium">
+                      {savingPaymentMethod ? 'Enregistrement…' : 'Actif'}
+                    </span>
                   )}
                 </button>
               ))}

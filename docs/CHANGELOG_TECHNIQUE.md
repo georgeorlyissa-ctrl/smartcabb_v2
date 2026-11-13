@@ -42,6 +42,49 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-13 — Profil : mode de paiement persisté, champ email plus écrasé pendant la saisie
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : (1) le mode de paiement choisi revenait à « Non défini » après déconnexion/reconnexion. (2) Le champ email se remplissait à nouveau avec l'ancienne adresse pendant la modification.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/ProfileScreen.tsx` | Sauvegarde du mode de paiement côté serveur, rechargement à l'ouverture, garde anti-écrasement du formulaire, sélection du texte au focus |
+| `components/passenger/LoginScreen.tsx` | `favoritePaymentMethod` repris du profil serveur (et du cache local en secours) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Mode de paiement** : le clic ne faisait que `mergeCurrentUser` + `localStorage` — rien n'était envoyé au serveur. Après déconnexion, `LoginScreen` rechargeait `/passengers/:id` puis construisait un objet `user` **en liste blanche** (id, nom, email, téléphone, solde, dates) : `favoritePaymentMethod` était perdu.
+  - Nouveau `handleSelectPaymentMethod()` : mise à jour optimiste → `POST /passengers/update/:id` avec `{ favoritePaymentMethod }` (la route fusionne les champs dans `passenger:{id}` **et** `profile:{id}`) → toast de succès et fermeture du dialogue. En cas d'échec : retour à la valeur précédente et message d'erreur, pour ne jamais afficher un choix non enregistré.
+  - `LoginScreen` mappe désormais `profile.favoritePaymentMethod || profile.favorite_payment_method` et, à défaut, la valeur du cache `smartcabb_user_{id}`.
+  - Effet de rechargement dans `ProfileScreen` : pour une session restaurée depuis `localStorage` avant ce correctif, le mode de paiement est récupéré depuis `/passengers/:id`.
+  - Pendant l'enregistrement, les boutons sont désactivés et affichent « Enregistrement… ».
+- **Champ email** : le `useEffect` qui synchronisait `editData` dépendait de `state.currentUser`. Or le solde est rafraîchi toutes les 10 s via `mergeCurrentUser({ walletBalance })`, ce qui remplaçait l'objet `currentUser` et **réinjectait l'ancien email** au milieu de la saisie. La synchronisation est maintenant ignorée tant que `isEditing` est vrai (et relancée à la fermeture du formulaire).
+  - Complément ergonomique : le contenu du champ email est **sélectionné au focus** (remplacement immédiat possible) et `autoComplete` passe à `off` pour limiter le remplissage automatique d'Android.
+- **Aucun changement backend** : `POST /passengers/update/:id` acceptait déjà des champs arbitraires et écrivait les deux clés KV.
+
+### Impact produit / comportement visible
+- Le mode de paiement choisi (« Mobile Money » ou « Espèces ») reste affiché après déconnexion/reconnexion, redémarrage de l'app et changement d'appareil.
+- Le chauffeur voit toujours le mode de paiement du passager (déjà lu depuis `favoritePaymentMethod`).
+- La modification de l'email n'est plus annulée toutes les 10 secondes ; un appui sur le champ sélectionne l'adresse existante pour la remplacer d'un coup.
+
+### Risques & rollback
+- **Risque** : un mode de paiement enregistré sur un ancien appareil n'est pas migré automatiquement (la clé `smartcabb_preferred_payment` n'est pas liée à l'utilisateur). L'utilisateur devra le resélectionner une fois ; l'opération est ensuite persistée.
+- **Risque** : si l'API est indisponible, le choix est annulé avec un message explicite (comportement voulu).
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK — bundle avec l'appel `favoritePaymentMethod` et le message d'échec
+- [ ] Test manuel : Profil → Modifier le mode de paiement → choisir Mobile Money → se déconnecter → se reconnecter → le choix est conservé
+- [ ] Test manuel : Profil → Modifier → vider l'email et taper une nouvelle adresse → attendre 30 s → la saisie n'est plus remplacée
+- [x] Déploiement Vercel vérifié en direct
+
+---
+
 ## 2026-11-12 — TikTok : URL de profil + diagnostic du sélecteur de contacts
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

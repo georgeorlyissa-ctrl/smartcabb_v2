@@ -253,6 +253,11 @@ export function LoginScreen() {
         name: profile.full_name || 'Utilisateur',
         email: profile.email,
         phone: profile.phone || '',
+        // ✅ Mode de paiement : stocké côté serveur (profile/passenger) pour
+        // survivre à la déconnexion. Les profils anciens peuvent l'avoir en
+        // snake_case.
+        favoritePaymentMethod:
+          profile.favoritePaymentMethod || profile.favorite_payment_method || undefined,
         // ✅ FIX: Utiliser le solde chargé depuis le backend
         walletBalance: walletBalance,
         walletTransactions: [], // Seront chargées depuis la base si nécessaire
@@ -274,6 +279,10 @@ export function LoginScreen() {
           user.phone = parsedLocalData.phone || user.phone;
           if (parsedLocalData.address) {
             user.address = parsedLocalData.address;
+          }
+          // Le serveur reste prioritaire ; le cache local sert de secours
+          if (!user.favoritePaymentMethod && parsedLocalData.favoritePaymentMethod) {
+            user.favoritePaymentMethod = parsedLocalData.favoritePaymentMethod;
           }
           console.log('✅ Données mergées avec localStorage:', user);
         }
