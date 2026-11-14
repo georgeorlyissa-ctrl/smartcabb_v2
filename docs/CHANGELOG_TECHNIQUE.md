@@ -42,6 +42,52 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-14 — Paramètres : écran « Moyens de paiement » réparé + message clair en cas de mauvaise connexion
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : (1) Paramètres → « Moyens de paiement » plantait immédiatement (`useAppState is not defined`). (2) En cas de mauvaise qualité de connexion, l'écran d'erreur affichait un message technique brut et des consignes clavier PC inutilisables sur Android.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/PaymentSettingsScreen.tsx` | Réécriture : import `useAppState` manquant, mode de paiement préféré réel enregistré côté serveur, suppression du faux stockage de cartes |
+| `components/ErrorBoundary.tsx` | Détection réseau/module, rechargement automatique unique, message mobile « Connexion instable », suppression des consignes PC |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Écran Moyens de paiement** : le composant appelait `useAppState()` sans l'importer (crash immédiat à l'ouverture, attrapé par l'`ErrorBoundary` → écran « Erreur de chargement »). L'écran a été réécrit :
+  - import de `useAppState` (`setCurrentScreen`, `state`, `mergeCurrentUser`) ;
+  - affichage du mode **préféré réel** (`state.currentUser.favoritePaymentMethod`) ;
+  - choix Mobile Money / Espèces enregistré via `POST /passengers/update/:id` (écrit `passenger:{id}` **et** `profile:{id}`), cache `localStorage` en secours, rollback + message explicite si l'appel échoue ;
+  - suppression de l'ancien gestionnaire de cartes qui ne stockait que dans `localStorage` tout en affichant des mentions « données cryptées / PCI-DSS » inexactes.
+  - Aucun numéro de carte n'est plus demandé nulle part.
+- **ErrorBoundary** :
+  - classification de l'erreur en `offline` (`navigator.onLine === false`), `network` (`Failed to fetch dynamically imported module`, `ChunkLoadError`, `Failed to fetch`, `Load failed`…) ou `runtime` ;
+  - pour un module dynamique manquant avec connexion active (cas typique d'un ancien `index.html` après déploiement), **un seul rechargement automatique** est tenté, avec verrou `sessionStorage` (`smartcabb_chunk_reload_at`, cooldown 60 s) pour ne jamais boucler ;
+  - si le module manque toujours, l'écran « Connexion instable » s'affiche avec `Réessayer` (rechargement complet) et `Retour à l'accueil` ;
+  - réécoute de l'événement `online` : rechargement automatique dès que le réseau revient ;
+  - interface mobile : `min-h-[100dvh]`, `pb-safe-page`, textes adaptés, icône Wi-Fi, aucune mention `Ctrl+Shift+Delete` / `Cmd+Shift+R` ;
+  - le message d'erreur technique brut n'est plus affiché qu'en développement (`process.env.NODE_ENV === 'development'`).
+
+### Impact produit / comportement visible
+- Paramètres → Paiement affiche enfin un écran fonctionnel ; le choix y est le même que dans Profil et reste enregistré après déconnexion.
+- En cas de réseau faible, l'utilisateur voit « Connexion instable » avec une consigne compréhensible sur téléphone, et l'app se rétablit seule quand la connexion revient.
+- Plus de risque de boucle de rechargement si un fichier JS a réellement disparu du serveur.
+
+### Risques & rollback
+- **Risque** : les éventuelles cartes ajoutées dans l'ancien écran (uniquement en `localStorage` sous `smartcabb_payment_methods`) ne sont plus affichées ; elles n'ont jamais été transmises au serveur ni utilisées pour un paiement.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK — chunk `PassengerApp-ISbHLMM5.js`, 0 appel `useAppState(` non importé, verrou anti-boucle présent
+- [ ] Test manuel : Paramètres → Paiement → choisir un mode → quitter/revenir → le choix est conservé
+- [ ] Test manuel : passer en mode avion puis ouvrir une page non chargée → écran « Connexion instable » / « Vous êtes hors ligne », puis retour réseau → rechargement automatique
+
+---
+
 ## 2026-11-13 — Profil : mode de paiement persisté, champ email plus écrasé pendant la saisie
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { Button } from './ui/button';
 
-// Icônes inline (évite import lucide-react)
+// Icônes inline (évite import lucide-react et permet de s'afficher même si
+// un module externe n'a pas pu être chargé).
 const AlertCircleIcon = ({ className }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <circle cx="12" cy="12" r="10" />
@@ -29,6 +30,22 @@ const WifiOffIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const RefreshIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+    <path d="M21 3v5h-5" />
+    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+    <path d="M8 16H3v5" />
+  </svg>
+);
+
+/** Dernier rechargement automatique (anti-boucle). */
+const AUTO_RELOAD_KEY = 'smartcabb_chunk_reload_at';
+/** Fenêtre minimale entre deux rechargements automatiques (ms). */
+const AUTO_RELOAD_COOLDOWN = 60_000;
+
+type ErrorKind = 'offline' | 'network' | 'runtime';
+
 interface Props {
   children: React.ReactNode;
   fallback?: React.ReactNode;
@@ -38,251 +55,217 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: any;
-  isOfflineError: boolean;
+  errorKind: ErrorKind;
 }
+
+const MESSAGES: Record<ErrorKind, { title: string; intro: string; hint: string }> = {
+  offline: {
+    title: 'Vous êtes hors ligne',
+    intro: "Impossible de charger cette page : aucune connexion Internet n'est détectée.",
+    hint: "Activez vos données mobiles ou connectez-vous au Wi-Fi, puis appuyez sur Réessayer."
+  },
+  network: {
+    title: 'Connexion instable',
+    intro: "Cette page n'a pas pu être chargée. La connexion a probablement été interrompue.",
+    hint: "Vérifiez votre réseau (Wi-Fi ou données mobiles), puis appuyez sur Réessayer."
+  },
+  runtime: {
+    title: 'Page indisponible',
+    intro: "Une erreur inattendue a empêché l'affichage de cette page.",
+    hint: "Réessayez. Si le problème persiste, revenez à l'accueil et rouvrez la page."
+  }
+};
+
+const isDynamicImportError = (message: string) =>
+  /Failed to fetch dynamically imported module|error loading dynamically imported module|Loading chunk|ChunkLoadError|Importing a module script failed/i.test(message);
+
+const isNetworkError = (message: string) =>
+  isDynamicImportError(message) || /Failed to fetch|NetworkError|Load failed|ERR_NETWORK/i.test(message);
 
 export class ErrorBoundary extends React.Component<Props, State> {
   private mounted = false;
+  private autoReloadTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null, isOfflineError: false };
+    this.state = { hasError: false, error: null, errorInfo: null, errorKind: 'runtime' };
   }
 
   componentDidMount() {
     this.mounted = true;
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', this.handleBackOnline);
+    }
   }
 
   componentWillUnmount() {
     this.mounted = false;
+    if (this.autoReloadTimer) clearTimeout(this.autoReloadTimer);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', this.handleBackOnline);
+    }
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  /** Le réseau revient : on recharge automatiquement (sans boucle possible,
+   *  l'événement ne se déclenche qu'au passage hors ligne → en ligne). */
+  private handleBackOnline = () => {
+    if (!this.state.hasError) return;
+    if (typeof window !== 'undefined') window.location.reload();
+  };
+
+  static getDerivedStateFromError(error: Error): Partial<State> {
     console.error('❌ ErrorBoundary - getDerivedStateFromError:', error);
-    return { hasError: true, error, errorInfo: null, isOfflineError: false };
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
     console.error('❌ ErrorBoundary caught an error:', error);
-    console.error('❌ Error info:', errorInfo);
-    console.error('❌ Component Stack:', errorInfo.componentStack);
-    
-    // 🔍 Détecter si c'est une erreur de module dynamique
-    const isDynamicImportError = 
-      error.message?.includes('Failed to fetch dynamically imported module') ||
-      error.message?.includes('error loading dynamically imported module') ||
-      error.message?.includes('Loading chunk') ||
-      error.message?.includes('ChunkLoadError');
-    
-    // 🌐 Vérifier l'état de la connexion de manière plus fiable
-    let isActuallyOffline = false;
-    
-    if (isDynamicImportError) {
-      console.warn('⚠️ Erreur de chargement de module dynamique détectée');
-      
-      // Vérifier plusieurs indicateurs de connexion
-      if (typeof window !== 'undefined') {
-        const navigatorOffline = !window.navigator.onLine;
-        
-        // Test supplémentaire : tenter de charger une ressource depuis le serveur
-        // Si on est vraiment hors ligne, l'ErrorBoundary devrait seulement s'afficher
-        // quand navigator.onLine est false
-        if (navigatorOffline) {
-          console.warn('📡 Navigator.onLine = false - Mode hors ligne confirmé');
-          isActuallyOffline = true;
-        } else {
-          console.log('✅ Navigator.onLine = true - Connexion détectée');
-          console.log('⚠️ Erreur de module, mais connexion active - Probablement un problème de build/cache');
-          console.log('🔄 Rechargement automatique dans 500ms...');
-          
-          // ✅ RECHARGEMENT AUTOMATIQUE après un court délai
-          setTimeout(() => {
-            if (this.mounted) {
-              window.location.reload();
-            }
-          }, 500);
-          
-          // Ne pas afficher l'erreur, juste recharger
-          return;
+    console.error('❌ Component stack:', errorInfo?.componentStack);
+
+    const message = error?.message || '';
+    const offline =
+      typeof navigator !== 'undefined' && navigator.onLine === false;
+    const network = offline || isNetworkError(message);
+
+    // 🔁 Module dynamique indisponible alors que la connexion semble bonne :
+    // c'est très souvent un ancien index.html qui pointe vers un fichier
+    // remplacé par un nouveau déploiement. Un seul rechargement règle le
+    // problème… à condition de ne pas boucler si le fichier manque vraiment.
+    if (!offline && isDynamicImportError(message)) {
+      let canReload = true;
+      try {
+        const last = Number(window.sessionStorage.getItem(AUTO_RELOAD_KEY) || 0);
+        canReload = !last || Date.now() - last > AUTO_RELOAD_COOLDOWN;
+        if (canReload) {
+          window.sessionStorage.setItem(AUTO_RELOAD_KEY, String(Date.now()));
         }
+      } catch {
+        // sessionStorage indisponible (navigation privée) : on évite de boucler
+        canReload = false;
       }
+
+      if (canReload) {
+        console.warn('🔄 Module manquant après déploiement — rechargement unique…');
+        this.autoReloadTimer = setTimeout(() => {
+          if (this.mounted && typeof window !== 'undefined') {
+            window.location.reload();
+          }
+        }, 300);
+        return;
+      }
+
+      console.warn('⚠️ Module toujours indisponible après rechargement — affichage du message.');
     }
-    
+
     if (this.mounted) {
-      this.setState({ errorInfo, isOfflineError: isActuallyOffline });
+      this.setState({
+        errorInfo,
+        errorKind: offline ? 'offline' : network ? 'network' : 'runtime'
+      });
     }
   }
 
-  handleReset = () => {
-    // 🧹 Nettoyer les données corrompues dans localStorage
-    try {
-      // ✅ SSR FIX: Vérifier que nous sommes côté client
-      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
-        console.warn('⚠️ localStorage non disponible (SSR)');
-        this.setState({ hasError: false, error: null, errorInfo: null, isOfflineError: false });
-        return;
-      }
-      
-      console.log('🧹 Nettoyage des données corrompues...');
-      
-      // Supprimer les données potentiellement corrompues
-      const keysToCheck = [
-        'smartcab_current_user',
-        'smartcab_current_driver',
-        'smartcab_current_ride',
-        'smartcab_system_settings'
-      ];
-      
-      keysToCheck.forEach(key => {
-        try {
-          const data = localStorage.getItem(key);
-          if (data) {
-            JSON.parse(data); // Vérifier si le JSON est valide
-          }
-        } catch (e) {
-          console.warn(`⚠️ Données corrompues détectées pour ${key}, suppression...`);
-          localStorage.removeItem(key);
-        }
-      });
-      
-      console.log('✅ Nettoyage terminé');
-    } catch (error) {
-      console.error('❌ Erreur lors du nettoyage:', error);
+  /** Réessayer : rechargement complet pour les erreurs réseau (le fichier
+   *  manquant doit être re-téléchargé), simple réinitialisation sinon. */
+  handleRetry = () => {
+    const { errorKind } = this.state;
+
+    if (errorKind !== 'runtime' && typeof window !== 'undefined') {
+      window.location.reload();
+      return;
     }
-    
-    this.setState({ hasError: false, error: null, errorInfo: null, isOfflineError: false });
+
+    this.setState({ hasError: false, error: null, errorInfo: null, errorKind: 'runtime' });
   };
 
   handleGoHome = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null, isOfflineError: false });
-    
-    // ✅ SSR FIX: Vérifier que nous sommes côté client
+    this.setState({ hasError: false, error: null, errorInfo: null, errorKind: 'runtime' });
+
     if (typeof window !== 'undefined') {
       window.location.href = '/';
     }
   };
 
   render() {
-    if (this.state.hasError) {
-      // Si un fallback personnalisé est fourni, l'utiliser
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
+    if (!this.state.hasError) return this.props.children;
 
-      // 📡 Affichage spécial pour les erreurs hors ligne
-      if (this.state.isOfflineError) {
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex items-center justify-center p-6">
-            <div className="max-w-lg w-full bg-white rounded-2xl shadow-2xl p-8">
-              <div className="text-center mb-6">
-                <WifiOffIcon className="w-20 h-20 text-orange-500 mx-auto mb-4" />
-                <h2 className="text-3xl mb-3 text-gray-900">Mode hors ligne</h2>
-                <p className="text-gray-600 mb-2">
-                  Cette page n'est pas disponible hors ligne.
-                </p>
-              </div>
+    // Si un fallback personnalisé est fourni, l'utiliser
+    if (this.props.fallback) return this.props.fallback;
 
-              {/* Message informatif */}
-              <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
-                <p className="text-sm text-orange-800">
-                  Vous devez être connecté à Internet pour accéder aux panneaux Admin et Conducteur.
-                </p>
-                <p className="text-sm text-orange-700 mt-2">
-                  Veuillez vous reconnecter ou revenir à l'accueil.
-                </p>
-              </div>
+    const kind = this.state.errorKind;
+    const message = MESSAGES[kind];
+    const isConnectionIssue = kind !== 'runtime';
 
-              {/* Actions */}
-              <div className="space-y-3">
-                <Button 
-                  onClick={this.handleReset}
-                  className="w-full h-12 bg-cyan-500 hover:bg-cyan-600 text-white"
-                >
-                  Réessayer
-                </Button>
-                <Button 
-                  onClick={this.handleGoHome}
-                  variant="outline"
-                  className="w-full h-12"
-                >
-                  <HomeIcon className="w-4 h-4 mr-2" />
-                  Retour à l'accueil
-                </Button>
-              </div>
-
-              {/* Info supplémentaire */}
-              <p className="text-xs text-gray-500 text-center mt-6">
-                Si le problème persiste, vérifiez la console du navigateur
-              </p>
-            </div>
+    return (
+      <div
+        role="alert"
+        className={`min-h-[100dvh] flex items-center justify-center px-4 pt-6 pb-safe-page ${
+          isConnectionIssue
+            ? 'bg-gradient-to-b from-orange-50 to-yellow-50'
+            : 'bg-gradient-to-b from-red-50 to-orange-50'
+        }`}
+      >
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-5 sm:p-8">
+          <div className="text-center mb-5">
+            {isConnectionIssue ? (
+              <WifiOffIcon className="w-14 h-14 text-orange-500 mx-auto mb-3" />
+            ) : (
+              <AlertCircleIcon className="w-14 h-14 text-red-500 mx-auto mb-3" />
+            )}
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{message.title}</h2>
+            <p className="text-sm text-gray-600 leading-relaxed">{message.intro}</p>
           </div>
-        );
-      }
 
-      // 🔴 Affichage standard pour les autres erreurs
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-6">
-          <div className="max-w-lg w-full bg-white rounded-2xl shadow-2xl p-8">
-            <div className="text-center mb-6">
-              <AlertCircleIcon className="w-20 h-20 text-red-500 mx-auto mb-4" />
-              <h2 className="text-3xl mb-3 text-gray-900">Erreur de chargement</h2>
-              <p className="text-gray-600 mb-2">
-                Une erreur est survenue lors du chargement de cette page.
-              </p>
-            </div>
-
-            {/* Détails de l'erreur */}
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-              <p className="text-sm text-red-800 font-mono break-words">
-                {this.state.error?.message || 'Erreur inconnue'}
-              </p>
-              
-              {/* Conseil pour problème de cache/build */}
-              {this.state.error?.message?.includes('Failed to fetch') && (
-                <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-xs text-yellow-800 font-bold">💡 Solution rapide :</p>
-                  <p className="text-xs text-yellow-700 mt-1">
-                    1. Videz le cache du navigateur (Ctrl+Shift+Delete)<br/>
-                    2. Actualisez la page (Ctrl+F5 ou Cmd+Shift+R)<br/>
-                    3. Si le problème persiste, attendez quelques minutes que le serveur se mette à jour
-                  </p>
-                </div>
-              )}
-              
-              {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
-                <details className="mt-3">
-                  <summary className="text-xs text-red-600 cursor-pointer hover:text-red-800">
-                    Détails techniques
-                  </summary>
-                  <pre className="mt-2 text-xs text-red-700 overflow-auto max-h-40 bg-red-100 p-2 rounded">
-                    {this.state.errorInfo.componentStack}
-                  </pre>
-                </details>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-3">
-              <Button 
-                onClick={this.handleReset}
-                className="w-full h-12 bg-cyan-500 hover:bg-cyan-600 text-white"
-              >
-                Réessayer
-              </Button>
-              <Button 
-                onClick={this.handleGoHome}
-                variant="outline"
-                className="w-full h-12"
-              >
-                <HomeIcon className="w-4 h-4 mr-2" />
-                Retour à l'accueil
-              </Button>
-            </div>
+          <div
+            className={`rounded-xl p-3.5 mb-5 text-sm leading-relaxed ${
+              isConnectionIssue
+                ? 'bg-orange-50 border border-orange-200 text-orange-800'
+                : 'bg-red-50 border border-red-200 text-red-800'
+            }`}
+          >
+            {message.hint}
           </div>
+
+          <div className="space-y-3">
+            <Button
+              onClick={this.handleRetry}
+              className="w-full h-12 bg-cyan-500 hover:bg-cyan-600 text-white font-medium"
+            >
+              <RefreshIcon className="w-4 h-4 mr-2" />
+              Réessayer
+            </Button>
+            <Button
+              onClick={this.handleGoHome}
+              variant="outline"
+              className="w-full h-12"
+            >
+              <HomeIcon className="w-4 h-4 mr-2" />
+              Retour à l'accueil
+            </Button>
+          </div>
+
+          <p className="text-[11px] text-gray-400 text-center mt-5 leading-relaxed">
+            {isConnectionIssue
+              ? 'Astuce : si vous utilisez les données mobiles, vérifiez que votre forfait est encore actif.'
+              : 'Si le problème persiste, contactez le support SmartCabb.'}
+          </p>
+
+          {/* Détails techniques : uniquement en développement */}
+          {process.env.NODE_ENV === 'development' && this.state.error && (
+            <details className="mt-4">
+              <summary className="text-xs text-gray-400 cursor-pointer">
+                Détails techniques
+              </summary>
+              <pre className="mt-2 text-[11px] text-red-700 overflow-auto max-h-40 bg-red-50 p-2 rounded whitespace-pre-wrap break-words">
+                {this.state.error.message}
+                {this.state.errorInfo?.componentStack
+                  ? `\n${this.state.errorInfo.componentStack}`
+                  : ''}
+              </pre>
+            </details>
+          )}
         </div>
-      );
-    }
-
-    return this.props.children;
+      </div>
+    );
   }
 }
