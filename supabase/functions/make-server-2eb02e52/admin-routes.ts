@@ -288,7 +288,7 @@ app.get("/stats", async (c) => {
     try {
       const { data, error } = await kvClient()
         .from("scheduled_rides")
-        .select("id,status,estimated_price,total_price,final_price,category,scheduled_date,created_at,completed_at")
+        .select("id,status,estimated_price,category,scheduled_date,created_at,updated_at")
         .order("created_at", { ascending: false })
         .limit(5000);
       if (error) {
@@ -343,7 +343,9 @@ app.get("/stats", async (c) => {
 
     // ─── Gains des réservations ───────────────────────────────────────────────
     function reservationPrice(r: any): number {
-      const raw = r.total_price ?? r.final_price ?? r.estimated_price ?? r.price ?? 0;
+      // ⚠️ La table `scheduled_rides` ne possède QUE `estimated_price`
+      // (pas de total_price / final_price : vérifié sur le schéma réel).
+      const raw = r.estimated_price ?? 0;
       return typeof raw === "string" ? parseFloat(raw) || 0 : Number(raw) || 0;
     }
     const COMPLETED_RESERVATION_STATUSES = ["completed", "done", "finished", "terminee", "terminée"];
@@ -368,7 +370,7 @@ app.get("/stats", async (c) => {
     // Réservations terminées aujourd'hui (payées / honorées)
     const reservationRevenueTodayCDF = completedReservations
       .filter((r: any) => {
-        const ts = r.completed_at || r.scheduled_date || r.created_at || "";
+        const ts = r.updated_at || r.scheduled_date || r.created_at || "";
         return ts && new Date(ts) >= todayStart;
       })
       .reduce((s: number, r: any) => s + reservationPrice(r), 0);
@@ -403,7 +405,7 @@ app.get("/stats", async (c) => {
     });
 
     completedReservations.forEach((r: any) => {
-      const key = monthKeyOf(r.completed_at || r.scheduled_date || r.created_at);
+      const key = monthKeyOf(r.updated_at || r.scheduled_date || r.created_at);
       if (key && monthlyMap[key]) monthlyMap[key].reservations += reservationPrice(r);
     });
 

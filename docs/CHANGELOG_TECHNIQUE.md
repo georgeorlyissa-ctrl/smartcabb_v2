@@ -58,7 +58,7 @@ Assez de détail pour comprendre le code sans le relire.>
 | `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
 
 ### Description technique
-- **Backend** : `/admin/stats` fait une requête supplémentaire sur `scheduled_rides` (colonnes `id,status,estimated_price,total_price,final_price,category,scheduled_date,created_at,completed_at`, limite 5000). Une réservation est considérée **honorée** si `status ∈ {completed, done, finished, terminee, terminée}`. Prix : `total_price → final_price → estimated_price → price`.
+- **Backend** : `/admin/stats` fait une requête supplémentaire sur `scheduled_rides` (colonnes réelles `id,status,estimated_price,category,scheduled_date,created_at,updated_at`, limite 5000 — les colonnes `total_price` / `final_price` / `completed_at` **n'existent pas** dans cette table, vérifié via l'API REST). Une réservation est considérée **honorée** si `status ∈ {completed, done, finished, terminee, terminée}` ; en pratique l'admin passe la réservation à `completed` via « Traiter ». Prix : `estimated_price` (seule colonne tarifaire de la table).
 - **Agrégats** :
   - `revenue.totalCDF` = courses terminées + réservations honorées ;
   - `revenue.ridesCDF` / `revenue.reservationsCDF` ;
@@ -66,7 +66,7 @@ Assez de détail pour comprendre le code sans le relire.>
   - `revenue.monthCDF`, `ridesMonthCDF`, `reservationsMonthCDF` ;
   - `revenue.ridesCount`, `reservationsCount`, `reservationsTotal` ;
   - `revenue.monthly[]` : 12 points `{month,label,shortLabel,ridesCDF,reservationsCDF,totalCDF}`.
-- Dates utilisées : courses `completedAt || completed_at || updatedAt || updated_at || createdAt || created_at` ; réservations `completed_at || scheduled_date || created_at`.
+- Dates utilisées : courses `completedAt || completed_at || updatedAt || updated_at || createdAt || created_at` ; réservations `updated_at || scheduled_date || created_at` (pas de `completed_at`).
 - **Rétrocompatibilité** : `totalRevenueCDF` et `revenueTodayCDF` restent **courses uniquement** ; le front privilégie `revenue.*` et retombe sur les anciens champs si l'objet est absent.
 - **UI** : graphique en barres empilées bleu (courses) / violet (réservations), hauteur relative au max sur 12 mois, infobulle native par mois, aucune librairie de charts (cohérent avec `StatsCharts`, build Vercel léger). Layout responsive (`grid-cols-1 md:grid-cols-2`, scroll horizontal du graphique sur mobile).
 
