@@ -280,6 +280,26 @@ app.get("/stats", async (c) => {
       kvGetByPrefix("ride:"),
     ]);
 
+    // ─── Réservations (table Supabase `scheduled_rides`) ──────────────────────
+    // Les réservations ne sont pas dans le KV store : ce sont les commandes
+    // « à l'avance » (Familiale / Business). On les charge ici pour pouvoir
+    // ventiler les gains entre courses immédiates et réservations.
+    let reservations: any[] = [];
+    try {
+      const { data, error } = await kvClient()
+        .from("scheduled_rides")
+        .select("id,status,estimated_price,total_price,final_price,category,scheduled_date,created_at,completed_at")
+        .order("created_at", { ascending: false })
+        .limit(5000);
+      if (error) {
+        console.warn("⚠️ [STATS] Réservations non chargées:", error.message);
+      } else if (Array.isArray(data)) {
+        reservations = data;
+      }
+    } catch (e) {
+      console.warn("⚠️ [STATS] Erreur chargement réservations:", e);
+    }
+
     // ─── Filtres conducteurs ──────────────────────────────────────────────────
     const approvedDrivers = drivers.filter(
       (d: any) => d.isApproved === true || d.is_approved === true || d.status === "approved"
@@ -321,6 +341,21 @@ app.get("/stats", async (c) => {
 
     const totalRevenueCDF = completedRides.reduce((s: number, r: any) => s + ridePrice(r), 0);
 
+    // ─── Gains des réservations ───────────────────────────────────────────────
+    function reservationPrice(r: any): number {
+      const raw = r.total_price ?? r.final_price ?? r.estimated_price ?? r.price ?? 0;
+      return typeof raw === "string" ? parseFloat(raw) || 0 : Number(raw) || 0;
+    }
+    const COMPLETED_RESERVATION_STATUSES = ["completed", "done", "finished", "terminee", "terminée"];
+    const completedReservations = reservations.filter((r: any) =>
+      COMPLETED_RESERVATION_STATUSES.includes(String(r.status || "").toLowerCase())
+    );
+    const reservationRevenueCDF = completedReservations.reduce(
+      (s: number, r: any) => s + reservationPrice(r),
+      0
+    );
+    const totalRevenueAllCDF = totalRevenueCDF + reservationRevenueCDF;
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
@@ -329,6 +364,64 @@ app.get("/stats", async (c) => {
       return ts && new Date(ts) >= todayStart;
     });
     const revenueTodayCDF = todayCompleted.reduce((s: number, r: any) => s + ridePrice(r), 0);
+
+    // Réservations terminées aujourd'hui (payées / honorées)
+    const reservationRevenueTodayCDF = completedReservations
+      .filter((r: any) => {
+        const ts = r.completed_at || r.scheduled_date || r.created_at || "";
+        return ts && new Date(ts) >= todayStart;
+      })
+      .reduce((s: number, r: any) => s + reservationPrice(r), 0);
+
+    // ─── Série mensuelle (12 derniers mois) ───────────────────────────────────
+    // Sert à visualiser la tendance : courses vs réservations.
+    const MONTH_LABELS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const monthKeys: string[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(monthStart);
+      d.setMonth(d.getMonth() - i);
+      monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+    }
+
+    const monthlyMap: Record<string, { rides: number; reservations: number }> = {};
+    monthKeys.forEach((key) => { monthlyMap[key] = { rides: 0, reservations: 0 }; });
+
+    const monthKeyOf = (value: any): string | null => {
+      if (!value) return null;
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return null;
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    };
+
+    completedRides.forEach((r: any) => {
+      const key = monthKeyOf(r.completedAt || r.completed_at || r.updatedAt || r.updated_at || r.createdAt || r.created_at);
+      if (key && monthlyMap[key]) monthlyMap[key].rides += ridePrice(r);
+    });
+
+    completedReservations.forEach((r: any) => {
+      const key = monthKeyOf(r.completed_at || r.scheduled_date || r.created_at);
+      if (key && monthlyMap[key]) monthlyMap[key].reservations += reservationPrice(r);
+    });
+
+    const revenueMonthly = monthKeys.map((key) => {
+      const index = Number(key.split("-")[1]) - 1;
+      const values = monthlyMap[key];
+      return {
+        month: key,
+        label: `${MONTH_LABELS[index]} ${key.slice(2, 4)}`,
+        shortLabel: MONTH_LABELS[index],
+        ridesCDF: Math.round(values.rides),
+        reservationsCDF: Math.round(values.reservations),
+        totalCDF: Math.round(values.rides + values.reservations),
+      };
+    });
+
+    const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+    const currentMonth = monthlyMap[currentMonthKey] || { rides: 0, reservations: 0 };
 
     const cancelledToday = cancelledRides.filter((r: any) => {
       const ts = r.cancelledAt || r.updatedAt || r.createdAt || r.created_at || "";
@@ -358,6 +451,23 @@ app.get("/stats", async (c) => {
         totalRevenueCDF:  Math.round(totalRevenueCDF),
         revenueTodayCDF:  Math.round(revenueTodayCDF),
         averageRating:    Math.round(avgRating * 10) / 10,
+
+        // ─── Ventilation des gains : courses vs réservations ──────────────────
+        revenue: {
+          totalCDF: Math.round(totalRevenueAllCDF),
+          ridesCDF: Math.round(totalRevenueCDF),
+          reservationsCDF: Math.round(reservationRevenueCDF),
+          todayCDF: Math.round(revenueTodayCDF + reservationRevenueTodayCDF),
+          ridesTodayCDF: Math.round(revenueTodayCDF),
+          reservationsTodayCDF: Math.round(reservationRevenueTodayCDF),
+          monthCDF: Math.round(currentMonth.rides + currentMonth.reservations),
+          ridesMonthCDF: Math.round(currentMonth.rides),
+          reservationsMonthCDF: Math.round(currentMonth.reservations),
+          ridesCount: completedRides.length,
+          reservationsCount: completedReservations.length,
+          reservationsTotal: reservations.length,
+          monthly: revenueMonthly,
+        },
       },
     });
   } catch (error) {

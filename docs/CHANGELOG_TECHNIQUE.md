@@ -42,6 +42,52 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-15 (3) — Admin : vue « Revenus » (gain total → courses / réservations → tendance 12 mois)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : dans le panel admin, afficher **d'abord le gain total**, puis le **gain des commandes de course** et le **gain des commandes par réservation**, avec la **tendance** sous forme de graphique.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/admin-routes.ts` | `/stats` charge `scheduled_rides` et renvoie un objet `stats.revenue` (total, courses, réservations, aujourd'hui, mois, compteurs, série 12 mois) |
+| `components/admin/RevenueOverview.tsx` | **Nouveau** — carte « Gain total », deux cartes de ventilation avec parts en %, graphique empilé 12 mois (CSS pur) |
+| `components/admin/AdminDashboard.tsx` | Import + rendu de `<RevenueOverview stats={liveStats} />` en haut du contenu ; KPI « Revenus aujourd'hui » et « Total » incluent désormais les réservations |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Backend** : `/admin/stats` fait une requête supplémentaire sur `scheduled_rides` (colonnes `id,status,estimated_price,total_price,final_price,category,scheduled_date,created_at,completed_at`, limite 5000). Une réservation est considérée **honorée** si `status ∈ {completed, done, finished, terminee, terminée}`. Prix : `total_price → final_price → estimated_price → price`.
+- **Agrégats** :
+  - `revenue.totalCDF` = courses terminées + réservations honorées ;
+  - `revenue.ridesCDF` / `revenue.reservationsCDF` ;
+  - `revenue.todayCDF`, `ridesTodayCDF`, `reservationsTodayCDF` (minuit local) ;
+  - `revenue.monthCDF`, `ridesMonthCDF`, `reservationsMonthCDF` ;
+  - `revenue.ridesCount`, `reservationsCount`, `reservationsTotal` ;
+  - `revenue.monthly[]` : 12 points `{month,label,shortLabel,ridesCDF,reservationsCDF,totalCDF}`.
+- Dates utilisées : courses `completedAt || completed_at || updatedAt || updated_at || createdAt || created_at` ; réservations `completed_at || scheduled_date || created_at`.
+- **Rétrocompatibilité** : `totalRevenueCDF` et `revenueTodayCDF` restent **courses uniquement** ; le front privilégie `revenue.*` et retombe sur les anciens champs si l'objet est absent.
+- **UI** : graphique en barres empilées bleu (courses) / violet (réservations), hauteur relative au max sur 12 mois, infobulle native par mois, aucune librairie de charts (cohérent avec `StatsCharts`, build Vercel léger). Layout responsive (`grid-cols-1 md:grid-cols-2`, scroll horizontal du graphique sur mobile).
+
+### Impact produit / comportement visible
+- En haut du tableau de bord admin : **Gain total** en grand, avec « Aujourd'hui » et « Ce mois ».
+- Dessous : **Commandes de course** (nombre de courses terminées, part en %, montant du jour) et **Commandes par réservation** (nombre honorées / total, part en %, montant du jour).
+- Puis la **tendance sur 12 mois** empilée courses + réservations.
+- Les cartes KPI « Revenus aujourd'hui » et « Total » comptabilisent désormais aussi les réservations.
+
+### Risques & rollback
+- **Risque** : la lecture de `scheduled_rides` peut échouer (RLS/permissions) → un `console.warn` est émis et les gains réservations tombent à 0, **sans casser** l'endpoint.
+- **Rollback** : `git revert <hash>` + redéploiement de l'Edge Function.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK — `AdminDashboard-BOaTkpSg.js` contient « Gain total » et « Tendance des gains »
+- [ ] Vérification visuelle admin en production (données réelles)
+- [ ] Vérification du rendu mobile (graphique défilable)
+
+---
+
 ## 2026-11-15 (2) — Profil : « Modes de paiement » ouvrait l'écran de paiement de course (crash `Card is not defined`)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

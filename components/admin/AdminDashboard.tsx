@@ -20,6 +20,7 @@ import { CancellationsScreen } from './CancellationsScreen';
 import { NotificationTester } from './NotificationTester';
 import FCMTestPanel from './FCMTestPanel';
 import { SMSInsufficientBalanceBanner } from './SMSInsufficientBalanceBanner';
+import { RevenueOverview } from './RevenueOverview';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { supabase } from '../../lib/supabase';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -288,8 +289,9 @@ export function AdminDashboard() {
   const pendingDrivers = drivers.filter(d =>
     (d.status === 'pending' || !d.isApproved || d.isApproved === false)
   );
-  const totalRevenue    = liveStats?.totalRevenueCDF ?? stats.totalRevenue;
-  const revenueTodayCDF = liveStats?.revenueTodayCDF ?? 0;
+  // Revenus : on privilégie la ventilation `revenue` (courses + réservations)
+  const totalRevenue    = liveStats?.revenue?.totalCDF ?? liveStats?.totalRevenueCDF ?? stats.totalRevenue;
+  const revenueTodayCDF = liveStats?.revenue?.todayCDF ?? liveStats?.revenueTodayCDF ?? 0;
   const cancelledToday  = liveStats?.cancelledToday  ?? 0;
   const averageRating   = liveStats?.averageRating   ?? (drivers.length > 0
     ? drivers.reduce((sum, d) => sum + (d.rating || 0), 0) / drivers.length
@@ -1251,7 +1253,12 @@ export function AdminDashboard() {
           <>
             {/* ⚠️ Bannière d'alerte SMS insuffisant */}
             <SMSInsufficientBalanceBanner />
-            
+
+            {/* 💰 Vue revenus : gain total, puis courses / réservations, puis tendance */}
+            <div className="mb-6">
+              <RevenueOverview stats={liveStats} />
+            </div>
+
             {/* Panel de notifications */}
             {showNotifications && (
               <motion.div
