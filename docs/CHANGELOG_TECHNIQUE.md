@@ -83,6 +83,7 @@ Assez de détail pour comprendre le code sans le relire.>
 ### Tests / vérifications
 - [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
 - [x] `npx vite build` OK — `AdminDashboard-BOaTkpSg.js` contient « Gain total » et « Tendance des gains »
+- [x] Vérification de l'API en production : `revenue.totalCDF` > 0, `reservationsCDF` alimenté (43 réservations, 36 honorées)
 - [ ] Vérification visuelle admin en production (données réelles)
 - [ ] Vérification du rendu mobile (graphique défilable)
 
