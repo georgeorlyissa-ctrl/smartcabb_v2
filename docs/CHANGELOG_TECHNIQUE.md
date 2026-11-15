@@ -42,6 +42,52 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-15 (2) — Profil : « Modes de paiement » ouvrait l'écran de paiement de course (crash `Card is not defined`)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : depuis **Mon Profil**, le bouton « Modes de paiement » affichait « Page indisponible ». Reproduit et diagnostiqué en production : `ReferenceError: Card is not defined`.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/ProfileScreen.tsx` | La ligne « Modes de paiement » ouvre `payment-settings` (écran de réglage) au lieu de `payment-method` (paiement de course) |
+| `components/CurrencySelector.tsx` | Import manquant `Card` (cause du crash) |
+| `components/admin/CustomerSupportScreen.tsx` | Imports manquants `Card`, `CardContent`, `CardHeader`, `CardTitle` |
+| `components/driver/DriverBalanceManager.tsx` | Import manquant `Card` |
+| `components/driver/GPSNavigationScreen.tsx` | Import manquant `Card` |
+| `components/driver/OfflineModeCache.tsx` | Import manquant `Card` |
+| `components/passenger/CustomerAssistant.tsx` | Imports manquants `CardHeader`, `CardTitle`, `CardContent` |
+| `components/passenger/RatingDialog.tsx` | Import manquant `Card` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Deux bugs cumulés** :
+  1. `ProfileScreen` déclarait `screen: 'payment-method'` pour « Modes de paiement ». Cet écran (`PaymentMethodScreen`) est celui du paiement **pendant une course** : il redirige vers `estimate` s'il n'y a pas de course, et sinon rend `CurrencySelector`.
+  2. `CurrencySelector` utilisait `<Card>` **sans l'importer**. Le bundler laissait donc une référence globale `Card` → `ReferenceError: Card is not defined` dès qu'une course était en cours. TypeScript ne le signalait pas (aucune vérification d'import pour ce fichier lors du build).
+- **Correctif principal** : la ligne du profil pointe désormais vers `payment-settings` — l'écran réparé la veille (mode préféré Mobile Money / Espèces, enregistré côté serveur).
+- **Correctif système** : balayage de tous les `components/`, `pages/` et `src/` à la recherche de `<Card…>` sans import correspondant ; 7 fichiers corrigés, dont plusieurs écrans chauffeur/admin qui auraient planté de la même façon.
+- Vérification post-build : `0` occurrence de `Card` non résolue dans le bundle (`e.jsxs(Card`).
+
+### Impact produit / comportement visible
+- Profil → Modes de paiement affiche l'écran de réglage fonctionnel (plus de plantage, plus de redirection vers l'estimation).
+- L'écran de paiement pendant une course (Mobile Money / Espèces / Mixte) ne plante plus à cause de `CurrencySelector`.
+- Les écrans chauffeur (solde, navigation, mode hors ligne) et admin (support) ne plantent plus sur `Card`.
+
+### Risques & rollback
+- **Risque** : aucun changement de logique métier, uniquement des imports manquants et une destination de navigation.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK — `PassengerApp-CusgYiRW.js`, 0 référence `Card` non résolue
+- [x] Reproduction du bug en production avant correctif : `ReferenceError: Card is not defined` (console navigateur)
+- [ ] Test manuel téléphone : Profil → Modes de paiement → choisir un mode → retour → le choix est conservé
+- [ ] Test manuel : course en cours → écran de paiement → changer de devise (USD/CDF) sans erreur
+
+---
+
 ## 2026-11-15 — Auto-mise à jour des clients bloqués sur un ancien bundle (+ diagnostic d'erreur)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

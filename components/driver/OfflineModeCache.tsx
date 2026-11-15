@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from '../../lib/toast';
 import { RefreshCw } from '../../lib/icons';
+import { Card } from '../ui/card';
 
 interface CachedRide {
   id: string;

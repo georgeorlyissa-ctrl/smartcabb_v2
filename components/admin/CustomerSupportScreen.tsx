@@ -1,5 +1,6 @@
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../lib/toast';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface Message {
   id: string;

@@ -513,7 +513,7 @@ export function ProfileScreen() {
       iconColor: 'text-blue-600',
       title: 'Modes de paiement',
       subtitle: getPaymentMethodLabel(passengerData?.favoritePaymentMethod),
-      screen: 'payment-method',
+      screen: 'payment-settings',
     },
     {
       icon: Shield,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from '../lib/motion';
 import { DollarSign, Banknote } from '../lib/icons';
+import { Card } from './ui/card';
 
 interface CurrencySelectorProps {
   onCurrencySelect: (currency: 'USD' | 'CDF') => void;

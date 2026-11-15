@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '../ui/button';
+import { Card } from '../ui/card';
 import { Navigation as NavigationIcon, ArrowLeft, Minimize2, Maximize2, Phone, MessageSquare, MapPin, AlertTriangle } from '../../lib/icons';
 import { MapView } from '../MapView'; // ✅ OPTIMISÉ: Utiliser MapView directement (Google Maps)
 import { motion } from '../../lib/motion';

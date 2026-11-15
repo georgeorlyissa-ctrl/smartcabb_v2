@@ -1,6 +1,7 @@
 import { DollarSign, Save, RefreshCw, Database } from '../../lib/icons';
 import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { Card } from '../ui/card';
 
 interface DriverBalanceManagerProps {
   driverId: string;

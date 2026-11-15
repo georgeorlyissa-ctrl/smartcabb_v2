@@ -1,6 +1,7 @@
 import { PRICING_CONFIG } from '../../lib/pricing-data';
 import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { Card } from '../ui/card';
 
 interface RatingDialogProps {
   ride: any;
