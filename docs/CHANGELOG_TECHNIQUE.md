@@ -42,6 +42,49 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-15 (4) — iPhone : écran rouge « Erreur détectée » à cause de Google Maps (IntersectionObserver)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : sur iPhone (Safari), l'écran « Prix estimé » affichait un écran rouge technique : *« Promesse non gérée : TypeError: Argument 1 ('target') to IntersectionObserver.observe must be an instance of Element »*. Le passager ne pouvait plus utiliser la page.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/safe-intersection-observer.ts` | **Nouveau** — protège `IntersectionObserver.observe/unobserve` contre les cibles non-Element |
+| `main.tsx` | Installe le garde-fou avant tout rendu (et avant le chargement de Google Maps) |
+| `utils/diagnostics.ts` | N'affiche plus l'overlay rouge pour les erreurs d'origine tierce (Google Maps) ; ajout de motifs bénins |
+| `components/MapView.tsx` | Détection élargie des échecs Google Maps (fichier `maps.googleapis.com`, `IntersectionObserver`, `gm_authFailure`) et bascule automatique vers OpenStreetMap, y compris sur promesse rejetée. Fichier réencodé en UTF-8 (il était en Windows-1252) |
+| `components/GoogleMapView.tsx` | Attend que le conteneur soit dans le DOM et ait une taille > 0 avant de créer la carte ; libère les listeners Google au démontage |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Origine** : Google Maps JS v3.66 (`main.js:272-273`) crée une promesse interne puis appelle `IntersectionObserver.observe(target)`. Sur iOS/Safari, la cible peut être `null` (conteneur pas encore mesuré, écran en transition, carte démontée pendant l'initialisation) → exception **asynchrone**. Notre `utils/diagnostics.ts` écoute `unhandledrejection` et affiche un overlay rouge technique pour toute promesse non gérée : d'où l'écran bloquant alors que la carte, elle, continuait de fonctionner.
+- **Correctif 1 (racine)** : `installSafeIntersectionObserver()` remplace `IntersectionObserver.prototype.observe` et `unobserve` par des versions qui ignorent une cible invalide (`nodeType !== 1`) au lieu de lever. L'appel reste 100 % natif pour les cibles valides. Neutralise aussi les autres librairies tierces.
+- **Correctif 2 (UX)** : `diagnostics.ts` ignore désormais les erreurs dont le fichier ou la pile contient `maps.googleapis.com` / `maps.gstatic.com` (+ motifs `IntersectionObserver`, `gm_authFailure`, `You must enable Billing`). Les vraies erreurs applicatives continuent d'afficher l'overlay.
+- **Correctif 3 (résilience)** : `MapView` écoute aussi `unhandledrejection` ; toute défaillance Google Maps (clé, billing, bug interne, conteneur non visible) bascule sur la carte OpenStreetMap déjà en place, sans écran d'erreur.
+- **Correctif 4 (prévention)** : `GoogleMapView` attend jusqu'à 2 s que le conteneur soit attaché au DOM et mesuré (`offsetWidth/Height > 0`) avant `new google.maps.Map(...)`, et nettoie les listeners au démontage.
+
+### Impact produit / comportement visible
+- Plus d'écran rouge technique sur iPhone à cause de Google Maps.
+- Si Google Maps échoue (clé/billing/réseau/iOS), la carte bascule silencieusement sur OpenStreetMap avec le bandeau « Mode carte simplifié (OpenStreetMap) ».
+- Les erreurs réelles de l'application continuent d'être signalées (overlay conservé pour le diagnostic).
+
+### Risques & rollback
+- **Risque** : le patch d'`IntersectionObserver` est global ; il ne modifie que le comportement des cibles invalides (qui levaient une exception auparavant). Aucun impact sur les cibles valides.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] Test local (preview) : `new IntersectionObserver(cb).observe(null)` ne lève plus d'exception (`patched: true`, `observeThrew: false`)
+- [x] Test local : rejet simulé avec le message exact de Google Maps → **aucun** overlay affiché
+- [x] Test local : rejet applicatif réel → overlay toujours affiché (non-régression du diagnostic)
+- [ ] Test manuel iPhone : ouvrir « Prix estimé » → carte affichée, aucun écran rouge
+
+---
+
 ## 2026-11-15 (3) — Admin : vue « Revenus » (gain total → courses / réservations → tendance 12 mois)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

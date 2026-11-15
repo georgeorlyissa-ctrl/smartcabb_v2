@@ -4,7 +4,7 @@
  * Essaie Google Maps en premier, puis bascule vers OpenStreetMap si erreur
  * (clé API manquante, RefererNotAllowedMapError, ApiNotActivatedMapError, etc.)
  *
- * @version 2.0.0
+ * @version 2.1.0
  */
 import { useEffect, useState } from 'react';
 import { GoogleMapView } from './GoogleMapView';
@@ -47,41 +47,78 @@ interface MapViewProps {
   height?: string;
 }
 
+/**
+ * Détecte les échecs venant de Google Maps lui-même : clé restreinte, billing
+ * désactivé, ou bug interne de la librairie (ex. sur iOS/Safari :
+ * « Argument 1 ('target') to IntersectionObserver.observe must be an instance
+ * of Element »). Dans tous ces cas on préfère la carte OpenStreetMap.
+ */
+function looksLikeGoogleMapsFailure(filename?: string, message?: string): boolean {
+  const file = filename || '';
+  const msg = message || '';
+  return (
+    file.includes('maps.googleapis.com') ||
+    file.includes('maps.gstatic.com') ||
+    msg.includes('RefererNotAllowedMapError') ||
+    msg.includes('ApiNotActivatedMapError') ||
+    msg.includes('InvalidKeyMapError') ||
+    msg.includes('MissingKeyMapError') ||
+    msg.includes('BillingNotEnabledMapError') ||
+    msg.includes('BillingNotEnabled') ||
+    msg.includes("This page can't load Google Maps correctly") ||
+    msg.includes('You must enable Billing') ||
+    msg.includes('IntersectionObserver.observe must be an instance of Element') ||
+    msg.includes('gm_authFailure')
+  );
+}
+
 export function MapView(props: MapViewProps) {
   // ✅ Par défaut on tente Google Maps
   const [useOpenStreetMap, setUseOpenStreetMap] = useState(false);
 
   useEffect(() => {
-    // Écouter les erreurs Google Maps globales (RefererNotAllowedMapError, BillingNotEnabled, etc.)
-    const errorListener = (event: ErrorEvent | any) => {
-      const errorMsg = event?.message || event?.error?.message || String(event);
+    const switchToOpenStreetMap = (reason: string) => {
+      console.warn('⚠️ Échec Google Maps détecté:', reason);
+      console.log('🔄 Basculement automatique vers OpenStreetMap...');
+      setUseOpenStreetMap(true);
+    };
+
+    // ─── Erreurs JS classiques ───────────────────────────────────────────────
+    const errorListener = (event: ErrorEvent) => {
+      const message = event?.message || (event as any)?.error?.message || '';
+      if (looksLikeGoogleMapsFailure(event?.filename, message)) {
+        switchToOpenStreetMap(message);
+      }
+    };
+
+    // ─── Promesses rejetées (bug interne Google Maps sur iOS) ───────────────
+    // La carte reste souvent utilisable, mais on bascule proprement sur OSM
+    // pour éviter que l'erreur ne remonte à l'utilisateur.
+    const rejectionListener = (event: PromiseRejectionEvent) => {
+      const reason: any = (event as any)?.reason;
+      const message = String(reason?.message || reason || '');
+      const stack = String(reason?.stack || '');
       if (
-        errorMsg.includes('RefererNotAllowedMapError') ||
-        errorMsg.includes('ApiNotActivatedMapError') ||
-        errorMsg.includes('InvalidKeyMapError') ||
-        errorMsg.includes('MissingKeyMapError') ||
-        errorMsg.includes('BillingNotEnabledMapError') ||
-        errorMsg.includes('BillingNotEnabled') ||
-        errorMsg.includes('This page can\'t load Google Maps correctly') ||
-        errorMsg.includes('You must enable Billing')
+        looksLikeGoogleMapsFailure(reason?.fileName, message) ||
+        stack.includes('maps.googleapis.com') ||
+        message.includes('IntersectionObserver')
       ) {
-        console.warn('⚠️ Erreur Google Maps globale détectée:', errorMsg);
-        console.log('🔄 Basculement vers OpenStreetMap...');
-        setUseOpenStreetMap(true);
+        switchToOpenStreetMap(message);
       }
     };
 
     // Google Maps appelle window.gm_authFailure en cas de problème de clé/billing
     const prevAuthFailure = (window as any).gm_authFailure;
     (window as any).gm_authFailure = () => {
-      console.warn('⚠️ gm_authFailure détecté (clé/billing)');
-      setUseOpenStreetMap(true);
+      switchToOpenStreetMap('gm_authFailure (clé/billing)');
       if (typeof prevAuthFailure === 'function') prevAuthFailure();
     };
 
     window.addEventListener('error', errorListener);
+    window.addEventListener('unhandledrejection', rejectionListener);
     return () => {
       window.removeEventListener('error', errorListener);
+      window.removeEventListener('unhandledrejection', rejectionListener);
       if ((window as any).gm_authFailure && (window as any).gm_authFailure.toString().includes('setUseOpenStreetMap')) {
         (window as any).gm_authFailure = prevAuthFailure;
       }

@@ -77,17 +77,54 @@ export function setupErrorInterceptors() {
     'moz-extension://',
     'webkit-masked-url',
     'Script error',                                 // Erreur cross-origin sans détail
+    // ─── Bruit des librairies tierces (ne cassent pas l'application) ────────
+    'IntersectionObserver',                         // Bug Google Maps iOS : observe(null)
+    'ResizeObserver',
+    'gm_authFailure',
+    'You must enable Billing',
+    'Google Maps JavaScript API',
+    'This page can\'t load Google Maps correctly',
   ];
 
   const isBenign = (message: string) =>
     BENIGN_PATTERNS.some(p => message?.includes(p));
 
+  /**
+   * Erreur provenant d'un script tiers (Google Maps, widgets, etc.) :
+   * elle ne doit JAMAIS afficher l'overlay technique à l'utilisateur.
+   * On détecte via le nom de fichier et/ou la pile d'appels.
+   */
+  const THIRD_PARTY_HOSTS = [
+    'maps.googleapis.com',
+    'maps.gstatic.com',
+    'google-analytics.com',
+    'googletagmanager.com',
+  ];
+
+  const isThirdPartyNoise = (payload: {
+    filename?: string;
+    message?: string;
+    stack?: string;
+  }): boolean => {
+    const haystack = `${payload.filename || ''}\n${payload.message || ''}\n${payload.stack || ''}`;
+    return THIRD_PARTY_HOSTS.some(host => haystack.includes(host));
+  };
+
   // Intercepter les erreurs JavaScript
   window.addEventListener('error', (event) => {
+    const stack = (event.error as any)?.stack ? String((event.error as any).stack) : '';
+
     // ✅ Ignorer les erreurs bénignes
     if (isBenign(event.message)) {
       event.preventDefault();
       console.warn('⚠️ Erreur bénigne ignorée (pas d\'overlay):', event.message);
+      return;
+    }
+
+    // ✅ Ignorer les erreurs provenant de scripts tiers (Google Maps…)
+    if (isThirdPartyNoise({ filename: event.filename, message: event.message, stack })) {
+      event.preventDefault();
+      console.warn('⚠️ Erreur tierce ignorée (pas d\'overlay):', event.message);
       return;
     }
 
@@ -101,14 +138,15 @@ export function setupErrorInterceptors() {
     });
     
     // Afficher une popup d'erreur avec stack si dispo (utile iOS)
-    const stack = event.error?.stack ? `\n\nStack:\n${String(event.error.stack).slice(0, 1200)}` : '';
-    const errorMessage = `${event.message}\n\nFichier: ${event.filename}:${event.lineno}:${event.colno}${stack}`;
+    const stackSuffix = stack ? `\n\nStack:\n${String(stack).slice(0, 1200)}` : '';
+    const errorMessage = `${event.message}\n\nFichier: ${event.filename}:${event.lineno}:${event.colno}${stackSuffix}`;
     showErrorOverlay(errorMessage);
   });
   
   // Intercepter les promesses rejetées
   window.addEventListener('unhandledrejection', (event) => {
     const reason = String(event.reason || '');
+    const stack = (event.reason as any)?.stack ? String((event.reason as any).stack) : '';
 
     // ✅ Ignorer les rejets bénins
     if (isBenign(reason)) {
@@ -117,14 +155,20 @@ export function setupErrorInterceptors() {
       return;
     }
 
-    const stack = (event.reason as any)?.stack ? `\n\nStack:\n${String((event.reason as any).stack).slice(0, 1200)}` : '';
+    // ✅ Ignorer les rejets provenant de scripts tiers (Google Maps…)
+    if (isThirdPartyNoise({ filename: (event.reason as any)?.fileName, message: reason, stack })) {
+      event.preventDefault();
+      console.warn('⚠️ Rejet tiers ignoré (pas d\'overlay):', reason);
+      return;
+    }
+
     console.error('❌ PROMESSE NON GÉRÉE:', {
       reason: event.reason,
       promise: event.promise,
       stack: (event.reason as any)?.stack
     });
     
-    const errorMessage = `Promesse non gérée: ${event.reason}${stack}`;
+    const errorMessage = `Promesse non gérée: ${event.reason}${stack ? `\n\nStack:\n${stack.slice(0, 1200)}` : ''}`;
     showErrorOverlay(errorMessage);
   });
   

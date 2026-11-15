@@ -180,7 +180,28 @@ export function GoogleMapView({
 
         if (!mounted || !mapRef.current) return;
 
-        const map = new window.google.maps.Map(mapRef.current, {
+        // ✅ SÉCURITÉ iOS — Google Maps plante (IntersectionObserver) quand on
+        // lui donne un conteneur détaché du DOM ou de taille nulle (écran en
+        // cours de transition, onglet masqué…). On attend qu'il soit prêt.
+        const container = mapRef.current;
+        const isReady = () =>
+          !!container &&
+          document.body.contains(container) &&
+          container.offsetWidth > 0 &&
+          container.offsetHeight > 0;
+
+        for (let attempt = 0; attempt < 40 && !isReady(); attempt++) {
+          await new Promise((r) => setTimeout(r, 50));
+          if (!mounted) return;
+        }
+
+        if (!isReady()) {
+          console.warn('⚠️ Conteneur carte non visible — bascule OpenStreetMap');
+          if (onError) onError('Conteneur carte non visible');
+          return;
+        }
+
+        const map = new window.google.maps.Map(container, {
           center,
           zoom,
           zoomControl: false,
@@ -234,7 +255,17 @@ export function GoogleMapView({
     };
 
     initMap();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      // Libère la carte Google pour éviter que ses tâches asynchrones
+      // continuent sur un conteneur supprimé du DOM (source du bug iOS).
+      try {
+        if (mapInstanceRef.current) {
+          window.google?.maps?.event?.clearInstanceListeners?.(mapInstanceRef.current);
+        }
+      } catch { /* ignore */ }
+      mapInstanceRef.current = null;
+    };
   }, []);
 
   // ─── Géolocalisation ─────────────────────────────────────────

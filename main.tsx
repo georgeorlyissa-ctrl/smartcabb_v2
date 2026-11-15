@@ -19,6 +19,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/globals.css';
 import { logStartupDiagnostics, setupErrorInterceptors } from './utils/diagnostics';
+import { installSafeIntersectionObserver } from './lib/safe-intersection-observer';
 import {
   releaseStaleServiceWorker,
   runStartupCacheCleanup,
@@ -39,7 +40,8 @@ if (typeof window !== 'undefined') {
   }
 }
 
-// 🔍 DIAGNOSTICS AU DÉMARRAGE
+// 🛡️ GARDE-FOU IntersectionObserver (bug Google Maps iOS/Safari) + diagnostics
+installSafeIntersectionObserver();
 logStartupDiagnostics();
 setupErrorInterceptors();
 
