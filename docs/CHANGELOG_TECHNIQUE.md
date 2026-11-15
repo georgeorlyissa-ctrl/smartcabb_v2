@@ -42,6 +42,53 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-15 — Auto-mise à jour des clients bloqués sur un ancien bundle (+ diagnostic d'erreur)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : l'écran « Moyens de paiement » fonctionnait en production mais restait en erreur sur le téléphone de l'utilisateur. Cause : un ancien Service Worker / Cache Storage du WebView servait encore les fichiers JS d'avant le correctif. L'écran d'erreur affiché (nouveau code) provenait du bundle frais, alors que le composant fautif, lui, venait du cache.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/app-update.ts` | **Nouveau** : purge SW/caches, rechargement sans cache, détection de nouveau build |
+| `main.tsx` | Nettoyage automatique au démarrage + vérification du build 4 s après lancement |
+| `components/ErrorBoundary.tsx` | Bouton « Forcer la mise à jour de l'application » + détail technique replié |
+| `hooks/useTranslation.ts` | Description « Moyens de paiement » corrigée (plus de mention de cartes) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Diagnostic** : vérification de l'écran en production (`https://www.smartcabb.com/app/passenger`, session passager simulée, navigation Paramètres → Moyens de paiement) → l'écran s'affiche correctement et le clic enregistre le mode. Le crash observé sur le téléphone ne vient donc pas du code déployé mais d'un bundle obsolète côté client.
+- **`lib/app-update.ts`** :
+  - `purgeRuntimeCaches()` : `navigator.serviceWorker.getRegistrations()` → `unregister()`, puis suppression de toutes les clés `caches`.
+  - `releaseStaleServiceWorker()` : si un Service Worker contrôle encore la page, purge puis **un seul** rechargement par session (`sessionStorage.smartcabb_sw_reloaded`).
+  - `checkForNewBuild()` : `fetch('/index.html', { cache: 'no-store' })`, extraction du `assets/index-*.js` référencé par le serveur, comparaison avec le `<script>` réellement chargé ; si différent → purge + rechargement (anti-boucle 60 s via `smartcabb_build_refresh_at`).
+  - `runStartupCacheCleanup(BUILD_ID)` : purge unique par version (`smartcabb_sw_cleanup_done`).
+  - `forceAppUpdate()` : purge + rechargement avec paramètre `_v=<timestamp>` pour contourner le cache HTTP.
+- **`main.tsx`** : `BUILD_ID = 'v517.75-2026-11-15'` ; le nettoyage et la vérification ne s'exécutent qu'en production (`import.meta.env.PROD`).
+- **`ErrorBoundary`** : ajout du lien « Forcer la mise à jour de l'application » (fonctionne même quand l'app est coincée) et d'un bloc `<details> « Détail technique »` replié, visible en production pour permettre un diagnostic par capture d'écran.
+- **Traductions** : « Gérer vos cartes et comptes » → « Choisir Mobile Money ou espèces » (fr) / « Choose Mobile Money or cash » (en), cohérent avec l'écran réel qui ne stocke aucune carte.
+
+### Impact produit / comportement visible
+- Un téléphone qui conserve une ancienne version se met à jour tout seul au lancement suivant.
+- En cas d'erreur persistante, l'utilisateur dispose d'un bouton explicite pour forcer la mise à jour, sans vider manuellement les données de l'app.
+- Le support peut lire le message d'erreur exact via « Détail technique ».
+
+### Risques & rollback
+- **Risque** : la purge des caches supprime le mode hors ligne du PWA. Celui-ci est déjà désactivé (enregistrement du Service Worker commenté dans `main.tsx`), donc aucun impact réel.
+- **Risque** : double rechargement au tout premier lancement après déploiement (une fois). Les garde-fous `sessionStorage` empêchent toute boucle.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK — `index-BtGSAbZU.js`, `PassengerApp-Gla2-NTf.js`
+- [x] Écran Moyens de paiement testé en direct sur `smartcabb.com` (session simulée) : affichage + clic OK
+- [ ] Test manuel téléphone : fermer complètement l'app, rouvrir, Paramètres → Moyens de paiement
+- [ ] Test manuel : si l'erreur persiste, appuyer sur « Forcer la mise à jour de l'application »
+
+---
+
 ## 2026-11-14 — Paramètres : écran « Moyens de paiement » réparé + message clair en cas de mauvaise connexion
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

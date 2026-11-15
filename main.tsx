@@ -19,6 +19,11 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/globals.css';
 import { logStartupDiagnostics, setupErrorInterceptors } from './utils/diagnostics';
+import {
+  releaseStaleServiceWorker,
+  runStartupCacheCleanup,
+  checkForNewBuild
+} from './lib/app-update';
 
 const { createRoot } = ReactDOM;
 
@@ -55,6 +60,22 @@ if (typeof document === 'undefined') {
 // 
 // Le PWA peut être réactivé plus tard en décommentant le code du Service Worker
 // une fois que la configuration Vercel sera correctement ajustée pour servir /sw.js
+
+// 🧹 AUTO-RÉPARATION DES CLIENTS BLOQUÉS SUR UN ANCIEN BUNDLE
+// D'anciennes versions de l'app enregistraient un Service Worker qui servait
+// des fichiers JS obsolètes (cache-first). Conséquence : un correctif déployé
+// n'arrivait jamais sur le téléphone, alors que l'écran d'erreur affiché
+// provenait bien du nouveau code (cas de l'écran « Moyens de paiement »).
+// On supprime donc les Service Workers hérités, on vide les caches, et on
+// détecte les nouveaux déploiements pour recharger automatiquement.
+const BUILD_ID = 'v517.75-2026-11-15';
+
+if (import.meta.env.PROD) {
+  runStartupCacheCleanup(BUILD_ID);
+  releaseStaleServiceWorker().then(() => {
+    window.setTimeout(() => { void checkForNewBuild(); }, 4000);
+  });
+}
 
 // ✅ Initialisation de l'application
 const initApp = () => {

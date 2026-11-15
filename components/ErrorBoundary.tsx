@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Button } from './ui/button';
+import { forceAppUpdate } from '../lib/app-update';
 
 // Icônes inline (évite import lucide-react et permet de s'afficher même si
 // un module externe n'a pas pu être chargé).
@@ -250,18 +251,26 @@ export class ErrorBoundary extends React.Component<Props, State> {
               : 'Si le problème persiste, contactez le support SmartCabb.'}
           </p>
 
-          {/* Détails techniques : uniquement en développement */}
-          {process.env.NODE_ENV === 'development' && this.state.error && (
-            <details className="mt-4">
-              <summary className="text-xs text-gray-400 cursor-pointer">
-                Détails techniques
+          {/* Solution radicale quand le téléphone garde une ancienne version
+              de l'application en cache (Service Worker / Cache Storage). */}
+          <button
+            type="button"
+            onClick={() => { void forceAppUpdate(); }}
+            className="mt-4 w-full text-xs text-gray-500 underline underline-offset-2 hover:text-gray-700"
+          >
+            Forcer la mise à jour de l'application
+          </button>
+
+          {/* Détail technique replié : utile au support et au diagnostic à
+              distance, sans polluer l'écran pour les autres utilisateurs. */}
+          {this.state.error?.message && (
+            <details className="mt-3">
+              <summary className="text-[11px] text-gray-400 cursor-pointer text-center">
+                Détail technique
               </summary>
-              <pre className="mt-2 text-[11px] text-red-700 overflow-auto max-h-40 bg-red-50 p-2 rounded whitespace-pre-wrap break-words">
+              <p className="mt-2 text-[11px] text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-2 break-words">
                 {this.state.error.message}
-                {this.state.errorInfo?.componentStack
-                  ? `\n${this.state.errorInfo.componentStack}`
-                  : ''}
-              </pre>
+              </p>
             </details>
           )}
         </div>
