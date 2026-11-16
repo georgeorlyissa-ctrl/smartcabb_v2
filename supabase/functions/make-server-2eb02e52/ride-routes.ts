@@ -7,11 +7,61 @@ const app = new Hono();
 
 // ─── Helpers "en ligne" & "disponible" — compatibilité ancien + nouveau format ──
 function isDriverOnline(d: any): boolean {
-  return d.isOnline === true || d.is_online === true ||
-         d.status === 'online' || d.status_online === 'online';
+  // Priorite aux booleens explicites : un chauffeur force hors ligne
+  // (solde insuffisant) garde parfois status_online='online' obsolete.
+  if (typeof d.isOnline === 'boolean') return d.isOnline;
+  if (typeof d.is_online === 'boolean') return d.is_online;
+  return d.status_online === 'online' || d.status === 'online';
 }
 function isDriverAvailable(d: any): boolean {
-  return d.available === true || d.is_available === true || d.status === 'online';
+  if (typeof d.is_available === 'boolean' || typeof d.available === 'boolean') {
+    return d.is_available === true || d.available === true;
+  }
+  return d.status_online === 'online' || d.status === 'online';
+}
+// Chauffeur deja affecte a une course : ne doit plus recevoir de propositions.
+function driverHasActiveRide(d: any, rideId?: string): boolean {
+  const active = d?.activeRideId || d?.active_ride_id || d?.currentRideId || d?.current_ride_id;
+  if (!active) return false;
+  return !rideId || active !== rideId;
+}
+/**
+ * Libere un chauffeur apres cloture/annulation d'une course :
+ * efface activeRideId et remet la disponibilite UNIQUEMENT s'il est en ligne
+ * et qu'il ne roule pas sur une autre course.
+ */
+async function releaseDriverAfterRide(driverId: string | null | undefined, rideId: string) {
+  if (!driverId) return;
+  try {
+    const driver = await kv.get<any>(`driver:${driverId}`);
+    if (!driver) return;
+    const active = driver.activeRideId || driver.active_ride_id || driver.currentRideId || driver.current_ride_id;
+    if (active && active !== rideId) {
+      console.log(`[RELEASE] Driver ${driverId} roule encore sur ${active} -> disponibilite inchangee`);
+      return;
+    }
+    const online = isDriverOnline(driver);
+    driver.is_available = online;
+    driver.available = online;
+    delete driver.activeRideId;
+    delete driver.active_ride_id;
+    delete driver.currentRideId;
+    delete driver.current_ride_id;
+    driver.updated_at = new Date().toISOString();
+    await kv.set(`driver:${driverId}`, driver);
+    const profile = await kv.get<any>(`profile:${driverId}`);
+    if (profile) {
+      await kv.set(`profile:${driverId}`, {
+        ...profile,
+        is_available: online,
+        available: online,
+        updated_at: driver.updated_at,
+      });
+    }
+    console.log(`[RELEASE] Driver ${driverId} libere apres course ${rideId} (dispo=${online})`);
+  } catch (e) {
+    console.error('[RELEASE] Erreur liberation chauffeur:', e);
+  }
 }
 
 // ✅ Catégories Standard — 🚦 la variante « sans clim » est EN PAUSE (28/10/2026) :
@@ -223,7 +273,9 @@ async function findAndNotifyNearbyDrivers(ride: any) {
                        driver.vehicle?.category ||
                        driver.vehicle?.type;
       const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
-      return isOnline && isAvailable && categoryMatch;
+      const isBusy = driverHasActiveRide(driver);
+      // Catégorie compatible + en ligne + disponible + pas deja en course
+      return isOnline && isAvailable && !isBusy && categoryMatch;
     });
 
     if (eligibleDrivers.length === 0) {
@@ -506,6 +558,11 @@ app.get("/debug-drivers", async (c) => {
       status_online: d.status_online, // ← ancien champ potentiel
       is_available: d.is_available,
       available: d.available,
+      activeRideId: d.activeRideId || d.currentRideId || null,
+      busy: driverHasActiveRide(d),
+      // Flags calcules (memes regles que le matching)
+      onlineResolved: isDriverOnline(d),
+      availableResolved: isDriverAvailable(d),
       // FCM Token
       hasFcmToken: !!d.fcmToken,
       fcmTokenPreview: d.fcmToken ? d.fcmToken.substring(0, 20) + '...' : null,
@@ -518,13 +575,11 @@ app.get("/debug-drivers", async (c) => {
       // Solde
       balance: d.balance,
       creditBalance: d.creditBalance,
-      // Éligibilité
-      eligible: (d.isOnline === true || d.is_online === true || d.status_online === 'online') &&
-                (d.available === true || d.is_available === true) &&
-                !!d.fcmToken
+      // Éligibilité (mêmes règles que findAndNotifyNearbyDrivers)
+      eligible: isDriverOnline(d) && isDriverAvailable(d) && !driverHasActiveRide(d) && !!d.fcmToken
     }));
 
-    const onlineCount = driversInfo.filter((d: any) => d.isOnline || d.is_online).length;
+    const onlineCount = driversInfo.filter((d: any) => d.onlineResolved).length;
     const eligibleCount = driversInfo.filter((d: any) => d.eligible).length;
 
     console.log(`🔍 [DEBUG] ${allDrivers.length} chauffeurs, ${onlineCount} en ligne, ${eligibleCount} éligibles`);
@@ -659,7 +714,7 @@ app.post("/check-drivers-availability", async (c) => {
           `${driverCategory} vs ${vehicleCategory}`);
       }
       
-      return isOnline && isAvailable && hasPositiveBalance && categoryMatch;
+      return isOnline && isAvailable && hasPositiveBalance && !driverHasActiveRide(d) && categoryMatch;
     });
     
     // Compter tous les chauffeurs en ligne (toutes catégories)
@@ -750,7 +805,7 @@ app.get("/check-availability/:id", async (c) => {
                       d.vehicle?.type;
       const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
       
-      return isOnline && isAvailable && hasPositiveBalance && categoryMatch;
+      return isOnline && isAvailable && hasPositiveBalance && !driverHasActiveRide(d) && categoryMatch;
     });
     
     const available = eligibleDrivers.length > 0;
@@ -834,6 +889,36 @@ app.post("/accept", async (c) => {
     const driver = await kv.get<any>(`driver:${driverId}`);
     if (!driver) {
       return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+
+    // ✅ 1 seule course a la fois : refuser si deja en course
+    if (driverHasActiveRide(driver, rideId)) {
+      const busyId = driver.activeRideId || driver.active_ride_id || driver.currentRideId || driver.current_ride_id;
+      const busyRide = await kv.get<any>(`ride:${busyId}`);
+      const busyTerminal = !busyRide ||
+        ['completed', 'rated', 'cancelled', 'no_driver_found'].includes(busyRide.status);
+      if (!busyTerminal) {
+        return c.json({
+          success: false,
+          error: "COURSE_EN_COURS",
+          message: "Vous avez deja une course en cours. Terminez-la avant d'en accepter une autre.",
+          activeRideId: busyId,
+        }, 409);
+      }
+    }
+
+    // ✅ Controle de compatibilite de categorie (cote serveur)
+    const rideCategoryRaw = ride.vehicleCategory || ride.vehicleType || ride.vehicle_type;
+    const driverCategoryRaw = driver.vehicleCategory || driver.vehicle_category ||
+      driver.vehicle_type || driver.vehicleType || driver.vehicle?.category || driver.vehicle?.type;
+    if (rideCategoryRaw && driverCategoryRaw && !categoriesCompatible(driverCategoryRaw, rideCategoryRaw)) {
+      return c.json({
+        success: false,
+        error: "CATEGORIE_INCOMPATIBLE",
+        message: `Cette course est en categorie ${rideCategoryRaw}. Votre vehicule est en ${driverCategoryRaw}.`,
+        rideCategory: rideCategoryRaw,
+        driverCategory: driverCategoryRaw,
+      }, 409);
     }
 
     const driverBalance = driver.accountBalance || driver.balance || driver.creditBalance || 0;
@@ -921,6 +1006,31 @@ app.post("/accept", async (c) => {
       }
     } catch (e) {
       console.error('❌ Erreur provision commission:', e);
+    }
+
+    // ✅ Marquer le chauffeur comme occupe (empeche le double booking + matching)
+    try {
+      driver.is_available = false;
+      driver.available = false;
+      driver.activeRideId = rideId;
+      driver.currentRideId = rideId;
+      driver.updated_at = new Date().toISOString();
+      if (typeof driver.isOnline !== 'boolean') driver.isOnline = isDriverOnline(driver);
+      if (typeof driver.is_online !== 'boolean') driver.is_online = driver.isOnline;
+      await kv.set(`driver:${driverId}`, driver);
+      const profBusy = await kv.get<any>(`profile:${driverId}`);
+      if (profBusy) {
+        await kv.set(`profile:${driverId}`, {
+          ...profBusy,
+          is_available: false,
+          available: false,
+          activeRideId: rideId,
+          updated_at: driver.updated_at,
+        });
+      }
+      console.log(`🔒 Chauffeur ${driverName} marque OCCUPE (course ${rideId})`);
+    } catch (e) {
+      console.error('❌ Erreur marquage chauffeur occupe:', e);
     }
 
     // ✅ Champs plats pour la compatibilité du polling passager
@@ -1270,6 +1380,9 @@ app.post("/cancel", async (c) => {
       console.error('❌ Erreur restitution provision:', e);
     }
 
+    // ✅ Liberer le chauffeur assigne : la course est annulee, il redevient dispo
+    await releaseDriverAfterRide(ride.driverId || driverId, rideId);
+
     // ─── Blocage automatique après 3 annulations successives ───────────────
     if (cancelledBy === 'passenger' && ride.passengerId) {
       const blockResult = await recordCancellationAndCheckBlock(ride.passengerId);
@@ -1459,6 +1572,7 @@ app.post("/sweep-fraud", async (c) => {
               ride.cancellationReason = "Démarrage jamais effectué (timeout 15 min)";
               ride.commissionHoldRefunded = hold > 0;
               await kv.set(`ride:${ride.id}`, ride);
+              await releaseDriverAfterRide(did, ride.id);
               const n = await strike(did);
               await logAdminEvent("fraud_auto_cancel", {
                 rideId: ride.id, driverId: did,
@@ -1490,6 +1604,7 @@ app.post("/sweep-fraud", async (c) => {
               ride.finalPrice = price;
               ride.autoCompleted = true;
               await kv.set(`ride:${ride.id}`, ride);
+              await releaseDriverAfterRide(did, ride.id);
               // Commission normale (provision déjà prélevée déduite)
               if (did && price > 0) {
                 const drv = await kv.get<any>(`driver:${did}`);
@@ -1826,6 +1941,9 @@ app.post("/complete", async (c) => {
 
     await kv.set(`ride:${rideId}`, ride);
 
+    // ✅ Liberer le chauffeur (disponible a nouveau s'il est toujours en ligne)
+    if (effectiveDriverId) await releaseDriverAfterRide(effectiveDriverId, rideId);
+
     // ─── Log événement complétion → panel admin ───────────────────────────
     if (!alreadyCompleted) {
       await logAdminEvent('ride_completed', {
@@ -1951,6 +2069,9 @@ app.post("/:id/complete", async (c) => {
       ride.finalPrice  = ride.totalPrice; // Alias pour compatibilité frontend
     }
     await kv.set(`ride:${rideId}`, ride);
+
+    // ✅ Liberer le chauffeur (disponible a nouveau s'il est toujours en ligne)
+    if (effectiveDriverId) await releaseDriverAfterRide(effectiveDriverId, rideId);
     
     return c.json({ success: true, ride });
   } catch (error) {

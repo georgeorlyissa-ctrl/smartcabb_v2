@@ -168,12 +168,15 @@ app.post("/toggle-online-status", async (c) => {
     }
 
     const now = new Date().toISOString();
+    const hasActiveRide = !!(driver.activeRideId || driver.currentRideId ||
+      driver.active_ride_id || driver.current_ride_id);
+    const isAvailable = isOnline && !hasActiveRide;
     const updatedDriver = {
       ...driver,
       isOnline,
       is_online: isOnline,
-      is_available: isOnline,
-      available: isOnline,
+      is_available: isAvailable,
+      available: isAvailable,
       // ✅ FIX: normaliser status vers 'approved' (ne pas laisser 'online'/'offline' dans status)
       status: "approved",
       isApproved: true,
@@ -192,8 +195,8 @@ app.post("/toggle-online-status", async (c) => {
         ...profile,
         isOnline,
         is_online: isOnline,
-        is_available: isOnline,
-        available: isOnline,
+        is_available: isAvailable,
+        available: isAvailable,
         status: "approved",
         isApproved: true,
         updated_at: now,
@@ -809,12 +812,15 @@ app.post("/:driverId/status", async (c) => {
     }
 
     const now = new Date().toISOString();
+    const hasActiveRide = !!(driver.activeRideId || driver.currentRideId ||
+      driver.active_ride_id || driver.current_ride_id);
+    const isAvailable = isOnline && !hasActiveRide;
     const updatedDriver = {
       ...driver,
       isOnline,
       is_online: isOnline,
-      is_available: isOnline,
-      available: isOnline,
+      is_available: isAvailable,
+      available: isAvailable,
       // ✅ FIX: normaliser status vers 'approved'
       status: "approved",
       isApproved: true,
@@ -834,8 +840,8 @@ app.post("/:driverId/status", async (c) => {
         ...profile,
         isOnline,
         is_online: isOnline,
-        is_available: isOnline,
-        available: isOnline,
+        is_available: isAvailable,
+        available: isAvailable,
         status: "approved",
         isApproved: true,
         updated_at: now,
@@ -1031,12 +1037,15 @@ app.post("/migrate-status", async (c) => {
       // Drivers avec status='online' ou 'offline' (ancien format)
       if (driver.status === "online" || driver.status === "offline") {
         const isOnline = driver.status === "online";
+        const hasActiveRide = !!(driver.activeRideId || driver.currentRideId ||
+          driver.active_ride_id || driver.current_ride_id);
+        const isAvailable = isOnline && !hasActiveRide;
         const now = new Date().toISOString();
         const updatedDriver = {
           ...driver,
           isOnline,
           is_online: isOnline,
-          is_available: isOnline,
+          is_available: isAvailable,
           available: isOnline,
           status: "approved",   // normaliser le champ status vers son vrai rôle
           isApproved: true,
@@ -1053,7 +1062,7 @@ app.post("/migrate-status", async (c) => {
             ...profile,
             isOnline,
             is_online: isOnline,
-            is_available: isOnline,
+            is_available: isAvailable,
             available: isOnline,
             status: "approved",
             isApproved: true,

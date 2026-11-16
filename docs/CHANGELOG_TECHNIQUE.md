@@ -42,6 +42,51 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-16 — Sonnerie de course chauffeur (audio mobile + écoute globale) et fiabilisation du matching
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : la sonnerie/popup « nouvelle course » n'arrivait pas de façon fiable côté chauffeur (surtout sur téléphone et quand il n'était pas sur le tableau de bord), et le matching pouvait proposer une course à un chauffeur déjà en course ou d'une autre catégorie.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/DriverApp.tsx` | Déverrouillage audio mobile global + surveillance `/rides/pending` hors tableau de bord |
+| `components/driver/DriverDashboardNew.tsx` | Vérification immédiate des courses au montage, polling 8 s, déverrouillage audio, son unique |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Disponibilité réelle, exclusion des chauffeurs occupés, contrôle de catégorie à l'acceptation, libération après course |
+| `supabase/functions/make-server-2eb02e52/fcm-routes.ts` | 1 appareil = 1 chauffeur (token FCM unique), disponibilité préservée pendant une course |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | Passage en ligne sans rendre « disponible » un chauffeur en course |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Audio mobile** : `unlockMobileAudio()` (AudioContext + TTS) n'était appelé que dans l'app passager. Il est maintenant appelé au montage de `DriverApp` (donc dès l'ouverture de l'app chauffeur), dans `DriverDashboardNew`, et à chaque retour au premier plan (`visibilitychange`). Sans geste utilisateur, l'AudioContext reste `suspended` sur mobile : la popup s'affichait mais aucun son ne sortait.
+- **Écoute globale des courses** : les listeners (FCM, message Service Worker, polling `/rides/pending/:driverId`) vivaient uniquement dans `DriverDashboardNew`, démonté sur Gains / Profil / Portefeuille / Réglages / Réservations. Un watcher ajouté dans `DriverApp` interroge `/rides/pending` toutes les 8 s sur ces écrans et ramène automatiquement sur `driver-dashboard` dès qu'une course est proposée : la popup et la sonnerie s'affichent alors normalement.
+- **Vérification immédiate** : le polling du tableau de bord attendait 10 s avant le premier appel ; il est lancé immédiatement au montage puis toutes les 8 s. `setPendingRideRequest(prev => prev || …)` évite d'écraser une notification déjà affichée.
+- **Son unique** : `RideNotification` joue déjà `playRideNotification` ; le composant `RideNotificationSound` rendu en parallèle a été retiré (double beep + double annonce vocale).
+- **Matching — disponibilité** : `isDriverOnline`/`isDriverAvailable` privilégient désormais les booléens explicites (`isOnline`, `is_online`, `is_available`, `available`) au lieu de `status_online='online'` obsolète (des chauffeurs forcés hors ligne pour solde insuffisant restaient considérés « en ligne »).
+- **Matching — 1 course à la fois** : `/rides/accept` refuse (`409 COURSE_EN_COURS`) un chauffeur ayant déjà `activeRideId` sur une course non terminée, puis marque le chauffeur occupé (`is_available=false`, `activeRideId`). `findAndNotifyNearbyDrivers` et `/check-drivers-availability` excluent les chauffeurs occupés.
+- **Matching — catégorie** : `/rides/accept` vérifie `categoriesCompatible(...)` et refuse (`409 CATEGORIE_INCOMPATIBLE`) toute acceptation hors catégorie (le front affiche désormais `message`). La normalisation Standard reste inchangée (`smart_standard` / `smart_standard_no_clim` → `smart_standard_clim`).
+- **Libération** : `releaseDriverAfterRide()` remet le chauffeur disponible (s'il est toujours en ligne) et efface `activeRideId` sur `/complete`, `/:id/complete`, `/cancel` et les clôtures/annulations automatiques de `/sweep-fraud`.
+- **FCM** : à l'enregistrement d'un token chauffeur, le même token est retiré des autres fiches `driver:` (un téléphone ne peut plus « posséder » plusieurs chauffeurs) ; `is_available` n'est plus forcé à `true` si une course est en cours.
+
+### Impact produit / comportement visible
+- La sonnerie + annonce vocale (« Nouvelle course… ») se déclenchent sur téléphone, y compris si le chauffeur est sur Gains/Profil/Portefeuille (retour automatique au tableau de bord).
+- Un chauffeur ne peut plus accepter une course d'une autre catégorie ni une deuxième course en parallèle.
+- Les passagers ne voient plus comme « disponibles » des chauffeurs déjà en course.
+
+### Risques & rollback
+- **Risque** : un chauffeur dont la fiche contient un `activeRideId` obsolète (course supprimée) serait bloqué ; `releaseDriverAfterRide` et la vérification du statut terminal (`completed|rated|cancelled|no_driver_found`) lèvent ce blocage, et `/debug-drivers` expose `busy`/`activeRideId` pour diagnostic.
+- **Rollback** : `git revert <hash>` + redéploiement de l'Edge Function `make-server-2eb02e52`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] Contrôle de syntaxe des 3 fichiers Deno (`ride-routes.ts`, `fcm-routes.ts`, `driver-routes.ts`)
+- [x] Edge Function `make-server-2eb02e52` redéployée et `/rides/debug-drivers` + `/rides/check-drivers-availability` vérifiés sur les 4 catégories
+
+---
+
 ## 2026-11-15 (4) — iPhone : écran rouge « Erreur détectée » à cause de Google Maps (IntersectionObserver)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

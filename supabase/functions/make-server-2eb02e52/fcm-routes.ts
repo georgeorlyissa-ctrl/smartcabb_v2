@@ -106,6 +106,11 @@ app.post("/register-driver-token", async (c) => {
       ? hadOldOnlineStatus
       : (driver?.isOnline === true || driver?.is_online === true);
 
+    // Ne pas rendre "disponible" un chauffeur deja en course
+    const activeRideId = driver?.activeRideId || driver?.active_ride_id ||
+      driver?.currentRideId || driver?.current_ride_id || null;
+    const currentIsAvailable = currentIsOnline && !activeRideId;
+
     // ── Normaliser le statut d'approbation ─────────────────────────────────────
     const approvalStatus = (
       driver?.status === 'approved' ||
@@ -137,8 +142,9 @@ app.post("/register-driver-token", async (c) => {
       // ✅ Statut en ligne — booléens cohérents
       isOnline: currentIsOnline,
       is_online: currentIsOnline,
-      is_available: currentIsOnline,
-      available: currentIsOnline,
+      is_available: currentIsAvailable,
+      available: currentIsAvailable,
+      ...(activeRideId ? { activeRideId } : {}),
       // ✅ Approbation normalisée ('online'/'offline' → 'approved')
       status: approvalStatus,
       isApproved,
@@ -150,6 +156,25 @@ app.post("/register-driver-token", async (c) => {
 
     await kv.set(driverKey, updatedDriver);
 
+    // ── 1 appareil = 1 chauffeur : retirer ce token des autres fiches ──────────
+    // Sinon un meme telephone "possede" plusieurs chauffeurs et les
+    // notifications partent vers la mauvaise personne.
+    try {
+      const { data: rows } = await kvClient()
+        .from(KV_TABLE)
+        .select("key, value")
+        .like("key", "driver:%");
+      for (const row of rows || []) {
+        const other: any = row.value;
+        if (!other || other.id === driverId) continue;
+        if (other.fcmToken !== fcmToken) continue;
+        await kv.set(row.key, { ...other, fcmToken: null, fcmTokenUpdatedAt: null });
+        console.log(`[FCM] Token partage retire du chauffeur ${other.id} (appartient a ${driverId})`);
+      }
+    } catch (e) {
+      console.warn("[FCM] Nettoyage token partage echoue:", e);
+    }
+
     // Sync profil si existant
     const profile = await kv.get(`profile:${driverId}`);
     if (profile) {
@@ -160,8 +185,8 @@ app.post("/register-driver-token", async (c) => {
         ...(vehicleCategory ? { vehicleCategory, vehicle_category: vehicleCategory } : {}),
         isOnline: currentIsOnline,
         is_online: currentIsOnline,
-        is_available: currentIsOnline,
-        available: currentIsOnline,
+        is_available: currentIsAvailable,
+        available: currentIsAvailable,
         status: approvalStatus,
         isApproved,
         lastSeenAt: now,

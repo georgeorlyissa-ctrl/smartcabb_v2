@@ -23,6 +23,8 @@ import { DriverDeploymentCheck } from '../components/driver/DriverDeploymentChec
 import { DriverScheduledRides } from '../components/driver/DriverScheduledRides';
 import { AppNotificationsScreen } from '../components/AppNotificationsScreen';
 import { useEffect } from 'react';
+import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { unlockMobileAudio, preloadVoices } from '../lib/notification-sound';
 
 function DriverAppContent() {
   const { state, setCurrentScreen, setCurrentView, setCurrentDriver } = useAppState();
@@ -136,6 +138,61 @@ function DriverAppContent() {
     if (!state.currentDriver?.id || state.currentView !== 'driver') return;
     console.log('✅ FCM géré par DriverDashboardNew pour driver:', state.currentDriver.id);
   }, [state.currentDriver?.id, state.currentView]);
+
+  // 🔔 Audio mobile : la sonnerie reste muette tant qu'aucun geste utilisateur
+  // n'a déverrouillé l'AudioContext. On déverrouille dès l'entrée dans l'app
+  // chauffeur, puis à chaque retour au premier plan.
+  useEffect(() => {
+    unlockMobileAudio();
+    preloadVoices();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') unlockMobileAudio();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  // 🚕 Surveillance globale des courses proposées.
+  // Les écouteurs (FCM / Service Worker / polling + sonnerie) vivent dans
+  // DriverDashboardNew. Si le chauffeur est sur Gains, Profil, Portefeuille,
+  // Réglages ou Réservations, aucune sonnerie ne pouvait se déclencher.
+  // Ici on interroge /rides/pending et on ramène sur le tableau de bord
+  // dès qu'une course est proposée (la popup + le son s'affichent alors).
+  const driverId = state.currentDriver?.id;
+  useEffect(() => {
+    if (!driverId) return;
+    const WATCHED_SCREENS = [
+      'driver-earnings',
+      'driver-settings',
+      'driver-profile',
+      'driver-wallet',
+      'driver-scheduled-rides',
+      'driver-notifications',
+    ];
+    if (!WATCHED_SCREENS.includes(currentScreen || '')) return;
+
+    let stopped = false;
+    const check = async () => {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/pending/${driverId}`,
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } }
+        );
+        const data = await res.json();
+        if (stopped) return;
+        if (data?.success && data.ride?.rideId && data.ride.type !== 'transfer_ride_request') {
+          console.log('🚕 Course proposée détectée → retour au tableau de bord');
+          setCurrentScreen('driver-dashboard');
+        }
+      } catch {}
+    };
+    void check();
+    const timer = setInterval(check, 8000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [driverId, currentScreen, setCurrentScreen]);
 
   if (showRLSBlockingScreen) {
     return <RLSBlockingScreen />;

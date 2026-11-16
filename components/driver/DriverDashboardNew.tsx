@@ -9,13 +9,13 @@ import { getMinimumCreditForCategory } from '../../lib/pricing-config';
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
 import { toast } from '../../lib/toast';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { RideNotificationSound } from './RideNotificationSound';
 import { RideNotification } from './RideNotification';
 import { FCMDiagnostic } from './FCMDiagnostic';
 import { PreciseGPSTracker, reverseGeocode } from '../../lib/precise-gps';
 import { registerDriverFCMToken } from '../../lib/driver-fcm';
 import { stopAllNotifications } from '../../lib/notification-sound';
 import { preloadVoices } from '../../lib/notification-sound';
+import { unlockMobileAudio } from '../../lib/notification-sound';
 import { supabase } from '../../lib/supabase';
 import { NotificationBell } from '../AppNotificationsScreen';
 import { addLocalNotification } from '../AppNotificationsScreen';
@@ -367,6 +367,11 @@ export function DriverDashboardNew() {
   useEffect(() => {
     if (!driver?.id) return;
 
+    // 🔔 Déverrouiller l'audio mobile dès l'ouverture du tableau de bord
+    // (sans geste utilisateur, la sonnerie reste muette sur téléphone)
+    unlockMobileAudio();
+    preloadVoices();
+
     // Écouter les messages du Service Worker (app en arrière-plan)
    const handleSWMessage = (event: MessageEvent) => {
   const { type, detail } = event.data || {};
@@ -434,9 +439,10 @@ export function DriverDashboardNew() {
     };
     initFCM();
 
-    // Polling de secours toutes les 10 secondes
-    const poll = setInterval(async () => {
-      if (!driver?.id || pendingRideRequest) return;
+    // Polling de secours (toutes les 8s) + vérification immédiate au montage
+    // → sans ça, une course arrivée juste avant l'ouverture du dashboard
+    //   n'était vue qu'après 10 secondes.
+    const checkPendingRide = async () => {
       try {
         const res = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/pending/${driver.id}`,
@@ -445,10 +451,13 @@ export function DriverDashboardNew() {
         const data = await res.json();
         if (data.success && data.ride && data.ride.type !== 'transfer_ride_request') {
           console.log('📋 Course en attente trouvée via polling:', data.ride.id);
-          setPendingRideRequest(buildRideRequest(data.ride));
+          setPendingRideRequest((prev) => prev || buildRideRequest(data.ride));
         }
       } catch (e) {}
-    }, 10000);
+    };
+
+    void checkPendingRide();
+    const poll = setInterval(checkPendingRide, 8000);
 
     return () => {
       navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
@@ -1478,8 +1487,11 @@ export function DriverDashboardNew() {
                   return;
                 }
 
-                // Autres erreurs
-                toast.error(data.error || 'Erreur lors de l\'acceptation de la course');
+                // Autres erreurs (catégorie incompatible, course déjà en cours, ...)
+                toast.error(
+                  data.message || data.error || 'Erreur lors de l\'acceptation de la course',
+                  { duration: 7000 }
+                );
                 setPendingRideRequest(null);
                 stopAllNotifications();
                 return;
@@ -1569,17 +1581,7 @@ export function DriverDashboardNew() {
         />
       )}
 
-      {/* Son de notification */}
-      <RideNotificationSound
-        shouldPlay={!!pendingRideRequest}
-        rideDetails={pendingRideRequest ? {
-          passengerName: pendingRideRequest.passengerName,
-          pickup: pendingRideRequest.pickup?.address,
-          destination: pendingRideRequest.dropoff?.address,
-          distance: pendingRideRequest.distance,
-          estimatedEarnings: pendingRideRequest.estimatedPrice
-        } : undefined}
-      />
+      {/* Son de notification : joué par RideNotification (source unique) */}
     </div>
   );
 }
