@@ -2465,6 +2465,16 @@ app.post("/process-scheduled", async (c) => {
           await kv.set(`ride:${rideId}`, ride);
           console.log(`Course pre-attribuee creee: ${rideId} (conducteur ${sr.driver_id})`);
 
+          // ✅ Marquer le chauffeur occupe : il ne doit pas recevoir d'autres courses
+          if (driver) {
+            driver.is_available = false;
+            driver.available = false;
+            driver.activeRideId = rideId;
+            driver.currentRideId = rideId;
+            driver.updated_at = new Date().toISOString();
+            await kv.set(`driver:${sr.driver_id}`, driver);
+          }
+
           // Notifier le conducteur : mise en route
           if (driver?.fcmToken) {
             await sendFCMNotification(driver.fcmToken, {

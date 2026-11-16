@@ -68,6 +68,7 @@ Assez de détail pour comprendre le code sans le relire.>
 - **Matching — 1 course à la fois** : `/rides/accept` refuse (`409 COURSE_EN_COURS`) un chauffeur ayant déjà `activeRideId` sur une course non terminée, puis marque le chauffeur occupé (`is_available=false`, `activeRideId`). `findAndNotifyNearbyDrivers` et `/check-drivers-availability` excluent les chauffeurs occupés.
 - **Matching — catégorie** : `/rides/accept` vérifie `categoriesCompatible(...)` et refuse (`409 CATEGORIE_INCOMPATIBLE`) toute acceptation hors catégorie (le front affiche désormais `message`). La normalisation Standard reste inchangée (`smart_standard` / `smart_standard_no_clim` → `smart_standard_clim`).
 - **Libération** : `releaseDriverAfterRide()` remet le chauffeur disponible (s'il est toujours en ligne) et efface `activeRideId` sur `/complete`, `/:id/complete`, `/cancel` et les clôtures/annulations automatiques de `/sweep-fraud`.
+- **Réservations programmées** : une course à l'avance pré-attribuée (`/process-scheduled`) marque également le chauffeur occupé (`is_available=false`, `activeRideId`) pour éviter qu'il accepte une course immédiate en parallèle.
 - **FCM** : à l'enregistrement d'un token chauffeur, le même token est retiré des autres fiches `driver:` (un téléphone ne peut plus « posséder » plusieurs chauffeurs) ; `is_available` n'est plus forcé à `true` si une course est en cours.
 
 ### Impact produit / comportement visible
