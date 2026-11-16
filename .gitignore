@@ -30,6 +30,10 @@ pnpm-debug.log*
 # Android
 *.keystore
 *.aab
+*.apk
+# Configuration Firebase native (ne jamais publier : contient la cle API)
+google-services.json
+android/app/google-services.json
 
 # Vercel
 .vercel
