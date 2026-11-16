@@ -44,7 +44,6 @@ export function getVehicleDisplayName(vehicleInfo: VehicleInfo | null | undefine
       return 'SmartCabb Standard avec Clim';
 
     case 'smart_standard':
-    case 'smart_standard_clim':
     case 'smart_standard_no_clim': // 🚦 variante « sans clim » en pause → affichée comme Standard
     case 'standard':
     case 'economique':

@@ -42,6 +42,46 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-16 (3) — Build release 1.5 (AAB + APK signés) et script de build fiabilisé
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : chore + fix
+- **Objectif** : produire l'AAB/APK **1.5** contenant le push natif (le `google-services.json` est désormais en place) et rendre `build-release-aab.ps1` utilisable : il s'arrêtait au premier warning de Vite parce que `$ErrorActionPreference = "Stop"` transformait la sortie stderr en erreur fatale.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `build-release-aab.ps1` | Helper `Invoke-Logged` (Start-Process + logs dans `%TEMP%\smartcabb-build-logs`) pour `npm run build`, `cap sync` et Gradle ; on ne se fie plus qu'au code de sortie |
+| `lib/vehicle-helpers.ts` | Suppression du `case 'smart_standard_clim'` en doublon (clause morte signalée par esbuild, comportement inchangé) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Cause du blocage** : Vite écrit ses WARNINGS sur stderr ; avec `$ErrorActionPreference = "Stop"` et un appel natif direct, PowerShell lève une `NativeCommandError` et interrompt le script avant même `cap sync`. Les étapes sont maintenant exécutées via `Start-Process -Wait -PassThru` avec stdout/stderr redirigés vers des fichiers de log relus ensuite, donc plus aucune sortie de warning ne peut tuer le build (les logs sont conservés en cas d'échec).
+- **Important (environnement agent)** : lancé **en arrière-plan** par le harnais, le processus PowerShell est terminé pendant l'attente des enfants (npm/Gradle) : utiliser un **terminal PowerShell normal** ou lancer les étapes une par une. En avant-plan le script fonctionne ; pour cette livraison les étapes ont été exécutées manuellement dans l'ordre `npm run build` → `npx cap sync android` → `robocopy` hors OneDrive → `gradlew bundleRelease assembleRelease`.
+- **Piège rencontré** : un build web interrompu laisse `dist/` **sans `dist/assets/`** (Vite vide le dossier de sortie avant d'écrire). `cap sync` embarquait alors un bundle cassé. Toujours vérifier `dist/assets` et `android/app/src/main/assets/public/index.html` après un build.
+- **Artefacts produits** (Bureau) : `SmartCabb-1.5.aab` (13 660 898 o) et `SmartCabb-1.5.apk` (13 238 542 o).
+- **Contrôles** : `package com.smartcabb.app`, `versionCode 8`, `versionName 1.5`, `minSdk 24`, `targetSdk 36`, permissions `POST_NOTIFICATIONS` + `VIBRATE` présentes, `com.google.firebase.messaging.FirebaseMessagingService` et `FirebaseInstanceIdReceiver` bien enregistrés dans le manifest (donc FCM natif actif), signature `CN=SmartCabb, OU=Mobile, O=SmartCabb, L=Kinshasa, CD` — **même clé que l'AAB 1.4** (SHA-256 `fb9ad899…6d4a75`), donc téléversement Play Console sans réinitialisation de clé.
+
+### Impact produit / comportement visible
+- Aucun changement visible côté web.
+- L'AAB 1.5 apporte la permission de notifications, le canal `smartcabb_rides` et le token FCM natif : la sonnerie de course fonctionne aussi **app en arrière-plan ou fermée**, et un appui sur la notification ouvre le tableau de bord avec la course.
+
+### Risques & rollback
+- **Risque** : les chauffeurs doivent accepter la permission « Notifications » au premier lancement ; en cas de refus, la sonnerie ne fonctionne qu'app ouverte (polling 8 s).
+- **Rollback** : conserver l'AAB 1.4 en Play Console (déploiement progressif) ; côté dépôt `git revert <hash>` puis rebuild.
+- `public/apk-version.json` **volontairement non modifié** (encore 1.3 / 6) : à passer en 1.5 / 8 uniquement après téléversement réel de l'APK dans le bucket Supabase (distribution hors Play Store).
+
+### Tests / vérifications
+- [x] `npm run build` OK (`dist/assets` : 114 fichiers)
+- [x] `npx cap sync android` OK — 4 plugins détectés (`app`, `contacts`, `geolocation`, `push-notifications`)
+- [x] `gradlew bundleRelease assembleRelease --no-daemon` → **BUILD SUCCESSFUL** (297 tâches)
+- [x] `npx tsc --noEmit` : aucune erreur hors `_headers/Code-component-*.tsx`
+- [x] Signature et manifest de l'APK vérifiés (`apksigner`, `aapt2 dump badging/xmltree`)
+- [ ] Téléversement Play Console (AAB 1.5) + test réel « app fermée » à faire par le propriétaire
+
+---
+
 ## 2026-11-16 (2) — Push natif Android (sonnerie app fermée) + catégories manquantes corrigées
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

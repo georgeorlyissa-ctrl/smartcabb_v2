@@ -18,6 +18,37 @@ param(
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
 
+# ----------------------------------------------------------------------------
+# Execute une commande externe et renvoie son code de sortie.
+# On passe par Start-Process + fichiers de log : les WARNINGS que Vite/Gradle
+# ecrivent sur stderr ne sont plus interpretes par PowerShell comme des
+# erreurs fatales ($ErrorActionPreference = 'Stop' les transformerait en crash).
+# ----------------------------------------------------------------------------
+function Invoke-Logged {
+    param(
+        [string]$Exe,
+        [string[]]$CmdArgs,
+        [string]$WorkDir,
+        [string]$Label
+    )
+    $logDir = Join-Path $env:TEMP "smartcabb-build-logs"
+    New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+    $outLog = Join-Path $logDir "$Label.out.log"
+    $errLog = Join-Path $logDir "$Label.err.log"
+    if (Test-Path -LiteralPath $outLog) { Remove-Item -LiteralPath $outLog -Force }
+    if (Test-Path -LiteralPath $errLog) { Remove-Item -LiteralPath $errLog -Force }
+
+    $proc = Start-Process -FilePath $Exe -ArgumentList $CmdArgs -WorkingDirectory $WorkDir -NoNewWindow -Wait -PassThru -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+
+    if (Test-Path -LiteralPath $outLog) {
+        Get-Content -LiteralPath $outLog -Encoding UTF8 | ForEach-Object { Write-Host $_ }
+    }
+    if (Test-Path -LiteralPath $errLog) {
+        Get-Content -LiteralPath $errLog -Encoding UTF8 | ForEach-Object { Write-Host $_ -ForegroundColor DarkYellow }
+    }
+    return $proc.ExitCode
+}
+
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host "   SmartCabb - Build RELEASE (push natif)" -ForegroundColor Cyan
 Write-Host "================================================" -ForegroundColor Cyan
@@ -43,20 +74,14 @@ if (-not (Test-Path -LiteralPath $googleServices)) {
 # 1. Build web
 if (-not $SkipWebBuild) {
     Write-Host "[1/6] npm run build..." -ForegroundColor Yellow
-    Push-Location -LiteralPath $root
-    try {
-        npm run build
-        if ($LASTEXITCODE -ne 0) { throw "Build web echoue" }
-    } finally { Pop-Location }
+    $webBuildCode = Invoke-Logged -Exe "cmd.exe" -CmdArgs @('/c', 'npm run build') -WorkDir $root -Label 'npm-build'
+    if ($webBuildCode -ne 0) { throw "Build web echoue (code $webBuildCode)" }
 }
 
 # 2. Sync Capacitor (recopie dist/ + met a jour les plugins natifs)
 Write-Host "[2/6] npx cap sync android..." -ForegroundColor Yellow
-Push-Location -LiteralPath $root
-try {
-    npx cap sync android
-    if ($LASTEXITCODE -ne 0) { throw "cap sync echoue" }
-} finally { Pop-Location }
+$syncCode = Invoke-Logged -Exe "cmd.exe" -CmdArgs @('/c', 'npx cap sync android') -WorkDir $root -Label 'cap-sync'
+if ($syncCode -ne 0) { throw "cap sync echoue (code $syncCode)" }
 
 # 3. Copie hors OneDrive (evite les verrous de synchronisation Gradle)
 Write-Host "[3/6] Preparation du dossier de build hors OneDrive..." -ForegroundColor Yellow
@@ -90,16 +115,9 @@ $env:JAVA_HOME = "$env:USERPROFILE\AppData\Local\Programs\Eclipse Adoptium\jdk-2
 $env:ANDROID_HOME = "C:\Users\smart\AppData\Local\Android\Sdk"
 $env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
 
-Push-Location -LiteralPath $workAndroid
-try {
-    if ($ApkOnly) {
-        .\gradlew assembleRelease --no-daemon
-        if ($LASTEXITCODE -ne 0) { throw "Gradle assembleRelease failed" }
-    } else {
-        .\gradlew bundleRelease assembleRelease --no-daemon
-        if ($LASTEXITCODE -ne 0) { throw "Gradle bundleRelease failed" }
-    }
-} finally { Pop-Location }
+$gradleArgs = if ($ApkOnly) { 'gradlew.bat assembleRelease --no-daemon' } else { 'gradlew.bat bundleRelease assembleRelease --no-daemon' }
+$gradleCode = Invoke-Logged -Exe "cmd.exe" -CmdArgs @('/c', $gradleArgs) -WorkDir $workAndroid -Label 'gradle-release'
+if ($gradleCode -ne 0) { throw "Gradle release echoue (code $gradleCode)" }
 
 # 5. Recuperation des artefacts
 $gradle = Get-Content -LiteralPath (Join-Path $workAndroid "app\build.gradle") -Raw
