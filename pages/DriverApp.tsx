@@ -136,12 +136,25 @@ function DriverAppContent() {
   // ✅ FCM géré entièrement par DriverDashboardNew — ne pas appeler setupFCMForUser ici
   // setupFCMForUser court-circuitait le système FCM et empêchait la popup RideNotification
   useEffect(() => {
-    if (!state.currentDriver?.id || state.currentView !== 'driver') return;
+    // ⚠️ Ne PAS conditionner au `currentView` : au démarrage, la vue peut encore
+    // valoir 'login'/'home' et le push natif ne serait jamais initialisé
+    // (aucun canal, aucun token) — c'était le cas avant ce correctif.
+    if (!state.currentDriver?.id) return;
     console.log('✅ FCM géré par DriverDashboardNew pour driver:', state.currentDriver.id);
     // 🔔 Push natif : seul canal capable de réveiller l'APK (le FCM WebView
     // n'est pas supporté). Sans ça : aucune sonnerie app en arrière-plan.
     void initNativePush('driver', state.currentDriver.id);
-  }, [state.currentDriver?.id, state.currentView]);
+
+    // Retour au premier plan : on réenregistre (le token peut avoir tourné et
+    // le canal doit exister avant la prochaine notification).
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void initNativePush('driver', state.currentDriver!.id);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [state.currentDriver?.id]);
 
   // 🔔 Audio mobile : la sonnerie reste muette tant qu'aucun geste utilisateur
   // n'a déverrouillé l'AudioContext. On déverrouille dès l'entrée dans l'app

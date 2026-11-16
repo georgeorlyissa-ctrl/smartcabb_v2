@@ -42,6 +42,43 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-16 (4) — Push Android : canal `smartcabb_rides` réparé, init natif indépendant de la vue, diagnostic du token
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : sur l'APK 1.5 installé depuis le Play Store, permission notifications accordée et envoi FCM accepté par Google (`messageId` retourné), **aucune notification ne s'affichait**. Deux causes matérielles identifiées dans le code client.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/native-push.ts` | `createChannel` ne passe plus `sound: 'default'` ; suppression unique de l'ancien canal (réparation) ; envoi de `platform`/`appVersion` avec le token |
+| `pages/DriverApp.tsx` | `initNativePush` n'est plus conditionné à `currentView === 'driver'` ; réenregistrement au retour au premier plan |
+| `supabase/functions/make-server-2eb02e52/fcm-routes.ts` | `/register-driver-token` mémorise `fcmPlatform` et `fcmAppVersion` (diagnostic) |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `/debug-drivers` expose `fcmPlatform`, `fcmAppVersion`, `fcmTokenUpdatedAt` |
+
+### Description technique
+- **Bug 1 — canal silencieux** : `PushNotifications.createChannel({ sound: 'default' })` est interprété par le plugin Android (`NotificationChannelManager.createChannel`) comme un **fichier `res/raw/default`** : `Uri.parse("android.resource://<pkg>/raw/default")`. Cette ressource n'existe pas → le canal est créé avec un son invalide (notifications muettes). En **omettant** `sound`, Android applique le son de notification par défaut du téléphone. Un canal Android étant **immuable après création**, un `deleteChannel` unique (gardé par `localStorage.sc_channel_repair_v2`) est exécuté avant de le recréer, pour réparer les installations existantes.
+- **Bug 2 — init jamais exécutée** : l'effet de `DriverApp` exigeait `state.currentView === 'driver'`. Au démarrage de l'app, la vue peut être encore `login`/`home` ; l'effet ne se relançait pas ensuite si la vue changeait sans changer de chauffeur → **ni canal, ni token natif**, et donc des notifications visant un canal inexistant (jetées silencieusement par Android, alors que FCM renvoie bien un `messageId`). La condition est désormais `state.currentDriver?.id` uniquement, avec réenregistrement sur `visibilitychange`.
+- **Observabilité** : le token enregistré par le **plugin natif** est désormais marqué `fcmPlatform: 'native'` + `fcmAppVersion` (l'ancien FCM web n'envoie pas ces champs). Permet de distinguer, depuis `/rides/debug-drivers`, un token natif d'un token navigateur — indispensable pour diagnostiquer ce type d'incident sans accès au téléphone.
+
+### Impact produit / comportement visible
+- Diffusable **sans nouvelle release Play Store** : correctif 100 % web (le bundle est chargé depuis `www.smartcabb.com`) + Edge Function redéployée.
+- Après réouverture de l'app par le chauffeur : le canal est recréé avec le son système, le token natif est (ré)enregistré, et les notifications apparaissent app en arrière-plan ou fermée.
+
+### Risques & rollback
+- **Risque faible** : la suppression du canal réinitialise ses réglages personnalisés (son/vibration) — un seul passage, automatique.
+- **Rollback** : `git revert <hash>` + redéploiement Edge Function ; le canal peut aussi être désactivé/réactivé par l'utilisateur dans les réglages Android.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` : aucune erreur hors `_headers/Code-component-*.tsx`
+- [x] `npm run build` OK (chunk `DriverApp-ClK84LmZ.js`)
+- [x] Edge Function redéployée (`make-server-2eb02e52`, projet `zaerjqchzqmcxqblkfkg`)
+- [ ] À valider par le propriétaire : ouvrir l'app 1.5, rester 10 s sur le tableau de bord, puis test push app fermée
+- [ ] Contrôle attendu sur `/rides/debug-drivers` : `fcmPlatform: "native"`, `fcmAppVersion: "1.5"`
+
+---
+
 ## 2026-11-16 (3) — Build release 1.5 (AAB + APK signés) et script de build fiabilisé
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

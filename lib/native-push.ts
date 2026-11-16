@@ -43,11 +43,24 @@ async function isNativePlatform(): Promise<boolean> {
   }
 }
 
+async function appVersion(): Promise<string | null> {
+  try {
+    const { App } = await import('@capacitor/app');
+    const info = await App.getInfo();
+    return info?.version || null;
+  } catch {
+    return null;
+  }
+}
+
 async function saveTokenFor(role: PushRole, userId: string, token: string): Promise<boolean> {
   const endpoint = role === 'driver' ? 'register-driver-token' : 'register-passenger-token';
+  const version = await appVersion();
   const body = role === 'driver'
-    ? { driverId: userId, fcmToken: token }
-    : { passengerId: userId, fcmToken: token };
+    // `platform`/`appVersion` servent au diagnostic : ils prouvent que le token
+    // vient du push NATIF (et non du FCM web, qui n'a pas ce champ).
+    ? { driverId: userId, fcmToken: token, platform: 'native', appVersion: version }
+    : { passengerId: userId, fcmToken: token, platform: 'native', appVersion: version };
 
   try {
     const res = await fetch(`${apiBase()}/fcm/${endpoint}`, {
@@ -145,15 +158,34 @@ async function installListeners(PushNotifications: any) {
   });
 }
 
+const CHANNEL_ID = 'smartcabb_rides';
+// Version du canal : à incrémenter si l'on doit le recréer chez tout le monde.
+const CHANNEL_REPAIR_KEY = 'sc_channel_repair_v2';
+
 async function ensureChannel(PushNotifications: any) {
+  // ⚠️ NE JAMAIS passer `sound: 'default'` ici : le plugin natif l'interprète
+  // comme un fichier res/raw/default (inexistant) et crée un canal avec un son
+  // invalide → notifications muettes. En omettant `sound`, Android utilise le
+  // son de notification par défaut du téléphone.
   try {
+    // Le canal est IMMUABLE une fois créé : on le supprime une seule fois pour
+    // réparer les installations qui ont le canal cassé, puis on le recrée.
+    try {
+      if (localStorage.getItem(CHANNEL_REPAIR_KEY) !== 'done') {
+        await PushNotifications.deleteChannel({ id: CHANNEL_ID });
+        localStorage.setItem(CHANNEL_REPAIR_KEY, 'done');
+        console.log('🧹 [NATIVE PUSH] Ancien canal supprimé (réparation du son)');
+      }
+    } catch (e) {
+      console.log('ℹ️ [NATIVE PUSH] Suppression du canal impossible:', e);
+    }
+
     await PushNotifications.createChannel({
-      id: 'smartcabb_rides',
+      id: CHANNEL_ID,
       name: 'Courses SmartCabb',
       description: 'Nouvelles courses, arrivées et mises à jour',
       importance: 5, // IMPORTANCE_HIGH → bandeau + son
       visibility: 1, // VISIBILITY_PUBLIC
-      sound: 'default',
       vibration: true,
       lights: true,
     });

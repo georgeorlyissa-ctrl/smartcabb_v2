@@ -566,6 +566,10 @@ app.get("/debug-drivers", async (c) => {
       // FCM Token
       hasFcmToken: !!d.fcmToken,
       fcmTokenPreview: d.fcmToken ? d.fcmToken.substring(0, 20) + '...' : null,
+      // 🔎 Origine du token : 'native' = plugin Capacitor (push réel), sinon web
+      fcmPlatform: d.fcmPlatform || 'web',
+      fcmAppVersion: d.fcmAppVersion || null,
+      fcmTokenUpdatedAt: d.fcmTokenUpdatedAt || null,
       // Catégorie véhicule
       vehicleCategory: d.vehicleCategory,
       vehicle_category: d.vehicle_category,

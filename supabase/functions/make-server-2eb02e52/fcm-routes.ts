@@ -70,13 +70,13 @@ app.post("/save-token", async (c) => {
  */
 app.post("/register-driver-token", async (c) => {
   try {
-    const { driverId, fcmToken } = await c.req.json();
+    const { driverId, fcmToken, platform, appVersion } = await c.req.json();
 
     if (!driverId || !fcmToken) {
       return c.json({ success: false, error: "driverId et fcmToken requis" }, 400);
     }
 
-    console.log(`🚗 Enregistrement token FCM pour conducteur ${driverId}:`, fcmToken.substring(0, 20) + '...');
+    console.log(`🚗 Enregistrement token FCM pour conducteur ${driverId} (${platform || 'web'} ${appVersion || ''}):`, fcmToken.substring(0, 20) + '...');
 
     // Récupérer les données actuelles du driver
     const driverKey = `driver:${driverId}`;
@@ -129,6 +129,10 @@ app.post("/register-driver-token", async (c) => {
       // FCM
       fcmToken,
       fcmTokenUpdatedAt: now,
+      // 🔎 Diagnostic : 'native' = token obtenu par le plugin Capacitor
+      // (absent ou 'web' = ancien FCM navigateur, qui ne réveille pas l'APK).
+      ...(platform ? { fcmPlatform: platform } : {}),
+      ...(appVersion ? { fcmAppVersion: appVersion } : {}),
       // ✅ vehicleCategory normalisé dans tous les formats
       ...(vehicleCategory ? {
         vehicleCategory,
