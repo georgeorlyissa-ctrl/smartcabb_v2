@@ -109,6 +109,17 @@ foreach ($p in $plugins) {
     if ($LASTEXITCODE -ge 8) { throw "Copie du plugin $($p.name) echouee (robocopy $LASTEXITCODE)" }
 }
 
+# Plugin TTS natif (voix de la sonnerie dans l'APK) — scope @capacitor-community
+$ttsSrc = Join-Path $root "node_modules\@capacitor-community\text-to-speech\android"
+$ttsDst = Join-Path $work "node_modules\@capacitor-community\text-to-speech\android"
+if (Test-Path -LiteralPath $ttsSrc) {
+    New-Item -ItemType Directory -Force -Path $ttsDst | Out-Null
+    robocopy $ttsSrc $ttsDst /E /XD build .gradle /NFL /NDL /NJH /NJS /NP | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "Copie du plugin text-to-speech echouee (robocopy $LASTEXITCODE)" }
+} else {
+    Write-Host "Plugin @capacitor-community/text-to-speech absent (voix native indisponible)" -ForegroundColor Yellow
+}
+
 # 4. Compilation release signee
 Write-Host "[4/6] Compilation release (signee)..." -ForegroundColor Yellow
 $env:JAVA_HOME = "$env:USERPROFILE\AppData\Local\Programs\Eclipse Adoptium\jdk-21.0.11+10"

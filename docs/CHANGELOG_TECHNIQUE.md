@@ -42,6 +42,49 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-16 (5) — Sonnerie de course : son réel (fichier audio en boucle) + voix native TTS dans l'APK
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : sur l'APK Android, la notification de course s'affichait mais **ne parlait pas et ne produisait aucun son** (« la sonnerie ne parle pas, il n'y a pas de son »).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/native-tts.ts` | **Nouveau** : wrapper du plugin `@capacitor-community/text-to-speech` (voix native Android), avec repli de langue et pré-chauffage |
+| `lib/notification-sound.ts` | Sonnerie jouée par un `<audio>` WAV (data URI) en boucle + repli WebAudio bouclé ; `speakMessage` utilise la voix native en app ; `stopAllNotifications` coupe sonnerie + TTS natif ; amorçage de l'élément audio au premier geste |
+| `lib/native-push.ts` | (déjà) envoi `platform`/`appVersion` avec le token |
+| `package.json` / `package-lock.json` | Ajout `@capacitor-community/text-to-speech@8.0.2` |
+| `android/app/build.gradle` | `versionCode 9` / `versionName "1.6"` (le plugin TTS est natif → nouvelle release obligatoire) |
+| `android/capacitor.settings.gradle`, `android/app/capacitor.build.gradle` | Générés par `npx cap sync android` (enregistrement du plugin TTS) |
+| `build-release-aab.ps1` | Copie aussi le plugin `@capacitor-community/text-to-speech` hors OneDrive avant compilation |
+
+### Description technique
+- **Cause 1 — aucune voix** : la WebView Android **n'implémente pas** `window.speechSynthesis`. Tout le chemin TTS existant (`speakUtterance`/`SpeechSynthesisUtterance`) était donc inopérant dans l'APK, alors qu'il fonctionnait sur navigateur. La voix est désormais produite par le moteur TTS natif d'Android via `@capacitor-community/text-to-speech`. `nativeSpeak()` essaie la langue demandée (`fr-FR`), puis `fr`, puis la langue par défaut du téléphone : un `speak()` sur une langue non installée **rejette**, ce qui rendait la voix muette sur les appareils sans voix française. La langue qui fonctionne est mémorisée (`_preferredLang`) et le moteur est pré-chauffé (`nativeTTSWarmup`) au démarrage du tableau de bord.
+- **Cause 2 — aucun son** : la sonnerie reposait sur `AudioContext` + oscillateurs, qui reste `suspended` sans geste utilisateur fiable dans la WebView. Elle est maintenant jouée par un élément `<audio>` alimenté par un WAV généré en mémoire (data URI, 3 groupes « ding-dong » 880/1100 Hz, 22 050 Hz mono) et **en boucle** jusqu'à acceptation/refus/expiration de la course. Le repli WebAudio est conservé (et bouclé lui aussi, au lieu d'un unique bip de 1,5 s perçu comme un silence). Capacitor pose `setMediaPlaybackRequiresUserGesture(false)`, la lecture programmatique est donc autorisée. L'élément audio est « amorcé » (lecture à volume 0 puis pause) lors du premier toucher, pour les WebView plus strictes.
+- **Arrêt propre** : `stopAllNotifications()` met en pause la sonnerie, vide la boucle de repli, annule `speechSynthesis` et appelle `TextToSpeech.stop()` : plus d'annonce qui continue après un refus de course.
+- **Ordre de lecture** : sonnerie (volume 0,8) démarrée immédiatement, puis annonce vocale par-dessus (« Bonjour, vous avez une nouvelle course SmartCabb ! … »).
+
+### Impact produit / comportement visible
+- App ouverte : la course **sonne en continu** et est **annoncée à voix haute** (départ + destination).
+- La voix nécessite l'APK **1.6** (plugin natif embarqué) ; le son de sonnerie et les autres correctifs web sont déjà actifs sans rebuild (bundle servi par `www.smartcabb.com`).
+- App fermée / arrière-plan : inchangé, notification système via le canal `smartcabb_rides` (voir entrée 4).
+
+### Risques & rollback
+- **Risque faible** : sonnerie en boucle potentiellement insistante — coupée automatiquement par le compte à rebours (10 s par défaut), l'acceptation, le refus ou la disparition de la course.
+- Si le téléphone n'a **aucun** moteur TTS (Google TTS désinstallé), la voix est abandonnée silencieusement (`_nativeBroken`) mais **la sonnerie continue** ; correction possible en installant « Synthèse vocale Google » + voix française.
+- **Rollback** : `git revert <hash>` (le son retombe alors sur les bips WebAudio) ; l'APK 1.6 peut être retiré du canal de test Play Console.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` : 24 erreurs, toutes pré-existantes dans `_headers/Code-component-*.tsx`
+- [x] `npm run build` OK (`dist/assets` présent)
+- [x] `npx cap sync android` : 5 plugins détectés, dont `@capacitor-community/text-to-speech@8.0.2` (`com.getcapacitor.community.tts.TextToSpeechPlugin`)
+- [ ] À valider par le propriétaire sur l'APK 1.6 : course lancée app ouverte → sonnerie continue + annonce vocale
+- [ ] Test à faire aussi avec le volume média du téléphone > 0 et « Synthèse vocale Google » installée
+
+---
+
 ## 2026-11-16 (4) — Push Android : canal `smartcabb_rides` réparé, init natif indépendant de la vue, diagnostic du token
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)

@@ -16,6 +16,8 @@
  */
 
 // ─── Détection navigateur ─────────────────────────────────────────────────────
+import { isNativeApp, nativeSpeak, nativeStopSpeak, nativeTTSWarmup } from './native-tts';
+
 const _ua     = typeof navigator !== 'undefined' ? navigator.userAgent : '';
 const IS_IOS     = /iPad|iPhone|iPod/.test(_ua) && !(window as any).MSStream;
 const IS_SAFARI  = /^((?!chrome|android).)*safari/i.test(_ua) || (IS_IOS && /safari/i.test(_ua));
@@ -91,6 +93,149 @@ function playNotificationBeep(): void {
     }
   } catch (e) {
     console.error('Erreur beep:', e);
+  }
+}
+
+// ─── Sonnerie jouée par un FICHIER AUDIO (fiable en WebView) ─────────────────
+//
+// `AudioContext` peut rester bloqué dans la WebView tant qu'aucune interaction
+// n'a eu lieu → sonnerie muette. Un élément <audio> alimenté par un WAV
+// embarqué (data URI) est beaucoup plus fiable : Capacitor désactive
+// l'exigence de geste utilisateur pour la lecture multimédia
+// (`setMediaPlaybackRequiresUserGesture(false)`).
+let _ringtoneEl: HTMLAudioElement | null = null;
+let _ringtoneUri: string | null = null;
+
+function encodeWavBase64(samples: Float32Array, sampleRate: number): string {
+  const bytes = new Uint8Array(44 + samples.length * 2);
+  const view = new DataView(bytes.buffer);
+  const writeStr = (o: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i));
+  };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+
+  let o = 44;
+  for (let i = 0; i < samples.length; i++, o += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+  }
+
+  let bin = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    const slice = bytes.subarray(i, i + CHUNK);
+    bin += String.fromCharCode.apply(null, Array.prototype.slice.call(slice));
+  }
+  return `data:audio/wav;base64,${btoa(bin)}`;
+}
+
+/** Génère la sonnerie : 3 groupes « ding-dong » (880 Hz puis 1100 Hz). */
+function buildRingtoneUri(): string {
+  const sr = 22050;
+  const totalSeconds = 3.2;
+  const buf = new Float32Array(Math.ceil(sr * totalSeconds));
+
+  const tone = (start: number, freq: number, dur: number, vol = 0.9) => {
+    const s0 = Math.floor(start * sr);
+    const n = Math.floor(dur * sr);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const env = Math.min(1, t / 0.015) * Math.pow(1 - t / dur, 1.6);
+      const v = Math.sin(2 * Math.PI * freq * t) * vol * env;
+      if (s0 + i < buf.length) buf[s0 + i] += v;
+    }
+  };
+
+  for (let g = 0; g < 3; g++) {
+    const base = g * 0.95;
+    tone(base, 880, 0.18);
+    tone(base + 0.20, 1100, 0.22);
+  }
+
+  return encodeWavBase64(buf, sr);
+}
+
+function getRingtoneElement(): HTMLAudioElement | null {
+  try {
+    if (typeof Audio === 'undefined') return null;
+    if (!_ringtoneEl) {
+      _ringtoneUri = _ringtoneUri || buildRingtoneUri();
+      _ringtoneEl = new Audio(_ringtoneUri);
+      _ringtoneEl.preload = 'auto';
+      // Sonnerie en boucle : une course doit sonner tant qu'elle n'est pas
+      // acceptée/refusée. `stopAllNotifications()` coupe la boucle.
+      _ringtoneEl.loop = true;
+      _ringtoneEl.volume = 0.8; // laisse la voix audible par-dessus
+    }
+    return _ringtoneEl;
+  } catch {
+    return null;
+  }
+}
+
+// Repli WebAudio : la sonnerie doit aussi se répéter (sinon 1,5 s de son
+// seulement, ce qui était perçu comme « pas de son »).
+let _beepLoopTimer: ReturnType<typeof setInterval> | null = null;
+
+function scheduleWebAudioBeeps(loop = true): void {
+  playNotificationBeep();
+  setTimeout(() => playNotificationBeep(), 700);
+  setTimeout(() => playNotificationBeep(), 1400);
+  if (!loop || _beepLoopTimer) return;
+  _beepLoopTimer = setInterval(() => {
+    if (!_soundAllowed) { stopBeepLoop(); return; }
+    scheduleWebAudioBeeps(false);
+  }, 2200);
+}
+
+function stopBeepLoop(): void {
+  if (_beepLoopTimer) { clearInterval(_beepLoopTimer); _beepLoopTimer = null; }
+}
+
+/**
+ * Joue la sonnerie de course. Repli WebAudio si la lecture du fichier est
+ * refusée, avec nouvelle tentative au premier toucher de l'écran.
+ */
+export function playRideRingtone(): void {
+  if (!_soundAllowed) return;
+
+  const el = getRingtoneElement();
+  if (!el) { scheduleWebAudioBeeps(); return; }
+
+  try {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') void ctx.resume().catch(() => {});
+  } catch {}
+
+  try {
+    el.pause();
+    el.currentTime = 0;
+    const p = el.play();
+    if (p && typeof p.then === 'function') {
+      p.catch(() => {
+        console.warn('⚠️ Sonnerie refusée par la WebView — repli WebAudio');
+        scheduleWebAudioBeeps();
+        const retry = () => {
+          window.removeEventListener('pointerdown', retry);
+          try { el.currentTime = 0; void el.play().catch(() => {}); } catch {}
+        };
+        window.addEventListener('pointerdown', retry, { once: true } as any);
+      });
+    }
+  } catch {
+    scheduleWebAudioBeeps();
   }
 }
 
@@ -226,7 +371,20 @@ function splitPhrases(text: string): string[] {
 
 // ─── Synthèse vocale principale ───────────────────────────────────────────────
 async function speakMessage(message: string, lang = 'fr-FR'): Promise<void> {
-  if (!('speechSynthesis' in window)) return;
+  // 1️⃣ APK / app native : `speechSynthesis` n'existe pas dans la WebView
+  //    Android → on utilise le moteur TTS natif du téléphone.
+  if (isNativeApp()) {
+    const spoken = await nativeSpeak(message, { lang, rate: 0.95 });
+    if (spoken) {
+      console.log('✅ TTS natif terminé');
+      return;
+    }
+  }
+
+  if (!('speechSynthesis' in window)) {
+    console.warn("⚠️ Aucune synthèse vocale disponible sur cet appareil");
+    return;
+  }
   if (IS_IOS) console.warn('⚠️ iOS: TTS nécessite un geste utilisateur récent');
 
   try {
@@ -332,12 +490,8 @@ export async function playRideNotification(rideDetails?: {
   console.log('🚖 playRideNotification');
   _soundAllowed = true;
 
-  // Beeps — 3×, espacés de 700 ms
-  playNotificationBeep();
-  setTimeout(() => playNotificationBeep(), 700);
-  setTimeout(() => playNotificationBeep(), 1400);
-
-  // Vibration
+  // Sonnerie : fichier audio (3 ding-dong) + vibration
+  playRideRingtone();
   vibrate([300, 100, 300, 100, 300]);
 
   // Message vocal (construit avec adresses courtes pour réduire la durée)
@@ -361,6 +515,11 @@ export async function playRideNotification(rideDetails?: {
 /** Arrête tout (son + vibration) */
 export function stopAllNotifications(): void {
   _soundAllowed = false;
+  stopBeepLoop();
+  try {
+    if (_ringtoneEl) { _ringtoneEl.pause(); _ringtoneEl.currentTime = 0; }
+  } catch {}
+  void nativeStopSpeak();
   try {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   } catch {}
@@ -388,7 +547,18 @@ export function preloadVoices(): void {
   // 1. Pré-chauffer l'AudioContext
   warmUpAudioContext();
 
-  // 2. Charger les voix et mettre en cache la meilleure voix française
+  // 2. Pré-générer la sonnerie (fichier WAV) pour un déclenchement instantané
+  try { getRingtoneElement(); } catch {}
+
+  // 3. App native : la voix est produite par le moteur TTS d'Android.
+  //    `nativeTTSWarmup` vérifie qu'une voix existe et supprime la latence
+  //    d'initialisation du premier `speak()`.
+  if (isNativeApp()) {
+    console.log('🔊 [SON] Voix native (TTS Android) + sonnerie fichier');
+    void nativeTTSWarmup();
+  }
+
+  // 4. Charger les voix du navigateur et mettre en cache la meilleure voix fr
   loadVoices().then(voices => {
     const voice = pickBestFrenchVoice(voices);
     _cachedVoice = voice;
@@ -423,6 +593,33 @@ export function unlockMobileAudio(): void {
       if ('speechSynthesis' in window) {
         try { window.speechSynthesis.getVoices(); } catch {}
       }
+      // Amorcer l'élément <audio> pendant un vrai geste : certaines WebView
+      // n'autorisent la lecture d'un média que s'il a déjà été lancé une fois
+      // par l'utilisateur. On ne le fait pas si la sonnerie est en cours.
+      const el = getRingtoneElement();
+      if (el && el.paused) {
+        const previousVolume = el.volume;
+        try {
+          el.volume = 0;
+          const p = el.play();
+          if (p && typeof p.then === 'function') {
+            p.then(() => {
+              el.pause();
+              el.currentTime = 0;
+              el.volume = previousVolume;
+            }).catch(() => { el.volume = previousVolume; });
+          } else {
+            el.pause();
+            el.currentTime = 0;
+            el.volume = previousVolume;
+          }
+        } catch {
+          el.volume = previousVolume;
+        }
+      }
+      // Moteur TTS natif : premier appel = initialisation (long) → on le fait
+      // pendant un geste plutôt qu'au moment de la course.
+      if (isNativeApp()) void nativeTTSWarmup();
     } catch {}
   };
   try {
