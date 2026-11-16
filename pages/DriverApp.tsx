@@ -25,6 +25,7 @@ import { AppNotificationsScreen } from '../components/AppNotificationsScreen';
 import { useEffect } from 'react';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { unlockMobileAudio, preloadVoices } from '../lib/notification-sound';
+import { initNativePush } from '../lib/native-push';
 
 function DriverAppContent() {
   const { state, setCurrentScreen, setCurrentView, setCurrentDriver } = useAppState();
@@ -137,6 +138,9 @@ function DriverAppContent() {
   useEffect(() => {
     if (!state.currentDriver?.id || state.currentView !== 'driver') return;
     console.log('✅ FCM géré par DriverDashboardNew pour driver:', state.currentDriver.id);
+    // 🔔 Push natif : seul canal capable de réveiller l'APK (le FCM WebView
+    // n'est pas supporté). Sans ça : aucune sonnerie app en arrière-plan.
+    void initNativePush('driver', state.currentDriver.id);
   }, [state.currentDriver?.id, state.currentView]);
 
   // 🔔 Audio mobile : la sonnerie reste muette tant qu'aucun geste utilisateur

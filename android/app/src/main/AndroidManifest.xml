@@ -42,6 +42,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Push natif : notifications de course (Android 13+ exige cette permission
+         et une demande a l'execution, faite par @capacitor/push-notifications). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <!-- Lecture du répertoire : nécessaire au sélecteur de contacts
          (@capacitor/contacts) utilisé par « Réserver pour quelqu'un d'autre ». -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />

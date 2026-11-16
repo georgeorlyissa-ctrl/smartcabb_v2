@@ -17,6 +17,7 @@ import { stopAllNotifications } from '../../lib/notification-sound';
 import { preloadVoices } from '../../lib/notification-sound';
 import { unlockMobileAudio } from '../../lib/notification-sound';
 import { supabase } from '../../lib/supabase';
+import { consumePendingPushRide } from '../../lib/native-push';
 import { NotificationBell } from '../AppNotificationsScreen';
 import { addLocalNotification } from '../AppNotificationsScreen';
 
@@ -342,6 +343,14 @@ export function DriverDashboardNew() {
   // ============================================================
   useEffect(() => {
     if (!driver?.id) return;
+
+    // 🔔 App ouverte en touchant une notification native (app fermée) :
+    // le payload est mémorisé par lib/native-push.ts avant le chargement.
+    const pushedRide = consumePendingPushRide();
+    if (pushedRide) {
+      console.log('🔗 App ouverte depuis une notification native, rideId:', pushedRide.rideId);
+      setPendingRideRequest(buildRideRequest(pushedRide));
+    }
 
     const params = new URLSearchParams(window.location.search);
     const rideId = params.get('rideId');

@@ -42,6 +42,50 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-16 (2) — Push natif Android (sonnerie app fermée) + catégories manquantes corrigées
+
+- **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat + fix
+- **Objectif** : dans l'APK, aucune notification n'arrivait quand l'app était en arrière-plan ou fermée (le FCM JavaScript n'existe pas en WebView Capacitor), et 3 chauffeurs n'avaient aucune catégorie de véhicule donc ne pouvaient jamais matcher.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/native-push.ts` | **Nouveau** — enregistrement push natif, canal Android `smartcabb_rides`, relais des événements FCM vers l'UI, mémorisation de la notification ouverte |
+| `pages/DriverApp.tsx` | Appelle `initNativePush('driver', id)` quand un chauffeur est connecté |
+| `components/driver/DriverDashboardNew.tsx` | Consomme la notification native ouverte (course affichée dès le montage du tableau de bord) |
+| `android/app/src/main/AndroidManifest.xml` | Ajout de `POST_NOTIFICATIONS` (Android 13+) et `VIBRATE` |
+| `android/app/build.gradle` | Version `1.5` / `versionCode 8` (release signée) |
+| `build-release-aab.ps1` | **Nouveau** — build release AAB + APK signés, avec contrôle de `google-services.json` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Pourquoi** : `@capacitor/push-notifications` était déjà installé et enregistré côté Android, et les helpers existaient dans `lib/capacitor-bridge.ts`, mais **aucun code n'appelait** `register()`. De plus `google-services.json` est absent (plugin Google Services non appliqué), donc aucun token natif n'était possible. Les notifications FCM version Web ne fonctionnent pas en WebView (pas de `PushManager`).
+- **Client** : `initNativePush(role, userId)` est idempotent. Il installe les listeners (`registration`, `registrationError`, `pushNotificationReceived`, `pushNotificationActionPerformed`), crée le canal `smartcabb_rides` (importance 5, son par défaut, vibration, lights), demande la permission puis `register()`; le token reçu est envoyé à `/fcm/register-driver-token` (ou `/fcm/register-passenger-token`). Le backend n'a pas changé : il envoyait déjà `channelId: smartcabb_rides` et `priority: high`.
+- **App ouverte** : `pushNotificationReceived` → événements `fcm-new-ride-request` / `fcm-ride-dismissed` / `fcm-reservation-assigned` déjà écoutés par `DriverDashboardNew`.
+- **App fermée** : `pushNotificationActionPerformed` mémorise le payload dans `sessionStorage` (`smartcabb_pending_push`), redirige vers `/app/driver` si nécessaire ; le tableau de bord consomme ce payload au montage (`consumePendingPushRide`) et affiche la popup + la sonnerie.
+- **Données** : les 3 chauffeurs sans catégorie (`Conducteur Test Google`, `Jeremie Mulumba`, `ORLY ORLY ISSA`, tous à 0 FC) ont reçu `smart_standard` via `POST /drivers/:id/update`. Répartition finale : 17 standard, 3 confort, 1 plus, 1 business, 1 standard_clim, 1 standard_no_clim — **24/24**.
+
+### Impact produit / comportement visible
+- Une fois l'APK 1.5 installé (avec `google-services.json`), le chauffeur reçoit la notification système **même app fermée**, avec son haut-parleur ; un appui ouvre directement le tableau de bord avec la course à accepter.
+- En web (Chrome/Safari mobile), comportement inchangé : FCM web + polling.
+- Plus aucun chauffeur « invisible » faute de catégorie.
+
+### Risques & rollback
+- **Risque** : sur Android 13+, la permission notifications est demandée au démarrage ; si refusée, pas de push (le polling reste actif app ouverte).
+- **Risque** : sur un APK sans `google-services.json`, `register()` échoue proprement (`registrationError`), sans crash.
+- **Rollback** : `git revert <hash>` + rebuild APK ; pour désactiver côté web sans rebuild, retirer l'appel `initNativePush` dans `pages/DriverApp.tsx`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npx vite build` OK
+- [x] `POST /drivers/:id/update` appliqué aux 3 chauffeurs, contrôle `/rides/debug-drivers` : 0 chauffeur sans catégorie
+- [ ] Build release AAB/APK **en attente de `android/app/google-services.json`** (Firebase Console)
+- [ ] Test push réel app fermée après installation de l'APK 1.5
+
+---
+
 ## 2026-11-16 — Sonnerie de course chauffeur (audio mobile + écoute globale) et fiabilisation du matching
 
 - **Commit** : _(ce commit)_ (branche `main`, poussé sur `origin`)
