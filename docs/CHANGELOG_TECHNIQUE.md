@@ -42,6 +42,49 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-17 (8) — 2ᵉ course sans notification chauffeur + bascule en ligne immédiate
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix / perf
+- **Objectif** : après une première course terminée, une nouvelle demande de course ne notifiait plus aucun chauffeur (la course restait en « recherche »). Le bouton « EN LIGNE / HORS LIGNE » demandait plusieurs clics. Objectifs : rendre le matching fiable en continu et la bascule de statut instantanée.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Détection des **verrous de course obsolètes**, matching qui ne bloque plus un chauffeur libre, timeout de matching sécurisé, expiration des recherches abandonnées, endpoint de réparation `POST /rides/heal-stuck-state` |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | `POST /:driverId/status` et `POST /toggle-online-status` libèrent un verrou obsolète avant de calculer la disponibilité |
+| `components/driver/DriverDashboardNew.tsx` | Bascule en ligne/hors ligne **optimiste** (retour immédiat), GPS non bloquant (4 s max, position en cache), un seul appel à la fois, garde anti-clignotement |
+
+### Description technique
+- **Cause racine constatée en production** : le chauffeur en ligne (`Jack Kalen`) avait `activeRideId = c8c86dba-…-812b6756` alors que cette course était `no_driver_found` depuis ~2 min. Son `is_available` restait donc à `false` **définitivement** : le matching l'excluait, d'où « plus rien ne marche » après la première course. Origine probable : collision entre la validation d'une course et le `setTimeout` de matching (30 s) qui réécrivait la course en `no_driver_found`, ou une écriture interrompue entre le verrouillage du chauffeur et la sauvegarde de la course.
+- **Verrou obsolète** : `activeRideId` n'est plus considéré comme bloquant que si la course pointée est réellement dans un état actif (`searching`, `pending`, `accepted`, `enroute`, `arrived`, `waiting`, `in_progress`). `loadActiveRideIdSet()` charge les courses une fois par matching, `releaseStaleDriverLock()` nettoie le chauffeur (et son profil) silencieusement.
+- **Timeout de matching** : re-vérifie la course avant d'écrire `no_driver_found`, ne l'écrase jamais si un `driverId` est présent, **restaure la course en `accepted`** si un chauffeur notifié l'a verrouillée pendant la fenêtre, puis libère les verrous résiduels.
+- **Recherches fantômes** : `GET /rides/status/:id` bascule en `no_driver_found` une course encore `searching` depuis plus de 45 s (le `setTimeout` ne survit pas à l'arrêt de l'instance Edge) et supprime la clé `matching:`.
+- **Réparation immédiate** : `POST /rides/heal-stuck-state` (idempotent, sans secret) libère les verrous obsolètes et expire les recherches bloquées. Utilisé une fois en production : `{ releasedDrivers: 1, expiredRides: 0 }`, le chauffeur est repassé `is_online: true, is_available: true, activeRideId: null` et `eligible: true`.
+- **Bascule en ligne** : `handleToggleOnline` applique le nouvel état immédiatement (`setIsOnline`), puis attend la position **au maximum 4 s** (précision approchée, `maximumAge: 120 s`, repli sur la dernière position connue) et envoie un seul `POST /drivers/:id/status`. En cas d'échec, l'état revient à la valeur précédente. `disabled` + indicateur pendant l'appel, `active:scale-95` pour le retour tactile, garde de 4 s pour qu'un rafraîchissement lancé avant le clic n'écrase pas l'état optimiste.
+
+### Impact produit / comportement visible
+- Un chauffeur redevient éligible dès que sa course est terminée/annulée, **même si un verrou est resté**, sans intervention admin.
+- Une recherche sans chauffeur se termine au bout de 45 s au lieu de tourner indéfiniment.
+- Le bouton « EN LIGNE / HORS LIGNE » réagit au premier clic, sans attente GPS visible.
+- **SMS** : le solde se lit sur `GET /sms/balance` (admin). Le 404 précédent venait d'un chemin inexistant (`/sms/credits/balance`) ; l'émetteur `SMARTCABB` est approuvé et l'envoi fonctionne (`GET /sms/config` → `enabled: true, configured: true`). Aucun code SMS modifié.
+
+### Risques & rollback
+- **Risque** : le healing repose sur la lecture de toutes les courses (`kv.getByPrefix('ride:')`) à chaque matching — coût acceptable mais proportionnel au volume de courses. Un chauffeur suspendu par l'admin (sans verrou de course) n'est **pas** réactivé automatiquement.
+- **Rollback** : `git revert <hash>` puis redéploiement Vercel + Edge Function. `POST /rides/heal-stuck-state` est idempotent, aucun effet de bord destructif.
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK ; typecheck ciblé de `DriverDashboardNew.tsx` : aucune erreur
+- [x] Edge Function redéployée (`npx supabase functions deploy make-server-2eb02e52 --project-ref zaerjqchzqmcxqblkfkg`)
+- [x] `POST /rides/heal-stuck-state` → `{ success: true, releasedDrivers: 1, expiredRides: 0 }`
+- [x] `GET /rides/debug-drivers?category=smart_standard` → `Jack Kalen` : `onlineResolved: true`, `availableResolved: true`, `activeRideId: null`, `eligible: true`
+- [x] `POST /rides/check-drivers-availability` → `available: true, driversCount: 1`
+- [x] `GET /rides/status/<course bloquée>` → la course n'est plus `searching`
+- [ ] À valider en réel : 2ᵉ course acceptée puis terminée → 3ᵉ demande notifiée immédiatement ; bascule en ligne en un seul clic
+
+---
+
 ## 2026-11-17 (7) — SOS admin : alertes visibles + détails de course et itinéraire
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

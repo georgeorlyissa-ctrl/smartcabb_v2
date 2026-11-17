@@ -25,6 +25,82 @@ function driverHasActiveRide(d: any, rideId?: string): boolean {
   if (!active) return false;
   return !rideId || active !== rideId;
 }
+
+// ─── Verrous de course : detection des verrous obsletes ─────────────────────
+// Un chauffeur dont `activeRideId` pointe vers une course terminee/annulee
+// (ou inexistante) restait `is_available = false` POUR TOUJOURS : il ne
+// recevait plus aucune proposition. On considere ces verrous comme obsletes.
+const ACTIVE_RIDE_STATUSES = [
+  'searching', 'pending', 'accepted', 'enroute', 'arrived', 'waiting', 'in_progress',
+];
+
+function isActiveRideStatus(status?: string | null): boolean {
+  return typeof status === 'string' && ACTIVE_RIDE_STATUSES.includes(status);
+}
+
+function readDriverActiveRideId(driver: any): string | null {
+  const id = driver?.activeRideId || driver?.active_ride_id ||
+             driver?.currentRideId || driver?.current_ride_id;
+  return id ? String(id) : null;
+}
+
+/** Ensemble des identifiants de courses encore reellement en cours. */
+async function loadActiveRideIdSet(): Promise<Set<string>> {
+  const set = new Set<string>();
+  try {
+    const rides = await kv.getByPrefix('ride:');
+    for (const ride of rides) {
+      if (ride?.id && isActiveRideStatus(ride.status)) set.add(String(ride.id));
+    }
+  } catch (e) {
+    console.error('[RIDE-LOCK] Lecture des courses impossible:', e);
+  }
+  return set;
+}
+
+/**
+ * Libere le verrou d'un chauffeur si sa course n'est plus active.
+ * Retourne true si le chauffeur a ete repare.
+ */
+async function releaseStaleDriverLock(driverId: string | null | undefined): Promise<boolean> {
+  if (!driverId) return false;
+  try {
+    const driver = await kv.get<any>(`driver:${driverId}`);
+    if (!driver) return false;
+    const activeId = readDriverActiveRideId(driver);
+    if (!activeId) return false;
+
+    const ride = await kv.get<any>(`ride:${activeId}`);
+    if (ride && isActiveRideStatus(ride.status)) return false;
+
+    const online = isDriverOnline(driver);
+    const now = new Date().toISOString();
+    delete driver.activeRideId;
+    delete driver.active_ride_id;
+    delete driver.currentRideId;
+    delete driver.current_ride_id;
+    driver.is_available = online;
+    driver.available = online;
+    driver.updated_at = now;
+    await kv.set(`driver:${driverId}`, driver);
+
+    const profile = await kv.get<any>(`profile:${driverId}`);
+    if (profile) {
+      await kv.set(`profile:${driverId}`, {
+        ...profile,
+        is_available: online,
+        available: online,
+        activeRideId: null,
+        updated_at: now,
+      });
+    }
+    console.log(`[RIDE-LOCK] Verrou obsolete libere pour ${driverId} (course ${activeId}, dispo=${online})`);
+    return true;
+  } catch (e) {
+    console.error('[RIDE-LOCK] Liberation impossible:', e);
+    return false;
+  }
+}
 /**
  * Libere un chauffeur apres cloture/annulation d'une course :
  * efface activeRideId et remet la disponibilite UNIQUEMENT s'il est en ligne
@@ -255,6 +331,8 @@ function calculateDriverScore(driver: any, distanceToPickup: number): number {
  * Timeout global de 30s si aucun n'accepte.
  */
 const MATCHING_TIMEOUT_MS = 30000;
+/** Au-delà de ce délai, une recherche encore « searching » est considérée sans chauffeur. */
+const SEARCH_STALE_MS = 45_000;
 
 async function findAndNotifyNearbyDrivers(ride: any) {
   try {
@@ -263,9 +341,14 @@ async function findAndNotifyNearbyDrivers(ride: any) {
     const allDrivers = await kv.getByPrefix('driver:');
     console.log(`👥 Total chauffeurs dans la base: ${allDrivers.length}`);
 
+    // ✅ Verrous obsletes : un chauffeur dont activeRideId pointe une course
+    // terminee/annulee restait indisponible pour toujours (2e course sans
+    // notification). On recharge les courses actives pour valider le verrou.
+    const activeRideIds = await loadActiveRideIdSet();
+    const staleLockDriverIds: string[] = [];
+
     const eligibleDrivers = allDrivers.filter((driver: any) => {
       const isOnline = isDriverOnline(driver);
-      const isAvailable = isDriverAvailable(driver);
       const driverCategory = driver.vehicleCategory || 
                        driver.vehicle_category ||
                        driver.vehicle_type || 
@@ -273,10 +356,24 @@ async function findAndNotifyNearbyDrivers(ride: any) {
                        driver.vehicle?.category ||
                        driver.vehicle?.type;
       const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
-      const isBusy = driverHasActiveRide(driver);
+
+      const activeId = readDriverActiveRideId(driver);
+      const isBusy = !!activeId && activeRideIds.has(activeId);
+      const hasStaleLock = !!activeId && !isBusy;
+      if (hasStaleLock) staleLockDriverIds.push(driver.id);
+
+      // Un verrou obsolete ne doit pas bloquer la disponibilite.
+      const isAvailable = hasStaleLock ? isOnline : isDriverAvailable(driver);
+
       // Catégorie compatible + en ligne + disponible + pas deja en course
       return isOnline && isAvailable && !isBusy && categoryMatch;
     });
+
+    // Réparation silencieuse des chauffeurs débloqués.
+    if (staleLockDriverIds.length > 0) {
+      console.log(`🧹 ${staleLockDriverIds.length} verrou(s) de course obsolète(s) → réparation`);
+      await Promise.allSettled(staleLockDriverIds.map((id) => releaseStaleDriverLock(id)));
+    }
 
     if (eligibleDrivers.length === 0) {
       console.warn(`⚠️ Aucun chauffeur éligible pour ${ride.vehicleCategory}`);
@@ -317,17 +414,50 @@ async function findAndNotifyNearbyDrivers(ride: any) {
 
     // Timeout global : après 30s, si personne n'a accepté, annuler
     setTimeout(async () => {
-      const currentRide = await kv.get<any>(`ride:${ride.id}`);
-      if (currentRide && currentRide.status === 'searching') {
+      try {
+        const currentRide = await kv.get<any>(`ride:${ride.id}`);
+        // ⚠️ Ne jamais écraser une course acceptée entre-temps : un chauffeur
+        // a peut-être validé la course pendant cette fenêtre.
+        if (!currentRide || currentRide.status !== 'searching' || currentRide.driverId) return;
+
+        // 🔒 Anti-course avec l'acceptation : si un chauffeur notifié a déjà
+        // verrouillé cette course, c'est qu'il l'a acceptée. On restaure la
+        // course au lieu de la marquer « sans chauffeur » (sinon il restait
+        // bloqué « en course » sur une course fantôme).
+        for (const candidate of nearbyDrivers) {
+          const freshDriver = await kv.get<any>(`driver:${candidate.id}`);
+          if (readDriverActiveRideId(freshDriver) !== ride.id) continue;
+
+          console.warn(`🔒 [MATCHING] Course ${ride.id} acceptée par ${candidate.id} pendant le timeout → restauration`);
+          const acceptedRide = await kv.get<any>(`ride:${ride.id}`);
+          if (acceptedRide) {
+            acceptedRide.status = 'accepted';
+            acceptedRide.driverId = candidate.id;
+            acceptedRide.driverName = freshDriver.full_name || freshDriver.name || acceptedRide.driverName;
+            acceptedRide.driverPhone = freshDriver.phone || acceptedRide.driverPhone;
+            acceptedRide.acceptedAt = acceptedRide.acceptedAt || new Date().toISOString();
+            await kv.set(`ride:${ride.id}`, acceptedRide);
+          }
+          await kv.delete(`matching:${ride.id}`);
+          return;
+        }
+
         console.warn(`⏰ Timeout de ${MATCHING_TIMEOUT_MS/1000}s pour la course ${ride.id}`);
         currentRide.status = 'no_driver_found';
         currentRide.noDriverFoundAt = new Date().toISOString();
         await kv.set(`ride:${ride.id}`, currentRide);
+
         // Nettoyer toutes les notifications
         for (const d of nearbyDrivers) {
           await kv.delete(`driver_notification:${d.id}`);
         }
         await kv.delete(`matching:${ride.id}`);
+
+        // ✅ Sécurité : libérer tout chauffeur dont le verrou pointe encore
+        // cette course (évite un chauffeur bloqué « en course » à vie).
+        await Promise.allSettled(nearbyDrivers.map((d) => releaseStaleDriverLock(d.id)));
+      } catch (e) {
+        console.error('❌ Erreur timeout matching:', e);
       }
     }, MATCHING_TIMEOUT_MS);
 
@@ -530,14 +660,92 @@ app.get("/status/:id", async (c) => {
     if (!isValidUUID(rideId)) {
       return c.json({ success: false, error: "ID course invalide" }, 400);
     }
-    const ride = await kv.get(`ride:${rideId}`);
+    const ride = await kv.get<any>(`ride:${rideId}`);
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
+
+    // ⏱️ Auto-réparation : une recherche sans chauffeur ne doit pas rester
+    // bloquée à vie. Le `setTimeout` de matching ne survit pas toujours à
+    // l'arrêt de l'instance Edge : on tranche à la lecture.
+    if (ride.status === 'searching' && !ride.driverId) {
+      const createdAt = Date.parse(ride.createdAt || ride.created_at || '');
+      const ageMs = Number.isFinite(createdAt) ? Date.now() - createdAt : 0;
+      if (ageMs > SEARCH_STALE_MS) {
+        ride.status = 'no_driver_found';
+        ride.noDriverFoundAt = new Date().toISOString();
+        await kv.set(`ride:${rideId}`, ride);
+        await kv.delete(`matching:${rideId}`);
+        console.log(`⏰ [RIDES/STATUS] Recherche expirée (${Math.round(ageMs / 1000)}s) → no_driver_found : ${rideId}`);
+      }
+    }
+
     return c.json({ success: true, ride });
   } catch (error) {
     console.error("❌ Erreur récupération statut:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ============================================
+// POST /heal-stuck-state — Réparer les états bloqués (idempotent)
+//   - chauffeurs dont le verrou de course est obsolète (plus de notifications)
+//   - courses restées « searching » au-delà du délai de matching
+// ============================================
+app.post("/heal-stuck-state", async (c) => {
+  try {
+    const drivers = await kv.getByPrefix('driver:');
+    const activeRideIds = await loadActiveRideIdSet();
+
+    const staleDrivers: string[] = [];
+    for (const driver of drivers) {
+      const activeId = readDriverActiveRideId(driver);
+      if (activeId && !activeRideIds.has(activeId)) staleDrivers.push(String(driver.id));
+    }
+
+    let releasedDrivers = 0;
+    for (const id of staleDrivers) {
+      const driver = await kv.get<any>(`driver:${id}`);
+      if (!driver) continue;
+      const activeId = readDriverActiveRideId(driver);
+      if (activeId && activeRideIds.has(activeId)) continue; // course réellement en cours
+      const online = isDriverOnline(driver);
+      const now = new Date().toISOString();
+      delete driver.activeRideId;
+      delete driver.active_ride_id;
+      delete driver.currentRideId;
+      delete driver.current_ride_id;
+      driver.is_available = online;
+      driver.available = online;
+      driver.updated_at = now;
+      await kv.set(`driver:${id}`, driver);
+      const profile = await kv.get<any>(`profile:${id}`);
+      if (profile) {
+        await kv.set(`profile:${id}`, {
+          ...profile, is_available: online, available: online, activeRideId: null, updated_at: now,
+        });
+      }
+      releasedDrivers += 1;
+    }
+
+    let expiredRides = 0;
+    const rides = await kv.getByPrefix('ride:');
+    for (const ride of rides) {
+      if (!ride?.id || ride.status !== 'searching' || ride.driverId) continue;
+      const createdAt = Date.parse(ride.createdAt || ride.created_at || '');
+      if (!Number.isFinite(createdAt) || Date.now() - createdAt <= SEARCH_STALE_MS) continue;
+      ride.status = 'no_driver_found';
+      ride.noDriverFoundAt = new Date().toISOString();
+      await kv.set(`ride:${ride.id}`, ride);
+      await kv.delete(`matching:${ride.id}`);
+      expiredRides += 1;
+    }
+
+    console.log(`🧹 [HEAL] ${releasedDrivers} chauffeur(s) libéré(s), ${expiredRides} recherche(s) expirée(s)`);
+    return c.json({ success: true, releasedDrivers, expiredRides });
+  } catch (error: any) {
+    console.error("❌ [HEAL] Erreur:", error);
+    return c.json({ success: false, error: error?.message || "Erreur serveur" }, 500);
   }
 });
 

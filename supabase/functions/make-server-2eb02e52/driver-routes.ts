@@ -168,6 +168,22 @@ app.post("/toggle-online-status", async (c) => {
     }
 
     const now = new Date().toISOString();
+
+    // ✅ Verrou de course obsolète (même correctif que POST /:driverId/status).
+    const linkedRideId = driver.activeRideId || driver.active_ride_id ||
+                         driver.currentRideId || driver.current_ride_id;
+    if (linkedRideId) {
+      const linkedRide = await kvGet(`ride:${linkedRideId}`);
+      const stillActive = !!linkedRide && ['searching', 'pending', 'accepted', 'enroute', 'arrived', 'waiting', 'in_progress']
+        .includes(linkedRide.status);
+      if (!stillActive) {
+        delete driver.activeRideId;
+        delete driver.active_ride_id;
+        delete driver.currentRideId;
+        delete driver.current_ride_id;
+      }
+    }
+
     const hasActiveRide = !!(driver.activeRideId || driver.currentRideId ||
       driver.active_ride_id || driver.current_ride_id);
     const isAvailable = isOnline && !hasActiveRide;
@@ -812,6 +828,25 @@ app.post("/:driverId/status", async (c) => {
     }
 
     const now = new Date().toISOString();
+
+    // ✅ Verrou de course obsolète : si `activeRideId` pointe vers une course
+    // terminée/annulée/inexistante, le chauffeur restait `is_available = false`
+    // pour toujours (plus aucune notification). On le libère à la volée.
+    const linkedRideId = driver.activeRideId || driver.active_ride_id ||
+                         driver.currentRideId || driver.current_ride_id;
+    if (linkedRideId) {
+      const linkedRide = await kvGet(`ride:${linkedRideId}`);
+      const stillActive = !!linkedRide && ['searching', 'pending', 'accepted', 'enroute', 'arrived', 'waiting', 'in_progress']
+        .includes(linkedRide.status);
+      if (!stillActive) {
+        console.log(`🧹 [DRIVERS/STATUS] Verrou obsolète libéré (${linkedRideId}) pour ${driverId}`);
+        delete driver.activeRideId;
+        delete driver.active_ride_id;
+        delete driver.currentRideId;
+        delete driver.current_ride_id;
+      }
+    }
+
     const hasActiveRide = !!(driver.activeRideId || driver.currentRideId ||
       driver.active_ride_id || driver.current_ride_id);
     const isAvailable = isOnline && !hasActiveRide;

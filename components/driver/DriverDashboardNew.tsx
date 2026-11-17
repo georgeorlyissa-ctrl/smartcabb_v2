@@ -297,7 +297,11 @@ export function DriverDashboardNew() {
             if (data.success && data.driver) {
               setDriver(data.driver);
               // ✅ FIX : status = approbation ("approved"), isOnline/is_online = statut en ligne
-              setIsOnline(data.driver.isOnline === true || data.driver.is_online === true);
+              // On ignore une réponse partie AVANT le clic en ligne/hors ligne
+              // pour ne pas faire clignoter le bouton.
+              if (Date.now() >= statusGuardUntil.current) {
+                setIsOnline(data.driver.isOnline === true || data.driver.is_online === true);
+              }
               return;
             }
           } else if (response.status === 404 && attempts === maxAttempts - 1 && state.currentDriver) {
@@ -636,55 +640,96 @@ export function DriverDashboardNew() {
     }
   };
 
-  const handleToggleOnline = async () => {
-    if (!driver) return;
+  // ⚡ Bascule en ligne / hors ligne : action immédiate (optimiste), position
+  // GPS récupérée sans bloquer l'interface (4 s maximum) et un seul appel à la fois.
+  const [statusPending, setStatusPending] = useState(false);
+  /** Empêche un rafraîchissement lancé avant le clic d'écraser l'état optimiste. */
+  const statusGuardUntil = useRef(0);
 
+  const getLastKnownLocation = (): { lat: number; lng: number } | null => {
+    const anyDriver = driver as any;
+    const raw = anyDriver?.location || anyDriver?.lastLocation || anyDriver?.currentLocation;
+    if (!raw) return null;
+    const lat = Number(raw.lat ?? raw.latitude);
+    const lng = Number(raw.lng ?? raw.longitude);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  };
+
+  const getQuickPosition = (): Promise<{ lat: number; lng: number } | null> =>
+    new Promise((resolve) => {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
+        resolve(getLastKnownLocation());
+        return;
+      }
+
+      let settled = false;
+      const finish = (value: { lat: number; lng: number } | null) => {
+        if (settled) return;
+        settled = true;
+        resolve(value ?? getLastKnownLocation());
+      };
+
+      // Filet de sécurité : l'interface ne doit jamais attendre plus de 4 s.
+      const guard = window.setTimeout(() => finish(null), 4_000);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          window.clearTimeout(guard);
+          finish({ lat: position.coords.latitude, lng: position.coords.longitude });
+        },
+        () => {
+          window.clearTimeout(guard);
+          // Pas de GPS : on réutilise la dernière position connue du chauffeur.
+          finish(null);
+        },
+        { enableHighAccuracy: false, maximumAge: 120_000, timeout: 3_500 },
+      );
+    });
+
+  const handleToggleOnline = async () => {
+    if (!driver || statusPending) return;
+
+    const nextOnline = !isOnline;
     const minimumCredit = getMinimumCreditForCategory(driver.vehicle?.category || 'smart_standard');
-    if (!isOnline && (driver.balance || 0) < minimumCredit) {
+    if (nextOnline && (driver.balance || 0) < minimumCredit) {
       toast.error(`Solde insuffisant ! Minimum ${minimumCredit.toLocaleString('fr-FR')} CDF requis.`);
       setShowWalletManager(true);
       return;
     }
 
-    try {
-      const newStatus = isOnline ? 'offline' : 'online';
-      let currentLocationToSend = null;
+    const previous = isOnline;
+    // ✅ Retour visuel immédiat : un seul clic suffit, plus d'attente GPS.
+    setIsOnline(nextOnline);
+    setStatusPending(true);
+    statusGuardUntil.current = Date.now() + 4_000;
 
-      if (newStatus === 'online') {
-        try {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true, timeout: 10000, maximumAge: 0
-            });
-          });
-          currentLocationToSend = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-        } catch (gpsError) {
-          toast.error('Impossible d\'obtenir votre position GPS.');
-          return;
-        }
-      }
+    try {
+      const location = nextOnline ? await getQuickPosition() : null;
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/${driver.id}/status`,
         {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus, location: currentLocationToSend })
+          body: JSON.stringify({ status: nextOnline ? 'online' : 'offline', location })
         }
       );
 
-      if (response.ok) {
-        setIsOnline(!isOnline);
-        toast.success(newStatus === 'online' ? 'Vous êtes maintenant en ligne' : 'Vous êtes maintenant hors ligne');
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || 'Erreur lors du changement de statut');
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setIsOnline(previous);
+        toast.error(payload?.error || 'Erreur lors du changement de statut');
+        return;
       }
+
+      setIsOnline(typeof payload?.isOnline === 'boolean' ? payload.isOnline : nextOnline);
+      toast.success(nextOnline ? 'Vous êtes maintenant en ligne' : 'Vous êtes maintenant hors ligne');
     } catch (error) {
+      setIsOnline(previous);
       toast.error('Erreur lors du changement de statut');
+    } finally {
+      setStatusPending(false);
     }
   };
 
@@ -738,12 +783,14 @@ export function DriverDashboardNew() {
             </button>
             <button
               onClick={handleToggleOnline}
-              className={`px-4 py-2 rounded-lg font-medium transition-all shadow-lg ${
+              disabled={statusPending}
+              aria-busy={statusPending}
+              className={`px-4 py-2 rounded-lg font-medium shadow-lg transition-all duration-150 active:scale-95 touch-manipulation select-none ${
                 isOnline ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-white text-primary hover:bg-gray-50 border-2 border-white'
-              }`}
+              } ${statusPending ? 'opacity-70 cursor-wait' : ''}`}
             >
-              <Power className="w-4 h-4 inline mr-1" />
-              {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
+              <Power className={`w-4 h-4 inline mr-1 ${statusPending ? 'animate-pulse' : ''}`} />
+              {statusPending ? '...' : isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
             </button>
           </div>
         </div>
