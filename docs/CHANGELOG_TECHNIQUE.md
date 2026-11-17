@@ -42,6 +42,47 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-17 (10) — Disponibilité passager, acceptation atomique et protection de la config SOS
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : après une course, un verrou résiduel pouvait (a) faire croire au passager qu'**aucun chauffeur** n'était disponible, (b) bloquer l'acceptation d'une nouvelle course, et (c) un client poussant une configuration obsolète effaçait les numéros SOS / coupait les SMS d'urgence.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `readDriverLockState()` (lecture ciblée de la course verrouillée), `repairStaleLocksInList()`, réparation dans `check-drivers-availability`, `check-availability/:id`, `debug-drivers` et le matching ; acceptation : course persistée **avant** le verrouillage du chauffeur et verrou obsolète libéré avant le contrôle « une seule course » |
+| `supabase/functions/make-server-2eb02e52/config-routes.ts` | `POST /config/update` : fusion protégée de `emergencyNumbers` (un numéro renseigné n'est jamais effacé) et `emergencySmsEnabled` non désactivable par un payload sans numéro |
+| `lib/config-sync.ts` | `saveGlobalConfig()` part de la config **en cache** (serveur) au lieu de `DEFAULT_CONFIG` : une sauvegarde partielle ne réinitialise plus les réglages |
+
+### Description technique
+- **Coût maîtrisé** : la validation d'un verrou se fait par une lecture ciblée (`ride:<activeRideId>`), pas par un scan de toutes les courses — le matching et les contrôles de disponibilité restent rapides (mesuré : `/rides/check-drivers-availability` ~0,4–4 s, `/emergency/config` ~0,5 s à chaud).
+- **Disponibilité passager** : `POST /rides/check-drivers-availability` et `GET /rides/check-availability/:id` réparent les verrous obsolètes **avant** de filtrer, et corrigent les objets en mémoire. Un chauffeur en ligne n'est plus compté « indisponible » à cause d'une course fantôme.
+- **Acceptation atomique** : la course est écrite en `accepted` (avec `driverId`) **avant** la pose du verrou `activeRideId`. Une erreur après ce point ne peut plus laisser un chauffeur bloqué sur une course restée `searching` — cause constatée en production (solde débité, verrou posé, course jamais acceptée).
+- **Acceptation d'une nouvelle course** : `releaseStaleDriverLock()` est appelé avant le contrôle `driverHasActiveRide()`, sinon un verrou terminal renvoyait `409 COURSE_EN_COURSE`.
+- **Protection SOS** : un client qui envoie `emergencyNumbers: { support: "", supportTech: "" }` (config par défaut/cache obsolète) ne peut plus effacer les numéros existants. `emergencySmsEnabled: false` n'est appliqué que si le payload contient réellement un numéro de support ; sinon l'état serveur est conservé. Pour modifier un numéro, il suffit d'en envoyer un nouveau (non vide).
+- **Front** : `saveGlobalConfig()` fusionne `DEFAULT_CONFIG < cache serveur < modifications`, ce qui évite de renvoyer des valeurs par défaut pour les champs non modifiés.
+
+### Impact produit / comportement visible
+- Le passager voit un chauffeur disponible dès qu'il est en ligne, même après une course terminée ou annulée.
+- Une course acceptée ne peut plus laisser le chauffeur « occupé » à vie.
+- Les numéros SOS et l'activation des SMS d'urgence ne peuvent plus être perdus par une sauvegarde de réglages sans rapport.
+
+### Risques & rollback
+- **Risque** : un numéro SOS ne peut plus être **effacé** via `POST /config/update` (il faut le remplacer). C'est volontaire — un numéro vide = plus aucune alerte SMS.
+- **Rollback** : `git revert <hash>` + redéploiement Edge Function / Vercel.
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK ; typecheck ciblé : aucune nouvelle erreur (seules les erreurs pré-existantes `Button variant` et `CONFIG_KEY` inutilisé subsistent)
+- [x] Edge Function redéployée
+- [x] `POST /config/update` avec `support`/`supportTech` → `GET /emergency/config` renvoie les deux numéros + `hasSupport: true`
+- [x] Simulation d'un client obsolète (numéros vides + `emergencySmsEnabled: false`) → numéros **conservés** et `emergencySmsEnabled` toujours `true`
+- [x] Course réelle `28b8b6e2…` : acceptée (`acceptedAt` 04:03:07) puis `arrived` — la 2ᵉ course est bien notifiée
+- [ ] À valider en réel : enchaîner une 3ᵉ course après clôture ; SOS de test (SMS sur les deux numéros)
+
+---
+
 ## 2026-11-17 (9) — SMS SOS vers plusieurs destinataires (support + support technique)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
@@ -52,22 +93,26 @@ Assez de détail pour comprendre le code sans le relire.>
 ### Fichiers touchés
 | Fichier | Nature du changement |
 |---|---|
-| `supabase/functions/make-server-2eb02e52/emergency-routes.ts` | `supportNumbersFrom()` (multi-numéros, dédoublonnage, max 4) ; `POST /sos` envoie à **chaque** destinataire et détaille le résultat ; `GET /config` expose `supportNumbers` et calcule `hasSupport` dessus ; `supportTech` ajouté aux défauts |
+| `supabase/functions/make-server-2eb02e52/sos-sms.ts` | **Nouveau module partagé** : `supportNumbersFrom()`, `readSosSmsConfig()`, `sendSosAlertSms()` (envoi séquentiel, résultat par destinataire) |
+| `supabase/functions/make-server-2eb02e52/emergency-routes.ts` | `POST /sos` utilise `sendSosAlertSms()` ; `GET /config` expose `supportNumbers` et calcule `hasSupport` dessus |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Un incident **« urgence »** en course envoie désormais aussi le SMS SOS (mêmes destinataires) |
 | `supabase/functions/make-server-2eb02e52/config-routes.ts` | `DEFAULT_CONFIG.emergencyNumbers.supportTech = ""` |
 | `lib/config-sync.ts` | Type `emergencyNumbers.supportTech?` + défaut vide (config front synchronisée) |
 | `components/admin/GlobalSettingsScreen.tsx` | Nouveau champ « Support technique » + libellés SMS mis à jour (1 crédit par numéro) |
 | `docs/EMERGENCY_SOS.md` | Documentation des destinataires multiples, du format des numéros et des valeurs de production |
 
 ### Description technique
-- `readEmergencyConfig()` retourne maintenant `supportNumbers: string[]` en plus de `numbers`. `supportNumbersFrom()` lit `support`, `supportTech` puis `supportBackup`, sépare sur `,` `;` `/` `|`, dédoublonne et plafonne à **4** destinataires.
-- `POST /emergency/sos` : envoi **séquentiel** (l'API EJSMS gère mal les rafales simultanées). `notified.sms` vaut `true` dès qu'un envoi réussit, `notified.smsRecipients` liste `{ to, ok, error }` par numéro, `notified.smsError` n'est rempli que si **aucun** numéro n'a été joint. Une erreur d'envoi ne bloque jamais l'enregistrement de l'alerte.
+- `readSosSmsConfig()` fusionne les défauts avec le KV `smartcabb_global_config` et retourne `supportNumbers: string[]`. `supportNumbersFrom()` lit `support`, `supportTech` puis `supportBackup`, sépare sur `,` `;` `/` `|`, dédoublonne et plafonne à **4** destinataires.
+- `sendSosAlertSms()` envoie **séquentiellement** (l'API EJSMS gère mal les rafales simultanées) et retourne `{ notified, error, results }`. `notified` vaut `true` dès qu'un envoi réussit, `results` liste `{ to, ok, error }` par numéro, `error` n'est rempli que si **aucun** numéro n'a été joint. Ne lève jamais : une erreur SMS ne bloque pas l'alerte.
+- `POST /emergency/sos` renvoie `notified.smsRecipients` (détail par numéro).
+- `POST /rides/:id/incident` (kind `urgence`) : après insertion dans `emergency_alerts`, construit le même message (`SOS SMARTCABB … Course … Tel …`) et appelle `sendSosAlertSms()`. Avant ce correctif l'alerte admin existait mais **aucun SMS** n'était envoyé.
 - `GET /emergency/config` renvoie `hasSupport: supportNumbers.length > 0` et la liste `supportNumbers` réellement utilisée.
 - Format : `sendEjSms()` normalise déjà les numéros locaux (`0XXXXXXXXX` → `243XXXXXXXXX`), les valeurs `0960624008` / `0990666661` sont donc acceptées telles quelles.
 - **Configuration appliquée en production** via `POST /config/update` :
   `emergencyNumbers = { police: "112", ambulance: "115", support: "0960624008", supportTech: "0990666661" }`, `emergencySmsEnabled = true`.
 
 ### Impact produit / comportement visible
-- Chaque alerte SOS (bouton SOS ou incident « urgence » sur course active) envoie un SMS aux deux numéros de support, avec type, position, identifiant de course et téléphone de la personne.
+- Chaque alerte SOS — **bouton SOS ou incident « urgence » sur une course active** — envoie un SMS aux deux numéros de support, avec type, position, identifiant de course et téléphone de la personne.
 - L'admin peut modifier les deux numéros et désactiver l'envoi depuis **Paramètres globaux → Urgences (SOS)**, sans redéploiement (lecture à chaud du KV `smartcabb_global_config`).
 - Coût : 2 crédits EJ SMS par alerte (un par destinataire), 4 au maximum si `supportBackup` est renseigné.
 

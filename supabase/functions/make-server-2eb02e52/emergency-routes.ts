@@ -17,8 +17,12 @@
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { get as kvGet, set as kvSet } from "./kv-wrapper.ts";
-import { sendEjSms } from "./ej-sms-core.ts";
+import { set as kvSet } from "./kv-wrapper.ts";
+import {
+  DEFAULT_SOS_NUMBERS,
+  readSosSmsConfig,
+  sendSosAlertSms,
+} from "./sos-sms.ts";
 
 const app = new Hono();
 
@@ -26,12 +30,7 @@ const CONFIG_KEY = "smartcabb_global_config";
 const TABLE = "emergency_alerts";
 const ALERT_TYPES = ["medical", "security", "accident", "harassment"];
 
-const DEFAULT_EMERGENCY_NUMBERS = {
-  police: "112",
-  ambulance: "115",
-  support: "",
-  supportTech: "",
-};
+const DEFAULT_EMERGENCY_NUMBERS = DEFAULT_SOS_NUMBERS;
 
 // ─── Helpers Supabase ─────────────────────────────────────────────────────────
 
@@ -143,44 +142,8 @@ function clientIp(c: any): string {
 
 // ─── Configuration ────────────────────────────────────────────────────────────
 
-async function readEmergencyConfig(): Promise<{
-  numbers: { police: string; ambulance: string; support: string; supportTech?: string };
-  smsEnabled: boolean;
-  supportNumbers: string[];
-}> {
-  const stored = (await kvGet<any>(CONFIG_KEY)) || {};
-  const numbers = {
-    ...DEFAULT_EMERGENCY_NUMBERS,
-    ...(stored.emergencyNumbers && typeof stored.emergencyNumbers === "object"
-      ? stored.emergencyNumbers
-      : {}),
-  };
-  return {
-    numbers,
-    smsEnabled: stored.emergencySmsEnabled === true,
-    supportNumbers: supportNumbersFrom(numbers),
-  };
-}
-
-/**
- * Numéros à prévenir par SMS lors d'un SOS.
- * Accepte plusieurs numéros par champ (séparés par `,` `;` `/` ou `|`),
- * et déduplique. `support` = ligne principale, `supportTech` = support technique.
- */
-function supportNumbersFrom(numbers: {
-  support?: string;
-  supportTech?: string;
-  supportBackup?: string;
-}): string[] {
-  const out: string[] = [];
-  for (const value of [numbers.support, numbers.supportTech, numbers.supportBackup]) {
-    if (!value) continue;
-    for (const part of String(value).split(/[,;/|]+/)) {
-      const trimmed = part.trim();
-      if (trimmed && !out.includes(trimmed)) out.push(trimmed);
-    }
-  }
-  return out.slice(0, 4);
+async function readEmergencyConfig() {
+  return await readSosSmsConfig();
 }
 
 // ─── GET /config — Numéros d'urgence ─────────────────────────────────────────
@@ -332,51 +295,19 @@ app.post("/sos", async (c) => {
     // Notification de l'équipe sécurité : SMS uniquement si activé et si au
     // moins un numéro de support est configuré (évite de consommer des crédits
     // à vide). Plusieurs destinataires possibles : support + support technique.
-    const { smsEnabled, supportNumbers } = await readEmergencyConfig();
-    let smsNotified = false;
-    let smsError: string | null = null;
-    const smsResults: Array<{ to: string; ok: boolean; error?: string }> = [];
+    const place = lat !== null && lng !== null ? `${lat.toFixed(5)},${lng.toFixed(5)}` : "position inconnue";
+    const who = payload.user_name || (role === "driver" ? "Conducteur" : "Passager");
+    const message =
+      `SOS SMARTCABB ${who} (${role}) - ${type}. ${place}` +
+      (payload.ride_id ? ` Course ${String(payload.ride_id).slice(0, 12)}` : "") +
+      (payload.user_phone ? ` Tel ${payload.user_phone}` : "");
 
-    if (smsEnabled && supportNumbers.length > 0) {
-      const place = lat !== null && lng !== null ? `${lat.toFixed(5)},${lng.toFixed(5)}` : "position inconnue";
-      const who = payload.user_name || (role === "driver" ? "Conducteur" : "Passager");
-      const message = (
-        `SOS SMARTCABB ${who} (${role}) - ${type}. ${place}` +
-        (payload.ride_id ? ` Course ${String(payload.ride_id).slice(0, 12)}` : "") +
-        (payload.user_phone ? ` Tel ${payload.user_phone}` : "")
-      ).slice(0, 320);
-
-      // Envoi séquentiel : l'API EJSMS gère mal les rafales simultanées.
-      for (const to of supportNumbers) {
-        try {
-          const result = await sendEjSms({ to, message });
-          smsResults.push({ to, ok: result.ok, error: result.ok ? undefined : (result.error || "Envoi SMS impossible") });
-          if (result.ok) {
-            smsNotified = true;
-          } else {
-            console.warn(`⚠️ [EMERGENCY/SOS] SMS non envoyé à ${to}:`, result.error);
-          }
-        } catch (e: any) {
-          const err = e?.message || "Envoi SMS impossible";
-          smsResults.push({ to, ok: false, error: err });
-          console.warn(`⚠️ [EMERGENCY/SOS] SMS non envoyé à ${to}:`, err);
-        }
-      }
-
-      // On ne remonte une erreur que si AUCUN destinataire n'a été joint.
-      if (!smsNotified) {
-        smsError = smsResults.find((r) => r.error)?.error || "Envoi SMS impossible";
-      }
-    } else if (!smsEnabled) {
-      console.warn("⚠️ [EMERGENCY/SOS] Envoi de SMS SOS désactivé dans la configuration");
-    } else {
-      console.warn("⚠️ [EMERGENCY/SOS] Aucun numéro de support configuré — pas de SMS");
-    }
+    const sms = await sendSosAlertSms(message);
 
     return c.json({
       success: true,
       alert,
-      notified: { sms: smsNotified, smsError, smsRecipients: smsResults },
+      notified: { sms: sms.notified, smsError: sms.error, smsRecipients: sms.results },
     }, 201);
   } catch (error) {
     console.error("❌ [EMERGENCY/SOS] Erreur:", error);

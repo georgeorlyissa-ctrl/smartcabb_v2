@@ -144,8 +144,12 @@ export async function fetchGlobalConfig(): Promise<GlobalConfig> {
  */
 export async function saveGlobalConfig(config: Partial<GlobalConfig>): Promise<boolean> {
   try {
+    // ⚠️ Base = configuration en cache (donc serveur), pas DEFAULT_CONFIG :
+    // sinon une sauvegarde partielle (taux de change…) réinitialise les
+    // numéros SOS et les autres réglages avec les valeurs par défaut.
     const fullConfig: GlobalConfig = {
       ...DEFAULT_CONFIG,
+      ...getCachedConfig(),
       ...config,
       lastUpdated: new Date().toISOString()
     };

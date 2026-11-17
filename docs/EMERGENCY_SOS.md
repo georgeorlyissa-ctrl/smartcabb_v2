@@ -77,6 +77,8 @@ seule l'Edge Function (service role) écrit.
 - `notified.sms` vaut `true` dès qu'**un** envoi réussit ; `notified.smsRecipients`
   détaille le résultat par numéro, `notified.smsError` n'est rempli que si
   **aucun** destinataire n'a été joint.
+- Le **même envoi** est déclenché par un incident « urgence » signalé pendant une
+  course (`POST /rides/:id/incident`), via le module partagé `sos-sms.ts`.
 - En cas d'absence de crédits, l'alerte reste enregistrée ; l'échec est journalisé mais ne bloque pas l'insertion.
 
 ---

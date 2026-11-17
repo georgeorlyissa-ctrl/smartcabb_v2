@@ -122,6 +122,42 @@ app.post("/update", async (c) => {
       configVersion: ((existing.configVersion || 0) as number) + 1,
     };
 
+    // 🛡️ Sécurité SOS : un client qui pousse une configuration partielle ou
+    // obsolète (taux de change, réglages par défaut) ne doit jamais effacer
+    // les numéros de support ni couper les SMS d'urgence.
+    const prevEmergency = (existing.emergencyNumbers && typeof existing.emergencyNumbers === "object")
+      ? existing.emergencyNumbers as Record<string, unknown>
+      : {};
+    const nextEmergency = (config.emergencyNumbers && typeof config.emergencyNumbers === "object")
+      ? config.emergencyNumbers as Record<string, unknown>
+      : {};
+    const keepNumber = (key: string, fallback = "") => {
+      const incoming = nextEmergency[key];
+      if (typeof incoming === "string" && incoming.trim() !== "") return incoming.trim();
+      const previous = prevEmergency[key];
+      if (typeof previous === "string" && previous.trim() !== "") return previous.trim();
+      return fallback;
+    };
+    merged.emergencyNumbers = {
+      ...prevEmergency,
+      ...nextEmergency,
+      police: keepNumber("police", DEFAULT_CONFIG.emergencyNumbers.police),
+      ambulance: keepNumber("ambulance", DEFAULT_CONFIG.emergencyNumbers.ambulance),
+      support: keepNumber("support"),
+      supportTech: keepNumber("supportTech"),
+    };
+
+    const hasNumbers = ["support", "supportTech", "supportBackup"]
+      .some((k) => typeof nextEmergency[k] === "string" && String(nextEmergency[k]).trim() !== "");
+    if (typeof config.emergencySmsEnabled === "boolean") {
+      merged.emergencySmsEnabled = hasNumbers
+        ? config.emergencySmsEnabled
+        // Payload sans numéro = copie obsolète : on conserve l'état existant.
+        : existing.emergencySmsEnabled === true;
+    } else if (existing.emergencySmsEnabled === true) {
+      merged.emergencySmsEnabled = true;
+    }
+
     await kvSet(CONFIG_KEY, merged);
 
     // ─── Log the config change as an event so all apps can detect it ─────────

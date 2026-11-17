@@ -2,6 +2,7 @@ import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification } from "./firebase-admin.ts";
 import { creditLoyaltyForRide } from "./loyalty-routes.ts";
+import { sendSosAlertSms } from "./sos-sms.ts";
 
 const app = new Hono();
 
@@ -101,6 +102,63 @@ async function releaseStaleDriverLock(driverId: string | null | undefined): Prom
     return false;
   }
 }
+/**
+ * État réel du verrou d'un chauffeur, par **lecture ciblée** de sa course.
+ * - `busy`  : la course pointée est encore active → le chauffeur roule.
+ * - `stale` : la course pointée n'existe plus ou est terminée/annulée.
+ */
+async function readDriverLockState(driver: any): Promise<{ busy: boolean; stale: boolean }> {
+  const activeId = readDriverActiveRideId(driver);
+  if (!activeId) return { busy: false, stale: false };
+  try {
+    const ride = await kv.get<any>(`ride:${activeId}`);
+    if (ride && isActiveRideStatus(ride.status)) return { busy: true, stale: false };
+    return { busy: false, stale: true };
+  } catch {
+    // Lecture impossible : on ne bloque pas le chauffeur pour autant.
+    return { busy: false, stale: false };
+  }
+}
+
+/**
+ * Répare les verrous obsolètes d'une liste de chauffeurs déjà chargée.
+ * Les objets passés sont corrigés **en mémoire** (pour le filtrage qui suit)
+ * et persistés dans le KV. Retourne le nombre de chauffeurs réparés.
+ */
+async function repairStaleLocksInList(drivers: any[]): Promise<number> {
+  let repaired = 0;
+  try {
+    const states = await Promise.all(
+      drivers.map(async (driver) => ({ driver, ...(await readDriverLockState(driver)) })),
+    );
+
+    for (const { driver, stale } of states) {
+      if (!stale) continue;
+
+      const online = isDriverOnline(driver);
+      const now = new Date().toISOString();
+      delete driver.activeRideId;
+      delete driver.active_ride_id;
+      delete driver.currentRideId;
+      delete driver.current_ride_id;
+      driver.is_available = online;
+      driver.available = online;
+      driver.updated_at = now;
+
+      if (driver.id) {
+        await kv.set(`driver:${driver.id}`, driver).catch(() => undefined);
+      }
+      repaired += 1;
+    }
+    if (repaired > 0) {
+      console.log(`[RIDE-LOCK] ${repaired} verrou(s) obsolète(s) réparé(s) à la volée`);
+    }
+  } catch (e) {
+    console.error('[RIDE-LOCK] Réparation de liste impossible:', e);
+  }
+  return repaired;
+}
+
 /**
  * Libere un chauffeur apres cloture/annulation d'une course :
  * efface activeRideId et remet la disponibilite UNIQUEMENT s'il est en ligne
@@ -341,33 +399,38 @@ async function findAndNotifyNearbyDrivers(ride: any) {
     const allDrivers = await kv.getByPrefix('driver:');
     console.log(`👥 Total chauffeurs dans la base: ${allDrivers.length}`);
 
-    // ✅ Verrous obsletes : un chauffeur dont activeRideId pointe une course
-    // terminee/annulee restait indisponible pour toujours (2e course sans
-    // notification). On recharge les courses actives pour valider le verrou.
-    const activeRideIds = await loadActiveRideIdSet();
-    const staleLockDriverIds: string[] = [];
+    // ✅ Verrous obsolètes : un chauffeur dont `activeRideId` pointe une course
+    // terminée/annulée restait indisponible pour toujours (2e course sans
+    // notification). On valide chaque verrou par une lecture **ciblée** de sa
+    // course (pas de scan complet de toutes les courses : trop coûteux).
+    const lockStates = await Promise.all(
+      allDrivers.map(async (driver: any) => {
+        const { busy, stale } = await readDriverLockState(driver);
+        return { driver, busy, stale };
+      }),
+    );
+    const staleLockDriverIds = lockStates
+      .filter((s) => s.stale && s.driver.id)
+      .map((s) => s.driver.id);
 
-    const eligibleDrivers = allDrivers.filter((driver: any) => {
-      const isOnline = isDriverOnline(driver);
-      const driverCategory = driver.vehicleCategory || 
-                       driver.vehicle_category ||
-                       driver.vehicle_type || 
-                       driver.vehicleType ||
-                       driver.vehicle?.category ||
-                       driver.vehicle?.type;
-      const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
+    const eligibleDrivers = lockStates
+      .filter(({ driver, busy, stale }) => {
+        const isOnline = isDriverOnline(driver);
+        const driverCategory = driver.vehicleCategory ||
+                         driver.vehicle_category ||
+                         driver.vehicle_type ||
+                         driver.vehicleType ||
+                         driver.vehicle?.category ||
+                         driver.vehicle?.type;
+        const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
 
-      const activeId = readDriverActiveRideId(driver);
-      const isBusy = !!activeId && activeRideIds.has(activeId);
-      const hasStaleLock = !!activeId && !isBusy;
-      if (hasStaleLock) staleLockDriverIds.push(driver.id);
+        // Un verrou obsolète ne doit pas bloquer la disponibilité.
+        const isAvailable = stale ? isOnline : isDriverAvailable(driver);
 
-      // Un verrou obsolete ne doit pas bloquer la disponibilite.
-      const isAvailable = hasStaleLock ? isOnline : isDriverAvailable(driver);
-
-      // Catégorie compatible + en ligne + disponible + pas deja en course
-      return isOnline && isAvailable && !isBusy && categoryMatch;
-    });
+        // Catégorie compatible + en ligne + disponible + pas déjà en course
+        return isOnline && isAvailable && !busy && categoryMatch;
+      })
+      .map(({ driver }) => driver);
 
     // Réparation silencieuse des chauffeurs débloqués.
     if (staleLockDriverIds.length > 0) {
@@ -755,6 +818,8 @@ app.post("/heal-stuck-state", async (c) => {
 app.get("/debug-drivers", async (c) => {
   try {
     const allDrivers = await kv.getByPrefix('driver:');
+    // Diagnostic fidèle : un verrou obsolète ne doit pas apparaître comme « occupé ».
+    await repairStaleLocksInList(allDrivers);
     
     const driversInfo = allDrivers.map((d: any) => ({
       id: d.id,
@@ -900,6 +965,9 @@ app.post("/check-drivers-availability", async (c) => {
     
     // Récupérer tous les chauffeurs
     const allDrivers = await kv.getByPrefix('driver:');
+    // 🧹 Un verrou de course obsolète ne doit pas faire croire qu'aucun
+    // chauffeur n'est disponible (sinon le passager ne peut plus commander).
+    await repairStaleLocksInList(allDrivers);
     
     console.log(`👥 Total chauffeurs dans base: ${allDrivers.length}`);
     
@@ -1003,6 +1071,7 @@ app.get("/check-availability/:id", async (c) => {
     
     // Récupérer tous les chauffeurs disponibles pour cette catégorie
     const allDrivers = await kv.getByPrefix('driver:');
+    await repairStaleLocksInList(allDrivers);
     const eligibleDrivers = allDrivers.filter((d: any) => {
       // ✅ FIX: isOnline correct + variable 'd'
       const isOnline = isDriverOnline(d);
@@ -1098,9 +1167,16 @@ app.post("/accept", async (c) => {
     }
 
     // ✅ NOUVEAU: Vérifier le solde du conducteur AVANT d'accepter
-    const driver = await kv.get<any>(`driver:${driverId}`);
+    let driver = await kv.get<any>(`driver:${driverId}`);
     if (!driver) {
       return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+    }
+
+    // 🧹 Verrou obsolète (course terminée/annulée/inexistante) : on le libère
+    // avant le contrôle « une seule course à la fois », sinon le chauffeur
+    // refusait toute nouvelle course alors qu'il était libre.
+    if (await releaseStaleDriverLock(driverId)) {
+      driver = (await kv.get<any>(`driver:${driverId}`)) || driver;
     }
 
     // ✅ 1 seule course a la fois : refuser si deja en course
@@ -1188,6 +1264,11 @@ app.post("/accept", async (c) => {
     ride.driverId = driverId;
     ride.driver = { id: driverId, name: driverName, phone: driverPhone, vehicle: driverVehicle, rating: driverRating };
     ride.acceptedAt = new Date().toISOString();
+
+    // 💾 Persister la course AVANT de verrouiller le chauffeur : si une erreur
+    // survient ensuite, on ne laisse jamais un chauffeur bloqué « en course »
+    // sur une course restée « searching » (cause de la 2ᵉ course sans notif).
+    await kv.set(`ride:${rideId}`, ride);
 
     // 🛡️ ANTI-FRAUDE : provisionner la commission dès l'acceptation.
     // Sans ça, un chauffeur qui transporte hors-système (jamais de start/complete)
@@ -2908,6 +2989,33 @@ app.post("/:id/incident", async (c) => {
             console.error("⚠️ [INCIDENT] Alerte SOS non créée:", alertError.message);
           } else {
             console.log("🚨 [INCIDENT] Alerte SOS créée pour la course", rideId);
+
+            // 📱 SMS au support : un incident « urgence » en course doit alerter
+            // l'équipe exactement comme le bouton SOS (mêmes destinataires).
+            try {
+              const fromDriver = reporterType === "driver";
+              const who = fromDriver
+                ? (driver?.name || ride.driverName || "Conducteur")
+                : (ride.passengerName || "Passager");
+              const phone = fromDriver
+                ? (driver?.phone || null)
+                : (ride.passengerPhone || null);
+              const latSms = typeof incident.lat === "number" ? incident.lat : null;
+              const lngSms = typeof incident.lng === "number" ? incident.lng : null;
+              const place = latSms !== null && lngSms !== null
+                ? `${latSms.toFixed(5)},${lngSms.toFixed(5)}`
+                : (pickupLabel ? String(pickupLabel).slice(0, 80) : "position inconnue");
+              const message =
+                `SOS SMARTCABB ${who} (${fromDriver ? "driver" : "passenger"}) - Urgence. ${place}` +
+                ` Course ${String(rideId).slice(0, 12)}` +
+                (phone ? ` Tel ${phone}` : "");
+
+              const sms = await sendSosAlertSms(message);
+              console.log(`📱 [INCIDENT] SMS SOS → ${sms.results.filter((r) => r.ok).length}/${sms.results.length} destinataire(s)`);
+            } catch (smsException) {
+              // Ne jamais bloquer le signalement d'incident.
+              console.error("⚠️ [INCIDENT] Erreur SMS SOS:", smsException);
+            }
           }
         }
       } catch (alertException) {
