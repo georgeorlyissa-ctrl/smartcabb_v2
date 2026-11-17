@@ -84,6 +84,13 @@ export function setupErrorInterceptors() {
     'You must enable Billing',
     'Google Maps JavaScript API',
     'This page can\'t load Google Maps correctly',
+    // ── Plugins natifs Capacitor appelés depuis une version qui ne les embarque
+    //    pas encore (ex. app 1.5 + web 1.6) : fonctionnalité dégradée, pas un bug
+    //    bloquant → jamais d'overlay technique pour l'utilisateur.
+    'plugin is not implemented',
+    'is not implemented on android',
+    'is not implemented on ios',
+    'is not implemented on web',
   ];
 
   const isBenign = (message: string) =>

@@ -11,6 +11,11 @@
  * Sur le web classique (Chrome/Safari desktop et mobile), on continue
  * d'utiliser `speechSynthesis` : voir `speakMessage()` dans
  * `lib/notification-sound.ts`.
+ *
+ * ⚠️ Le plugin est NATIF : une app installée avant la version 1.6 ne le
+ * contient pas. Tout appel y produirait une promesse rejetée
+ * (`"TextToSpeech" plugin is not implemented on android`) qui déclenchait
+ * l'overlay « Erreur détectée ». D'où le garde-fou `ttsPluginAvailable()`.
  */
 
 import { Capacitor } from '@capacitor/core';
@@ -23,15 +28,43 @@ export function isNativeApp(): boolean {
   }
 }
 
-// Moteur TTS considéré comme inutilisable (aucune langue ne fonctionne) :
+// Moteur TTS considéré comme inutilisable (plugin absent ou aucune langue) :
 // on arrête d'essayer à chaque course pour ne pas ralentir l'alerte.
 let _nativeBroken = false;
 // Langue qui a effectivement fonctionné (évite de retester à chaque appel).
 let _preferredLang: string | null = null;
+// Cache du test de présence du plugin (null = pas encore testé).
+let _pluginChecked: boolean | null = null;
+
+/**
+ * Le plugin TTS est-il réellement embarqué dans l'APK ?
+ *
+ * `isPluginAvailable` lit la liste des plugins natifs déclarés par Capacitor :
+ * il ne rejette jamais et ne déclenche aucun appel natif.
+ */
+function ttsPluginAvailable(): boolean {
+  if (_pluginChecked !== null) return _pluginChecked;
+  try {
+    _pluginChecked = Capacitor.isPluginAvailable('TextToSpeech');
+  } catch {
+    _pluginChecked = false;
+  }
+  if (!_pluginChecked) {
+    console.warn(
+      '⚠️ [TTS NATIF] Plugin absent de cette version de l’app (APK < 1.6) — voix désactivée, sonnerie conservée'
+    );
+  }
+  return _pluginChecked;
+}
 
 async function loadPlugin() {
   const mod = await import('@capacitor-community/text-to-speech');
   return mod.TextToSpeech;
+}
+
+/** Vrai si la voix native peut être tentée (app native + plugin embarqué). */
+function canUseNativeTTS(): boolean {
+  return !_nativeBroken && isNativeApp() && ttsPluginAvailable();
 }
 
 /**
@@ -42,14 +75,14 @@ async function loadPlugin() {
  * `speak()` avec une langue non supportée **rejette** — ce qui donnait
  * l'impression que « la sonnerie ne parle pas ».
  *
- * @returns `true` si la voix native a réellement été jouée, `false` s'il faut
- *          retomber sur `speechSynthesis` (web) ou renoncer.
+ * Ne rejette JAMAIS : retourne `false` s'il faut retomber sur la voix du
+ * navigateur (web) ou renoncer.
  */
 export async function nativeSpeak(
   text: string,
   opts?: { lang?: string; rate?: number; volume?: number }
 ): Promise<boolean> {
-  if (!text || _nativeBroken || !isNativeApp()) return false;
+  if (!text || !canUseNativeTTS()) return false;
 
   try {
     const TextToSpeech = await loadPlugin();
@@ -95,9 +128,9 @@ export async function nativeSpeak(
   }
 }
 
-/** Interrompt immédiatement l'annonce vocale native. */
+/** Interrompt immédiatement l'annonce vocale native. Ne rejette jamais. */
 export async function nativeStopSpeak(): Promise<void> {
-  if (!isNativeApp()) return;
+  if (!canUseNativeTTS()) return;
   try {
     const TextToSpeech = await loadPlugin();
     await TextToSpeech.stop();
@@ -109,7 +142,7 @@ export async function nativeStopSpeak(): Promise<void> {
  * qu'une voix existe. Appelé au démarrage du tableau de bord chauffeur.
  */
 export async function nativeTTSWarmup(): Promise<void> {
-  if (_nativeBroken || !isNativeApp()) return;
+  if (!canUseNativeTTS()) return;
   try {
     const TextToSpeech = await loadPlugin();
     const { languages } = await TextToSpeech.getSupportedLanguages();
@@ -138,7 +171,7 @@ export async function nativeTTSCheck(): Promise<{
   available: boolean;
   languages?: string[];
 }> {
-  if (!isNativeApp()) return { available: false };
+  if (!canUseNativeTTS()) return { available: false };
   try {
     const TextToSpeech = await loadPlugin();
     const { languages } = await TextToSpeech.getSupportedLanguages();

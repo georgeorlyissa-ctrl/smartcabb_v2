@@ -42,6 +42,44 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-17 (6) — Overlay « Erreur détectée » : `"TextToSpeech" plugin is not implemented on android`
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : sur l'APK **1.5** (Play Store) qui charge le **web 1.6**, l'utilisateur voyait un écran rouge bloquant : `Promesse non gérée: Error: "TextToSpeech" plugin is not implemented on android`.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/native-tts.ts` | Garde-fou `ttsPluginAvailable()` (`Capacitor.isPluginAvailable`) avant **tout** appel au plugin ; `canUseNativeTTS()` centralise le test ; aucune fonction ne peut plus rejeter |
+| `lib/notification-sound.ts` | Appel natif de `speakMessage` encapsulé dans un `try/catch` ; `.catch(() => {})` sur les `void speakMessage(...)` |
+| `utils/diagnostics.ts` | Ajout de motifs « bénins » : `plugin is not implemented`, `is not implemented on android/ios/web` → plus d'overlay technique |
+| `android/app/src/main/assets/public/**` | Assets web re-synchronisés (`npx cap sync android`) pour l'APK 1.6 |
+
+### Description technique
+- **Cause** : le plugin TTS est **natif**. L'APK 1.5 ne le déclare pas dans `capacitor.plugins.json`. Or le bundle web est chargé depuis `www.smartcabb.com` et servait déjà le code 1.6. Capacitor, ne trouvant pas l'implémentation (`d()` de `registerPlugin`), lève `"TextToSpeech" plugin is not implemented on android` ; le rejet remontait jusqu'au listener `unhandledrejection` de `utils/diagnostics.ts` qui affichait l'overlay plein écran « Erreur détectée ».
+- **Correctif** : avant tout appel, on interroge `Capacitor.isPluginAvailable('TextToSpeech')` (lecture de la liste des plugins natifs déclarés, sans appel natif) et on mémorise le résultat. Si le plugin est absent : log unique `[TTS NATIF] Plugin absent … (APK < 1.6)`, **voix désactivée**, sonnerie conservée. Les trois points d'entrée (`nativeSpeak`, `nativeStopSpeak`, `nativeTTSWarmup`, `nativeTTSCheck`) passent par `canUseNativeTTS()` et gardent leur `try/catch`, donc aucune promesse ne peut plus être rejetée vers le global.
+- **Défense en profondeur** : l'overlay d'erreurs ignore désormais les messages « plugin is not implemented » : une future version du web utilisant un plugin absent d'un vieil APK dégradera la fonctionnalité **sans bloquer l'application**.
+
+### Impact produit / comportement visible
+- APK 1.5 : plus aucun écran rouge ; la sonnerie fonctionne, la voix est simplement absente (normal, plugin non embarqué).
+- APK 1.6 (AAB sur le Bureau, versionCode 9) : sonnerie **et** voix.
+- Aucun secret, aucune modification de schéma.
+
+### Risques & rollback
+- **Risque très faible** : si `isPluginAvailable` renvoyait `false` à tort, la voix native serait désactivée (repli silencieux, sonnerie intacte).
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` : 24 erreurs, toutes pré-existantes dans `_headers/Code-component-*.tsx`
+- [x] `npm run build` OK
+- [x] `npx cap sync android` OK (assets 1.6 embarqués)
+- [x] AAB/APK 1.6 reconstruits : versionCode 9 / versionName 1.6, signature `fb9ad899…6d4a75` (même clé)
+- [ ] À valider : sur APK 1.5, lancer une course → sonnerie seule, **aucun écran rouge**
+
+---
+
 ## 2026-11-16 (5) — Sonnerie de course : son réel (fichier audio en boucle) + voix native TTS dans l'APK
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

@@ -374,10 +374,16 @@ async function speakMessage(message: string, lang = 'fr-FR'): Promise<void> {
   // 1️⃣ APK / app native : `speechSynthesis` n'existe pas dans la WebView
   //    Android → on utilise le moteur TTS natif du téléphone.
   if (isNativeApp()) {
-    const spoken = await nativeSpeak(message, { lang, rate: 0.95 });
-    if (spoken) {
-      console.log('✅ TTS natif terminé');
-      return;
+    try {
+      const spoken = await nativeSpeak(message, { lang, rate: 0.95 });
+      if (spoken) {
+        console.log('✅ TTS natif terminé');
+        return;
+      }
+    } catch (e) {
+      // `nativeSpeak` ne rejette pas, mais on ne veut JAMAIS qu'une erreur de
+      // voix fasse remonter une promesse non gérée jusqu'à l'overlay d'erreur.
+      console.warn('⚠️ TTS natif indisponible:', e);
     }
   }
 
@@ -693,7 +699,7 @@ export function playPassengerArrivedSound(): void {
 /** 🗣️ Annonce vocale d'arrivée — sonnerie + voix "Votre conducteur est arrivé" */
 export function announcePassengerArrived(): void {
   playPassengerArrivedSound();
-  void speakMessage('Votre conducteur est arrivé.');
+  void speakMessage('Votre conducteur est arrivé.').catch(() => {});
 }
 
 /** ✅ Accusé de réception d'une réservation — son FORTE + voix + notification navigateur */
@@ -709,7 +715,7 @@ export function announceReservationReceived(details?: {
     ? ` pour ${details.dateStr} à ${details.timeStr}`
     : '';
   const cat = details?.categoryLabel ? ` en ${details.categoryLabel}` : '';
-  void speakMessage(`SmartCabb a pris en compte votre réservation${cat}${when}. Merci de votre confiance.`);
+  void speakMessage(`SmartCabb a pris en compte votre réservation${cat}${when}. Merci de votre confiance.`).catch(() => {});
   showBrowserNotification(
     'SmartCabb — Réservation reçue ✅',
     `Votre réservation${cat}${when} est bien prise en compte.`,
