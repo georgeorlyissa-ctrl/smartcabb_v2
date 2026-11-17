@@ -85,7 +85,10 @@ Assez de détail pour comprendre le code sans le relire.>
 - [x] Typecheck ciblé des fichiers modifiés (`tsc -p` sans `_headers`) : aucune erreur
 - [x] `npm run build` (Vite) OK
 - [x] `POST /emergency/sos` vérifié en production (création + annulation)
-- [ ] À vérifier après déploiement : déclencher « Urgence / sécurité » depuis une course → alerte visible dans l'écran SOS avec le détail de la course
+- [x] **Edge Function déployée manuellement** : `npx supabase functions deploy make-server-2eb02e52 --project-ref zaerjqchzqmcxqblkfkg` — il n'existe aucun workflow GitHub qui déploie les functions, le déploiement est **manuel** (Vercel, lui, est automatique).
+- [x] Après déploiement : un SOS de test crée bien un événement `emergency_sos` dans `GET /admin/live-feed` (alerte ensuite annulée).
+- [x] Après déploiement : `GET /admin/live-feed` renvoie l'incident `urgence` réel (course `2f1b518c-…-0a95ab01dd88`) → il apparaît dans le panneau « Incidents signalés en course » avec le détail de la course.
+- [ ] À vérifier côté UI admin : ouvrir « Urgences SOS » et déclencher « Urgence / sécurité » depuis une course active.
 
 ---
 
