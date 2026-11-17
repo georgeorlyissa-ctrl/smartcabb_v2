@@ -42,7 +42,6 @@ import {
   Volume2,
   XCircle,
 } from '../../lib/icons';
-import { supabase } from '../../lib/supabase';
 import { playSosAlarm, preloadVoices, requestNotificationPermission } from '../../lib/notification-sound';
 import {
   acknowledgeEmergency,
@@ -54,13 +53,15 @@ import {
   type AdminSosAlert,
 } from '../../lib/emergency-admin-service';
 import { toast } from '../../lib/toast';
+import { SosRideDetails } from './SosRideDetails';
+import { SosIncidentFeed } from './SosIncidentFeed';
 
 /** Délai cible de prise en charge (secondes). */
 const SLA_ACK_SECONDS = 60;
 /** Intervalle de ré-alarme d'une alerte non acquittée. */
 const RE_ALARM_MS = 2 * 60 * 1000;
 /** Interrogation de secours si le temps réel est indisponible. */
-const POLL_MS = 15_000;
+const POLL_MS = 8_000;
 
 type FilterKey = 'active' | 'all' | 'closed';
 
@@ -268,24 +269,6 @@ export function EmergencyAlertsScreen({ onBack }: { onBack?: () => void }) {
     return () => clearInterval(timer);
   }, [load]);
 
-  // Temps réel Supabase (rafraîchit la liste dès qu'une alerte change).
-  useEffect(() => {
-    const channel = supabase
-      .channel(`admin-emergency-alerts-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'emergency_alerts' },
-        () => {
-          void load({ silent: true });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [load]);
-
   const activeAlerts = useMemo(() => alerts.filter(isActiveEmergency), [alerts]);
   const pendingAlerts = useMemo(() => alerts.filter((a) => a.status === 'active'), [alerts]);
   const overdueAlerts = useMemo(
@@ -423,6 +406,12 @@ export function EmergencyAlertsScreen({ onBack }: { onBack?: () => void }) {
             <div className="min-w-0">
               <p className="font-semibold text-red-900">Erreur de chargement</p>
               <p className="text-sm text-red-700">{error}</p>
+              {/session/i.test(error) && (
+                <p className="text-sm text-red-700 mt-1">
+                  Déconnectez-vous puis reconnectez-vous au tableau de bord admin pour
+                  réactiver la session : les alertes SOS réapparaîtront automatiquement.
+                </p>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -483,6 +472,9 @@ export function EmergencyAlertsScreen({ onBack }: { onBack?: () => void }) {
             </Button>
           ))}
         </div>
+
+        {/* Incidents signalés en course (panne, urgence…) avec détail de la course */}
+        <SosIncidentFeed />
 
         {/* Liste */}
         {loading ? (
@@ -635,6 +627,9 @@ export function EmergencyAlertsScreen({ onBack }: { onBack?: () => void }) {
                         )}
                       </div>
                     )}
+
+                    {/* Détails de la course concernée (lieu, itinéraire, chauffeur…) */}
+                    {alert.ride_id && <SosRideDetails rideId={String(alert.ride_id)} />}
 
                     {/* Suivi */}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">

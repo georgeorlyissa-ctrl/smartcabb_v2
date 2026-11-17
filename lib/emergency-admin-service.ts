@@ -13,7 +13,7 @@
  */
 
 import { projectId } from '../utils/supabase/info';
-import { supabase } from './supabase';
+import { getFreshSession, refreshSession } from './supabase';
 import type {
   EmergencyRole,
   EmergencyStatus,
@@ -83,50 +83,68 @@ export function isActiveEmergency(alert: Pick<AdminSosAlert, 'status'>): boolean
 }
 
 /** Jeton de session admin (jamais la clé anon : ces routes sont réservées aux admins). */
-async function adminToken(): Promise<string | null> {
-  try {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token || null;
-  } catch {
-    return null;
-  }
+async function adminToken(options: { forceRefresh?: boolean } = {}): Promise<string | null> {
+  // Le client Supabase conserve la session du dernier compte connecté (admin
+  // compris) et rafraîchit le jeton automatiquement. En cas de refus 401, on
+  // force un rafraîchissement puis on retente une seule fois.
+  const session = options.forceRefresh ? await refreshSession() : await getFreshSession();
+  return session?.access_token || null;
 }
 
 async function request<T>(
   path: string,
   init: { method?: 'GET' | 'POST'; body?: Record<string, unknown>; timeoutMs?: number } = {},
 ): Promise<{ ok: boolean; status: number; data: T | null; error?: string }> {
-  const token = await adminToken();
+  const timeoutMs = init.timeoutMs ?? 15_000;
+
+  const attempt = async (token: string) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`${API_BASE}${path}`, {
+        method: init.method ?? 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        },
+        ...(init.body ? { body: JSON.stringify(init.body) } : {}),
+        signal: controller.signal,
+      });
+
+      const data = (await response.json().catch(() => null)) as T | null;
+      return { response, data };
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  let token = await adminToken();
   if (!token) {
     return {
       ok: false,
       status: 401,
       data: null,
-      error: 'Session administrateur expirée — reconnectez-vous.',
+      error: 'Session administrateur expirée — reconnectez-vous au tableau de bord admin.',
     };
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), init.timeoutMs ?? 15_000);
-
   try {
-    const response = await fetch(`${API_BASE}${path}`, {
-      method: init.method ?? 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-      },
-      ...(init.body ? { body: JSON.stringify(init.body) } : {}),
-      signal: controller.signal,
-    });
+    let { response, data } = await attempt(token);
 
-    const data = (await response.json().catch(() => null)) as T | null;
+    // Jeton refusé (expiré côté serveur) : un rafraîchissement + un seul essai.
+    if (response.status === 401) {
+      const refreshed = await adminToken({ forceRefresh: true });
+      if (refreshed) {
+        token = refreshed;
+        ({ response, data } = await attempt(token));
+      }
+    }
 
     if (!response.ok) {
       const backendError = (data as any)?.error;
       const fallback =
         response.status === 401
-          ? 'Session administrateur expirée — reconnectez-vous.'
+          ? 'Session administrateur expirée — reconnectez-vous au tableau de bord admin.'
           : response.status === 403
             ? 'Ce compte n’a pas les droits administrateur.'
             : `Erreur ${response.status}`;
@@ -142,8 +160,6 @@ async function request<T>(
       data: null,
       error: aborted ? 'Délai dépassé — vérifiez votre connexion' : 'Réseau indisponible',
     };
-  } finally {
-    clearTimeout(timer);
   }
 }
 

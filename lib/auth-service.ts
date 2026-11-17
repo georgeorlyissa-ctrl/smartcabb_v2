@@ -224,7 +224,9 @@ export async function signIn(credentials: LoginCredentials): Promise<AuthResult>
     console.log('   - User ID:', authData.user.id);
     console.log('   - Email:', authData.user.email);
     console.log('   - Access token:', accessToken ? '[présent]' : '[absent]');
-    
+    // La session est persistée par le client Supabase (persistSession: true) :
+    // les écrans admin peuvent lire le jeton via supabase.auth.getSession().
+
     // ✅ Récupérer le rôle depuis les métadonnées Auth
     const userRole = authData.user.user_metadata?.role || 'passenger';
     console.log('🔍 [signIn] Rôle détecté:', userRole);

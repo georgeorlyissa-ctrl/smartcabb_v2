@@ -25,6 +25,8 @@ const EVENT_CFG: Record<string, { label: string; color: string; bg: string; bord
   config_updated:  { label: 'Config mise à jour',    color: 'text-orange-800', bg: 'bg-orange-50',  border: 'border-orange-200', icon: '⚙️' },
   driver_approved: { label: 'Conducteur approuvé',   color: 'text-green-800',  bg: 'bg-green-50',   border: 'border-green-200',  icon: '✅' },
   driver_rejected: { label: 'Conducteur rejeté',     color: 'text-red-800',    bg: 'bg-red-50',     border: 'border-red-200',    icon: '🚫' },
+  ride_incident:   { label: 'Incident signalé',      color: 'text-red-800',    bg: 'bg-red-50',     border: 'border-red-200',    icon: '⚠️' },
+  emergency_sos:   { label: 'Alerte SOS',            color: 'text-white',      bg: 'bg-red-600',    border: 'border-red-700',    icon: '🚨' },
 };
 
 function cfg(type: string) {

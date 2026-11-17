@@ -42,7 +42,54 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
-## 2026-11-17 (6) — Overlay « Erreur détectée » : `"TextToSpeech" plugin is not implemented on android`
+## 2026-11-17 (7) — SOS admin : alertes visibles + détails de course et itinéraire
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : l'écran admin **Urgences SOS** restait vide (« Aucune alerte en cours ») alors qu'un incident (`ride_incident`) apparaissait dans « Activité en direct ». L'admin n'avait aucun moyen d'ouvrir la course concernée pour intervenir (lieu, itinéraire, chauffeur, position).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/supabase.ts` | **Client unique** : client officiel `@supabase/supabase-js` (`persistSession`, `autoRefreshToken`) + helpers `getFreshSession()` / `refreshSession()` ; types DB conservés |
+| `lib/supabase.tsx` | **Supprimé** (doublon : l'application utilisait deux clients Supabase différents selon le résolveur) |
+| `lib/emergency-admin-service.ts` | `adminToken()` via `getFreshSession()` ; rafraîchissement forcé + **un seul réessai** sur 401 |
+| `components/admin/EmergencyAlertsScreen.tsx` | Abonnement realtime inutilisable retiré (polling fiable), polling 15 s → **8 s**, message d'action si session expirée, bloc **détails de la course** dans chaque alerte |
+| `components/admin/EmergencyAlertsWatcher.tsx` | Abonnement realtime retiré, polling 20 s → **10 s** |
+| `components/admin/SosRideDetails.tsx` | **Nouveau** : lieu de prise en charge, destination, itinéraire Google Maps, passager, chauffeur, véhicule, distance/prix, position chauffeur, incidents de la course |
+| `components/admin/SosIncidentFeed.tsx` | **Nouveau** : incidents déclarés en course (panne, crevaison, urgence…) avec ouverture du détail de la course |
+| `components/admin/AdminLiveFeed.tsx` | Libellés lisibles pour `ride_incident` (« Incident signalé ») et `emergency_sos` (« Alerte SOS ») |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Une urgence déclarée en course crée aussi une ligne `emergency_alerts` (anti-doublon sur les alertes actives de la course) |
+| `supabase/functions/make-server-2eb02e52/emergency-routes.ts` | Un SOS est journalisé dans le fil d'activité admin (`event:<date>:*`, type `emergency_sos`) |
+
+### Description technique
+- **Cause n°1 — deux clients Supabase** : `lib/supabase.ts` contenait un client maison (auth REST uniquement, **sans persistance de session**) et `lib/supabase.tsx` le client officiel. `vite.config.ts` résout `.tsx` **avant** `.ts` : le runtime utilisait le client officiel, mais `tsc` typait sur le client maison. Résultat : contrats incohérents (`supabase.channel` « absent » pour le typage, présent à l'exécution), et les écrans dépendant de `supabase.auth.getSession()` pouvaient recevoir `null` (401 sur `/emergency/alerts` et `/emergency/active`). Les deux implémentations sont fusionnées dans `lib/supabase.ts` (client officiel), `lib/supabase.tsx` est supprimé, les appels `.from/.rpc/.channel` sont conservés à l'identique.
+- **Cause n°2 — incident ≠ SOS** : le bouton « Signaler un incident » (`components/IncidentModal.tsx`) appelait `POST /rides/:id/incident`, qui journalisait seulement un événement `ride_incident`. Aucune ligne `emergency_alerts` n'était créée : l'écran SOS restait donc vide. Désormais `kind === "urgence"` insère une alerte `type: "security"` (course, position, note, véhicule, autre partie), uniquement s'il n'existe pas déjà une alerte active pour cette course.
+- **Détails de course** : `SosRideDetails` lit `GET /rides/:id` (course + `driverLocation`) et `GET /rides/:id/incidents` avec la clé anon (routes publiques), rafraîchit toutes les 30 s, et affiche l'itinéraire `https://www.google.com/maps/dir/?api=1&origin=…&destination=…&travelmode=driving`.
+- **Incidents récents** : `SosIncidentFeed` lit `GET /admin/live-feed?limit=100&days=7`, filtre `ride_incident` et propose « Détails & itinéraire » (ouvre `SosRideDetails`).
+- **Session admin** : `adminToken()` utilise la session persistée par le client officiel, la rafraîchit 90 s avant expiration et, en cas de 401, force `refreshSession()` puis retente **une** fois. Si aucune session n'existe, l'écran affiche « Reconnectez-vous au tableau de bord admin ».
+
+### Impact produit / comportement visible
+- Une urgence déclarée pendant une course apparaît **immédiatement** dans « Urgences SOS » (polling 8 s) **et** dans « Activité en direct ».
+- Chaque alerte SOS expose le trajet complet, les contacts, la position du chauffeur et un bouton « Ouvrir l'itinéraire (Google Maps) ».
+- Le panneau « Incidents signalés en course » reste visible même sans alerte SOS, avec accès au détail de la course.
+- Aucun secret, aucune migration, aucun changement d'API publique.
+
+### Risques & rollback
+- **Risque** : la fusion des clients Supabase change l'implémentation utilisée par certains écrans legacy (retours d'API normalisés par le SDK) ; l'insertion d'alerte depuis un incident est encapsulée dans un `try/catch` et ne peut pas bloquer le signalement.
+- **Rollback** : `git revert <hash>` puis redéploiement Vercel + Edge Function. Les alertes créées par des incidents peuvent être clôturées depuis l'écran SOS.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] Typecheck ciblé des fichiers modifiés (`tsc -p` sans `_headers`) : aucune erreur
+- [x] `npm run build` (Vite) OK
+- [x] `POST /emergency/sos` vérifié en production (création + annulation)
+- [ ] À vérifier après déploiement : déclencher « Urgence / sécurité » depuis une course → alerte visible dans l'écran SOS avec le détail de la course
+
+---
+
+
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode

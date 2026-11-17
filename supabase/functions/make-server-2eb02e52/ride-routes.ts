@@ -2646,6 +2646,68 @@ app.post("/:id/incident", async (c) => {
       scheduledRideId: ride.scheduledRideId || null,
     });
 
+    // 🚨 Une « urgence / sécurité » déclarée en course doit aussi apparaître
+    // dans l'écran admin « Urgences SOS » (en plus du fil d'activité).
+    if (kind === "urgence") {
+      try {
+        const supabase = kvClient();
+        const { data: existing } = await supabase
+          .from("emergency_alerts")
+          .select("id")
+          .eq("ride_id", rideId)
+          .in("status", ["active", "acknowledged"])
+          .limit(1);
+
+        if (!existing || existing.length === 0) {
+          const driver = ride.driver || {};
+          const fromDriver = reporterType === "driver";
+          const pickupLabel =
+            typeof ride.pickup === "object"
+              ? (ride.pickup?.address || ride.pickup?.name || null)
+              : (ride.pickup || null);
+
+          const { error: alertError } = await supabase.from("emergency_alerts").insert({
+            user_id: reporterId || (fromDriver ? ride.driverId : ride.passengerId) || `ride:${rideId}`,
+            role: fromDriver ? "driver" : "passenger",
+            user_name: fromDriver
+              ? (driver?.name || ride.driverName || "Conducteur")
+              : (ride.passengerName || "Passager"),
+            user_phone: fromDriver
+              ? (driver?.phone || null)
+              : (ride.passengerPhone || null),
+            ride_id: rideId,
+            type: "security",
+            status: "active",
+            lat: typeof incident.lat === "number" ? incident.lat : null,
+            lng: typeof incident.lng === "number" ? incident.lng : null,
+            accuracy: null,
+            address: pickupLabel ? String(pickupLabel).slice(0, 250) : null,
+            note: (incident.comment || "Urgence signalée pendant la course").slice(0, 500),
+            vehicle_info: driver?.vehicle
+              ? [driver.vehicle.make, driver.vehicle.model, driver.vehicle.plate || driver.vehicle.license_plate]
+                  .filter(Boolean)
+                  .join(" ")
+                  .slice(0, 160)
+              : null,
+            counterpart_name: fromDriver
+              ? (ride.passengerName || null)
+              : (driver?.name || ride.driverName || null),
+            counterpart_phone: fromDriver ? (ride.passengerPhone || null) : (driver?.phone || null),
+            metadata: { source: "ride_incident", sessionVerified: false },
+          });
+
+          if (alertError) {
+            console.error("⚠️ [INCIDENT] Alerte SOS non créée:", alertError.message);
+          } else {
+            console.log("🚨 [INCIDENT] Alerte SOS créée pour la course", rideId);
+          }
+        }
+      } catch (alertException) {
+        // Ne jamais bloquer le signalement d'incident.
+        console.error("⚠️ [INCIDENT] Erreur création alerte SOS:", alertException);
+      }
+    }
+
     // Notifier l'autre partie
     try {
       const mapsUrl = incident.lat != null && incident.lng != null

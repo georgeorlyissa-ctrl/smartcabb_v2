@@ -268,6 +268,31 @@ app.post("/sos", async (c) => {
 
     console.log("🚨 [EMERGENCY/SOS] Alerte créée:", alert.id, "—", role, type);
 
+    // Trace dans le fil d'activité admin : un SOS doit être visible partout.
+    try {
+      const eventId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const today = new Date().toISOString().slice(0, 10);
+      await kvSet(`event:${today}:${eventId}`, {
+        id: eventId,
+        type: "emergency_sos",
+        data: {
+          alertId: alert.id,
+          rideId: payload.ride_id,
+          role,
+          sosType: type,
+          userName: payload.user_name,
+          userPhone: payload.user_phone,
+          lat,
+          lng,
+          address: payload.address,
+        },
+        actor: "system",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (_) {
+      // Ne jamais bloquer une alerte pour un log.
+    }
+
     // Trace KV (historique / audit même si la base est purgée).
     await kvSet(`emergency:${alert.id}`, {
       id: alert.id,

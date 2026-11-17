@@ -1,170 +1,84 @@
 // ============================================
-// CLIENT SUPABASE - NE PAS UTILISER DIRECTEMENT
-// Utiliser plutôt les appels API vers le serveur
+// CLIENT SUPABASE - SINGLETON
 // ============================================
 
 /**
- * ⚠️ ATTENTION : Ce fichier est conservé pour la compatibilité
- * mais ne devrait PAS être utilisé directement dans l'application.
- * 
- * Utilisez plutôt les appels API vers le serveur backend :
+ * ⚠️ Un seul client Supabase pour toute l'application.
+ *
+ * Le client officiel gère lui-même la persistance de session (localStorage) et
+ * le rafraîchissement du jeton. Les écrans qui lisent `supabase.auth.getSession()`
+ * (SOS admin, SMS, chat) disposent donc toujours du jeton du dernier compte
+ * connecté — y compris les administrateurs.
+ *
+ * Pour les appels métier, préférer l'API REST :
  * fetch(`https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/...`)
  */
 
+import { createClient } from '@supabase/supabase-js';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 
 const supabaseUrl = `https://${projectId}.supabase.co`;
 const supabaseAnonKey = publicAnonKey;
 
-// ✅ CLIENT SUPABASE SIMPLIFIÉ - Sans dépendance externe
-// Fournit uniquement les méthodes d'authentification nécessaires
-export const supabase = {
+/** Marge de sécurité : on rafraîchit le jeton 90 s avant son expiration. */
+const REFRESH_MARGIN_SECONDS = 90;
+
+export interface StoredSession {
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+  expires_in?: number;
+  token_type?: string;
+  user?: any;
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    signInWithPassword: async ({ email, password }: { email: string; password: string }) => {
-      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: { user: null, session: null }, error };
-      }
-      
-      return { data: await response.json(), error: null };
-    },
-    
-    signUp: async ({ email, password, options }: { email: string; password: string; options?: any }) => {
-      const response = await fetch(`${supabaseUrl}/auth/v1/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify({ email, password, data: options?.data }),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: { user: null, session: null }, error };
-      }
-      
-      return { data: await response.json(), error: null };
-    },
-    
-    signOut: async () => {
-      // Nettoyer le localStorage
-      localStorage.removeItem('supabase.auth.token');
-      return { error: null };
-    },
-    
-    getSession: async () => {
-      const token = localStorage.getItem('supabase.auth.token');
-      if (!token) {
-        return { data: { session: null }, error: null };
-      }
-      
-      try {
-        const session = JSON.parse(token);
-        return { data: { session }, error: null };
-      } catch {
-        return { data: { session: null }, error: null };
-      }
-    },
-    
-    setSession: async (session: any) => {
-      localStorage.setItem('supabase.auth.token', JSON.stringify(session));
-      return { data: { session }, error: null };
-    },
-    
-    getUser: async (token?: string) => {
-      const accessToken = token || JSON.parse(localStorage.getItem('supabase.auth.token') || '{}').access_token;
-      
-      if (!accessToken) {
-        return { data: { user: null }, error: { message: 'No token' } };
-      }
-      
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'apikey': supabaseAnonKey,
-        },
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: { user: null }, error };
-      }
-      
-      return { data: { user: await response.json() }, error: null };
-    },
-    
-    resetPasswordForEmail: async (email: string, options?: { redirectTo?: string }) => {
-      const body: Record<string, string> = { email };
-      if (options?.redirectTo) body.redirect_to = options.redirectTo;
-      
-      const response = await fetch(`${supabaseUrl}/auth/v1/recover`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify(body),
-      });
-      
-if (!response.ok) {
-        let error;
-        try { error = await response.json(); } catch { error = { message: `Erreur ${response.status}` }; }
-        return { data: { user: null }, error };
-      }
-      
-      return { data: {}, error: null };
-    },
-    
-    updateUser: async (attributes: any) => {
-      const token = JSON.parse(localStorage.getItem('supabase.auth.token') || '{}').access_token;
-      
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'apikey': supabaseAnonKey,
-        },
-        body: JSON.stringify(attributes),
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        return { data: { user: null }, error };
-      }
-      
-      return { data: { user: await response.json() }, error: null };
-    },
-    
-    signInWithOAuth: async ({ provider }: { provider: string }) => {
-      // OAuth n'est pas supporté dans ce client simplifié
-      return { 
-        data: { provider, url: null }, 
-        error: { message: 'OAuth not supported in simplified client' } 
-      };
-    },
-    
-    admin: {
-      createUser: async ({ email, password, user_metadata, email_confirm }: any) => {
-        // Cette fonction nécessite le service role key, donc elle doit être appelée depuis le serveur
-        return {
-          data: null,
-          error: { message: 'Admin functions must be called from server' }
-        };
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+});
+
+/**
+ * Session courante, rafraîchie automatiquement si elle approche de
+ * l'expiration. Retourne `null` si personne n'est connecté.
+ */
+export async function getFreshSession(): Promise<StoredSession | null> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    let session = (data.session as StoredSession | null) ?? null;
+    if (!session?.access_token) return null;
+
+    const expiring =
+      typeof session.expires_at === 'number' &&
+      session.expires_at * 1000 - Date.now() < REFRESH_MARGIN_SECONDS * 1000;
+
+    if (expiring && session.refresh_token) {
+      const { data: refreshed, error } = await supabase.auth.refreshSession();
+      if (!error && refreshed.session?.access_token) {
+        session = refreshed.session as StoredSession;
       }
     }
+
+    return session;
+  } catch {
+    return null;
   }
-};
+}
+
+/** Force le rafraîchissement de la session (null si impossible). */
+export async function refreshSession(): Promise<StoredSession | null> {
+  try {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error) return null;
+    return (data.session as StoredSession | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export default supabase;
 
 // ============================================
 // TYPES DE BASE DE DONNÉES

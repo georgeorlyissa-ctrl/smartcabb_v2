@@ -16,7 +16,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ChevronRight, X } from '../../lib/icons';
 import { useAppState } from '../../hooks/useAppState';
-import { supabase } from '../../lib/supabase';
 import { playSosAlarm } from '../../lib/notification-sound';
 import {
   getActiveEmergencies,
@@ -25,7 +24,7 @@ import {
 } from '../../lib/emergency-admin-service';
 
 const RE_ALARM_MS = 2 * 60 * 1000;
-const POLL_MS = 20_000;
+const POLL_MS = 10_000;
 const EMERGENCIES_SCREEN = 'admin-emergencies';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -118,23 +117,6 @@ export function EmergencyAlertsWatcher({ currentScreen }: { currentScreen: strin
     void load();
     const timer = setInterval(() => void load(), POLL_MS);
     return () => clearInterval(timer);
-  }, [load]);
-
-  useEffect(() => {
-    const channel = supabase
-      .channel(`admin-emergency-watcher-${Math.random().toString(36).slice(2)}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'emergency_alerts' },
-        () => {
-          void load();
-        },
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
   }, [load]);
 
   const activeCount = alerts.length;
