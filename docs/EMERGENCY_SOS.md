@@ -69,8 +69,14 @@ seule l'Edge Function (service role) écrit.
 ### Notification de l'équipe
 
 - Aucune notification n'est envoyée par défaut.
-- Si `emergencySmsEnabled = true` **et** `emergencyNumbers.support` est renseigné,
-  un SMS court est envoyé au support via EJ SMS (`sendEjSms`).
+- Si `emergencySmsEnabled = true` **et** au moins un numéro est renseigné
+  (`emergencyNumbers.support` ou `emergencyNumbers.supportTech`), un SMS court
+  est envoyé à **chaque destinataire** via EJ SMS (`sendEjSms`), en séquentiel.
+- Chaque champ accepte plusieurs numéros séparés par `,` `;` `/` ou `|`.
+  Maximum **4 destinataires** après dédoublonnage (`support`, `supportTech`, `supportBackup`).
+- `notified.sms` vaut `true` dès qu'**un** envoi réussit ; `notified.smsRecipients`
+  détaille le résultat par numéro, `notified.smsError` n'est rempli que si
+  **aucun** destinataire n'a été joint.
 - En cas d'absence de crédits, l'alerte reste enregistrée ; l'échec est journalisé mais ne bloque pas l'insertion.
 
 ---
@@ -83,8 +89,15 @@ seule l'Edge Function (service role) écrit.
 |---|---|---|
 | `emergencyNumbers.police` | `112` | Numéro affiché / appelé dans le dialogue SOS |
 | `emergencyNumbers.ambulance` | `115` | Idem |
-| `emergencyNumbers.support` | `""` | Numéro de l'équipe sécurité SmartCabb |
-| `emergencySmsEnabled` | `false` | Envoie un SMS au support à chaque alerte (1 crédit EJ SMS) |
+| `emergencyNumbers.support` | `""` | Numéro de l'équipe sécurité SmartCabb (appel + SMS) |
+| `emergencyNumbers.supportTech` | `""` | Support technique, second destinataire des SMS SOS |
+| `emergencySmsEnabled` | `false` | Envoie un SMS à chaque destinataire à chaque alerte (1 crédit EJ SMS par numéro) |
+
+**Valeurs configurées en production** (novembre 2026) : `support = 0960624008`,
+`supportTech = 0990666661`, `emergencySmsEnabled = true`.
+
+`GET /emergency/config` renvoie `hasSupport` (vrai si au moins un destinataire)
+et `supportNumbers` (liste effective utilisée pour les SMS).
 
 Ces valeurs sont lues à chaud depuis le KV (`smartcabb_global_config`) : **aucun redéploiement** nécessaire après modification. Le dialogue SOS met en cache les numéros 5 minutes.
 

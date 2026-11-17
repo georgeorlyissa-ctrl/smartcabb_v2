@@ -52,7 +52,7 @@ const DEFAULT_CONFIG = {
   smsEnabled:             true,
   smsProvider:            "ejsms",
   // 🚨 SOS : numéros d'urgence affichés dans l'app et notification SMS du support
-  emergencyNumbers:       { police: "112", ambulance: "115", support: "" },
+  emergencyNumbers:       { police: "112", ambulance: "115", support: "", supportTech: "" },
   emergencySmsEnabled:    false,
   otpRequired:            false,
   admin2faRequired:       true,

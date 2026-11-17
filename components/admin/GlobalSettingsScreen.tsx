@@ -494,11 +494,30 @@ export function GlobalSettingsScreen() {
                       ...localConfig.emergencyNumbers,
                       support: e.target.value,
                     })}
-                    placeholder="+243XXXXXXXXX"
+                    placeholder="0960624008"
                     className="mt-1"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Numéro de l'équipe sécurité, appelé par l'utilisateur depuis le dialogue SOS.
+                    Numéro de l'équipe sécurité, appelé par l'utilisateur depuis le dialogue SOS
+                    et prévenu par SMS à chaque alerte.
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="emergencySupportTech">Support technique</Label>
+                  <Input
+                    id="emergencySupportTech"
+                    type="tel"
+                    value={localConfig.emergencyNumbers?.supportTech || ''}
+                    onChange={(e) => handleChange('emergencyNumbers', {
+                      ...localConfig.emergencyNumbers,
+                      supportTech: e.target.value,
+                    })}
+                    placeholder="0990666661"
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Second destinataire des SMS SOS. Laisse vide pour n'alerter que le support principal.
                   </p>
                 </div>
 
@@ -506,7 +525,8 @@ export function GlobalSettingsScreen() {
                   <div>
                     <Label>Notification SMS à chaque alerte</Label>
                     <p className="text-xs text-gray-500">
-                      Envoie un SMS au support (1 crédit par alerte). Nécessite un numéro de support.
+                      Envoie un SMS au support et au support technique (1 crédit par numéro et par alerte).
+                      Nécessite au moins un numéro renseigné.
                     </p>
                   </div>
                   <Switch

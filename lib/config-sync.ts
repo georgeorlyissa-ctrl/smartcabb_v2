@@ -40,13 +40,18 @@ export interface GlobalConfig {
   notificationsEnabled: boolean;
 
   // Urgences (SOS)
-  /** Numéros affichés dans le dialogue SOS. `support` = équipe sécurité SmartCabb. */
+  /**
+   * Numéros affichés dans le dialogue SOS.
+   * `support` = équipe sécurité SmartCabb, `supportTech` = support technique.
+   * Plusieurs numéros par champ sont acceptés (séparés par `,` `;` `/` ou `|`).
+   */
   emergencyNumbers: {
     police: string;
     ambulance: string;
     support: string;
+    supportTech?: string;
   };
-  /** Envoie un SMS au numéro `emergencyNumbers.support` à chaque alerte SOS. */
+  /** Envoie un SMS aux numéros `support` + `supportTech` à chaque alerte SOS. */
   emergencySmsEnabled: boolean;
   
   // Sécurité
@@ -80,7 +85,8 @@ export const DEFAULT_CONFIG: GlobalConfig = {
   emergencyNumbers: {
     police: '112',
     ambulance: '115',
-    support: ''
+    support: '',
+    supportTech: ''
   },
   emergencySmsEnabled: false,
   otpRequired: false,

@@ -30,6 +30,7 @@ const DEFAULT_EMERGENCY_NUMBERS = {
   police: "112",
   ambulance: "115",
   support: "",
+  supportTech: "",
 };
 
 // ─── Helpers Supabase ─────────────────────────────────────────────────────────
@@ -143,8 +144,9 @@ function clientIp(c: any): string {
 // ─── Configuration ────────────────────────────────────────────────────────────
 
 async function readEmergencyConfig(): Promise<{
-  numbers: { police: string; ambulance: string; support: string };
+  numbers: { police: string; ambulance: string; support: string; supportTech?: string };
   smsEnabled: boolean;
+  supportNumbers: string[];
 }> {
   const stored = (await kvGet<any>(CONFIG_KEY)) || {};
   const numbers = {
@@ -156,7 +158,29 @@ async function readEmergencyConfig(): Promise<{
   return {
     numbers,
     smsEnabled: stored.emergencySmsEnabled === true,
+    supportNumbers: supportNumbersFrom(numbers),
   };
+}
+
+/**
+ * Numéros à prévenir par SMS lors d'un SOS.
+ * Accepte plusieurs numéros par champ (séparés par `,` `;` `/` ou `|`),
+ * et déduplique. `support` = ligne principale, `supportTech` = support technique.
+ */
+function supportNumbersFrom(numbers: {
+  support?: string;
+  supportTech?: string;
+  supportBackup?: string;
+}): string[] {
+  const out: string[] = [];
+  for (const value of [numbers.support, numbers.supportTech, numbers.supportBackup]) {
+    if (!value) continue;
+    for (const part of String(value).split(/[,;/|]+/)) {
+      const trimmed = part.trim();
+      if (trimmed && !out.includes(trimmed)) out.push(trimmed);
+    }
+  }
+  return out.slice(0, 4);
 }
 
 // ─── GET /config — Numéros d'urgence ─────────────────────────────────────────
@@ -166,12 +190,13 @@ app.get("/config", async (c) => {
     const auth = await resolveCaller(c);
     if (!auth.ok) return auth.response;
 
-    const { numbers } = await readEmergencyConfig();
+    const { numbers, supportNumbers } = await readEmergencyConfig();
     return c.json({
       success: true,
       numbers,
-      // Le support est le seul numéro interne utile côté app.
-      hasSupport: Boolean(numbers.support),
+      // Le support (principal + technique) est le seul numéro interne utile côté app.
+      hasSupport: supportNumbers.length > 0,
+      supportNumbers,
     });
   } catch (error) {
     console.error("❌ [EMERGENCY/CONFIG] Erreur:", error);
@@ -304,34 +329,54 @@ app.post("/sos", async (c) => {
       created_at: alert.created_at,
     }).catch(() => undefined);
 
-    // Notification de l'équipe sécurité : SMS uniquement si activé et si un
-    // numéro de support est configuré (évite de consommer des crédits à vide).
-    const { numbers, smsEnabled } = await readEmergencyConfig();
+    // Notification de l'équipe sécurité : SMS uniquement si activé et si au
+    // moins un numéro de support est configuré (évite de consommer des crédits
+    // à vide). Plusieurs destinataires possibles : support + support technique.
+    const { smsEnabled, supportNumbers } = await readEmergencyConfig();
     let smsNotified = false;
     let smsError: string | null = null;
+    const smsResults: Array<{ to: string; ok: boolean; error?: string }> = [];
 
-    if (smsEnabled && numbers.support) {
+    if (smsEnabled && supportNumbers.length > 0) {
       const place = lat !== null && lng !== null ? `${lat.toFixed(5)},${lng.toFixed(5)}` : "position inconnue";
       const who = payload.user_name || (role === "driver" ? "Conducteur" : "Passager");
-      const message =
+      const message = (
         `SOS SMARTCABB ${who} (${role}) - ${type}. ${place}` +
         (payload.ride_id ? ` Course ${String(payload.ride_id).slice(0, 12)}` : "") +
-        (payload.user_phone ? ` Tel ${payload.user_phone}` : "");
+        (payload.user_phone ? ` Tel ${payload.user_phone}` : "")
+      ).slice(0, 320);
 
-      const result = await sendEjSms({ to: numbers.support, message: message.slice(0, 320) });
-      smsNotified = result.ok;
-      if (!result.ok) {
-        smsError = result.error || "Envoi SMS impossible";
-        console.warn("⚠️ [EMERGENCY/SOS] SMS support non envoyé:", smsError);
+      // Envoi séquentiel : l'API EJSMS gère mal les rafales simultanées.
+      for (const to of supportNumbers) {
+        try {
+          const result = await sendEjSms({ to, message });
+          smsResults.push({ to, ok: result.ok, error: result.ok ? undefined : (result.error || "Envoi SMS impossible") });
+          if (result.ok) {
+            smsNotified = true;
+          } else {
+            console.warn(`⚠️ [EMERGENCY/SOS] SMS non envoyé à ${to}:`, result.error);
+          }
+        } catch (e: any) {
+          const err = e?.message || "Envoi SMS impossible";
+          smsResults.push({ to, ok: false, error: err });
+          console.warn(`⚠️ [EMERGENCY/SOS] SMS non envoyé à ${to}:`, err);
+        }
       }
-    } else if (!numbers.support) {
+
+      // On ne remonte une erreur que si AUCUN destinataire n'a été joint.
+      if (!smsNotified) {
+        smsError = smsResults.find((r) => r.error)?.error || "Envoi SMS impossible";
+      }
+    } else if (!smsEnabled) {
+      console.warn("⚠️ [EMERGENCY/SOS] Envoi de SMS SOS désactivé dans la configuration");
+    } else {
       console.warn("⚠️ [EMERGENCY/SOS] Aucun numéro de support configuré — pas de SMS");
     }
 
     return c.json({
       success: true,
       alert,
-      notified: { sms: smsNotified, smsError },
+      notified: { sms: smsNotified, smsError, smsRecipients: smsResults },
     }, 201);
   } catch (error) {
     console.error("❌ [EMERGENCY/SOS] Erreur:", error);

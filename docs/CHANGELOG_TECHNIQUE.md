@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-17 (9) — SMS SOS vers plusieurs destinataires (support + support technique)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat / config
+- **Objectif** : un SOS déclenché depuis l'application n'envoyait aucun SMS car `emergencyNumbers.support` était vide. Le support doit désormais être prévenu automatiquement, sur **deux numéros** : support `0960624008` et support technique `0990666661`.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/emergency-routes.ts` | `supportNumbersFrom()` (multi-numéros, dédoublonnage, max 4) ; `POST /sos` envoie à **chaque** destinataire et détaille le résultat ; `GET /config` expose `supportNumbers` et calcule `hasSupport` dessus ; `supportTech` ajouté aux défauts |
+| `supabase/functions/make-server-2eb02e52/config-routes.ts` | `DEFAULT_CONFIG.emergencyNumbers.supportTech = ""` |
+| `lib/config-sync.ts` | Type `emergencyNumbers.supportTech?` + défaut vide (config front synchronisée) |
+| `components/admin/GlobalSettingsScreen.tsx` | Nouveau champ « Support technique » + libellés SMS mis à jour (1 crédit par numéro) |
+| `docs/EMERGENCY_SOS.md` | Documentation des destinataires multiples, du format des numéros et des valeurs de production |
+
+### Description technique
+- `readEmergencyConfig()` retourne maintenant `supportNumbers: string[]` en plus de `numbers`. `supportNumbersFrom()` lit `support`, `supportTech` puis `supportBackup`, sépare sur `,` `;` `/` `|`, dédoublonne et plafonne à **4** destinataires.
+- `POST /emergency/sos` : envoi **séquentiel** (l'API EJSMS gère mal les rafales simultanées). `notified.sms` vaut `true` dès qu'un envoi réussit, `notified.smsRecipients` liste `{ to, ok, error }` par numéro, `notified.smsError` n'est rempli que si **aucun** numéro n'a été joint. Une erreur d'envoi ne bloque jamais l'enregistrement de l'alerte.
+- `GET /emergency/config` renvoie `hasSupport: supportNumbers.length > 0` et la liste `supportNumbers` réellement utilisée.
+- Format : `sendEjSms()` normalise déjà les numéros locaux (`0XXXXXXXXX` → `243XXXXXXXXX`), les valeurs `0960624008` / `0990666661` sont donc acceptées telles quelles.
+- **Configuration appliquée en production** via `POST /config/update` :
+  `emergencyNumbers = { police: "112", ambulance: "115", support: "0960624008", supportTech: "0990666661" }`, `emergencySmsEnabled = true`.
+
+### Impact produit / comportement visible
+- Chaque alerte SOS (bouton SOS ou incident « urgence » sur course active) envoie un SMS aux deux numéros de support, avec type, position, identifiant de course et téléphone de la personne.
+- L'admin peut modifier les deux numéros et désactiver l'envoi depuis **Paramètres globaux → Urgences (SOS)**, sans redéploiement (lecture à chaud du KV `smartcabb_global_config`).
+- Coût : 2 crédits EJ SMS par alerte (un par destinataire), 4 au maximum si `supportBackup` est renseigné.
+
+### Risques & rollback
+- **Risque** : consommation de crédits SMS doublée ; un numéro mal saisi est simplement ignoré après normalisation (`toMsisdn`) et l'échec est tracé.
+- **Rollback** : vider `emergencyNumbers.supportTech` et/ou passer `emergencySmsEnabled = false` depuis l'admin (immédiat, sans redéploiement). Code : `git revert <hash>` + redéploiement Edge Function.
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK
+- [x] Edge Function redéployée (`make-server-2eb02e52`)
+- [x] `GET /emergency/config` → `numbers.support = "0960624008"`, `numbers.supportTech = "0990666661"`, `hasSupport: true`, `supportNumbers: ["0960624008","0990666661"]`
+- [x] `GET /sms/config` → `{ enabled: true, configured: true }`
+- [ ] À valider en réel : un SOS de test → réception du SMS sur les deux numéros
+
+---
+
 ## 2026-11-17 (8) — 2ᵉ course sans notification chauffeur + bascule en ligne immédiate
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
