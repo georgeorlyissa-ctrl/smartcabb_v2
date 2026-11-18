@@ -28,9 +28,12 @@ export function isNativeApp(): boolean {
   }
 }
 
-// Moteur TTS considéré comme inutilisable (plugin absent ou aucune langue) :
-// on arrête d'essayer à chaque course pour ne pas ralentir l'alerte.
+// Moteur TTS momentanément inutilisable : on marque une pause plutôt que de
+// désactiver la voix pour toute la session (le moteur Android peut échouer
+// ponctuellement : initialisation, autre app en train de parler, etc.).
 let _nativeBroken = false;
+let _nativeFailures = 0;
+let _nativeCooldownUntil = 0;
 // Langue qui a effectivement fonctionné (évite de retester à chaque appel).
 let _preferredLang: string | null = null;
 // Cache du test de présence du plugin (null = pas encore testé).
@@ -64,7 +67,9 @@ async function loadPlugin() {
 
 /** Vrai si la voix native peut être tentée (app native + plugin embarqué). */
 function canUseNativeTTS(): boolean {
-  return !_nativeBroken && isNativeApp() && ttsPluginAvailable();
+  if (_nativeBroken || !isNativeApp() || !ttsPluginAvailable()) return false;
+  if (_nativeCooldownUntil && Date.now() < _nativeCooldownUntil) return false;
+  return true;
 }
 
 /**
@@ -88,9 +93,11 @@ export async function nativeSpeak(
     const TextToSpeech = await loadPlugin();
 
     const requested = opts?.lang ?? 'fr-FR';
-    const candidates = _preferredLang
-      ? [_preferredLang]
-      : Array.from(new Set([requested, 'fr', ''])); // '' = langue par défaut
+    // On garde la langue qui a marché, mais on retombe sur les autres si elle
+    // échoue : un échec ponctuel ne doit pas priver le chauffeur de la voix.
+    const candidates = Array.from(
+      new Set([...(_preferredLang ? [_preferredLang] : []), requested, 'fr', ''])
+    ); // '' = langue par défaut du téléphone
 
     let lastError: unknown = null;
 
@@ -98,6 +105,9 @@ export async function nativeSpeak(
       try {
         // Coupe une éventuelle annonce précédente (sinon les phrases se cumulent).
         await TextToSpeech.stop().catch(() => {});
+        // Certains moteurs TTS ignorent un `speak()` envoyé dans la même
+        // milliseconde qu'un `stop()` : petite respiration = voix garantie.
+        await new Promise((r) => setTimeout(r, 60));
 
         await TextToSpeech.speak({
           text,
@@ -108,22 +118,30 @@ export async function nativeSpeak(
         });
 
         _preferredLang = lang || null;
+        _nativeFailures = 0;
+        _nativeCooldownUntil = 0;
         console.log(`✅ [TTS NATIF] annonce jouée (lang=${lang || 'défaut'})`);
         return true;
       } catch (e) {
         lastError = e;
         console.warn(`⚠️ [TTS NATIF] échec avec lang=${lang || 'défaut'}:`, e);
+        if (_preferredLang === lang) _preferredLang = null;
       }
     }
 
     throw lastError;
   } catch (e) {
     console.warn(
-      '⚠️ [TTS NATIF] Aucune voix native disponible (moteur TTS Google absent ?):',
+      '⚠️ [TTS NATIF] Aucune voix native disponible pour l’instant:',
       e
     );
-    // Une seule erreur loggée : on n'insiste pas à chaque course.
-    _nativeBroken = true;
+    // Pause de 60 s après 2 échecs consécutifs : on ne désactive pas la voix
+    // pour toute la session (l'erreur est souvent transitoire).
+    _nativeFailures++;
+    if (_nativeFailures >= 2) {
+      _nativeFailures = 0;
+      _nativeCooldownUntil = Date.now() + 60_000;
+    }
     return false;
   }
 }

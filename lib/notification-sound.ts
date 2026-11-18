@@ -243,6 +243,50 @@ export function playRideRingtone(): void {
 let _cachedVoices: SpeechSynthesisVoice[] | null = null;
 let _cachedVoice:  SpeechSynthesisVoice  | null = null; // voix française sélectionnée
 let _ttsWarmedUp = false;
+/** iOS/Safari : la voix n'est autorisée qu'après un geste utilisateur. */
+let _ttsUnlocked = false;
+/** Minuterie d'annulation de l'utterance d'amorçage (voir `primeSpeechSynthesis`). */
+let _primeTimer: number | null = null;
+/** Nombre d'amorces tentées : on insiste sur les 1ers gestes (iOS est capricieux). */
+let _primeAttempts = 0;
+
+/**
+ * 🔓 Débloque la synthèse vocale pendant un VRAI geste utilisateur.
+ * iOS (Safari) refuse `speechSynthesis.speak()` tant qu'aucune utterance n'a
+ * été lancée depuis un toucher : on en lance une quasi silencieuse ici.
+ * À appeler uniquement depuis un handler `touch/click`.
+ */
+export function primeSpeechSynthesis(): boolean {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
+  try {
+    // Une annonce réelle est peut-être en train de parler : ne jamais l'amorcer
+    // (le `cancel()` de l'amorce couperait la course en pleine annonce).
+    if (window.speechSynthesis.speaking && !_primeTimer) {
+      _ttsUnlocked = true;
+      return true;
+    }
+
+    if (_primeTimer) { clearTimeout(_primeTimer); _primeTimer = null; }
+
+    _primeAttempts++;
+    const u = new SpeechSynthesisUtterance(' ');
+    u.volume = 0;
+    u.rate   = 2;
+    u.lang   = 'fr-FR';
+    window.speechSynthesis.speak(u);
+    _ttsUnlocked = true;
+    _primeTimer = window.setTimeout(() => {
+      _primeTimer = null;
+      // `speakMessage()` remet ce timer à zéro avant de parler : s'il tourne
+      // encore ici, c'est qu'aucune vraie annonce n'a démarré entre-temps.
+      try { window.speechSynthesis.cancel(); } catch {}
+    }, 400);
+    console.log('🔓 [TTS] synthèse vocale déverrouillée (geste utilisateur)');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Charge les voix (cross-browser) avec polling accéléré (50 ms).
@@ -329,16 +373,26 @@ function warmUpTTSEngine(voice: SpeechSynthesisVoice | null): void {
 }
 
 // ─── Jouer une utterance — cross-browser ─────────────────────────────────────
-function speakUtterance(utt: SpeechSynthesisUtterance, timeoutMs = 14000): Promise<void> {
+function speakUtterance(
+  utt: SpeechSynthesisUtterance,
+  timeoutMs = 14000,
+  onStart?: () => void
+): Promise<boolean> {
   return new Promise((resolve) => {
-    let resolved = false;
-    const done = () => { if (!resolved) { resolved = true; resolve(); } };
+    let settled  = false;
+    let started  = false;
+    const done = () => { if (!settled) { settled = true; resolve(started); } };
 
     const guard = setTimeout(() => {
       console.warn('⚠️ TTS timeout utterance');
       done();
     }, timeoutMs);
 
+    utt.onstart = () => {
+      started = true;
+      console.log('🗣️ TTS démarré');
+      try { onStart?.(); } catch {}
+    };
     utt.onend   = () => { clearTimeout(guard); done(); };
     utt.onerror = (e) => {
       clearTimeout(guard);
@@ -348,7 +402,11 @@ function speakUtterance(utt: SpeechSynthesisUtterance, timeoutMs = 14000): Promi
       done();
     };
 
-    window.speechSynthesis.speak(utt);
+    try { window.speechSynthesis.speak(utt); } catch (e) {
+      console.warn('⚠️ TTS speak() a échoué:', e);
+      done();
+      return;
+    }
 
     // Fix Chrome / Android / Samsung : pause silencieuse → forcer resume() toutes les 250 ms
     if (!IS_FIREFOX && !IS_SAFARI) {
@@ -364,13 +422,43 @@ function speakUtterance(utt: SpeechSynthesisUtterance, timeoutMs = 14000): Promi
   });
 }
 
+// ─── Rejeu de l'annonce au prochain geste (iOS / navigateur strict) ───────────
+let _pendingSpeech: string | null = null;
+let _pendingGestureHooked = false;
+
+function retrySpeechOnNextGesture(message: string): void {
+  _pendingSpeech = message;
+  if (_pendingGestureHooked) return;
+  _pendingGestureHooked = true;
+
+  const handler = () => {
+    window.removeEventListener('pointerdown', handler);
+    window.removeEventListener('touchend', handler);
+    _pendingGestureHooked = false;
+    const pending = _pendingSpeech;
+    _pendingSpeech = null;
+    // `_soundAllowed === false` = course acceptée/refusée → on ne rejoue pas.
+    if (!pending || !_soundAllowed) return;
+    console.warn('🔁 [TTS] rejeu de l’annonce après geste utilisateur');
+    primeSpeechSynthesis();
+    void speakMessage(pending, 'fr-FR');
+  };
+
+  window.addEventListener('pointerdown', handler, { once: true });
+  window.addEventListener('touchend', handler, { once: true, passive: true } as any);
+}
+
 /** Découpe en phrases pour contourner le bug Chrome (utterance > ~15 s tronquée) */
 function splitPhrases(text: string): string[] {
   return text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
 }
 
 // ─── Synthèse vocale principale ───────────────────────────────────────────────
-async function speakMessage(message: string, lang = 'fr-FR'): Promise<void> {
+async function speakMessage(
+  message: string,
+  lang = 'fr-FR',
+  hooks?: { onStart?: () => void; onEnd?: () => void }
+): Promise<void> {
   // 1️⃣ APK / app native : `speechSynthesis` n'existe pas dans la WebView
   //    Android → on utilise le moteur TTS natif du téléphone.
   if (isNativeApp()) {
@@ -391,9 +479,14 @@ async function speakMessage(message: string, lang = 'fr-FR'): Promise<void> {
     console.warn("⚠️ Aucune synthèse vocale disponible sur cet appareil");
     return;
   }
-  if (IS_IOS) console.warn('⚠️ iOS: TTS nécessite un geste utilisateur récent');
+  if (!_ttsUnlocked && (IS_IOS || IS_ANDROID)) {
+    console.warn('⚠️ TTS mobile non déverrouillé : un geste utilisateur est nécessaire');
+  }
 
   try {
+    // 0️⃣ Une amorce en attente ne doit jamais annuler la vraie annonce.
+    if (_primeTimer) { clearTimeout(_primeTimer); _primeTimer = null; }
+
     const wasSpeaking = window.speechSynthesis.speaking || window.speechSynthesis.pending;
 
     if (wasSpeaking) {
@@ -404,8 +497,10 @@ async function speakMessage(message: string, lang = 'fr-FR'): Promise<void> {
     }
     // Si rien ne jouait → délai = 0, on parle immédiatement
 
-    // Voix depuis cache (0 ms si preloadVoices() a déjà été appelé)
-    const voice = _cachedVoice ?? pickBestFrenchVoice(await loadVoices());
+    // Voix depuis le cache uniquement : attendre `loadVoices()` ici retardait
+    // l'annonce de plusieurs secondes sur mobile (et la sonnerie était coupée
+    // pendant ce temps). `utt.lang` suffit à choisir une voix française.
+    const voice = _cachedVoice ?? (_cachedVoices ? pickBestFrenchVoice(_cachedVoices) : null);
 
     const browser = IS_SAMSUNG ? 'Samsung'
       : IS_CHROME  ? (IS_ANDROID ? 'Chrome/Android' : 'Chrome')
@@ -416,6 +511,14 @@ async function speakMessage(message: string, lang = 'fr-FR'): Promise<void> {
 
     const needsChunks = IS_CHROME || IS_ANDROID || IS_SAMSUNG;
     const phrases     = needsChunks ? splitPhrases(message) : [message];
+    let   anyStarted  = false;
+    let   hooksFired  = false;
+
+    const fireStart = () => {
+      if (hooksFired) return;
+      hooksFired = true;
+      try { hooks?.onStart?.(); } catch {}
+    };
 
     for (let i = 0; i < phrases.length; i++) {
       if (!phrases[i]) continue;
@@ -425,13 +528,22 @@ async function speakMessage(message: string, lang = 'fr-FR'): Promise<void> {
       utt.pitch  = 1.0;
       utt.volume = 1.0;
       if (voice) utt.voice = voice;
-      await speakUtterance(utt);
+      const started = await speakUtterance(utt, 14000, fireStart);
+      if (started) anyStarted = true;
       if (i < phrases.length - 1) await new Promise(r => setTimeout(r, 50)); // inter-phrase minimal
+    }
+
+    if (!anyStarted) {
+      console.warn('⚠️ TTS: aucune phrase n’a démarré — nouvel essai au prochain toucher');
+      if (IS_IOS || IS_ANDROID || isNativeApp()) retrySpeechOnNextGesture(message);
+      return;
     }
 
     console.log('✅ TTS terminé');
   } catch (e) {
     console.error('❌ speakMessage:', e);
+  } finally {
+    try { hooks?.onEnd?.(); } catch {}
   }
 }
 
@@ -514,6 +626,44 @@ export async function playRideNotification(rideDetails?: {
     tag: 'smartcabb-ride', renotify: true, data: rideDetails,
   });
 
+  const isMobile = IS_IOS || IS_ANDROID || isNativeApp();
+
+  // Mobile : la sonnerie et la voix se disputent la session audio. Sur iOS, un
+  // <audio> en lecture rend carrément la voix muette (« juste un bip »), et
+  // sur Android la sonnerie masque l'annonce. On coupe donc la sonnerie le
+  // temps de l'annonce, puis on la reprend (si la course est toujours là).
+  let ringtonePaused = false;
+
+  const pauseRingtoneForVoice = () => {
+    if (!isMobile || ringtonePaused) return;
+    try {
+      if (_ringtoneEl && !_ringtoneEl.paused) {
+        _ringtoneEl.pause();
+        ringtonePaused = true;
+        console.log('🔇 Sonnerie en pause le temps de l’annonce vocale');
+      }
+    } catch {}
+  };
+
+  const resumeRingtoneAfterVoice = () => {
+    if (!ringtonePaused) return;
+    ringtonePaused = false;
+    if (!_soundAllowed) return; // course acceptée/refusée entre-temps
+    try { void _ringtoneEl?.play().catch(() => {}); } catch {}
+  };
+
+  if (isMobile) {
+    // Laisse entendre la sonnerie ~0,8 s (le chauffeur sait qu'une course
+    // arrive) avant de laisser la place à la voix.
+    await new Promise(r => setTimeout(r, 800));
+    if (!_soundAllowed) return;
+    pauseRingtoneForVoice();
+    await speakMessage(msg, 'fr-FR', { onEnd: resumeRingtoneAfterVoice })
+      .catch(e => console.error('TTS:', e));
+    resumeRingtoneAfterVoice();
+    return;
+  }
+
   // TTS — awaité pour que la Promise se résolve quand la voix est terminée
   await speakMessage(msg, 'fr-FR').catch(e => console.error('TTS:', e));
 }
@@ -589,7 +739,7 @@ let _audioUnlockListenerAdded = false;
 
 export function unlockMobileAudio(): void {
   if (typeof window === 'undefined') return;
-  const unlock = () => {
+  const unlock = (fromGesture: boolean) => {
     try {
       warmUpAudioContext();
       const ctx = getAudioContext();
@@ -598,6 +748,12 @@ export function unlockMobileAudio(): void {
       }
       if ('speechSynthesis' in window) {
         try { window.speechSynthesis.getVoices(); } catch {}
+        // iOS/Safari + Chrome Android : la synthèse vocale n'est autorisée
+        // qu'après une interaction. On la débloque ici, pendant un vrai geste,
+        // sinon la voix de la course reste muette (seul le bip sort).
+        if (fromGesture && _primeAttempts < 3 && (IS_IOS || IS_ANDROID)) {
+          primeSpeechSynthesis();
+        }
       }
       // Amorcer l'élément <audio> pendant un vrai geste : certaines WebView
       // n'autorisent la lecture d'un média que s'il a déjà été lancé une fois
@@ -631,10 +787,11 @@ export function unlockMobileAudio(): void {
   try {
     if (!_audioUnlockListenerAdded) {
       _audioUnlockListenerAdded = true;
-      window.addEventListener('touchend', unlock, { passive: true } as any);
-      window.addEventListener('click', unlock);
+      const onGesture = () => unlock(true);
+      window.addEventListener('touchend', onGesture, { passive: true } as any);
+      window.addEventListener('click', onGesture);
     }
-    unlock();
+    unlock(false); // appel au montage : pas de geste → aucune amorce TTS
   } catch {}
 }
 

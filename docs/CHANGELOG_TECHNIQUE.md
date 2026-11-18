@@ -42,7 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
-## 2026-11-17 (10) — Disponibilité passager, acceptation atomique et protection de la config SOS
+## 2026-11-18 (11) — Annonce vocale des courses audible sur téléphone (iOS / Android)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : sur ordinateur l'annonce vocale d'une nouvelle course est parfaitement audible, mais sur téléphone (Safari iOS, Chrome Android, APK) le chauffeur n'entend qu'un bip/sonnerie — **aucune voix**. Le chauffeur doit entendre « Bonjour, vous avez une nouvelle course SmartCabb… » sur son téléphone.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/notification-sound.ts` | `primeSpeechSynthesis()` (déverrouillage TTS pendant un geste), `_primeTimer` anti-coupure, `speakUtterance()` → `Promise<boolean>` + `onstart`, `retrySpeechOnNextGesture()`, `speakMessage()` (hooks `onStart`/`onEnd`, plus d'attente `loadVoices()`), `playRideNotification()` (sonnerie coupée le temps de la voix sur mobile), `unlockMobileAudio()` (amorçage TTS au 1er geste uniquement) |
+| `lib/native-tts.ts` | Échec/erreur TTS native **transitoire** (plus de désactivation définitive), repli de langue si `_preferredLang` échoue, 60 ms entre `stop()` et `speak()` |
+
+### Description technique
+- **Cause racine** : sur iOS/Safari (et Chrome) `speechSynthesis.speak()` exige une *activation utilisateur* (sticky). Aucun geste n'était fait sur l'écran chauffeur avant l'arrivée d'une course → `speak()` partait sans droit, la voix ne démarrait jamais et seul le bip de la sonnerie sortait. Sur Android, la WebView de l'APK n'implémente pas `speechSynthesis` (voix native requise), et sur le web mobile la lecture simultanée de l'élément `<audio>` de sonnerie peut rendre la voix muette.
+- **Déverrouillage** : `primeSpeechSynthesis()` lance une utterance quasi silencieuse (`' '`, volume 0) **pendant un vrai geste** (`click`/`touchend`) capté par `unlockMobileAudio()`, sur les 3 premiers gestes (un simple clic sur « EN LIGNE » suffit). `unlockMobileAudio()` appelé au montage ne tente plus d'amorce (pas de geste). L'`unlock` est aussi rejoué au retour au premier plan (`visibilitychange`) via `DriverApp`.
+- **Anti-coupure** : l'utterance d'amorçage ne s'auto-annule plus au bout de 250 ms (elle pouvait couper le vrai message lancé juste après) ; `_primeTimer` est annulé par `speakMessage()` et `primeSpeechSynthesis()` ne s'exécute pas si une annonce est déjà en cours.
+- **Détection d'échec** : `speakUtterance()` résout désormais `true` seulement si l'événement `onstart` a eu lieu. Si aucune phrase n'a démarré, `retrySpeechOnNextGesture()` mémorise le message et le rejoue au **prochain toucher** (annulé si la course a été acceptée/refusée : `_soundAllowed === false`).
+- **Latence mobile** : `speakMessage()` ne fait plus `await loadVoices()` (jusqu'à 2,5 s) ; il utilise la voix déjà mise en cache par `preloadVoices()` et sinon se contente de `utt.lang = 'fr-FR'` (le moteur choisit la voix française). L'annonce démarre donc sans délai, même si la liste des voix n'est pas encore chargée.
+- **Sonnerie vs voix (mobile)** : dans `playRideNotification()`, sur mobile (`IS_IOS || IS_ANDROID || isNativeApp()`), la sonnerie joue ~0,8 s puis est **mise en pause** le temps de l'annonce, puis reprise (si la course est toujours affichée). Sur ordinateur le comportement (voix + sonnerie en parallèle) est inchangé, puisque c'est ce qui fonctionne.
+- **TTS natif (APK)** : `_nativeBroken` n'est plus posé après une erreur — remplacé par un compteur (`2` échecs consécutifs → pause de 60 s) ; un succès remet tout à zéro. Si la langue mémorisée (`_preferredLang`) échoue, on réessaie `fr-FR`, `fr`, puis la langue par défaut au lieu de rester bloqué. Ajout d'un `stop()` + 60 ms avant `speak()` (certains moteurs ignorent un `speak()` collé au `stop()`).
+
+### Impact produit / comportement visible
+- Le chauffeur entend la voix annonçant la course sur **iPhone et Android**, y compris dans l'APK ≥ 1.6 (moteur TTS natif), et plus seulement la sonnerie.
+- Un simple clic sur l'écran chauffeur (par ex. « EN LIGNE ») débloque définitivement la voix de la session.
+- Si le téléphone refuse malgré tout la synthèse (moteur TTS absent, mode économie d'énergie, appel en cours), la sonnerie continue de sonner et le message est rejoué au geste suivant.
+- Sur ordinateur : aucun changement.
+
+### Risques & rollback
+- **Risque** : la sonnerie est brièvement interrompue sur mobile (≈ durée de l'annonce). Si le moteur TTS est cassé sur l'appareil, un court silence (~0,3 s) précède la reprise de la sonnerie.
+- **Risque** : un APK < 1.6 ne contient pas le plugin TTS natif → pas de voix possible, seuls la sonnerie et le rejeu au geste fonctionnent (mise à jour Play Store requise).
+- **Rollback** : `git revert <hash>` + redéploiement Vercel (aucun changement backend, aucune migration, aucun secret).
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK
+- [x] Typecheck ciblé (`tsconfig.check.json` sur `lib/notification-sound.ts` + `lib/native-tts.ts`) : seule l'erreur pré-existante `NotificationOptions.vibrate` subsiste
+- [ ] À valider en réel par le chauffeur : **iPhone** (Safari/PWA) — un clic sur l'écran, puis nouvelle course → voix ; **Android** (APK 1.6+) — voix via moteur TTS natif ; Android navigateur — voix via `speechSynthesis`
+- [ ] Vérifier que le message est rejoué en touchant l'écran si l'annonce n'a pas démarré (logs `🔁 [TTS] rejeu…`)
+
+---
+
+
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
