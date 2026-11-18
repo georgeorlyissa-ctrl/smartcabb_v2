@@ -42,6 +42,44 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-18 (15) — Panneau admin : adresses Départ / Arrivée des courses affichées
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : dans le panneau admin, onglet **Courses** de la fiche conducteur (et de la fiche passager), les lignes « Départ » et « Arrivée » apparaissaient **vides**. La cause n'était pas l'affichage mais la conversion des données : `hooks/useSupabaseData.ts` lisait `ride.pickup?.address` / `ride.destination?.address` sur une réponse d'API déjà normalisée en `pickup_address` / `dropoff_address`, donc les deux champs finissaient à `undefined`.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `hooks/useSupabaseData.ts` | `fetchRidesFromKV` : lecture des champs **réellement** renvoyés par `GET /admin/rides` (`pickup_address`, `pickup_lat/lng`, `dropoff_address`, `dropoff_lat/lng`, `duration`, `created_at`) avec les anciennes clés camelCase conservées en repli ; `??` au lieu de `||` pour les nombres (0 reste valide) |
+| `components/admin/DriverDetailModal.tsx` | Onglet Courses : `ride.pickup.address` → `ride.pickup_address || ride.pickup?.address || '—'` (idem destination) |
+| `components/admin/PassengerDetailModal.tsx` | Onglet Courses : même correction (même bug, fiche passager) |
+
+### Description technique
+- L'Edge Function `GET /admin/rides` (`supabase/functions/make-server-2eb02e52/admin-routes.ts`, lignes ~616-632) renvoie **déjà** un objet normalisé : `pickup_address`, `dropoff_address`, `total_amount`, `duration`, `created_at`, `rating`… Aucun objet imbriqué `pickup` / `destination` n'est envoyé.
+- `fetchRidesFromKV` appliquait pourtant `ride.pickup?.address || ride.pickupAddress` → `undefined` pour **toutes** les courses. `useSupabaseData` reconstruisait ensuite `pickup.address` à partir de ce champ vide, d'où les libellés vides dans les deux modales.
+- Correction : lecture prioritaire des clés snake_case de l'API, avec repli sur les formes camelCase/imbriquées (tolérance si un autre endpoint est branché un jour).
+- `duration_minutes` est corrigé au passage (`ride.duration_minutes ?? ride.duration`) : la durée s'affiche aussi dans la carte de course.
+- Aucun changement d'API ni de schéma : uniquement la couche de transformation côté client. Les autres écrans qui consomment `rides` (`DriversListScreen` ligne 652 : course en direct, `ClientsListScreen`) bénéficient de la même correction.
+
+### Impact produit / comportement visible
+- Onglet **Courses** de la fiche conducteur : chaque carte affiche **Départ**, **Arrivée**, le montant et la durée de la course.
+- Onglet **Courses** de la fiche passager : itinéraire affiché (au lieu de deux lignes vides).
+- Bloc « Course en direct » de la liste des conducteurs : les adresses remontent aussi quand elles manquaient.
+- Correctif **web uniquement** : déploiement Vercel suffit, l'app Android charge le web distant (aucun rebuild AAB, aucun changement de versionCode).
+
+### Risques & rollback
+- **Risque** : très faible (lecture de champs déjà présents dans la réponse). Si un champ manque, l'interface affiche `—` au lieu d'un vide.
+- **Rollback** : `git revert <hash>` — les deux modales reviennent à `ride.pickup.address` (adresses de nouveau vides).
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK
+- [x] Typecheck ciblé (`tsconfig.check.json` temporaire sur `useSupabaseData.ts` + les 2 modales) : aucune erreur nouvelle ; seules les erreurs pré-existantes du fichier subsistent (`totalPrice`, `variant` de `Badge`, etc.)
+- [ ] À vérifier dans l'admin après déploiement Vercel : ouvrir Conducteur → Courses → les adresses doivent apparaître pour les anciennes **et** les nouvelles courses
+
+---
+
 ## 2026-11-18 (14) — Signature release : mots de passe du keystore sortis du dépôt
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

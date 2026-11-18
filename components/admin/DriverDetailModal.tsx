@@ -1050,11 +1050,15 @@ export function DriverDetailModal({
                         <div className="text-sm space-y-1">
                           <div className="flex items-start space-x-2">
                             <span className="text-gray-500 min-w-[80px]">Départ:</span>
-                            <span className="font-medium">{ride.pickup.address}</span>
+                            <span className="font-medium">
+                              {ride.pickup_address || ride.pickup?.address || '—'}
+                            </span>
                           </div>
                           <div className="flex items-start space-x-2">
                             <span className="text-gray-500 min-w-[80px]">Arrivée:</span>
-                            <span className="font-medium">{ride.destination.address}</span>
+                            <span className="font-medium">
+                              {ride.dropoff_address || ride.destination?.address || '—'}
+                            </span>
                           </div>
                         </div>
                       </div>

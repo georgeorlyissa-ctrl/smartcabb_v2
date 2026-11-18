@@ -163,23 +163,27 @@ export function useSupabaseData() {
       if (data.success && data.rides) {
         console.log('✅ Courses chargées depuis KV store:', data.count);
         // Convertir les courses du KV store au format attendu
+        // ⚠️ L'API `/admin/rides` renvoie déjà des champs normalisés en snake_case
+        // (`pickup_address`, `dropoff_address`, `total_amount`, `duration`,
+        // `created_at`). Les anciens accès `ride.pickup?.address` / `ride.pickupAddress`
+        // ne correspondaient à rien → adresses vides dans le panneau admin.
         return data.rides.map((ride: any) => ({
           id: ride.id,
           passenger_id: ride.passengerId || ride.passenger_id,
           driver_id: ride.driverId || ride.driver_id,
-          pickup_address: ride.pickup?.address || ride.pickupAddress,
-          pickup_lat: ride.pickup?.lat || ride.pickupLat,
-          pickup_lng: ride.pickup?.lng || ride.pickupLng,
-          dropoff_address: ride.destination?.address || ride.destinationAddress,
-          dropoff_lat: ride.destination?.lat || ride.destinationLat,
-          dropoff_lng: ride.destination?.lng || ride.destinationLng,
-          total_amount: ride.finalPrice || ride.total_amount || ride.estimatedPrice,
-          duration_minutes: ride.duration || ride.duration_minutes,
+          pickup_address: ride.pickup_address || ride.pickup?.address || ride.pickupAddress,
+          pickup_lat: ride.pickup_lat ?? ride.pickup?.lat ?? ride.pickupLat,
+          pickup_lng: ride.pickup_lng ?? ride.pickup?.lng ?? ride.pickupLng,
+          dropoff_address: ride.dropoff_address || ride.destination?.address || ride.destinationAddress,
+          dropoff_lat: ride.dropoff_lat ?? ride.destination?.lat ?? ride.destinationLat,
+          dropoff_lng: ride.dropoff_lng ?? ride.destination?.lng ?? ride.destinationLng,
+          total_amount: ride.total_amount ?? ride.finalPrice ?? ride.estimatedPrice,
+          duration_minutes: ride.duration_minutes ?? ride.duration,
           status: ride.status,
-          created_at: ride.createdAt || ride.created_at,
-          vehicle_category: ride.vehicleType || ride.vehicle_category,
+          created_at: ride.created_at || ride.createdAt,
+          vehicle_category: ride.vehicle_category || ride.vehicleType,
           rating: ride.rating,
-          payment_method: ride.paymentMethod || ride.payment_method
+          payment_method: ride.payment_method || ride.paymentMethod
         }));
       }
       

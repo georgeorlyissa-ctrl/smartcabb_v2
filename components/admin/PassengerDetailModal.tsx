@@ -553,8 +553,12 @@ export function PassengerDetailModal({
                       <div className="flex items-center space-x-3">
                         <Car className="w-5 h-5 text-blue-600" />
                         <div>
-                          <p className="font-medium text-sm">{ride.pickup.address}</p>
-                          <p className="text-xs text-gray-500">→ {ride.destination.address}</p>
+                          <p className="font-medium text-sm">
+                            {ride.pickup_address || ride.pickup?.address || '—'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            → {ride.dropoff_address || ride.destination?.address || '—'}
+                          </p>
                           <p className="text-xs text-gray-500 mt-1">
                             {ride.created_at ? new Date(ride.created_at).toLocaleDateString('fr-FR') : 'N/A'}
                           </p>
