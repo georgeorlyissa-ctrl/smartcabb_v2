@@ -42,6 +42,41 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-18 (13) — Checklist DSA « trader status » (échéance 1er février 2027)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : docs
+- **Objectif** : Google impose à **tous** les comptes développeur de déclarer leur statut « trader » / « non-trader » (DSA) **avant le 1er février 2027**, sous peine de blocage des mises à jour puis de retrait mondial. La déclaration n'est pas encore faite pour SmartCabb ; il fallait laisser une procédure durable dans le dépôt, avec un rappel daté, plutôt qu'une consigne orale.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `docs/DSA_TRADER_STATUS.md` | **Nouveau** : obligation, statut retenu (trader), informations à préparer, procédure compte + app, checklist et rappel au 1er janvier 2027 |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Aucun code applicatif modifié : documentation seule.
+- Statut retenu : **trader (professionnel)** — SmartCabb est une activité commerciale ; déclarer « non-trader » constituerait une fausse déclaration (risque de suspension mondiale du compte).
+- Procédure documentée : `Manage account → Account details → About you` (niveau compte) puis `App content → Trader status and Terms of Service` (niveau app), avec l'URL des CGU `https://www.smartcabb.com/terms`.
+- À partir du 1er mars 2027, les coordonnées déclarées sont publiques sur la fiche Play Store → utiliser des coordonnées professionnelles (e-mail support, téléphone support, adresse du bureau).
+
+### Impact produit / comportement visible
+- Aucun impact sur l'application, le web ou l'API.
+- La déclaration conditionne la **pérennité de la distribution** (mises à jour bloquées après le 1er février 2027 si non faite).
+
+### Risques & rollback
+- **Risque** : oubli de l'échéance → blocage des mises à jour puis retrait mondial.
+- **Rollback** : sans objet (documentation). Le statut reste modifiable dans le Play Console.
+
+### Tests / vérifications
+- [x] Procédure recoupée avec l'aide officielle Google (`support.google.com/googleplay/android-developer/answer/17594752`)
+- [x] URL des CGU vérifiée (`/terms` répond 200)
+- [ ] Faire la déclaration dans le Play Console (action propriétaire du compte)
+- [ ] Poser le rappel au 1er janvier 2027 dans l'agenda du propriétaire
+
+---
+
 ## 2026-11-18 (12) — Distribution Play Store uniquement : retrait du prompt de mise à jour APK
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
@@ -130,7 +165,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
-
+## 2026-11-17 (10) — Disponibilité passager, acceptation atomique et protection de la config SOS
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
