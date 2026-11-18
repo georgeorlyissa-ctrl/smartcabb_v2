@@ -78,8 +78,13 @@ Assez de détail pour comprendre le code sans le relire.>
 ### Tests / vérifications
 - [x] `npm run build` (Vite) OK — bundle d'entrée 291 kB → 279 kB
 - [x] `git grep ApkUpdatePrompt` : aucune référence de code restante (seule une mention historique dans ce journal)
-- [ ] Déploiement Vercel vérifié (bundle servi sans le composant)
-- [ ] Publication Play Store du build 1.6 (versionCode 9) — **action requise côté propriétaire du compte Play Console**
+- [x] Déploiement Vercel vérifié : bundle d'entrée `index-L4wI1_So.js` sans `ApkUpdatePrompt`, plus aucun appel réseau à `/app/version` ; correctif de voix toujours présent dans `notification-sound-ByHQupKt.js`
+- [x] **AAB 1.6 (versionCode 9) construit et vérifié** le 18/11/2026 :
+  - `cd android` puis `.\gradlew.bat bundleRelease` (JDK 21 + SDK Android déjà présents sur la machine)
+  - Artifact : `android/app/build/outputs/bundle/release/app-release.aab` (13,7 Mo), `package="com.smartcabb.app"`, `versionCode="9"`, `versionName="1.6"`
+  - Vérifié dans le bundle : `base/assets/capacitor.config.json` pointe bien sur `https://www.smartcabb.com/app/passenger?platform=apk` (donc tous les correctifs web s'appliquent sans rebuild) et `classes.dex` contient `com.getcapacitor.community.tts.TextToSpeechPlugin` (le plugin natif survit à R8 grâce aux règles `-keep class com.getcapacitor.community.**` de `android/app/proguard-rules.pro`)
+  - Piège rencontré : sous OneDrive, `mergeReleaseResources` échoue sur `Unable to delete directory …` → faire `.\gradlew.bat --stop` puis supprimer `android/app/build` avant de relancer
+- [ ] Téléversement Play Console + mise à jour de l'app testeur (action propriétaire du compte)
 
 ---
 
