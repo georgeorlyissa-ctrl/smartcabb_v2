@@ -31,6 +31,9 @@ pnpm-debug.log*
 *.keystore
 *.aab
 *.apk
+# Identifiants de signature (ne jamais publier : contient les mots de passe)
+android/keystore.properties
+keystore.properties
 # Configuration Firebase native (ne jamais publier : contient la cle API)
 google-services.json
 android/app/google-services.json

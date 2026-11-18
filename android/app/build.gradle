@@ -1,5 +1,19 @@
 apply plugin: 'com.android.application'
 
+// ─── Identifiants de signature ───────────────────────────────────────────────
+// Les mots de passe ne sont plus écrits en clair ici (fichier versionné) : ils
+// sont lus depuis `android/keystore.properties`, ignoré par git. Sur une autre
+// machine / en CI, recréer ce fichier avec les mêmes valeurs.
+// ⚠️ Ne jamais changer ces valeurs : l'APP/AAB doit rester signé avec la même
+// clé, sinon le Play Store refuse la mise à jour.
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withInputStream { keystoreProperties.load(it) }
+} else {
+    logger.warn('⚠️ android/keystore.properties absent : signature release impossible (bundleRelease échouera).')
+}
+
 android {
     namespace = "com.smartcabb.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -21,10 +35,12 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file('smartcabb-release.keystore')
-            storePassword 'smartcabb2026'
-            keyAlias 'smartcabb'
-            keyPassword 'smartcabb2026'
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties.getProperty('storeFile', 'smartcabb-release.keystore'))
+                storePassword keystoreProperties.getProperty('storePassword')
+                keyAlias keystoreProperties.getProperty('keyAlias')
+                keyPassword keystoreProperties.getProperty('keyPassword')
+            }
         }
     }
     buildTypes {

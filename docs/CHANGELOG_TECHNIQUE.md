@@ -42,9 +42,47 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
-## 2026-11-18 (13) — Checklist DSA « trader status » (échéance 1er février 2027)
+## 2026-11-18 (14) — Signature release : mots de passe du keystore sortis du dépôt
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security / chore
+- **Objectif** : les mots de passe du keystore de signature (`storePassword`, `keyPassword`) étaient écrits **en clair** dans `android/app/build.gradle`, un fichier versionné sur GitHub. Les déplacer dans un fichier local ignoré par git, sans changer la clé ni les mots de passe (sinon le Play Store refuserait les futures mises à jour).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `android/app/build.gradle` | Lecture des identifiants depuis `android/keystore.properties` (classe `Properties`) + avertissement explicite si le fichier est absent ; plus aucun mot de passe en clair |
+| `.gitignore` | Ajout de `android/keystore.properties` et `keystore.properties` |
+| `android/keystore.properties` | **Fichier local, non versionné** (créé sur la machine) : `storeFile`, `storePassword`, `keyAlias`, `keyPassword` |
+
+### Description technique
+- Le bloc `signingConfigs.release` est désormais conditionnel : il n'est renseigné que si `android/keystore.properties` existe. Sinon, Gradle affiche `⚠️ android/keystore.properties absent : signature release impossible` et `bundleRelease` échoue explicitement (au lieu de produire un bundle non signé).
+- **Aucune rotation de clé** : même keystore (`android/app/smartcabb-release.keystore`), même alias (`smartcabb`), mêmes mots de passe. Le certificat et donc la continuité des mises à jour Play Store sont préservés.
+- Le keystore lui-même n'est **pas** versionné (`*.keystore` dans `.gitignore`) : il n'existe que sur la machine de build (+ OneDrive). Il doit être sauvegardé hors dépôt.
+- ⚠️ Le mot de passe reste présent dans **l'historique git** des commits précédents. Le sortir du fichier courant empêche les futures fuites mais ne « nettoie » pas le passé ; une vraie rotation imposerait une nouvelle clé d'upload (réinitialisation via le support Google Play, l'app signing key restant chez Google).
+
+### Impact produit / comportement visible
+- Aucun impact sur l'app, le web ou l'API : le binaire produit est identique (même versionCode 9 / versionName 1.6, même certificat).
+- **Sur une autre machine / un CI**, il faut recréer `android/keystore.properties` avant de builder, sinon `bundleRelease` échoue avec un message clair.
+
+### Risques & rollback
+- **Risque** : oubli du fichier `keystore.properties` sur une nouvelle machine → build release impossible (erreur explicite, pas de bundle non signé).
+- **Risque** : perte du keystore local (non versionné) → impossible de signer de nouvelles versions sans réinitialiser la clé d'upload auprès de Google.
+- **Rollback** : `git revert <hash>` (les mots de passe reviennent dans `build.gradle`). À éviter.
+
+### Tests / vérifications
+- [x] `.\gradlew.bat bundleRelease` OK (tâche `:app:signReleaseBundle` réellement réexécutée après suppression de `intermediary_bundle`)
+- [x] `jarsigner -verify -verbose -certs app-release.aab` → **« jar verified »**, certificat `CN=SmartCabb, O=SmartCabb, L=Kinshasa, C=CD`
+- [x] AAB identique en taille (13 668 720 octets), `versionCode 9` / `versionName 1.6` inchangés → la version déjà téléversée sur le Play Store reste valable
+- [x] `git check-ignore -v android/keystore.properties` → ignoré ; `git status` ne montre que `build.gradle` et `.gitignore`
+- [x] `git grep smartcabb2026` : plus aucune occurrence de mot de passe versionnée (seuls des noms d'images `photo_conducteur_smartcabb2026.jpeg`)
+
+---
+
+## 2026-11-18 (13) — Checklist DSA « trader status » (échéance 1er février 2027)
+
+- **Commit** : `73b3db7` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : docs
 - **Objectif** : Google impose à **tous** les comptes développeur de déclarer leur statut « trader » / « non-trader » (DSA) **avant le 1er février 2027**, sous peine de blocage des mises à jour puis de retrait mondial. La déclaration n'est pas encore faite pour SmartCabb ; il fallait laisser une procédure durable dans le dépôt, avec un rappel daté, plutôt qu'une consigne orale.
