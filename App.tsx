@@ -6,7 +6,6 @@ import { DeferredLoading } from './components/DeferredLoading';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PWAInstallPrompt, OnlineStatusIndicator } from './components/PWAInstallPrompt';
 import { ExchangeRateSync } from './components/ExchangeRateSync';
-import { ApkUpdatePrompt } from './components/ApkUpdatePrompt';
 import { PageTransition } from './components/PageTransition';
 import { SeoHead } from './components/SeoHead';
 import { AppProvider } from './hooks/useAppState';
@@ -430,7 +429,6 @@ function App() {
               />
               <ExchangeRateSync />
               <MaintenanceBanner />
-              <ApkUpdatePrompt />
               <PageTransition />
 
               <Suspense fallback={<SuspenseFallback />}>

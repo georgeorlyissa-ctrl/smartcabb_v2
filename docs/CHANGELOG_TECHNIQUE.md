@@ -42,6 +42,47 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-18 (12) — Distribution Play Store uniquement : retrait du prompt de mise à jour APK
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : chore / refactor
+- **Objectif** : la distribution de l'app Android passe **uniquement** par le Play Store (compte testeur) et le web `smartcabb.com`. La popup « nouvelle version de l'APK à télécharger » (héritée de la distribution par fichier `.apk`) n'a plus de sens et pouvait proposer un APK obsolète (le backend renvoie encore `1.1` / versionCode 4, août 2026).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `App.tsx` | Suppression de l'import et du rendu `<ApkUpdatePrompt />` |
+| `components/ApkUpdatePrompt.tsx` | **Fichier supprimé** (composant de mise à jour par téléchargement d'APK) |
+
+### Description technique
+- Le composant interrogeait `GET /app/version` puis comparait `version` avec `App.getInfo().version` : si la version distante était supérieure, il affichait une popup avec un lien `window.open(apkUrl, '_system')` vers un APK stocké sur Supabase Storage.
+- Il ne s'activait que dans l'app native (`Capacitor.isNativePlatform()`), donc le web n'était pas concerné.
+- **Rien d'autre n'utilisait ce composant** (vérifié par recherche globale). La route backend `GET /app/version` (`supabase/functions/make-server-2eb02e52/app-version-routes.ts`) est **conservée** : elle devient inutilisée côté app mais reste disponible (aucune Edge Function à redéployer, aucun risque de régression). Le diagnostic de token push (`lib/native-push.ts`, `App.getInfo()`) est indépendant et inchangé.
+- Les mises à jour de l'app Android sont désormais gérées par le **Play Store** (mise à jour automatique par défaut). Les correctifs web (voix, matching, SOS…) continuent d'arriver sans upload, puisque l'app charge `https://www.smartcabb.com/app/passenger?platform=apk` (`server.url` dans `capacitor.config.ts`).
+
+### Impact produit / comportement visible
+- Plus de popup « Télécharger la nouvelle version » dans l'app Android.
+- Le web et l'app partagent exactement le même code ; aucune fonctionnalité perdue.
+- ⚠️ **Version Play Store** : si l'app installée affiche **1.5 (versionCode 8)**, elle ne contient pas le plugin natif `@capacitor-community/text-to-speech` → **aucune voix possible sur Android**. Il faut publier le build **1.6 (versionCode 9)** déjà configuré dans `android/app/build.gradle` :
+  1. `npx cap sync android`
+  2. `cd android` puis `.\gradlew.bat bundleRelease`
+  3. Play Console → Test interne / Production → téléverser `android/app/build/outputs/bundle/release/app-release.aab` (signé avec `android/app/smartcabb-release.keystore`, alias `smartcabb`)
+  4. Si Play Console refuse « versionCode 9 déjà utilisé », passer à `versionCode 10` / `versionName "1.6.1"` et reconstruire.
+
+### Risques & rollback
+- **Risque** : plus aucun mécanisme de mise à jour forcée côté app. Sans mise à jour Play Store, un appareil peut rester sur une ancienne version native (mais récupère quand même tous les correctifs web).
+- **Risque faible** : un utilisateur encore sur un APK installé hors Play Store ne sera plus invité à mettre à jour. À traiter par communication directe.
+- **Rollback** : `git revert <hash>` (le composant et son import sont restaurés) + redéploiement Vercel. Aucun changement backend, aucun secret touché.
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK — bundle d'entrée 291 kB → 279 kB
+- [x] `git grep ApkUpdatePrompt` : aucune référence de code restante (seule une mention historique dans ce journal)
+- [ ] Déploiement Vercel vérifié (bundle servi sans le composant)
+- [ ] Publication Play Store du build 1.6 (versionCode 9) — **action requise côté propriétaire du compte Play Console**
+
+---
+
 ## 2026-11-18 (11) — Annonce vocale des courses audible sur téléphone (iOS / Android)
 
 - **Commit** : `5a2c3e1` + _(ce commit)_ (branche `main`, poussée sur `origin`)
