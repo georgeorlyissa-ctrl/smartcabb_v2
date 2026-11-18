@@ -468,10 +468,17 @@ async function speakMessage(
         console.log('✅ TTS natif terminé');
         return;
       }
+      // Plugin absent (APK < 1.6), moteur TTS non installé ou pause après
+      // erreurs : la `speechSynthesis` de la WebView ne parle jamais et
+      // n'émettrait aucun `onstart`. Inutile d'attendre 14 s (la sonnerie
+      // resterait coupée) : on rend la main tout de suite.
+      console.warn('⚠️ TTS natif indisponible — sonnerie conservée');
+      return;
     } catch (e) {
       // `nativeSpeak` ne rejette pas, mais on ne veut JAMAIS qu'une erreur de
       // voix fasse remonter une promesse non gérée jusqu'à l'overlay d'erreur.
       console.warn('⚠️ TTS natif indisponible:', e);
+      return;
     }
   }
 

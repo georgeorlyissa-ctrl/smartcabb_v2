@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-18 (11) — Annonce vocale des courses audible sur téléphone (iOS / Android)
 
-- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Commit** : `5a2c3e1` + _(ce commit)_ (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix
 - **Objectif** : sur ordinateur l'annonce vocale d'une nouvelle course est parfaitement audible, mais sur téléphone (Safari iOS, Chrome Android, APK) le chauffeur n'entend qu'un bip/sonnerie — **aucune voix**. Le chauffeur doit entendre « Bonjour, vous avez une nouvelle course SmartCabb… » sur son téléphone.
@@ -63,6 +63,7 @@ Assez de détail pour comprendre le code sans le relire.>
 - **Latence mobile** : `speakMessage()` ne fait plus `await loadVoices()` (jusqu'à 2,5 s) ; il utilise la voix déjà mise en cache par `preloadVoices()` et sinon se contente de `utt.lang = 'fr-FR'` (le moteur choisit la voix française). L'annonce démarre donc sans délai, même si la liste des voix n'est pas encore chargée.
 - **Sonnerie vs voix (mobile)** : dans `playRideNotification()`, sur mobile (`IS_IOS || IS_ANDROID || isNativeApp()`), la sonnerie joue ~0,8 s puis est **mise en pause** le temps de l'annonce, puis reprise (si la course est toujours affichée). Sur ordinateur le comportement (voix + sonnerie en parallèle) est inchangé, puisque c'est ce qui fonctionne.
 - **TTS natif (APK)** : `_nativeBroken` n'est plus posé après une erreur — remplacé par un compteur (`2` échecs consécutifs → pause de 60 s) ; un succès remet tout à zéro. Si la langue mémorisée (`_preferredLang`) échoue, on réessaie `fr-FR`, `fr`, puis la langue par défaut au lieu de rester bloqué. Ajout d'un `stop()` + 60 ms avant `speak()` (certains moteurs ignorent un `speak()` collé au `stop()`).
+- **APK ancien (plugin TTS absent)** : si le TTS natif n'est pas disponible, on **s'arrête immédiatement** au lieu de tenter la `speechSynthesis` de la WebView (qui ne parle jamais et n'émet aucun `onstart`) : plus d'attente de 14 s pendant laquelle la sonnerie restait coupée.
 
 ### Impact produit / comportement visible
 - Le chauffeur entend la voix annonçant la course sur **iPhone et Android**, y compris dans l'APK ≥ 1.6 (moteur TTS natif), et plus seulement la sonnerie.
