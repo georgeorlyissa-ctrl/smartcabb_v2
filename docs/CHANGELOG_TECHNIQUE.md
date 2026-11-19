@@ -42,6 +42,42 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (29) — Réservations : reste à payer, gains sur le total, pénalité journalière, bascule passager
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat / fix
+- **Objectif** : (1) la course issue d'une réservation doit afficher **seulement la deuxième tranche** (l'acompte de 50 % est déjà réglé) ; (2) le conducteur doit être payé sur le **prix total**, pas sur le reste ; (3) **pénalité de 10 $/heure** au-delà de 21h pour une réservation **journalière** ; (4) le passager doit **basculer automatiquement** sur sa course quand la réservation démarre.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Course créée depuis une réservation : `estimatedPrice` = **total − acompte**, + `scheduledTotalPrice`, `scheduledDepositPaid`, `depositMethod` (3 constructions) ; `/complete` : **pénalité journalière** après 21h et **gains conducteur sur le total** ; `actualCost` mutable |
+| `pages/PassengerApp.tsx` | Sur `reservation_driver_enroute` / `reservation_started` / `scheduled_ride_processing` : chargement de la course, `setCurrentRide` + ouverture « course en cours » |
+
+### Description technique
+- **Deuxième tranche** : quand une réservation devient une course, le prix affiché/facturé vaut `estimated_price − 50 %` si l'acompte est reçu (`scheduledTotalPrice` conserve le total, `scheduledDepositPaid` l'acompte). Le paiement de la tranche restante se fait normalement à la clôture (portefeuille, espèces ou Mobile Money).
+- **Gains conducteur** : `/complete` calcule désormais la commission et les gains sur `scheduledTotalPrice + pénalité` (et non sur le seul reste), sinon l'acompte n'aurait jamais été crédité au chauffeur. Les courses normales sont inchangées (`actualCost`).
+- **Pénalité journalière** : si la course est journalière (`serviceType = location_jour` ou catégorie Business) et que la **clôture** a lieu après **21:00 heure de Kinshasa**, ajout de `10 USD × heures entamées`, converti au taux de la config (`exchangeRate`). Traçabilité : `penaltyApplied`, `penaltyHours`, `penaltyCDF` sur la course ; le `finalPrice` inclut la pénalité.
+- **Bascule passager** : à la réception du push de démarrage, l'app interroge `/rides/:id`, reconstruit `pickup`/`destination`, définit la course courante et ouvre l'écran « course en cours » (ou « recherche » si la course n'est pas encore attribuée).
+
+### Impact produit / comportement visible
+- Une réservation à 10 000 CDF avec 5 000 d'acompte affiche **5 000 CDF** : le passager ne paie que la deuxième tranche.
+- Le chauffeur perçoit sa part sur le **prix total** (acompte compris).
+- Une location journalière qui dépasse 21h est facturée **10 $/heure entamée** en plus, avec le détail sur la course.
+- Le passager voit sa course s'ouvrir automatiquement quand la réservation démarre.
+
+### Risques & rollback
+- **Risque** : la pénalité est calculée **à la clôture** côté serveur ; l'écran de paiement peut afficher le reste sans la pénalité avant rafraîchissement (le montant final enregistré la contient).
+- **Rollback** : `git revert` ; les champs ajoutés sont optionnels.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [x] Edge Function redéployée
+- [ ] À confirmer : réservation avec acompte → course affichée au reste ; clôture après 21h → pénalité ; push de démarrage → bascule passager
+
+---
+
 ## 2026-11-19 (28) — Réservations : heure locale (UTC+1) respectée + fenêtre d'échéance sûre
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

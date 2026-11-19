@@ -2408,7 +2408,7 @@ app.post("/complete", async (c) => {
     const body = await c.req.json();
     const { rideId, endLocation } = body;
     // ✅ FIX : accepter actualCost OU totalCost OU finalPrice (multi-sources frontend)
-    const actualCost: number | undefined =
+    let actualCost: number | undefined =
       body.actualCost ?? body.totalCost ?? body.finalPrice ?? undefined;
 
     if (!rideId || typeof rideId !== 'string') {
@@ -2440,16 +2440,52 @@ app.post("/complete", async (c) => {
     const alreadyCompleted = ride.status === 'completed' || ride.status === 'rated';
     const effectiveDriverId = ride.driverId || body.driverId || null;
 
+    // ⏱️ Pénalité « location journalière » après 21h (heure de Kinshasa) :
+    // 10 $ par heure entamée. Concerne les courses journalières (Business /
+    // location_jour) ; la pénalité est ajoutée au montant réglé à la clôture.
+    let penaltyCDF = 0;
+    const isDailyRide =
+      ride.serviceType === 'location_jour' ||
+      ride.vehicleCategory === 'smart_business' ||
+      ride.vehicleType === 'smart_business' ||
+      ride.vehicle_category === 'smart_business';
+    if (isDailyRide && !ride.penaltyApplied) {
+      const offsetMin = parseInt(Deno.env.get('BUSINESS_UTC_OFFSET_MINUTES') || '60');
+      const local = new Date(Date.now() + offsetMin * 60000);
+      const localHours = local.getUTCHours() + local.getUTCMinutes() / 60;
+      if (localHours > 21) {
+        const overHours = Math.ceil(localHours - 21);
+        let rate = 2250;
+        try {
+          const cfg = await kvGet('smartcabb_global_config');
+          const r = Number(cfg?.exchangeRate);
+          if (Number.isFinite(r) && r > 0) rate = r;
+        } catch { /* taux par défaut */ }
+        penaltyCDF = Math.round(10 * overHours * rate);
+        ride.penaltyApplied = true;
+        ride.penaltyHours = overHours;
+        ride.penaltyCDF = penaltyCDF;
+        actualCost = (actualCost || 0) + penaltyCDF;
+        console.log(`⏱️ [RIDE-COMPLETE] Pénalité journalière ${overHours}h après 21h : ${penaltyCDF} CDF`);
+      }
+    }
+
     if (effectiveDriverId && actualCost && !alreadyCompleted) {
       const driver = await kv.get<any>(`driver:${effectiveDriverId}`);
       if (driver) {
         // ✅ Commission depuis la config admin (taux + activé + minimum)
         const cs = await getCommissionSettings();
+        // 💰 Base des gains conducteur = prix TOTAL de la course (acompte inclus)
+        // + pénalité. Sinon, avec une réservation, il n'aurait touché que 85 %
+        // du « reste à payer » et l'acompte ne lui aurait jamais été crédité.
+        const baseForDriver = Number(ride.scheduledTotalPrice) > 0
+          ? Number(ride.scheduledTotalPrice) + (Number(ride.penaltyCDF) || 0)
+          : (actualCost || 0);
         let commission = 0;
         if (cs.enabled) {
-          commission = Math.max(Math.round(actualCost * cs.rate / 100), cs.minimum);
+          commission = Math.max(Math.round(baseForDriver * cs.rate / 100), cs.minimum);
         }
-        const driverEarnings  = actualCost - commission;
+        const driverEarnings  = baseForDriver - commission;
 
         // 🛡️ ANTI-FRAUDE : déduire la provision déjà prélevée à l'acceptation.
         // Si la course a coûté moins que prévu, le trop-perçu est restitué.
@@ -2590,11 +2626,17 @@ app.post("/:id/complete", async (c) => {
       if (driver) {
         // ✅ Commission depuis la config admin (taux + activé + minimum)
         const cs = await getCommissionSettings();
+        // 💰 Base des gains conducteur = prix TOTAL de la course (acompte inclus)
+        // + pénalité. Sinon, avec une réservation, il n'aurait touché que 85 %
+        // du « reste à payer » et l'acompte ne lui aurait jamais été crédité.
+        const baseForDriver = Number(ride.scheduledTotalPrice) > 0
+          ? Number(ride.scheduledTotalPrice) + (Number(ride.penaltyCDF) || 0)
+          : (actualCost || 0);
         let commission = 0;
         if (cs.enabled) {
-          commission = Math.max(Math.round(actualCost * cs.rate / 100), cs.minimum);
+          commission = Math.max(Math.round(baseForDriver * cs.rate / 100), cs.minimum);
         }
-        const driverEarnings  = actualCost - commission;
+        const driverEarnings  = baseForDriver - commission;
 
         const newBalance = (driver.balance || 0) - commission;
 
@@ -3046,7 +3088,19 @@ app.post("/process-scheduled", async (c) => {
             pickup: { name: sr.pickup_address, address: sr.pickup_address, coordinates: { lat: sr.pickup_lat, lng: sr.pickup_lng } },
             destination: { name: sr.dropoff_address, address: sr.dropoff_address, coordinates: { lat: sr.dropoff_lat, lng: sr.dropoff_lng } },
             vehicleCategory: sr.category,
-            estimatedPrice: sr.estimated_price,
+            // 💰 L'acompte (50 %) a déjà été réglé à la réservation : la course
+            // n'affiche et ne facture QUE le reste à payer. Le total reste
+            // stocké pour le calcul des gains du conducteur.
+            estimatedPrice: Math.max(
+              0,
+              (Number(sr.estimated_price) || 0) -
+                (sr.deposit_received ? Math.round((Number(sr.estimated_price) || 0) * 0.5) : 0),
+            ),
+            scheduledTotalPrice: Number(sr.estimated_price) || 0,
+            scheduledDepositPaid: sr.deposit_received
+              ? Math.round((Number(sr.estimated_price) || 0) * 0.5)
+              : 0,
+            depositMethod: sr.deposit_method || null,
             distance: 0,
             duration: 0,
             pickupAddress: sr.pickup_address,
@@ -3114,7 +3168,19 @@ app.post("/process-scheduled", async (c) => {
             coordinates: { lat: sr.dropoff_lat, lng: sr.dropoff_lng }
           },
           vehicleCategory: sr.category,
-          estimatedPrice: sr.estimated_price,
+          // 💰 L'acompte (50 %) a déjà été réglé à la réservation : la course
+            // n'affiche et ne facture QUE le reste à payer. Le total reste
+            // stocké pour le calcul des gains du conducteur.
+            estimatedPrice: Math.max(
+              0,
+              (Number(sr.estimated_price) || 0) -
+                (sr.deposit_received ? Math.round((Number(sr.estimated_price) || 0) * 0.5) : 0),
+            ),
+            scheduledTotalPrice: Number(sr.estimated_price) || 0,
+            scheduledDepositPaid: sr.deposit_received
+              ? Math.round((Number(sr.estimated_price) || 0) * 0.5)
+              : 0,
+            depositMethod: sr.deposit_method || null,
           distance: 0,
           duration: 0,
           pickupAddress: sr.pickup_address,
@@ -3814,7 +3880,19 @@ app.post("/admin-process-one", async (c) => {
       pickup: { name: sr.pickup_address, address: sr.pickup_address, coordinates: { lat: sr.pickup_lat, lng: sr.pickup_lng } },
       destination: { name: sr.dropoff_address, address: sr.dropoff_address, coordinates: { lat: sr.dropoff_lat, lng: sr.dropoff_lng } },
       vehicleCategory: sr.category,
-      estimatedPrice: sr.estimated_price,
+      // 💰 L'acompte (50 %) a déjà été réglé à la réservation : la course
+            // n'affiche et ne facture QUE le reste à payer. Le total reste
+            // stocké pour le calcul des gains du conducteur.
+            estimatedPrice: Math.max(
+              0,
+              (Number(sr.estimated_price) || 0) -
+                (sr.deposit_received ? Math.round((Number(sr.estimated_price) || 0) * 0.5) : 0),
+            ),
+            scheduledTotalPrice: Number(sr.estimated_price) || 0,
+            scheduledDepositPaid: sr.deposit_received
+              ? Math.round((Number(sr.estimated_price) || 0) * 0.5)
+              : 0,
+            depositMethod: sr.deposit_method || null,
       distance: 0,
       duration: 0,
       pickupAddress: sr.pickup_address,

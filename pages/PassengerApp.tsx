@@ -43,9 +43,11 @@ import { ScheduledRides } from '../components/passenger/ScheduledRides';
 import { AppNotificationsScreen } from '../components/AppNotificationsScreen';
 import { usePassengerArrivalAlerts } from '../hooks/usePassengerArrivalAlerts';
 import { preloadVoices, unlockMobileAudio } from '../lib/notification-sound';
+import { projectId, publicAnonKey } from '../utils/supabase/info';
+import { toast } from '../lib/toast';
 
 function PassengerAppContent() {
-  const { state, setCurrentScreen, setCurrentView } = useAppState();
+  const { state, setCurrentScreen, setCurrentView, setCurrentRide } = useAppState();
   const { currentScreen, currentUser: user } = state;
   const navigate = useNavigate();
   const location = useLocation();
@@ -382,6 +384,42 @@ function PassengerAppContent() {
 
     console.log('🔥 Initialisation FCM pour passager:', state.currentUser.id);
 
+    // 🚖 Réservation arrivée à l'heure : la course est déjà attribuée par le
+    // serveur. On l'adopte et on ouvre l'écran de course, comme pour une
+    // commande normale (sinon le passager restait sur son écran d'accueil).
+    const openScheduledRide = async (rideId: string) => {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/${rideId}`,
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } },
+        );
+        const json = await res.json();
+        const ride = json?.ride;
+        if (!ride) return;
+
+        const num = (value: any, fallback: number) => {
+          const n = Number(value);
+          return Number.isFinite(n) ? n : fallback;
+        };
+        const pickup = {
+          lat: num(ride.pickup?.coordinates?.lat ?? ride.pickup?.lat ?? ride.pickupLat, -4.3276),
+          lng: num(ride.pickup?.coordinates?.lng ?? ride.pickup?.lng ?? ride.pickupLng, 15.3136),
+          address: ride.pickupAddress || ride.pickup?.address || ride.pickup?.name || 'Point de départ',
+        };
+        const destination = {
+          lat: num(ride.destination?.coordinates?.lat ?? ride.destination?.lat ?? ride.destinationLat, -4.3276),
+          lng: num(ride.destination?.coordinates?.lng ?? ride.destination?.lng ?? ride.destinationLng, 15.3136),
+          address: ride.destinationAddress || ride.destination?.address || ride.destination?.name || 'Destination',
+        };
+
+        setCurrentRide({ ...ride, pickup, destination } as any);
+        setCurrentScreen(ride.status === 'searching' ? 'ride' : 'ride-in-progress');
+        toast.success('🚖 Votre course réservée a démarré');
+      } catch (e) {
+        console.warn('⚠️ Ouverture de la course réservée impossible:', e);
+      }
+    };
+
     setupFCMForUser(state.currentUser.id, 'passenger', (payload) => {
       console.log('🔔 Notification passager reçue:', payload);
       
@@ -404,6 +442,14 @@ function PassengerAppContent() {
         case 'ride_cancelled':
           console.log('❌ Course annulée', { title, body, reason: data.reason });
           break;
+        // 🚖 Réservation : le chauffeur est en route / la course démarre.
+        case 'reservation_driver_enroute':
+        case 'reservation_started':
+        case 'scheduled_ride_processing': {
+          console.log('🚖 Réservation démarrée côté passager:', data.rideId);
+          if (data.rideId) void openScheduledRide(String(data.rideId));
+          break;
+        }
         default:
           console.log('🔔 Notification générique:', { title, body, data });
       }
