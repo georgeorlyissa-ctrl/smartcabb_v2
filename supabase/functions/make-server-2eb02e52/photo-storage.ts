@@ -121,9 +121,79 @@ export async function storePhotoDataUrl(
     return null;
   }
 
+  // Bucket privé : on renvoie une URL signée (lisible par <img> sans en-tête).
+  const signed = await signPhotoPath(path);
+  if (signed) return signed;
+  // Repli (bucket public) : URL publique simple.
   const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
-  if (!publicUrl) return null;
-  return `${publicUrl}?v=${Date.now()}`;
+  return publicUrl ? `${publicUrl}?v=${Date.now()}` : null;
+}
+
+/** Un an : les URLs sont de toute façon re-signées à chaque lecture d'une fiche. */
+const SIGNED_URL_TTL_SEC = 365 * 24 * 60 * 60;
+
+/**
+ * URL **signée** (bucket privé) pour un objet déjà téléversé.
+ * `<img src>` ne peut pas envoyer l'en-tête `Authorization` : la signature est
+ * donc le seul moyen de servir une image privée à l'application.
+ */
+export async function signPhotoPath(
+  path: string,
+  expiresIn: number = SIGNED_URL_TTL_SEC,
+): Promise<string | null> {
+  if (!path) return null;
+  const { data, error } = await kvClient().storage.from(BUCKET).createSignedUrl(path, expiresIn);
+  if (error || !data?.signedUrl) {
+    if (error) console.warn(`⚠️ [PHOTOS] Signature ${path}: ${error.message}`);
+    return null;
+  }
+  return data.signedUrl;
+}
+
+/** Bascule le bucket en privé (les objets restent, seules les URLs publiques cessent de marcher). */
+export async function setBucketPrivate(): Promise<{ ok: boolean; error?: string }> {
+  const { error } = await kvClient().storage.updateBucket(BUCKET, { public: false });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+/**
+ * Re-signe les `photo_url` de toutes les fiches ayant un `photo_storage_path`.
+ * À lancer après le passage du bucket en privé (et périodiquement si besoin :
+ * les lectures d'API re-signent de toute façon à la volée).
+ */
+export async function refreshPhotoUrls(): Promise<{ updated: number; failed: string[] }> {
+  const supabase = kvClient();
+  const result = { updated: 0, failed: [] as string[] };
+
+  for (const prefix of ["driver:", "profile:", "passenger:"]) {
+    const { data, error } = await supabase
+      .from(KV_TABLE).select("key, value").like("key", prefix + "%");
+    if (error) {
+      result.failed.push(`${prefix}: ${error.message}`);
+      continue;
+    }
+    for (const row of data || []) {
+      const record: any = row.value;
+      const path = record?.photo_storage_path;
+      if (!record || !path) continue;
+      const signed = await signPhotoPath(path);
+      if (!signed) {
+        result.failed.push(`${record.id || row.key}: signature impossible`);
+        continue;
+      }
+      const { error: writeError } = await supabase
+        .from(KV_TABLE).upsert({ key: row.key, value: { ...record, photo_url: signed } });
+      if (writeError) {
+        result.failed.push(`${record.id || row.key}: écriture — ${writeError.message}`);
+        continue;
+      }
+      result.updated += 1;
+    }
+  }
+
+  console.log(`🖼️ [PHOTOS] ${result.updated} URL(s) signée(s), ${result.failed.length} échec(s)`);
+  return result;
 }
 
 export interface PhotoMigrationReport {

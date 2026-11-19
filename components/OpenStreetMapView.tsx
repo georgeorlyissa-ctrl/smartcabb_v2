@@ -35,6 +35,11 @@ interface OpenStreetMapViewProps {
   vehicle?: Location;
   /** Conducteurs connectés → voiture + prénom. */
   drivers?: MapDriverMarker[];
+  /**
+   * Itinéraires à tracer (`path` = suite de [lat, lng]).
+   * L'itinéraire `active: true` est en bleu épais, les autres en gris.
+   */
+  routes?: Array<{ id: string; path: [number, number][]; active?: boolean }>;
   /** Position de l'utilisateur de l'appareil (carte d'accueil). */
   userMarker?: Location;
   /** Rôle de l'utilisateur : bonhomme (passager) ou voiture (conducteur). */
@@ -75,6 +80,7 @@ export function OpenStreetMapView({
   destination,
   vehicle,
   drivers = [],
+  routes = [],
   userMarker,
   userRole = 'passenger',
   zoom = 14,
@@ -86,6 +92,8 @@ export function OpenStreetMapView({
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, { marker: any; iconKey: string }>>(new Map());
   const fitSignatureRef = useRef<string>('');
+  const routesLayerRef = useRef<any>(null);
+  const routeFitRef = useRef<string>('');
   const [loadError, setLoadError] = useState(false);
 
   // Init carte UNE SEULE FOIS — jamais recréée sur changement de centre/zoom.
@@ -135,6 +143,8 @@ export function OpenStreetMapView({
       mapRef.current = null;
       markersRef.current.clear();
       fitSignatureRef.current = '';
+      routesLayerRef.current = null;
+      routeFitRef.current = '';
       if (map) {
         // Stopper toute animation (zoom/pan) AVANT de démonter :
         // un _onZoomTransitionEnd en vol après remove() = crash _leaflet_pos.
@@ -290,6 +300,71 @@ export function OpenStreetMapView({
     vehicle?.lat, vehicle?.lng, userMarker?.lat, userMarker?.lng, userRole,
     center?.lat, center?.lng, loadError,
   ]);
+
+  // ─── Itinéraires : tracé + alternatives (style Uber/Yango) ──────────
+  useEffect(() => {
+    const map = mapRef.current;
+    const Leaflet: any = (L as any);
+    if (!map || !Leaflet || loadError) return;
+    try {
+      if (!document.contains(map.getContainer())) return;
+    } catch { return; }
+
+    if (!routesLayerRef.current) {
+      routesLayerRef.current = Leaflet.layerGroup().addTo(map);
+    }
+    const layer = routesLayerRef.current;
+    try { layer.clearLayers(); } catch { /* ignore */ }
+
+    const validRoutes = (routes || []).filter(
+      (r) => Array.isArray(r?.path) && r.path.length > 1,
+    );
+    // Alternatives d'abord, itinéraire actif dessiné par-dessus.
+    const ordered = [...validRoutes].sort(
+      (a, b) => Number(!!a.active) - Number(!!b.active),
+    );
+
+    for (const route of ordered) {
+      try {
+        // Liseré blanc : lisibilité sur un fond de carte chargé.
+        Leaflet.polyline(route.path, {
+          color: '#FFFFFF',
+          weight: route.active ? 10 : 8,
+          opacity: 0.9,
+          interactive: false,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(layer);
+
+        Leaflet.polyline(route.path, {
+          color: route.active ? '#0098FF' : '#94A3B8',
+          weight: route.active ? 6 : 4,
+          opacity: route.active ? 1 : 0.85,
+          interactive: false,
+          lineCap: 'round',
+          lineJoin: 'round',
+          ...(route.active ? {} : { dashArray: '1 8' }),
+        }).addTo(layer);
+      } catch (e) {
+        console.warn('⚠️ [OSM] Tracé d’itinéraire impossible', e);
+      }
+    }
+
+    const active = validRoutes.find((r) => r.active) || validRoutes[0];
+    if (active) {
+      const signature = `${active.id}:${active.path.length}:${active.path[0]?.join(',')}`;
+      if (signature !== routeFitRef.current) {
+        routeFitRef.current = signature;
+        try {
+          map.fitBounds(Leaflet.latLngBounds(active.path).pad(0.12), {
+            animate: false,
+            maxZoom: 17,
+          });
+        } catch { /* ignore */ }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(routes), loadError]);
 
   if (loadError) {
     return (

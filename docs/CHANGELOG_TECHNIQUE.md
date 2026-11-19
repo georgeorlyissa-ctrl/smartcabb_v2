@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (24) — Carte « course en cours » (itinéraire + alternatives), Storage privé
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat / security
+- **Objectif** : (1) l'écran passager « Course en cours » affichait une **zone noire** au lieu d'une carte (Google Maps inactif) ; (2) afficher la course **en temps réel**, **tracer l'itinéraire** et proposer des **itinéraires alternatifs** (comme Uber/Yango) ; (3) passer le bucket des photos en **privé** (URLs signées).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/RideInProgressScreen.tsx` | `provider="osm"` (carte intérimaire), itinéraire temps réel + **sélecteur d'itinéraires** (recommandé / alternatives) |
+| `hooks/useRoutePlan.ts` | **Nouveau** : OSRM `alternatives=true`, 3 itinéraires max, recalcul débouncé (600 ms) et seulement si le départ bouge de 150 m |
+| `components/OpenStreetMapView.tsx` | Prop `routes` : tracé des itinéraires (liseré blanc + bleu pour l'actif, gris pointillé pour les alternatives) + cadrage sur l'itinéraire actif |
+| `components/MapView.tsx` | Prop `provider` (`auto`/`osm`/`google`) ; `routes` transmises à OSM ; centre figé si `disableAutoCenter` ; **bascule OSM automatique si Google ne rend rien après 7 s** |
+| `supabase/functions/make-server-2eb02e52/photo-storage.ts` | `signPhotoPath()`, `setBucketPrivate()`, `refreshPhotoUrls()` ; `storePhotoDataUrl()` renvoie une URL **signée** |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | `POST /drivers/migrate-photos` : modes `migrate` / `rewrite-urls` / `private` |
+
+### Description technique
+**1. Carte intérimaire + itinéraire.** `MapView` accepte `provider="osm"` : l'écran de course affiche directement OpenStreetMap (aucune clé, aucun billing), avec la position du conducteur rafraîchie toutes les 3 s (`GET /rides/:id` → `driverLocation`). `OpenStreetMapView` accepte désormais `routes: [{ id, path, active }]` et dessine un liseré blanc + une ligne bleue (actif) ou grise pointillée (alternatives), puis cadre sur l'itinéraire actif.
+**2. Alternatives (Uber/Yango).** `useRoutePlan` interroge OSRM (`router.project-osrm.org`, sans clé) avec `alternatives=true&geometries=geojson&overview=full` → jusqu'à 3 itinéraires (durée + distance). Recalcul **débouncé** (600 ms) et seulement si la destination change ou si le conducteur a bougé de **150 m** (pas d'appel à chaque tick GPS). Pendant l'approche : itinéraire vers le point de prise en charge ; une fois la facturation commencée : itinéraire vers la destination. Des **pastilles** (« Recommandé », « Alternative 1/2 ») avec durée et distance permettent de changer d'itinéraire, comme chez Uber.
+**3. Filet anti-carte noire.** Si Google Maps n'a pas produit son conteneur (`.gm-style`) au bout de 7 s, `MapView` bascule automatiquement sur OpenStreetMap — quel que soit l'écran, y compris sur iPhone où l'échec ne lève aucune erreur JS.
+**4. Storage privé.** Le bucket `avatars` est passé en **privé**. Les `photo_url` de **37 fiches** ont été réécrites en **URLs signées** (validité 1 an, re-signées à chaque nouvelle photo). Vérifié : URL signée → **200** (`image/jpeg`), ancienne URL publique sans jeton → **400**. Les nouvelles photos (inscription, mise à jour du profil) sont téléversées puis signées directement.
+
+### Impact produit / comportement visible
+- L'écran « Course en cours » affiche une **vraie carte**, le **tracé de l'itinéraire** en bleu, et la **position du conducteur en direct**.
+- Le passager peut choisir entre l'itinéraire recommandé et des alternatives (durée/distance affichées).
+- Les photos ne sont plus accessibles sans URL signée ; les avatars continuent de s'afficher normalement.
+
+### Risques & rollback
+- **Risque** : OSRM public (débit limité) ; les itinéraires déjà calculés sont conservés en cas d'échec, et le recalcul est espacé.
+- **Risque** : les URLs signées expirent au bout d'un an ; elles sont re-signées lors d'un changement de photo (et peuvent l'être en masse via `mode=rewrite-urls`).
+- **Rollback** : `provider="auto"` pour revenir à Google en priorité ; `setBucketPrivate` peut être annulé (`updateBucket public: true`) et `rewrite-urls` rejoué.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [x] Storage : 37 URLs signées, bucket privé, image **200**, URL publique **400**
+- [x] Route de maintenance refermée (**403**) après retrait du jeton
+- [x] Fiche conducteur : **4,2 Ko**, `photo_url` en `object/sign`
+- [ ] À confirmer visuellement sur téléphone : carte OSM, tracé et sélecteur d'itinéraires
+
+---
+
 ## 2026-11-19 (23) — Photos de profil : base64 → Supabase Storage (budget d'E/S disque)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

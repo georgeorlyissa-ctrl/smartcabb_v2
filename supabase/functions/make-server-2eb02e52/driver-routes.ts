@@ -14,7 +14,12 @@ import {
   readKvStrict,
   rebuildDriverRecord,
 } from "./driver-records.ts";
-import { migrateProfilePhotos, storePhotoDataUrl } from "./photo-storage.ts";
+import {
+  migrateProfilePhotos,
+  refreshPhotoUrls,
+  setBucketPrivate,
+  storePhotoDataUrl,
+} from "./photo-storage.ts";
 
 const app = new Hono();
 
@@ -127,7 +132,7 @@ app.get("/", async (c) => {
 // Protégé par un jeton temporaire (`PHOTO_MIGRATION_TOKEN`, secret Supabase) :
 // l'en-tête `x-migration-token` doit correspondre. Le jeton est retiré après
 // la migration (la route répond alors 403).
-//   body : { dryRun?: boolean, limit?: number }
+//   body : { mode?: 'migrate'|'rewrite-urls'|'private', dryRun?: boolean, limit?: number }
 app.post("/migrate-photos", async (c) => {
   const expected = Deno.env.get("PHOTO_MIGRATION_TOKEN") || "";
   const provided = c.req.header("x-migration-token") || "";
@@ -136,14 +141,27 @@ app.post("/migrate-photos", async (c) => {
   }
 
   const body = await c.req.json().catch(() => ({}));
-  const dryRun = body?.dryRun === true;
-  const limit = Number(body?.limit) || 0;
+  const mode = String(body?.mode || "migrate");
 
   try {
-    const report = await migrateProfilePhotos({ dryRun, limit });
-    return c.json({ success: report.failed.length === 0, dryRun, limit, ...report });
+    // 1️⃣ Passage à des URLs signées (bucket encore public : aucune coupure).
+    if (mode === "rewrite-urls") {
+      const result = await refreshPhotoUrls();
+      return c.json({ success: result.failed.length === 0, mode, ...result });
+    }
+    // 2️⃣ Bucket privé (les URLs publiques cessent de fonctionner).
+    if (mode === "private") {
+      const result = await setBucketPrivate();
+      return c.json({ success: result.ok, mode, ...result }, result.ok ? 200 : 500);
+    }
+    // 3️⃣ Migration base64 → Storage.
+    const report = await migrateProfilePhotos({
+      dryRun: body?.dryRun === true,
+      limit: Number(body?.limit) || 0,
+    });
+    return c.json({ success: report.failed.length === 0, mode, ...report });
   } catch (e: any) {
-    console.error("❌ [PHOTOS] Migration impossible:", e);
+    console.error("❌ [PHOTOS] Opération impossible:", e);
     return c.json({ success: false, error: String(e?.message || e) }, 500);
   }
 });

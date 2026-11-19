@@ -6,7 +6,7 @@
  *
  * @version 2.1.0
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GoogleMapView } from './GoogleMapView';
 import { OpenStreetMapView } from './OpenStreetMapView';
 
@@ -52,6 +52,15 @@ interface MapViewProps {
    * de l'utilisateur : bonhomme (passager, par défaut) ou voiture (conducteur).
    */
   userRole?: 'passenger' | 'driver';
+  /**
+   * Fournisseur de carte.
+   * - `auto` (défaut) : Google Maps, puis repli OpenStreetMap en cas d'échec ;
+   * - `osm` : OpenStreetMap directement (carte « intérimaire », sans clé/billing) ;
+   * - `google` : Google Maps uniquement.
+   */
+  provider?: 'auto' | 'osm' | 'google';
+  /** Itinéraires tracés sur la carte OSM (alternatives incluses). */
+  routes?: Array<{ id: string; path: [number, number][]; active?: boolean }>;
 }
 
 /**
@@ -80,8 +89,33 @@ function looksLikeGoogleMapsFailure(filename?: string, message?: string): boolea
 }
 
 export function MapView(props: MapViewProps) {
-  // ✅ Par défaut on tente Google Maps
-  const [useOpenStreetMap, setUseOpenStreetMap] = useState(false);
+  // ✅ Par défaut on tente Google Maps ; `provider="osm"` force la carte
+  // intérimaire (OpenStreetMap) tant que la facturation Google n'est pas active.
+  const [useOpenStreetMap, setUseOpenStreetMap] = useState(props.provider === 'osm');
+  const providerRef = useRef(props.provider);
+
+  useEffect(() => {
+    if (providerRef.current === props.provider) return;
+    providerRef.current = props.provider;
+    if (props.provider === 'osm') setUseOpenStreetMap(true);
+    if (props.provider === 'google') setUseOpenStreetMap(false);
+  }, [props.provider]);
+
+  // 🛟 Filet de sécurité : Google Maps peut échouer SANS lever d'erreur (clé
+  // refusée, billing inactif) et laisser un rectangle noir. Si la carte n'est
+  // pas prête au bout de 7 s, on bascule sur OpenStreetMap.
+  useEffect(() => {
+    if (useOpenStreetMap || props.provider === 'google') return;
+    const timer = setTimeout(() => {
+      try {
+        if (!document.querySelector('.gm-style')) {
+          console.warn('⚠️ Google Maps inactif après 7 s → bascule OpenStreetMap');
+          setUseOpenStreetMap(true);
+        }
+      } catch { /* ignore */ }
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [useOpenStreetMap, props.provider]);
 
   useEffect(() => {
     const switchToOpenStreetMap = (reason: string) => {
@@ -148,6 +182,11 @@ export function MapView(props: MapViewProps) {
     const destinationPoint = props.destination || props.routeEnd;
     // Carte « ma position » (sans trajet) : on dessine l'utilisateur au centre.
     const userPoint = props.showUserLocation && !pickupPoint ? props.center : undefined;
+    // Si l'écran gère lui-même le cadrage (suivi de course), le centre ne doit
+    // pas bouger à chaque position GPS : on garde le point de départ comme ancre.
+    const osmCenter = props.disableAutoCenter
+      ? (pickupPoint || props.center)
+      : (props.center || pickupPoint);
     const osmDrivers = (props.drivers || [])
       .filter(d => d?.location && Number.isFinite(d.location.lat) && Number.isFinite(d.location.lng))
       .map(d => ({
@@ -167,11 +206,12 @@ export function MapView(props: MapViewProps) {
         </div>
 
         <OpenStreetMapView
-          center={props.center || pickupPoint}
+          center={osmCenter}
           pickup={pickupPoint}
           destination={destinationPoint}
           vehicle={props.vehicleLocation}
           drivers={osmDrivers}
+          routes={props.routes}
           markers={props.markers}
           userMarker={userPoint}
           userRole={props.userRole}

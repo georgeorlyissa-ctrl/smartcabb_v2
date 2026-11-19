@@ -56,6 +56,7 @@ const Timer = ({ className = "w-5 h-5" }: { className?: string }) => (
 
 import { RatingDialog } from './RatingDialog';
 import { IncidentModal } from '../IncidentModal';import { MapView } from '../MapView';
+import { useRoutePlan } from '../../hooks/useRoutePlan';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 
@@ -115,6 +116,24 @@ export function RideInProgressScreen() {
 
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+
+  // 🛣️ Itinéraire TEMPS RÉEL + alternatives (OSRM), comme Uber/Yango :
+  //   - conducteur en route → itinéraire vers le point de prise en charge ;
+  //   - course commencée   → itinéraire vers la destination.
+  const inTrip = currentRide?.status === 'in_progress' || billingActive;
+  const routeTarget = inTrip
+    ? (currentRide?.destination?.lat && currentRide?.destination?.lng ? currentRide.destination : null)
+    : (currentRide?.pickup?.lat && currentRide?.pickup?.lng ? currentRide.pickup : null);
+  const {
+    routes: routeOptions,
+    selectedId: selectedRouteId,
+    setSelectedId: setSelectedRouteId,
+  } = useRoutePlan(driverLocation, routeTarget);
+  const mapRoutes = routeOptions.map((route) => ({
+    id: route.id,
+    path: route.path,
+    active: route.id === selectedRouteId,
+  }));
 
   // ─── POLLING EN TEMPS RÉEL ────────────────────────────────────
   useEffect(() => {
@@ -403,6 +422,10 @@ export function RideInProgressScreen() {
       {/* 🗺️ CARTE EN PLEIN ÉCRAN */}
       <div className="absolute inset-0 z-0">
         <MapView
+          // 🗺️ Carte intérimaire OpenStreetMap (sans clé/billing Google) :
+          // elle s'affichait noire sur iPhone tant que Google Maps n'est pas activé.
+          provider="osm"
+          routes={mapRoutes}
           center={driverLocation}
           vehicleLocation={driverLocation}
           zoom={14}
@@ -527,6 +550,33 @@ export function RideInProgressScreen() {
       <div className="absolute bottom-0 left-0 right-0 z-40">
         <div className="bg-gradient-to-t from-black/80 to-transparent backdrop-blur-xl">
           <div className="p-4 pb-safe-bar space-y-3">
+
+            {/* 🛣️ Itinéraires proposés (recommandé + alternatives) */}
+            {routeOptions.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                {routeOptions.map((route, index) => {
+                  const active = route.id === selectedRouteId;
+                  return (
+                    <button
+                      key={route.id}
+                      onClick={() => setSelectedRouteId(route.id)}
+                      className={`flex-shrink-0 rounded-2xl px-3 py-2 text-left border transition-colors ${
+                        active
+                          ? 'bg-white text-gray-900 border-white shadow-lg'
+                          : 'bg-black/40 text-white border-white/25 backdrop-blur'
+                      }`}
+                    >
+                      <div className={`text-[10px] font-semibold uppercase tracking-wide ${active ? 'text-gray-500' : 'text-white/60'}`}>
+                        {index === 0 ? 'Recommandé' : `Alternative ${index}`}
+                      </div>
+                      <div className="text-sm font-bold whitespace-nowrap">
+                        {route.durationMin} min · {route.distanceKm.toFixed(1)} km
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Zone facturation active */}
             {billingActive && (
