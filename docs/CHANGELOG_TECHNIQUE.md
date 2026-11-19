@@ -42,6 +42,47 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (18) — Écran de recherche : variante « vue de dessus » (plan de quartier)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : ui / design
+- **Objectif** : proposer une lecture plus parlante pour le passager qui attend : au lieu d'un gros plan sur un véhicule, montrer **le quartier vu de dessus** avec plusieurs voitures, un repère et l'itinéraire — tout en gardant les animations. Les deux variantes coexistent, la vue de dessus devient celle utilisée par défaut sur l'écran de recherche.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/SearchingDriverIllustration.tsx` | Ajout de la prop `variant: 'map' \| 'car'` (défaut `map`), nouvelle scène `MapScene`, factorisation du calcul du balayage radar (`buildBeams`), nouvelles animations CSS (`sdr-drift-*`, `sdr-glow`, `sdr-sonar`, `sdr-route`) |
+
+### Description technique
+- `buildBeams(cx, cy, r, maxOpacity)` génère l'éventail radar (12 parts de 5°, opacité croissante) + le bord d'attaque, **réutilisé par les deux scènes** (centre `(66,69)` pour la carte, `(100,104)` pour le gros plan).
+- **Scène `map`** : disque carte (`#F6FBFF → #C9E1F7`), 9 îlots arrondis (`#CFE4F7`), 3 rues blanches avec marquages pointillés, 4 véhicules vus de dessus (1 mis en avant en bleu SmartCabb avec halo + sonar, 3 autres en gris-bleu), repère jaune et **itinéraire pointillé** entre le repère et le véhicule.
+- Animations (toutes `transform`/`opacity`, GPU) :
+  - balayage radar autour du **véhicule mis en avant** (`transform-origin` inline sur `66px 69px`, `transform-box: view-box`) ;
+  - halo qui respire + **onde sonar** qui s'étend depuis ce véhicule ;
+  - **trois véhicules qui circulent** lentement le long de leur rue (aller-retour 8 / 9 / 10 s) — chaque `<g>` déplacé est un enfant du groupe portant le `transform` de position/rotation, les deux transforms se composent ;
+  - **itinéraire en chenillard** (`stroke-dashoffset` −20, 1,4 s, boucle sans saut : période du motif = 10) ;
+  - repère qui saute + halo qui pulse, ondes concentriques externes (inchangées).
+- `prefers-reduced-motion: reduce` neutralise l'ensemble (y compris les nouvelles animations).
+- `RideScreen` est inchangé : il appelle `<SearchingDriverIllustration size={128} />` sans `variant`, donc la carte s'affiche. Repasser au gros plan = `variant="car"`.
+
+### Impact produit / comportement visible
+- L'écran d'attente montre désormais un **plan de quartier animé** : le radar balaie autour du véhicule, les autres voitures roulent, le trajet vers le repère défile en pointillés.
+- Même poids (tout est inline, ~8 Ko de JS/HTML, aucune image à télécharger), mêmes performances.
+- Correctif **web uniquement** : déploiement Vercel suffit, aucun versionCode.
+
+### Risques & rollback
+- **Risque** : lisibilité à 96-128 px — la carte est plus dense que le gros plan ; les contrastes restent volontairement faibles pour ne pas concurrencer le texte.
+- **Rollback** : passer `variant="car"` (une ligne dans `RideScreen`), ou `git revert` pour revenir à l'entrée 17.
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK
+- [x] Scène « carte » vérifiée par rendu statique 400×400 : éventail régulier, rues/îlots lisibles, 4 véhicules distincts, itinéraire et repère bien placés
+- [x] Aucun fichier image ajouté (tout est inline) : rien à héberger, rien à mettre en cache
+- [ ] À vérifier sur téléphone après déploiement : lisibilité de la carte et fluidité des déplacements
+
+---
+
 ## 2026-11-19 (17) — Écran de recherche : illustration **animée** (radar, roues, repère)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
