@@ -66,6 +66,12 @@ export function SearchingDriversScreen() {
   const [sheetExpanded, setSheetExpanded] = useState(false);
   // Incrémenté par « Continuer » pour relancer la création sans dépendre de `phase`
   const [retryToken, setRetryToken] = useState(0);
+  // Aucun chauffeur dans la catégorie demandée → alerte + suggestions
+  const [noDriverInfo, setNoDriverInfo] = useState<{
+    alternatives: { category: string; count: number }[];
+    totalOnline: number;
+  } | null>(null);
+  const noDriverShownRef = useRef(false);
 
   // Empêcher le double appel API
   const apiCalled = useRef(false);
@@ -145,6 +151,17 @@ export function SearchingDriversScreen() {
 
         setDriversCount(data.driversCount || 0);
         setOnlineDrivers(Array.isArray(data.drivers) ? data.drivers : []);
+
+        // 🚫 Aucun chauffeur pour CETTE catégorie : prévenir tout de suite et
+        // proposer les catégories où des chauffeurs sont connectés (une seule
+        // fois, l'utilisateur peut choisir de continuer d'attendre).
+        if (!noDriverShownRef.current && (data.driversCount || 0) === 0) {
+          noDriverShownRef.current = true;
+          setNoDriverInfo({
+            alternatives: Array.isArray(data.alternatives) ? data.alternatives : [],
+            totalOnline: Number(data.totalOnline) || 0,
+          });
+        }
         // « Chargé » = une réponse VALIDE est arrivée. En cas d'échec on ne
         // prétend pas « aucun chauffeur » : on le dit (connexion lente).
         setDriversLoaded(true);
@@ -344,6 +361,19 @@ export function SearchingDriversScreen() {
     setRetryToken((n) => n + 1);
   };
 
+  // ─── Changer de catégorie (aucun chauffeur dans celle demandée) ──────
+  const chooseCategory = async (category: string) => {
+    // Bloque la création d'une nouvelle course et annule celle éventuellement
+    // déjà envoyée (sinon elle resterait « en recherche » jusqu'au timeout).
+    apiCalled.current = true;
+    try { sessionStorage.setItem('smartcabb_preferred_category', category); } catch { /* ignore */ }
+    setNoDriverInfo(null);
+    await handleCancel();
+    toast.info(`Catégorie sélectionnée : ${VEHICLE_LABELS[category] || category}`, {
+      description: 'Vérifiez le prix puis commandez à nouveau.',
+    });
+  };
+
   if (!pendingRide) return null;
 
   // ─── Préparation des données pour la carte ────────────────────
@@ -378,6 +408,65 @@ export function SearchingDriversScreen() {
 
   return (
     <div className="h-[100dvh] w-full relative overflow-hidden bg-gray-100 flex flex-col">
+
+      {/* 🚫 Aucun chauffeur dans la catégorie demandée → suggestion immédiate */}
+      {noDriverInfo && (
+        <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-3xl p-5 space-y-4 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <CarIcon className="w-5 h-5 text-amber-600" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-gray-900">
+                  {noDriverInfo.alternatives.length > 0
+                    ? `Aucun chauffeur ${VEHICLE_LABELS[pendingRide.vehicleType] || ''} en ligne`
+                    : 'Aucun chauffeur connecté pour le moment'}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {noDriverInfo.alternatives.length > 0
+                    ? 'Des chauffeurs sont connectés dans d’autres catégories. Choisissez-en une pour être pris en charge tout de suite.'
+                    : 'Tous nos chauffeurs sont hors ligne ou déjà en course. Réessayez dans quelques minutes.'}
+                </p>
+              </div>
+            </div>
+
+            {noDriverInfo.alternatives.length > 0 && (
+              <div className="space-y-2">
+                {noDriverInfo.alternatives.map((alt) => (
+                  <button
+                    key={alt.category}
+                    onClick={() => { void chooseCategory(alt.category); }}
+                    className="w-full flex items-center justify-between rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 hover:bg-cyan-100 transition-colors"
+                  >
+                    <span className="text-sm font-semibold text-cyan-900">
+                      {VEHICLE_LABELS[alt.category] || alt.category}
+                    </span>
+                    <span className="text-xs font-bold text-cyan-700 bg-white rounded-full px-2 py-0.5">
+                      {alt.count} dispo.
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setNoDriverInfo(null)}
+                className="flex-1 h-11 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200"
+              >
+                Continuer d’attendre
+              </button>
+              <button
+                onClick={() => { setNoDriverInfo(null); void handleCancel(); }}
+                className="flex-1 h-11 rounded-xl bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════
           🗺️ CARTE PLEIN ÉCRAN — Leaflet/OSM (aucune clé Google requise)

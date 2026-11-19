@@ -158,8 +158,56 @@ export function PaymentScreen() {
     };
   }, [currentRide?.id, durationInSeconds, state.updateRide]);
 
+  // 💰 Solde RÉEL : le state global peut être périmé (il affichait 0 CDF alors
+  // que le compte en avait 1 000). On interroge le serveur à l'ouverture et on
+  // resynchronise l'état global.
+  const [liveBalance, setLiveBalance] = useState<number | null>(null);
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    let alive = true;
+    (async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/passengers/${currentUser.id}/balance`,
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } },
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        const value = Number(data?.balance ?? data?.walletBalance);
+        if (!alive || !Number.isFinite(value)) return;
+        setLiveBalance(value);
+        if (state.updateUser) {
+          state.updateUser({ ...currentUser, walletBalance: value, balance: value });
+        }
+      } catch (error) {
+        console.warn('⚠️ [PAYMENT] Solde non actualisé:', error);
+      }
+    })();
+    return () => { alive = false; };
+  }, [currentUser?.id]);
+
+  // 📱 Mobile Money : on n'affiche une méthode utilisable que si le fournisseur
+  // est réellement actif (sinon l'utilisateur découvrait « Paiement Ejpay
+  // désactivé » au moment de confirmer).
+  const [ejpayAvailable, setEjpayAvailable] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const response = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/ejpay/config`,
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } },
+        );
+        if (!response.ok) return;
+        const data = await response.json();
+        if (alive && data?.success) setEjpayAvailable(Boolean(data.enabled && data.configured));
+      } catch { /* laisser null : on ne bloque pas le paiement */ }
+    })();
+    return () => { alive = false; };
+  }, []);
+
   const ridePrice = currentRide?.finalPrice || currentRide?.totalPrice || currentRide?.estimatedPrice || 0;
-  const userBalance = currentUser?.walletBalance || currentUser?.balance || 0;
+  const userBalance = liveBalance ?? currentUser?.walletBalance ?? currentUser?.balance ?? 0;
   const cashAmountNum = parseFloat(cashAmount) || 0;
   const mobileMoneyAmount = ridePrice - cashAmountNum;
 
@@ -394,6 +442,15 @@ export function PaymentScreen() {
 
   // ─── Paiement principal ───────────────────────────────────────
   const handlePayment = async () => {
+    // Mobile Money indisponible (fournisseur désactivé) → message clair AVANT
+    // d'ouvrir la saisie du numéro, au lieu d'une erreur serveur à la fin.
+    if ((selectedMethod === 'mobile_money' || selectedMethod === 'mixed') && ejpayAvailable === false) {
+      toast.error('Mobile Money indisponible pour le moment', {
+        description: 'Utilisez le portefeuille ou les espèces, ou réessayez plus tard.',
+      });
+      return;
+    }
+
     if (selectedMethod === 'mobile_money') {
       setShowNetworkSelection(true);
       return;
@@ -450,7 +507,9 @@ export function PaymentScreen() {
       // ✅ TRADUIT
       name: t('mobile_money'),
       icon: Smartphone,
-      description: 'Orange Money, Airtel Money, M-Pesa',
+      description: ejpayAvailable === false
+        ? 'Indisponible pour le moment'
+        : 'Orange Money, Airtel Money, M-Pesa',
       color: 'bg-orange-100 text-orange-600'
     },
     {
@@ -458,7 +517,9 @@ export function PaymentScreen() {
       // ✅ TRADUIT
       name: `${t('cash')} + ${t('mobile_money')}`,
       icon: Split,
-      description: `${t('cash')} + ${t('mobile_money')}`,
+      description: ejpayAvailable === false
+        ? 'Indisponible pour le moment'
+        : `${t('cash')} + ${t('mobile_money')}`,
       color: 'bg-blue-100 text-blue-600'
     }
   ];

@@ -42,6 +42,46 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (25) — Paiement : Ejpay réactivé, solde réel, alerte « aucun chauffeur »
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Autor** : agent OpenCode
+- **Type** : fix
+- **Objectif** : (1) « Paiement Ejpay désactivé » au moment de payer en Mobile Money / Espèces + Mobile Money ; (2) l'écran de paiement affichait **Solde : 0 CDF** alors que le compte avait **1 000 CDF** ; (3) lorsqu'aucun chauffeur de la catégorie demandée n'est en ligne, prévenir immédiatement le passager et proposer les autres catégories.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/PaymentScreen.tsx` | Solde relu sur le serveur à l'ouverture (et état global resynchronisé) ; méthodes Mobile Money désactivées/affichent « Indisponible » si le fournisseur est inactif ; garde avant saisie |
+| `components/passenger/EstimateScreen.tsx` | Pré-sélection de la catégorie suggérée (`smartcabb_preferred_category`) |
+| `components/passenger/SearchingDriversScreen.tsx` | Alerte immédiate « aucun chauffeur dans cette catégorie » + liste des catégories disponibles (compteurs) + « Continuer d'attendre » / « Annuler » |
+| Configuration Supabase | `ejpayEnabled` repassé à **true** (le fournisseur était déjà configuré et authentifié) |
+
+### Description technique
+**1. Ejpay n'était pas en cause.** `/ejpay/health` renvoyait `configured: true`, `oauthOk: true`, `callbackConfigured: true`, mais `enabled: false`. Le message venait donc de **notre drapeau** `ejpayEnabled` de `smartcabb_global_config` (probablement perdu lors de la remise à zéro de la config). Il a été réactivé via `/config/update` (`enabled: true` confirmé par `/ejpay/health`). Par sécurité, l'écran de paiement interroge désormais `/ejpay/config` : si le fournisseur est désactivé, les cartes « Mobile Money » et « Espèces + Mobile Money » affichent **« Indisponible pour le moment »** et la confirmation est bloquée avec un message clair, au lieu d'une erreur serveur après saisie du numéro.
+**2. Solde périmé.** L'écran lisait `state.currentUser.balance/walletBalance`, figé à 0 depuis la connexion. Il appelle maintenant `GET /passengers/:id/balance` au montage (serveur : **1 000 CDF**) et met à jour l'état global. La ligne « Solde » et le contrôle « solde insuffisant » utilisent cette valeur fraîche.
+**3. Aucun chauffeur pour la catégorie.** Dès la première réponse de `check-drivers-availability` avec `driversCount = 0`, une alerte s'affiche (une seule fois) :
+   - si d'autres catégories ont des chauffeurs en ligne (`alternatives`), elles sont listées avec leur nombre de disponibles ; un appui **annule la recherche en cours**, mémorise la catégorie (`smartcabb_preferred_category`) et revient à l'estimation avec **cette catégorie pré-sélectionnée** ;
+   - sinon (« aucun chauffeur connecté »), l'utilisateur peut annuler ou continuer d'attendre.
+   L'utilisateur garde toujours la possibilité de continuer d'attendre (les chauffeurs peuvent se connecter entre-temps).
+
+### Impact produit / comportement visible
+- Le paiement Mobile Money refonctionne (Airtel/Orange/M-Pesa/Afrimoney) et le message « désactivé » ne peut plus apparaître sans explication.
+- Le portefeuille affiche le **vrai solde** (1 000 CDF au lieu de 0).
+- Le passager est prévenu **tout de suite** si sa catégorie n'a personne en ligne, avec une bascule en un geste vers une catégorie disponible.
+
+### Risques & rollback
+- **Risque** : Ejpay est maintenant actif en production ; un incident fournisseur impacte Mobile Money (les paiements Espèces/Portefeuille restent disponibles).
+- **Rollback** : `/config/update { ejpayEnabled: false }` pour couper Mobile Money immédiatement (l'UI l'affichera comme indisponible).
+
+### Tests / vérifications
+- [x] `/ejpay/health` → `enabled: true`, `configured: true`, `oauthOk: true`
+- [x] `/passengers/9aa1654b…/balance` → **1 000 CDF** (3 sources concordantes)
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [ ] À confirmer : paiement Mobile Money réel, solde affiché, alerte de catégorie sur téléphone
+
+---
+
 ## 2026-11-19 (24) — Carte « course en cours » (itinéraire + alternatives), Storage privé
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

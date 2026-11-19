@@ -52,6 +52,17 @@ export function EstimateScreen() {
   // 🚦 « smart_standard » = SmartCabb Standard (la variante « sans clim » est en pause,
   // voir NO_CLIM_CATEGORY_ENABLED dans lib/pricing-data.ts).
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleCategory>('smart_standard');
+
+  // ↩ Catégorie suggérée par l'écran de recherche (aucun chauffeur dans la
+  // catégorie demandée) : on la présélectionne en revenant sur l'estimation.
+  useEffect(() => {
+    try {
+      const preferred = sessionStorage.getItem('smartcabb_preferred_category');
+      if (!preferred) return;
+      sessionStorage.removeItem('smartcabb_preferred_category');
+      setSelectedVehicle(preferred as VehicleCategory);
+    } catch { /* ignore */ }
+  }, []);
   const [passengerCount, setPassengerCount] = useState(1);
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [basePrice, setBasePrice] = useState(12500);
