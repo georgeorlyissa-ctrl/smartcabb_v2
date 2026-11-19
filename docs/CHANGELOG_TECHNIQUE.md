@@ -42,6 +42,46 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (27) — Réservations : plus de traitement anticipé, démarrage à l'heure notifié
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (flux réservation)
+- **Objectif** : une réservation du **19/11/2026 à 10:30** n'a rien déclenché à l'heure prévue. Diagnostic en base : la réservation avait été **« traitée » manuellement à 09:26** (une heure trop tôt) et le push de démarrage n'était **traité par aucun écran**.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `POST /rides/admin-process-one` refuse le traitement plus de **15 min** avant l'heure (`409`, message explicite) |
+| `lib/native-push.ts` | Gestion de `reservation_started` (push natif) → événement `fcm-reservation-started` + ouverture du tableau de bord |
+| `lib/driver-fcm.ts` | Même gestion côté FCM web (navigateur) |
+| `components/driver/DriverDashboardNew.tsx` | Sur `fcm-reservation-started` : chargement de la course, **ouverture directe de la navigation** + **sonnerie et annonce vocale** |
+
+### Description technique
+**Chronologie constatée** (réservation `7cac687c…`) : créée à 09:21, acompte espèces confirmé à 09:22, **assignée à Ruth Shole à 09:24**, rappel H-1 envoyé à 09:25, acceptée + présence confirmée à 09:27… mais **statut `completed` dès 09:27** et aucune course au moment prévu. Une course `accepted` avait en réalité été créée à **09:26** par `POST /rides/admin-process-one` (bouton « Traiter / créer la course maintenant » du panneau admin) : la réservation était donc consommée **une heure avant** l'heure demandée, et le push `reservation_started` envoyé à ce moment-là n'était géré par **aucun** `case` de l'app conducteur.
+
+**Correctifs.**
+1. **Serveur** : `/rides/admin-process-one` refuse désormais tout traitement à plus de 15 min de l'heure prévue (`SCHEDULED_RIDE_EARLY_MINUTES`, 409 avec la date/heure). Le cycle normal (cron toutes les 5 min) crée la course au bon moment.
+2. **App conducteur** : `reservation_started` est traité. Sur réception, l'app charge la course (`/rides/:id`), vérifie qu'elle est bien `accepted/enroute/arrived/in_progress`, reconstruit `pickup`/`destination`, **ouvre l'écran de navigation** et joue la **sonnerie + l'annonce vocale** (même mécanisme que la carte de course).
+3. Nettoyage : la course créée trop tôt (`d6f236ae…`) a été annulée (`cancelledBy: system`) et le verrou du conducteur libéré (Ruth : `is_available: true`, aucun `activeRideId`).
+
+### Impact produit / comportement visible
+- Une réservation ne peut plus être « consommée » avant l'heure : l'admin est averti s'il essaie.
+- À l'heure prévue, la course est créée par le cron, le chauffeur reçoit le push **et** l'app s'ouvre sur la navigation avec sonnerie + voix ; le passager reçoit la notification.
+- Plus de réservation « terminée » sans course réelle.
+
+### Risques & rollback
+- **Risque** : en cas d'urgence, l'admin ne peut plus forcer une course plus de 15 min avant l'heure (il peut ajuster `SCHEDULED_RIDE_EARLY_MINUTES`).
+- **Rollback** : `git revert` ; les données existantes ne sont pas migrées.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [x] Edge Function redéployée ; course trop-tôt annulée, conducteur libéré
+- [x] Analyse de la trace réelle (assignation, rappel H-1, acceptation, présence, traitement anticipé)
+- [ ] À confirmer en réel : réservation à venir → à l'heure, ouverture de la navigation + sonnerie côté chauffeur
+
+---
+
 ## 2026-11-19 (26) — Courses orphelines : plus aucune course acceptée après le départ du passager
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

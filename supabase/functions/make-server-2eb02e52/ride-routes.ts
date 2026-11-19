@@ -3773,6 +3773,21 @@ app.post("/admin-process-one", async (c) => {
       return c.json({ success: false, error: "Réservation déjà traitée ou annulée" }, 400);
     }
 
+    // ⏰ Ne pas transformer une réservation en course AVANT l'heure prévue :
+    // la course serait créée (et le chauffeur envoyé) une heure trop tôt, et à
+    // l'heure réelle plus rien ne se déclencherait (réservation déjà « traitée »).
+    const startMs = new Date(`${sr.scheduled_date}T${sr.scheduled_time || "00:00"}`).getTime();
+    const minutesUntil = (startMs - Date.now()) / 60000;
+    const earlyWindow = Number(Deno.env.get("SCHEDULED_RIDE_EARLY_MINUTES") || "15");
+    if (Number.isFinite(minutesUntil) && minutesUntil > earlyWindow) {
+      return c.json({
+        success: false,
+        error: `Trop tôt : cette réservation est prévue le ${sr.scheduled_date} à ${String(sr.scheduled_time || "").slice(0, 5)}. ` +
+          `Elle sera traitée automatiquement ${earlyWindow} min avant l'heure prévue.`,
+        minutesUntil: Math.round(minutesUntil),
+      }, 409);
+    }
+
     const passengerProfile = await kvGet(`passenger:${sr.user_id}`);
     const base: any = {
       id: crypto.randomUUID(),

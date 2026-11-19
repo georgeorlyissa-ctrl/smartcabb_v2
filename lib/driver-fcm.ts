@@ -217,6 +217,12 @@ export async function listenToFCMMessages(
         window.dispatchEvent(new CustomEvent('fcm-reservation-assigned', { detail: data }));
       }
 
+      // Réservation arrivée à l'heure → ouvrir la course déjà attribuée
+      if (data.type === 'reservation_started' && data.rideId) {
+        console.log('🚖 Réservation démarrée FCM - dispatch fcm-reservation-started');
+        window.dispatchEvent(new CustomEvent('fcm-reservation-started', { detail: data }));
+      }
+
       // Notification navigateur via Service Worker (compatible mobile)
       if (Notification.permission === 'granted' && 'serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(registration => {

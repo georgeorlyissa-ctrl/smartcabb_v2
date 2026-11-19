@@ -124,6 +124,16 @@ function handleNotificationData(data: Record<string, any>, fromAction: boolean) 
     return;
   }
 
+  // 🚖 Réservation arrivée à l'heure : la course est déjà attribuée au
+  // conducteur. Sans ce cas, la notification s'affichait mais l'app restait sur
+  // le tableau de bord (aucune course ouverte, ni sonnerie).
+  if (type === 'reservation_started' && data.rideId) {
+    rememberPendingRide(data);
+    window.dispatchEvent(new CustomEvent('fcm-reservation-started', { detail: data }));
+    openDriverDashboardIfNeeded();
+    return;
+  }
+
   console.log('🔔 [NATIVE PUSH] Notification reçue:', type || '(sans type)');
 }
 

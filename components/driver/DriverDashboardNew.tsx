@@ -13,9 +13,12 @@ import { RideNotification } from './RideNotification';
 import { FCMDiagnostic } from './FCMDiagnostic';
 import { PreciseGPSTracker, reverseGeocode } from '../../lib/precise-gps';
 import { registerDriverFCMToken } from '../../lib/driver-fcm';
-import { stopAllNotifications } from '../../lib/notification-sound';
-import { preloadVoices } from '../../lib/notification-sound';
-import { unlockMobileAudio } from '../../lib/notification-sound';
+import {
+  stopAllNotifications,
+  preloadVoices,
+  unlockMobileAudio,
+  playRideNotification,
+} from '../../lib/notification-sound';
 import { isNativeApp, nativeTTSCheck } from '../../lib/native-tts';
 import { supabase } from '../../lib/supabase';
 import { consumePendingPushRide } from '../../lib/native-push';
@@ -473,6 +476,62 @@ export function DriverDashboardNew() {
     };
     window.addEventListener('fcm-reservation-assigned', handleReservationAssigned);
 
+    // 🚖 Réservation arrivée à l'heure : la course est DÉJÀ attribuée.
+    // On ouvre directement la navigation + on joue la sonnerie et l'annonce
+    // (auparavant le push `reservation_started` n'était traité par personne et
+    // le chauffeur ne voyait rien à l'heure prévue).
+    const handleReservationStarted = async (event: any) => {
+      const rideId = event?.detail?.rideId;
+      if (!rideId) return;
+      console.log('🚖 Réservation démarrée:', rideId);
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/${rideId}`,
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } },
+        );
+        const data = await res.json();
+        const ride = data?.ride;
+        if (!ride || !['accepted', 'enroute', 'arrived', 'in_progress'].includes(ride.status)) return;
+
+        const num = (value: any, fallback: number) => {
+          const n = Number(value);
+          return Number.isFinite(n) ? n : fallback;
+        };
+        const pickup = {
+          lat: num(ride.pickup?.coordinates?.lat ?? ride.pickup?.lat ?? ride.pickupLat, -4.3276),
+          lng: num(ride.pickup?.coordinates?.lng ?? ride.pickup?.lng ?? ride.pickupLng, 15.3136),
+          address: ride.pickupAddress || ride.pickup?.address || ride.pickup?.name || 'Point de départ',
+        };
+        const destination = {
+          lat: num(ride.destination?.coordinates?.lat ?? ride.destination?.lat ?? ride.destinationLat, -4.3276),
+          lng: num(ride.destination?.coordinates?.lng ?? ride.destination?.lng ?? ride.destinationLng, 15.3136),
+          address: ride.destinationAddress || ride.destination?.address || ride.destination?.name || 'Destination',
+        };
+
+        setCurrentRide({
+          ...ride,
+          pickup,
+          destination,
+          status: 'accepted',
+        } as any);
+
+        // 🔔 Sonnerie + annonce vocale (mêmes réglages que la carte de course)
+        void playRideNotification({
+          passengerName: ride.passengerName,
+          pickup: pickup.address,
+          destination: destination.address,
+          distance: Number(ride.distance) || 0,
+          estimatedEarnings: Number(ride.estimatedPrice) || 0,
+        }).catch(() => undefined);
+
+        setCurrentScreen('driver-navigation');
+        toast.success('Course réservée : en route vers le client 🚗');
+      } catch (e) {
+        console.warn('⚠️ Ouverture de la course réservée impossible:', e);
+      }
+    };
+    window.addEventListener('fcm-reservation-started', handleReservationStarted);
+
     // Initialiser FCM et démarrer le listener foreground
     const initFCM = async () => {
       try {
@@ -527,6 +586,7 @@ export function DriverDashboardNew() {
       window.removeEventListener('fcm-new-ride-request', handleFCMRide);
       window.removeEventListener('fcm-ride-dismissed', handleRideDismissed);
       window.removeEventListener('fcm-reservation-assigned', handleReservationAssigned);
+      window.removeEventListener('fcm-reservation-started', handleReservationStarted);
       clearInterval(poll);
     };
   }, [driver?.id]);
