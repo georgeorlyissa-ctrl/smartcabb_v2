@@ -8,6 +8,7 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { isOTPRequired, verifyOTPToken } from "./otp-core.ts";
+import { readKvStrict } from "./driver-records.ts";
 import { rateLimiter } from "../lib/rate-limit.ts";
 
 const app = new Hono();
@@ -257,7 +258,16 @@ app.post("/login", rateLimiter(), async (c) => {
       }, 401);
     }
 
-    let profile = await kvGet(`profile:${data.user.id}`);
+    // Lecture STRICTE : « base indisponible » ≠ « profil absent ». Avant, une
+    // lecture en échec faisait réécrire un profil ET une fiche conducteur
+    // vierges (solde 0) par-dessus les vraies données à la connexion.
+    let profile: any;
+    try {
+      profile = await readKvStrict(`profile:${data.user.id}`);
+    } catch (e) {
+      console.error("❌ [AUTH/LOGIN] Lecture du profil impossible:", e);
+      return c.json({ success: false, error: "Service momentanément indisponible. Réessayez dans un instant." }, 503);
+    }
 
     if (!profile) {
       const userMetadata = data.user.user_metadata || {};

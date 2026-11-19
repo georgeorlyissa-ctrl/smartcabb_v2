@@ -298,6 +298,7 @@ export function GPSNavigationScreen({
           zoom={15}
           className="w-full h-full"
           showUserLocation={true}
+          userRole="driver"
           enableGeolocation={true}
           onLocationUpdate={(location) => {
             setCurrentPosition({

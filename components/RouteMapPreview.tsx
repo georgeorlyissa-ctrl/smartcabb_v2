@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from '../lib/motion';
 import { formatDuration, getCurrentTrafficConditions } from '../lib/duration-calculator';
 import { MapView } from './MapView';
+import { useNearbyDrivers } from '../hooks/useNearbyDrivers';
 
 interface Location {
   lat: number;
@@ -37,6 +38,9 @@ export function RouteMapPreview({
   const [isMapReady, setIsMapReady] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); // 🆕 État pour expand/collapse
   const traffic = getCurrentTrafficConditions();
+  // 🚗 Conducteurs connectés autour du départ, affichés sur la carte
+  // (appelé avant tout `return` anticipé : l'ordre des hooks reste stable).
+  const { drivers: nearbyDrivers } = useNearbyDrivers({ lat: pickup?.lat, lng: pickup?.lng });
 
   // ✅ VALIDATION DES COORDONNÉES - PROTECTION CONTRE LES CRASHES
   if (!pickup?.lat || !pickup?.lng || !destination?.lat || !destination?.lng) {
@@ -120,6 +124,7 @@ export function RouteMapPreview({
           showRoute={true}
           routeStart={stablePickup}
           routeEnd={stableDestination}
+          drivers={nearbyDrivers}
           enableZoomControls={true}
           enableGeolocation={false}
           className="w-full h-full"

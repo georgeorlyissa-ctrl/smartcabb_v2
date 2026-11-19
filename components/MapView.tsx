@@ -22,6 +22,8 @@ interface Driver {
   location: Location;
   vehicleType?: string;
   rating?: number;
+  /** false = déjà en course (marqueur grisé). */
+  available?: boolean;
 }
 
 interface MapViewProps {
@@ -45,6 +47,11 @@ interface MapViewProps {
   disableAutoCenter?: boolean;
   showTraffic?: boolean;
   height?: string;
+  /**
+   * Qui regarde la carte ? Sert au repli OpenStreetMap pour dessiner la position
+   * de l'utilisateur : bonhomme (passager, par défaut) ou voiture (conducteur).
+   */
+  userRole?: 'passenger' | 'driver';
 }
 
 /**
@@ -134,28 +141,40 @@ export function MapView(props: MapViewProps) {
 
   // ─── Fallback OpenStreetMap ───────────────────────────────
   if (useOpenStreetMap) {
-    // Construire la liste de marqueurs pour OSM
-    const osmMarkers: Location[] = [];
-    if (props.center) osmMarkers.push(props.center);
-    if (props.pickup) osmMarkers.push(props.pickup);
-    if (props.destination) osmMarkers.push(props.destination);
-    if (props.routeStart) osmMarkers.push(props.routeStart);
-    if (props.routeEnd) osmMarkers.push(props.routeEnd);
-    if (props.markers) osmMarkers.push(...props.markers);
-    if (props.drivers) props.drivers.forEach(d => osmMarkers.push(d.location));
-    // ✅ SUIVI TEMPS RÉEL — afficher aussi le véhicule en mode OSM
-    if (props.vehicleLocation) osmMarkers.push(props.vehicleLocation);
+    // Chaque marqueur garde son RÔLE (avant : liste plate où tout, sauf le
+    // premier point, devenait une voiture — et le départ, présent 3 fois,
+    // apparaissait comme une voiture au lieu d'un passager).
+    const pickupPoint = props.pickup || props.routeStart;
+    const destinationPoint = props.destination || props.routeEnd;
+    // Carte « ma position » (sans trajet) : on dessine l'utilisateur au centre.
+    const userPoint = props.showUserLocation && !pickupPoint ? props.center : undefined;
+    const osmDrivers = (props.drivers || [])
+      .filter(d => d?.location && Number.isFinite(d.location.lat) && Number.isFinite(d.location.lng))
+      .map(d => ({
+        id: d.id,
+        name: d.name,
+        lat: d.location.lat,
+        lng: d.location.lng,
+        available: d.available,
+      }));
 
     return (
       <div className="relative w-full h-full">
-        {/* Bandeau informatif */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-orange-500 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium z-50 whitespace-nowrap">
-          🗺️ Mode carte simplifié (OpenStreetMap)
+        {/* Bandeau informatif — discret et dans le coin : il masquait auparavant
+            le marqueur de destination sur les petites cartes. */}
+        <div className="absolute top-2 left-2 bg-orange-500/90 text-white px-2 py-0.5 rounded-md shadow text-[10px] font-medium z-50 whitespace-nowrap pointer-events-none">
+          🗺️ Carte simplifiée
         </div>
 
         <OpenStreetMapView
-          center={props.center || props.pickup}
-          markers={osmMarkers.length > 0 ? osmMarkers : undefined}
+          center={props.center || pickupPoint}
+          pickup={pickupPoint}
+          destination={destinationPoint}
+          vehicle={props.vehicleLocation}
+          drivers={osmDrivers}
+          markers={props.markers}
+          userMarker={userPoint}
+          userRole={props.userRole}
           zoom={props.zoom}
           className={props.className}
           onMapClick={props.onMapClick}

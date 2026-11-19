@@ -62,6 +62,15 @@ export function EstimateScreen() {
   // 🔒 Désactive le bouton après 1 clic (anti double-soumission)
   const [isBooking, setIsBooking] = useState(false);
 
+  // 🛟 Filet de sécurité : si une exception inattendue survient pendant la
+  // préparation de la course, le bouton ne doit JAMAIS rester bloqué
+  // (« Commande » grisé, plus aucune course possible).
+  useEffect(() => {
+    if (!isBooking) return;
+    const t = setTimeout(() => setIsBooking(false), 20000);
+    return () => clearTimeout(t);
+  }, [isBooking]);
+
   // 📅 Réservation pour toutes les catégories
   const RESERVATION_ONLY = ['smart_plus', 'smart_business'];
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);

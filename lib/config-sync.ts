@@ -107,31 +107,39 @@ const CONFIG_KEY = 'smartcabb_global_config';
 const LOCAL_CACHE_KEY = 'smartcabb_config_cache';
 
 /**
+ * Récupérer la configuration depuis le serveur — ÉCHOUE si le serveur ne
+ * répond pas (aucun repli sur le cache ni sur les valeurs par défaut).
+ * Utilisé par les écrans qui vont ÉCRIRE la config : ils ne doivent jamais
+ * sauvegarder une valeur inventée.
+ */
+export async function fetchGlobalConfigStrict(): Promise<GlobalConfig> {
+  const response = await fetch(`${API_BASE}/config/get`, {
+    headers: {
+      'Authorization': `Bearer ${publicAnonKey}`
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Configuration indisponible (HTTP ${response.status})`);
+  }
+
+  const data = await response.json();
+  if (!data?.success || !data?.config) {
+    throw new Error(data?.error || 'Réponse de configuration invalide');
+  }
+
+  cacheConfig(data.config);
+  console.log('✅ Configuration chargée depuis le serveur');
+  return data.config;
+}
+
+/**
  * Récupérer la configuration depuis le serveur
  */
 export async function fetchGlobalConfig(): Promise<GlobalConfig> {
   try {
-    const response = await fetch(`${API_BASE}/config/get`, {
-      headers: {
-        'Authorization': `Bearer ${publicAnonKey}`
-      }
-    });
-
-    if (!response.ok) {
-      console.log('ℹ️ Config serveur non disponible, utilisation du cache local');
-      return getCachedConfig();
-    }
-
-    const data = await response.json();
-    
-    if (data.success && data.config) {
-      // Mettre en cache
-      cacheConfig(data.config);
-      console.log('✅ Configuration chargée depuis le serveur');
-      return data.config;
-    }
-
-    return getCachedConfig();
+    return await fetchGlobalConfigStrict();
   } catch (error) {
     // ✅ Comportement normal : utilisation du cache si le serveur n'est pas accessible
     console.log('ℹ️ Utilisation de la configuration en cache (serveur non accessible)');
@@ -144,12 +152,20 @@ export async function fetchGlobalConfig(): Promise<GlobalConfig> {
  */
 export async function saveGlobalConfig(config: Partial<GlobalConfig>): Promise<boolean> {
   try {
-    // ⚠️ Base = configuration en cache (donc serveur), pas DEFAULT_CONFIG :
-    // sinon une sauvegarde partielle (taux de change…) réinitialise les
-    // numéros SOS et les autres réglages avec les valeurs par défaut.
+    // ⚠️ Base = configuration SERVEUR (relue juste avant), jamais le cache ni
+    // DEFAULT_CONFIG : un cache vide ou périmé faisait réécrire le taux de
+    // change et les autres réglages avec les valeurs par défaut.
+    let serverConfig: GlobalConfig;
+    try {
+      serverConfig = await fetchGlobalConfigStrict();
+    } catch (e) {
+      console.error('❌ [CONFIG] Sauvegarde refusée : configuration serveur illisible', e);
+      return false;
+    }
+
     const fullConfig: GlobalConfig = {
       ...DEFAULT_CONFIG,
-      ...getCachedConfig(),
+      ...serverConfig,
       ...config,
       lastUpdated: new Date().toISOString()
     };

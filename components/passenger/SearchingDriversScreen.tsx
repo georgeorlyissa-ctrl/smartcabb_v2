@@ -6,6 +6,7 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 import { formatCDF } from '../../lib/pricing';
 import { Car as CarIcon, MapPin as MapPinIcon, X as XIcon, ChevronUp as ChevronUpIcon } from '../../lib/icons';
+import { SearchingDriversMap } from './SearchingDriversMap';
 
 // ─── Types ───────────────────────────────────────────────────
 interface OnlineDriver {
@@ -18,6 +19,7 @@ interface OnlineDriver {
   lat?: number;
   lng?: number;
   distanceKm?: number;
+  available?: boolean;
 }
 
 interface PendingRideData {
@@ -56,6 +58,8 @@ export function SearchingDriversScreen() {
   const [phase, setPhase] = useState<'init' | 'searching' | 'notifying' | 'error'>('init');
   const [onlineDrivers, setOnlineDrivers] = useState<OnlineDriver[]>([]);
   const [driversCount, setDriversCount] = useState(0);
+  const [driversLoaded, setDriversLoaded] = useState(false);
+  const [driversFailing, setDriversFailing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [dots, setDots] = useState('');
@@ -63,6 +67,15 @@ export function SearchingDriversScreen() {
 
   // Empêcher le double appel API
   const apiCalled = useRef(false);
+
+  // 🆔 Identifiant de CETTE tentative, réutilisé en cas de réessai : le serveur
+  // renvoie la même course au lieu d'en créer une deuxième (idempotence).
+  const requestIdRef = useRef<string>('');
+  if (!requestIdRef.current) {
+    requestIdRef.current = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+      ? crypto.randomUUID()
+      : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
 
   // ─── Points animés ───────────────────────────────────────────
   useEffect(() => {
@@ -96,8 +109,16 @@ export function SearchingDriversScreen() {
     if (phase === 'error') return;
 
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let controller: AbortController | null = null;
+    let failures = 0;
 
+    // Sondage SÉQUENTIEL : la requête suivante n'est planifiée qu'une fois la
+    // précédente terminée. Avec un setInterval, des réponses lentes
+    // s'empilaient et saturaient le serveur (ce qui ralentissait encore plus).
     const fetchDrivers = async () => {
+      controller = new AbortController();
+      const abortTimer = setTimeout(() => controller?.abort(), 15000);
       try {
         const res = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/check-drivers-availability`,
@@ -112,44 +133,62 @@ export function SearchingDriversScreen() {
               pickupLat: pendingRide.pickup.lat,
               pickupLng: pendingRide.pickup.lng,
             }),
+            signal: controller.signal,
           }
         );
-        if (res.ok && !cancelled) {
-          const data = await res.json();
-          if (data.success) {
-            setDriversCount(data.driversCount || 0);
-            if (Array.isArray(data.drivers)) {
-              setOnlineDrivers(data.drivers);
-            }
-          }
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data?.success) throw new Error(data?.error || 'réponse invalide');
+        if (cancelled) return;
+
+        setDriversCount(data.driversCount || 0);
+        setOnlineDrivers(Array.isArray(data.drivers) ? data.drivers : []);
+        // « Chargé » = une réponse VALIDE est arrivée. En cas d'échec on ne
+        // prétend pas « aucun chauffeur » : on le dit (connexion lente).
+        setDriversLoaded(true);
+        setDriversFailing(false);
+        failures = 0;
       } catch (err) {
+        if (cancelled) return;
+        failures += 1;
+        if (failures >= 2) setDriversFailing(true);
         console.warn('⚠️ Impossible de récupérer les chauffeurs en ligne:', err);
+      } finally {
+        clearTimeout(abortTimer);
+        if (!cancelled) {
+          // Positions rafraîchies toutes les 4 s ; plus espacé en cas d'échecs.
+          timer = setTimeout(fetchDrivers, failures === 0 ? 4000 : Math.min(4000 * 2 ** failures, 20000));
+        }
       }
     };
 
     fetchDrivers();
-    // ✅ Rafraîchit les positions toutes les 4s pendant la recherche/notification
-    const interval = setInterval(fetchDrivers, 4000);
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (timer) clearTimeout(timer);
+      controller?.abort();
     };
   }, [pendingRide, phase]);
 
   // ─── Après 2.5s → appeler l'API create-ride ─────────────────
+  // Réessai automatique sur les erreurs TRANSITOIRES (réseau, délai, 5xx, 503
+  // de redéploiement) : le MÊME clientRequestId est renvoyé, donc jamais de
+  // doublon. Un refus définitif (4xx) arrête immédiatement.
   useEffect(() => {
     if (phase !== 'searching' || !pendingRide || apiCalled.current) return;
 
-    const timer = setTimeout(async () => {
-      if (apiCalled.current) return;
-      apiCalled.current = true;
+    let cancelled = false;
+    let controller: AbortController | null = null;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const sleep = (ms: number) => new Promise<void>((resolve) => {
+      timers.push(setTimeout(resolve, ms));
+    });
 
-      setPhase('notifying');
-
+    const postCreate = async () => {
+      controller = new AbortController();
+      const abortTimer = setTimeout(() => controller?.abort(), 25000);
       try {
-        console.log('🚖 SearchingDriversScreen: Création de la course...');
         const response = await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/create`,
           {
@@ -159,6 +198,7 @@ export function SearchingDriversScreen() {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
+              clientRequestId: requestIdRef.current,
               passengerId: pendingRide.passengerId,
               passengerName: pendingRide.passengerName,
               passengerPhone: pendingRide.passengerPhone,
@@ -172,72 +212,92 @@ export function SearchingDriversScreen() {
               passengerCount: pendingRide.passengerCount,
               beneficiary: pendingRide.beneficiary ?? null,
             }),
+            signal: controller.signal,
           }
         );
-
-        if (!response.ok) {
-          const errText = await response.text();
-          let blockedMessage: string | null = null;
-          try {
-            const errJson = JSON.parse(errText);
-            if (errJson.error === 'COMPTE_BLOQUE') {
-              blockedMessage = errJson.message || 'Votre compte a été temporairement suspendu suite à plusieurs annulations successives.';
-            }
-          } catch {}
-          if (blockedMessage) throw new Error(blockedMessage);
-          throw new Error(`Erreur ${response.status}: ${errText}`);
-        }
-
-        const result = await response.json();
-        if (!result.success || !result.rideId) {
-          if ((result as any).error === 'COMPTE_BLOQUE') {
-            throw new Error((result as any).message || 'Compte temporairement bloqué.');
-          }
-          throw new Error(result.error || 'Pas de rideId retourné');
-        }
-
-        console.log('✅ Course créée, rideId:', result.rideId);
-
-        // Créer la course localement
-        createRide({
-          id: result.rideId,
-          passengerId: pendingRide.passengerId,
-          pickup: pendingRide.pickup,
-          destination: pendingRide.destination,
-          pickupInstructions: pendingRide.pickupInstructions,
-          status: 'pending',
-          estimatedPrice: pendingRide.estimatedPrice,
-          estimatedDuration: pendingRide.estimatedDuration,
-          vehicleType: pendingRide.vehicleType as any,
-          passengerCount: pendingRide.passengerCount,
-          distanceKm: pendingRide.distance,
-          promoCode: pendingRide.promoCode,
-          promoDiscount: pendingRide.promoDiscount,
-        } as any);
-
-        // Nettoyer sessionStorage
-        sessionStorage.removeItem('smartcab_pending_ride');
-
-        // Courte pause → navigation
-        setTimeout(() => {
-          setCurrentScreen('ride');
-        }, 1200);
-
-      } catch (err: any) {
-        console.error('❌ Erreur création course:', err);
-        apiCalled.current = false;
-        setPhase('error');
-        const raw = err.message || t('error');
-        // 500 transitoire → message humain au lieu du JSON brut
-        setErrorMsg(
-          /erreur 500/i.test(raw)
-            ? 'Service momentanément indisponible. Touchez Continuer pour réessayer.'
-            : raw
-        );
+        const text = await response.text();
+        let json: any = null;
+        try { json = JSON.parse(text); } catch { /* réponse non JSON */ }
+        return { ok: response.ok, status: response.status, json, text };
+      } finally {
+        clearTimeout(abortTimer);
       }
-    }, 2500);
+    };
 
-    return () => clearTimeout(timer);
+    const run = async () => {
+      if (apiCalled.current) return;
+      apiCalled.current = true;
+      setPhase('notifying');
+
+      let lastMessage = '';
+
+      for (let attempt = 1; attempt <= 3 && !cancelled; attempt++) {
+        try {
+          console.log(`🚖 Création de la course (tentative ${attempt}/3)…`);
+          const { ok, status, json, text } = await postCreate();
+          if (cancelled) return;
+
+          if (ok && json?.success && json?.rideId) {
+            console.log('✅ Course créée, rideId:', json.rideId);
+
+            createRide({
+              id: json.rideId,
+              passengerId: pendingRide.passengerId,
+              pickup: pendingRide.pickup,
+              destination: pendingRide.destination,
+              pickupInstructions: pendingRide.pickupInstructions,
+              status: 'pending',
+              estimatedPrice: pendingRide.estimatedPrice,
+              estimatedDuration: pendingRide.estimatedDuration,
+              vehicleType: pendingRide.vehicleType as any,
+              passengerCount: pendingRide.passengerCount,
+              distanceKm: pendingRide.distance,
+              promoCode: pendingRide.promoCode,
+              promoDiscount: pendingRide.promoDiscount,
+            } as any);
+
+            sessionStorage.removeItem('smartcab_pending_ride');
+
+            timers.push(setTimeout(() => setCurrentScreen('ride'), 1200));
+            return;
+          }
+
+          const blocked = json?.error === 'COMPTE_BLOQUE';
+          const retryable = !blocked && (status >= 500 || status === 408 || status === 429 || !!json?.retry);
+          lastMessage = blocked
+            ? (json?.message || 'Votre compte a été temporairement suspendu suite à plusieurs annulations successives.')
+            : (json?.message || json?.error || text || `Erreur ${status}`);
+
+          if (!retryable) break;
+          console.warn(`⚠️ Création indisponible (${status}) — nouvelle tentative…`);
+        } catch (e: any) {
+          if (cancelled) return;
+          lastMessage = e?.name === 'AbortError'
+            ? 'Délai dépassé'
+            : (e?.message || 'Erreur réseau');
+          console.warn('⚠️ Création interrompue:', lastMessage);
+        }
+
+        if (attempt < 3) await sleep(1500 * attempt);
+      }
+
+      if (cancelled) return;
+      apiCalled.current = false;
+      setPhase('error');
+      setErrorMsg(
+        /indisponible|erreur réseau|délai|abort|erreur 5|503|504/i.test(lastMessage) || !lastMessage
+          ? 'Service momentanément indisponible. Touchez Continuer pour réessayer.'
+          : lastMessage
+      );
+    };
+
+    timers.push(setTimeout(run, 2500));
+
+    return () => {
+      cancelled = true;
+      timers.forEach((t) => clearTimeout(t));
+      controller?.abort();
+    };
   }, [phase, pendingRide]);
 
   // ─── Annulation ──────────────────────────────────────────────
@@ -285,46 +345,43 @@ export function SearchingDriversScreen() {
     .map(d => ({
       id: d.id,
       name: d.full_name || d.name || 'Chauffeur',
-      location: { lat: d.lat as number, lng: d.lng as number },
-      vehicleType: d.vehicleType,
-      rating: d.rating,
+      lat: d.lat as number,
+      lng: d.lng as number,
+      available: d.available,
     }));
 
+  // Le plus proche parmi ceux qui peuvent réellement prendre la course.
   const closestDriver = onlineDrivers
-    .filter(d => typeof d.distanceKm === 'number')
+    .filter(d => d.available !== false && typeof d.distanceKm === 'number')
     .sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0))[0];
+
+  const driversLabel =
+    driversCount > 0
+      ? (driversCount === 1
+          ? t('drivers_available_one')
+          : t('drivers_available_many').replace('{n}', String(driversCount)))
+      : driversLoaded
+      ? (onlineDrivers.length > 0 ? t('no_driver_available') : t('no_driver_nearby'))
+      : driversFailing
+      ? t('slow_connection_retry')
+      : t('looking_for_drivers');
 
   const statusColor =
     phase === 'error' ? 'red' : phase === 'notifying' ? 'green' : 'cyan';
-
-  const staticMapUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${pendingRide.pickup.lat},${pendingRide.pickup.lng}&zoom=14&size=800x600&markers=${pendingRide.pickup.lat},${pendingRide.pickup.lng},red-pushpin${mapDrivers.map(d => `%7C${d.location.lat},${d.location.lng},blue-pushpin`).join('')}`;
 
   return (
     <div className="h-[100dvh] w-full relative overflow-hidden bg-gray-100 flex flex-col">
 
       {/* ══════════════════════════════════════════════════════════
-          🗺️ CARTE PLEIN ÉCRAN — image statique OSM (toujours visible, même sans facturation Google)
+          🗺️ CARTE PLEIN ÉCRAN — Leaflet/OSM (aucune clé Google requise)
+          • marqueur passager = icône bonhomme
+          • un marqueur par conducteur connecté, mis à jour toutes les 4 s
           ══════════════════════════════════════════════════════════ */}
-      <div className="absolute inset-0 z-0 bg-[#e5e7eb]">
-        <img
-          src={staticMapUrl}
-          alt="Carte des chauffeurs"
-          className="w-full h-full object-cover"
-          loading="eager"
-          onError={(e) => {
-            const target = e.currentTarget as HTMLImageElement;
-            target.style.display = 'none';
-            const fallback = target.nextElementSibling as HTMLElement;
-            if (fallback) fallback.style.display = 'flex';
-          }}
+      <div className="absolute inset-0 z-0">
+        <SearchingDriversMap
+          center={{ lat: pendingRide.pickup.lat, lng: pendingRide.pickup.lng }}
+          drivers={mapDrivers}
         />
-        <div className="hidden w-full h-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-6 text-center" style={{ display: 'none' }}>
-          <div>
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow">🗺️</div>
-            <p className="text-sm font-medium text-gray-700">Carte temporairement indisponible</p>
-            <p className="text-xs text-gray-500 mt-1">{pendingRide.pickup.address}</p>
-          </div>
-        </div>
       </div>
 
       {/* Léger voile sombre en haut/bas pour lisibilité du texte */}
@@ -374,7 +431,7 @@ export function SearchingDriversScreen() {
               {phase === 'error'
                 ? t('error')
                 : phase === 'notifying'
-                ? `${t('driver_found')} ✓`
+                ? `${t('sending_request_drivers')}${dots}`
                 : `${t('searching_driver')}${dots}`}
             </span>
           </motion.div>
@@ -411,17 +468,17 @@ export function SearchingDriversScreen() {
 
             {/* Nombre de chauffeurs + le plus proche */}
             {phase !== 'error' && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <p className="text-gray-700 text-sm font-medium">
-                    {driversCount > 0
-                      ? `${driversCount} ${t('drivers')} ${t('go_online').toLowerCase()}`
-                      : t('loading') + '…'}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-2 h-2 rounded-full flex-shrink-0 animate-pulse ${
+                    driversCount > 0 ? 'bg-green-500' : 'bg-amber-400'
+                  }`} />
+                  <p className="text-gray-700 text-sm font-medium truncate">
+                    {driversLabel}
                   </p>
                 </div>
                 {closestDriver?.distanceKm !== undefined && (
-                  <span className="text-cyan-600 text-xs font-semibold bg-cyan-50 px-2 py-1 rounded-full">
+                  <span className="text-cyan-600 text-xs font-semibold bg-cyan-50 px-2 py-1 rounded-full flex-shrink-0">
                     {closestDriver.distanceKm.toFixed(1)} {t('km')}
                   </span>
                 )}

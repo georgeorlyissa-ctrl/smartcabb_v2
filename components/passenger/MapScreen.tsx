@@ -9,6 +9,7 @@ import { PassengerLanguageSelector } from './PassengerLanguageSelector';
 import { reverseGeocode } from '../../lib/precise-gps';
 import { toast } from '../../lib/toast';
 import { NotificationBell } from '../AppNotificationsScreen';
+import { useNearbyDrivers } from '../../hooks/useNearbyDrivers';
 
 const MapPin = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>);
 const Home = ({ className = "w-5 h-5" }: { className?: string }) => (<svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>);
@@ -54,7 +55,10 @@ export function MapScreen() {
       mapCenterRef.current = currentLocation;
       setMapCenter(currentLocation);
     }
-  }, [currentLocation]);  const [pickupLocation, setPickupLocation] = useState<Location | null>(null);
+  }, [currentLocation]);
+  // 🚗 Conducteurs connectés autour de moi, affichés sur la carte d'accueil
+  const { drivers: nearbyDrivers } = useNearbyDrivers({ lat: mapCenter.lat, lng: mapCenter.lng });
+  const [pickupLocation, setPickupLocation] = useState<Location | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(true);
   const [loadingAddress, setLoadingAddress] = useState(false);
   const [isSelectingOnMap, setIsSelectingOnMap] = useState(false);
@@ -283,6 +287,7 @@ export function MapScreen() {
       <div className="flex-1 relative bg-gray-100" style={{ minHeight: 280 }}>
         <MapView
           center={mapCenter}
+          drivers={nearbyDrivers}
           zoom={15}
           className="w-full h-full"
           showUserLocation={true}

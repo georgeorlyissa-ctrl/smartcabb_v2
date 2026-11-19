@@ -31,6 +31,36 @@ async function kvGet(key: string): Promise<any> {
   } catch (e) { console.error("KV get exception:", e); return null; }
 }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Lecture STRICTE de la configuration.
+ *
+ * ⚠️ Indispensable : `kvGet` renvoie `null` aussi bien quand la clé est absente
+ * que quand la base est momentanément indisponible. Le code confondait les deux
+ * et **réécrivait la configuration avec les valeurs par défaut** (taux de
+ * change 2500 au lieu du taux réel, `configVersion` remis à 1). C'est la cause
+ * du taux qui « change tout seul » dans le panneau admin.
+ *
+ * Lève une erreur si la lecture échoue après plusieurs tentatives : l'appelant
+ * répond alors 503 et **n'écrit rien**.
+ */
+async function kvGetStrict(key: string): Promise<any | null> {
+  let lastError = "";
+  for (const delay of [0, 250, 800]) {
+    if (delay) await sleep(delay);
+    try {
+      const { data, error } = await kvClient()
+        .from(KV_TABLE).select("value").eq("key", key).maybeSingle();
+      if (!error) return data?.value ?? null;
+      lastError = error.message;
+    } catch (e: any) {
+      lastError = String(e?.message || e);
+    }
+  }
+  throw new Error(`KV get ${key}: ${lastError}`);
+}
+
 async function kvSet(key: string, value: any): Promise<void> {
   try {
     const { error } = await kvClient().from(KV_TABLE).upsert({ key, value });
@@ -66,7 +96,16 @@ const DEFAULT_CONFIG = {
 app.get("/get", async (c) => {
   try {
     console.log("⚙️ [CONFIG/GET] Lecture de la configuration...");
-    const stored = await kvGet(CONFIG_KEY);
+
+    let stored: any;
+    try {
+      stored = await kvGetStrict(CONFIG_KEY);
+    } catch (e) {
+      // ⛔ Ne JAMAIS écrire les valeurs par défaut ici : cela écraserait le vrai
+      // taux de change. Le client garde son cache et réessaiera.
+      console.error("❌ [CONFIG/GET] Lecture impossible (aucune écriture):", e);
+      return c.json({ success: false, error: "CONFIG_UNAVAILABLE", retry: true }, 503);
+    }
 
     if (stored) {
       // Nettoyer les clés numériques qui auraient pu s'accumuler (bug data)
@@ -99,8 +138,9 @@ app.get("/get", async (c) => {
     return c.json({ success: true, config: DEFAULT_CONFIG });
   } catch (error) {
     console.error("❌ [CONFIG/GET] Erreur:", error);
-    // En cas d'erreur, renvoyer quand même les valeurs par défaut pour ne pas bloquer l'app
-    return c.json({ success: true, config: DEFAULT_CONFIG });
+    // Ne jamais renvoyer des valeurs par défaut comme si c'était la config
+    // réelle : les clients les mettraient en cache puis les sauvegarderaient.
+    return c.json({ success: false, error: "CONFIG_UNAVAILABLE", retry: true }, 503);
   }
 });
 
@@ -114,19 +154,43 @@ app.post("/update", async (c) => {
 
     console.log("⚙️ [CONFIG/UPDATE] Mise à jour de la configuration...");
 
-    const existing = await kvGet(CONFIG_KEY) ?? DEFAULT_CONFIG;
+    // Lecture STRICTE : si la base est indisponible, on refuse la sauvegarde
+    // au lieu de repartir des valeurs par défaut (ce qui écrasait le taux).
+    let existing: any;
+    try {
+      existing = await kvGetStrict(CONFIG_KEY);
+    } catch (e) {
+      console.error("❌ [CONFIG/UPDATE] Lecture impossible (aucune écriture):", e);
+      return c.json({ success: false, error: "CONFIG_UNAVAILABLE", retry: true }, 503);
+    }
+    const base = (existing && typeof existing === "object") ? existing : DEFAULT_CONFIG;
+
+    // Les valeurs numériques critiques ne doivent jamais être écrasées par un
+    // `undefined`/`NaN`/0 envoyé par un écran mal initialisé.
+    const safeNumber = (value: any, fallback: number): number => {
+      const n = typeof value === "number" ? value : Number(value);
+      return Number.isFinite(n) && n > 0 ? n : fallback;
+    };
+
     const merged = {
-      ...existing,
+      ...base,
       ...config,
+      exchangeRate: safeNumber(config.exchangeRate, safeNumber(base.exchangeRate, DEFAULT_CONFIG.exchangeRate)),
+      commissionRate: safeNumber(config.commissionRate, safeNumber(base.commissionRate, DEFAULT_CONFIG.commissionRate)),
+      // Version TOUJOURS croissante (elle repartait à 1 quand la config avait
+      // été réécrite par les valeurs par défaut).
+      configVersion: Math.max(
+        Number(base.configVersion) || 0,
+        Number(config.configVersion) || 0,
+      ) + 1,
       lastUpdated: new Date().toISOString(),
-      configVersion: ((existing.configVersion || 0) as number) + 1,
     };
 
     // 🛡️ Sécurité SOS : un client qui pousse une configuration partielle ou
     // obsolète (taux de change, réglages par défaut) ne doit jamais effacer
     // les numéros de support ni couper les SMS d'urgence.
-    const prevEmergency = (existing.emergencyNumbers && typeof existing.emergencyNumbers === "object")
-      ? existing.emergencyNumbers as Record<string, unknown>
+    const prevEmergency = (base.emergencyNumbers && typeof base.emergencyNumbers === "object")
+      ? base.emergencyNumbers as Record<string, unknown>
       : {};
     const nextEmergency = (config.emergencyNumbers && typeof config.emergencyNumbers === "object")
       ? config.emergencyNumbers as Record<string, unknown>
@@ -153,8 +217,8 @@ app.post("/update", async (c) => {
       merged.emergencySmsEnabled = hasNumbers
         ? config.emergencySmsEnabled
         // Payload sans numéro = copie obsolète : on conserve l'état existant.
-        : existing.emergencySmsEnabled === true;
-    } else if (existing.emergencySmsEnabled === true) {
+        : base.emergencySmsEnabled === true;
+    } else if (base.emergencySmsEnabled === true) {
       merged.emergencySmsEnabled = true;
     }
 

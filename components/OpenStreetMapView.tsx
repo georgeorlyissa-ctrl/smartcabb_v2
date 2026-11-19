@@ -1,20 +1,69 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import {
+  destinationIcon,
+  driverIcon,
+  genericIcon,
+  passengerIcon,
+  vehicleIcon,
+} from './map/mapMarkers';
 
 interface Location {
   lat: number;
   lng: number;
 }
 
+export interface MapDriverMarker {
+  id: string;
+  name?: string;
+  lat: number;
+  lng: number;
+  /** false = déjà en course (marqueur grisé). */
+  available?: boolean;
+}
+
 interface OpenStreetMapViewProps {
   center?: Location;
+  /** Marqueurs génériques (pastille neutre). */
   markers?: Location[];
+  /** Passager / point de départ → icône BONHOMME. */
+  pickup?: Location;
+  /** Destination → épingle rouge. */
+  destination?: Location;
+  /** Véhicule suivi pendant la course → voiture verte. */
+  vehicle?: Location;
+  /** Conducteurs connectés → voiture + prénom. */
+  drivers?: MapDriverMarker[];
+  /** Position de l'utilisateur de l'appareil (carte d'accueil). */
+  userMarker?: Location;
+  /** Rôle de l'utilisateur : bonhomme (passager) ou voiture (conducteur). */
+  userRole?: 'passenger' | 'driver';
   zoom?: number;
   className?: string;
   showAttribution?: boolean;
   onMapClick?: (lat: number, lng: number) => void;
 }
+
+/** Les conducteurs plus loin que cela ne forcent pas le cadrage (carte lisible). */
+const FIT_DRIVER_RADIUS_M = 6000;
+
+interface DesiredMarker {
+  key: string;
+  lat: number;
+  lng: number;
+  /** Change quand l'icône doit être recréée (nom, disponibilité…). */
+  iconKey: string;
+  build: () => any;
+  z: number;
+  title?: string;
+}
+
+const valid = (p?: Location | null): p is Location =>
+  !!p && Number.isFinite(p.lat) && Number.isFinite(p.lng);
+
+const sig = (p?: Location | null): string =>
+  valid(p) ? `${p.lat.toFixed(4)},${p.lng.toFixed(4)}` : '-';
 
 /**
  * Carte OpenStreetMap via Leaflet (sans iframe, compatible CSP)
@@ -22,6 +71,12 @@ interface OpenStreetMapViewProps {
 export function OpenStreetMapView({
   center,
   markers = [],
+  pickup,
+  destination,
+  vehicle,
+  drivers = [],
+  userMarker,
+  userRole = 'passenger',
   zoom = 14,
   className = "w-full h-full",
   showAttribution = true,
@@ -29,7 +84,8 @@ export function OpenStreetMapView({
 }: OpenStreetMapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<Map<string, { marker: any; iconKey: string }>>(new Map());
+  const fitSignatureRef = useRef<string>('');
   const [loadError, setLoadError] = useState(false);
 
   // Init carte UNE SEULE FOIS — jamais recréée sur changement de centre/zoom.
@@ -43,7 +99,7 @@ export function OpenStreetMapView({
         if (cancelled || !containerRef.current || mapRef.current) return;
         const Leaflet: any = L as any;
         if (!Leaflet) return;
-        const initialCenter = center || markers[0] || { lat: -4.3276, lng: 15.3136 };
+        const initialCenter = center || pickup || markers[0] || { lat: -4.3276, lng: 15.3136 };
         const map = Leaflet.map(containerRef.current, {
           zoomControl: false,
           attributionControl: false,
@@ -77,6 +133,8 @@ export function OpenStreetMapView({
       if (timer) clearTimeout(timer);
       const map = mapRef.current;
       mapRef.current = null;
+      markersRef.current.clear();
+      fitSignatureRef.current = '';
       if (map) {
         // Stopper toute animation (zoom/pan) AVANT de démonter :
         // un _onZoomTransitionEnd en vol après remove() = crash _leaflet_pos.
@@ -110,7 +168,8 @@ export function OpenStreetMapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [zoom]);
 
-  // Marqueurs séparés — pas de recréation de carte
+  // Marqueurs : synchronisés par clé (pas de recréation de carte, pas de
+  // clignotement quand les positions des conducteurs se rafraîchissent).
   useEffect(() => {
     const map = mapRef.current;
     const Leaflet: any = (L as any);
@@ -118,29 +177,119 @@ export function OpenStreetMapView({
     try {
       if (!document.contains(map.getContainer())) return;
     } catch { return; }
-    // Nettoyer anciens
-    markersRef.current.forEach((m: any) => { try { m.remove(); } catch {} });
-    markersRef.current = [];
-    const allPoints: Location[] = [];
-    if (center) allPoints.push(center);
-    markers.forEach(m => allPoints.push(m));
-    allPoints.forEach((p, idx) => {
-      const isPickup = idx === 0 && center && p.lat === center.lat && p.lng === center.lng;
-      const html = isPickup
-        ? '<div style="width:18px;height:18px;background:#10b981;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>'
-        : '<div style="width:28px;height:28px;background:#0ea5e9;border:2px solid white;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px">🚗</div>';
-      const icon = Leaflet.divIcon({ html, className: '', iconSize: isPickup ? [18, 18] : [28, 28], iconAnchor: isPickup ? [9, 9] : [14, 14] });
-      const m = Leaflet.marker([p.lat, p.lng], { icon }).addTo(map);
-      markersRef.current.push(m);
+
+    const desired: DesiredMarker[] = [];
+
+    if (valid(pickup)) {
+      desired.push({ key: 'pickup', lat: pickup.lat, lng: pickup.lng, iconKey: 'pax', build: passengerIcon, z: 1000, title: 'Passager' });
+    }
+    if (valid(userMarker)) {
+      const isDriver = userRole === 'driver';
+      desired.push({
+        key: 'user', lat: userMarker.lat, lng: userMarker.lng,
+        iconKey: isDriver ? 'veh' : 'pax',
+        build: isDriver ? vehicleIcon : passengerIcon,
+        z: 950, title: 'Votre position',
+      });
+    }
+    if (valid(vehicle)) {
+      desired.push({ key: 'vehicle', lat: vehicle.lat, lng: vehicle.lng, iconKey: 'veh', build: vehicleIcon, z: 900, title: 'Véhicule' });
+    }
+    if (valid(destination)) {
+      desired.push({ key: 'destination', lat: destination.lat, lng: destination.lng, iconKey: 'dest', build: destinationIcon, z: 800, title: 'Destination' });
+    }
+    markers.forEach((m, i) => {
+      if (!valid(m)) return;
+      desired.push({ key: `gen:${i}`, lat: m.lat, lng: m.lng, iconKey: 'gen', build: genericIcon, z: 100 });
     });
-    if (allPoints.length > 1) {
+    drivers.forEach((d) => {
+      if (!d || !Number.isFinite(d.lat) || !Number.isFinite(d.lng)) return;
+      const busy = d.available === false;
+      desired.push({
+        key: `drv:${d.id}`, lat: d.lat, lng: d.lng,
+        iconKey: `drv|${d.name || ''}|${busy ? 'busy' : 'free'}`,
+        build: () => driverIcon(d.name, !busy),
+        z: 0,
+        title: `${d.name || 'Chauffeur'}${busy ? ' (en course)' : ''}`,
+      });
+    });
+
+    try {
+      const present = markersRef.current;
+      const wanted = new Set(desired.map((d) => d.key));
+
+      for (const [key, entry] of present.entries()) {
+        if (!wanted.has(key)) {
+          try { entry.marker.remove(); } catch {}
+          present.delete(key);
+        }
+      }
+
+      for (const d of desired) {
+        const existing = present.get(d.key);
+        if (existing && existing.iconKey === d.iconKey) {
+          existing.marker.setLatLng([d.lat, d.lng]);
+          continue;
+        }
+        if (existing) {
+          try { existing.marker.remove(); } catch {}
+        }
+        const marker = Leaflet.marker([d.lat, d.lng], {
+          icon: d.build(),
+          zIndexOffset: d.z,
+          keyboard: false,
+          title: d.title,
+        }).addTo(map);
+        present.set(d.key, { marker, iconKey: d.iconKey });
+      }
+    } catch (e) {
+      console.warn('⚠️ Erreur marqueurs Leaflet', e);
+      return;
+    }
+
+    // Cadrage : seulement quand l'ensemble affiché change (itinéraire, véhicule
+    // qui avance, conducteur qui apparaît/disparaît) — pas à chaque rafraîchis-
+    // sement de position, pour ne pas « sauter » pendant que l'utilisateur
+    // regarde la carte.
+    const anchor: Location | undefined = valid(pickup) ? pickup : valid(userMarker) ? userMarker : center;
+    const nearbyDrivers = drivers.filter((d) => {
+      if (!d || !Number.isFinite(d.lat) || !Number.isFinite(d.lng)) return false;
+      if (!valid(anchor)) return true;
       try {
-        const bounds = Leaflet.latLngBounds(allPoints.map(p => [p.lat, p.lng] as [number, number]));
+        return Leaflet.latLng(anchor.lat, anchor.lng).distanceTo([d.lat, d.lng]) <= FIT_DRIVER_RADIUS_M;
+      } catch { return true; }
+    });
+
+    const points: [number, number][] = [];
+    if (valid(pickup)) points.push([pickup.lat, pickup.lng]);
+    if (valid(userMarker)) points.push([userMarker.lat, userMarker.lng]);
+    if (valid(vehicle)) points.push([vehicle.lat, vehicle.lng]);
+    if (valid(destination)) points.push([destination.lat, destination.lng]);
+    markers.forEach((m) => { if (valid(m)) points.push([m.lat, m.lng]); });
+    nearbyDrivers.forEach((d) => points.push([d.lat, d.lng]));
+    if (points.length === 0 && valid(center)) points.push([center.lat, center.lng]);
+
+    const signature = [
+      sig(pickup), sig(userMarker), sig(vehicle), sig(destination),
+      markers.map(sig).join(';'),
+      nearbyDrivers.map((d) => d.id).sort().join(','),
+    ].join('|');
+
+    if (points.length > 1 && signature !== fitSignatureRef.current) {
+      fitSignatureRef.current = signature;
+      try {
+        const bounds = Leaflet.latLngBounds(points);
         // animate:false — évite une animation de zoom en vol si la carte se démonte
-        map.fitBounds(bounds.pad(0.35), { animate: false });
+        map.fitBounds(bounds.pad(0.35), { animate: false, maxZoom: 17 });
       } catch {}
     }
-  }, [JSON.stringify(markers), center?.lat, center?.lng, loadError]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    JSON.stringify(markers), JSON.stringify(drivers),
+    pickup?.lat, pickup?.lng, destination?.lat, destination?.lng,
+    vehicle?.lat, vehicle?.lng, userMarker?.lat, userMarker?.lng, userRole,
+    center?.lat, center?.lng, loadError,
+  ]);
 
   if (loadError) {
     return (

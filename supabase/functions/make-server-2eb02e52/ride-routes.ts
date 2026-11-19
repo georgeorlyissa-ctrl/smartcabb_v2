@@ -3,6 +3,14 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification } from "./firebase-admin.ts";
 import { creditLoyaltyForRide } from "./loyalty-routes.ts";
 import { sendSosAlertSms } from "./sos-sms.ts";
+import {
+  loadDriversLite,
+  purgeBogusRecoveredDrivers,
+  readDriverLiveLite,
+  readDriverPosition,
+  rebuildAllDriverRecords,
+  rebuildDriverRecord,
+} from "./driver-records.ts";
 
 const app = new Hono();
 
@@ -122,8 +130,10 @@ async function readDriverLockState(driver: any): Promise<{ busy: boolean; stale:
 
 /**
  * Répare les verrous obsolètes d'une liste de chauffeurs déjà chargée.
- * Les objets passés sont corrigés **en mémoire** (pour le filtrage qui suit)
- * et persistés dans le KV. Retourne le nombre de chauffeurs réparés.
+ * Les objets passés sont corrigés **en mémoire** (pour le filtrage qui suit) ;
+ * la persistance relit la fiche COMPLÈTE par id (`releaseStaleDriverLock`) :
+ * la liste peut être « allégée » (sans photo) et ne doit jamais être réécrite
+ * telle quelle dans le KV. Retourne le nombre de chauffeurs réparés.
  */
 async function repairStaleLocksInList(drivers: any[]): Promise<number> {
   let repaired = 0;
@@ -132,24 +142,22 @@ async function repairStaleLocksInList(drivers: any[]): Promise<number> {
       drivers.map(async (driver) => ({ driver, ...(await readDriverLockState(driver)) })),
     );
 
+    const toPersist: string[] = [];
     for (const { driver, stale } of states) {
       if (!stale) continue;
 
       const online = isDriverOnline(driver);
-      const now = new Date().toISOString();
       delete driver.activeRideId;
       delete driver.active_ride_id;
       delete driver.currentRideId;
       delete driver.current_ride_id;
       driver.is_available = online;
       driver.available = online;
-      driver.updated_at = now;
 
-      if (driver.id) {
-        await kv.set(`driver:${driver.id}`, driver).catch(() => undefined);
-      }
+      if (driver.id) toPersist.push(String(driver.id));
       repaired += 1;
     }
+    await Promise.allSettled(toPersist.map((id) => releaseStaleDriverLock(id)));
     if (repaired > 0) {
       console.log(`[RIDE-LOCK] ${repaired} verrou(s) obsolète(s) réparé(s) à la volée`);
     }
@@ -396,7 +404,8 @@ async function findAndNotifyNearbyDrivers(ride: any) {
   try {
     console.log(`🔍 Recherche de chauffeurs pour la course ${ride.id}`);
 
-    const allDrivers = await kv.getByPrefix('driver:');
+    // Lecture ALLÉGÉE (sans photos base64 : ~5 Mo → quelques Ko) et fraîche.
+    const allDrivers = await loadDriversLite();
     console.log(`👥 Total chauffeurs dans la base: ${allDrivers.length}`);
 
     // ✅ Verrous obsolètes : un chauffeur dont `activeRideId` pointe une course
@@ -625,6 +634,32 @@ app.post("/create", async (c) => {
   try {
     const rideData = await c.req.json();
     console.log("📦 Données reçues:", JSON.stringify(rideData, null, 2));
+
+    // 🆔 Idempotence : le client envoie un identifiant de tentative. Un second
+    // appel (réseau lent, bouton pressé deux fois, réessai automatique) renvoie
+    // la MÊME course au lieu d'en créer une deuxième.
+    const clientRequestId = typeof rideData.clientRequestId === "string"
+      ? rideData.clientRequestId.trim().slice(0, 80)
+      : "";
+    if (clientRequestId) {
+      try {
+        const existingId = await kvGet(`ride_req:${clientRequestId}`);
+        if (existingId && typeof existingId === "string") {
+          const existingRide = await kvGet(`ride:${existingId}`);
+          if (existingRide) {
+            console.log(`♻️ [RIDES/CREATE] Requête ${clientRequestId} déjà traitée → course ${existingId}`);
+            return c.json({
+              success: true,
+              rideId: existingId,
+              ride: existingRide,
+              matching: { success: true, idempotent: true, driversNotified: 0 },
+            });
+          }
+        }
+      } catch (e) {
+        console.warn("⚠️ [RIDES/CREATE] Vérification d'idempotence impossible:", e);
+      }
+    }
     
     const passengerIdForBlock = rideData.passengerId || rideData.passenger_id;
     if (passengerIdForBlock) {
@@ -689,12 +724,64 @@ app.post("/create", async (c) => {
       } : {}),
     };
     
-    await kv.set(`ride:${rideId}`, ride);
+    // 💾 Écriture RETENTÉE : sans cela, une microcoupure KV renvoyait une 500
+    // et le passager voyait « service indisponible » sans qu'aucune course
+    // n'existe côté serveur (aucune notification possible ensuite).
+    let persisted = false;
+    let lastWriteError = "";
+    for (const delay of [0, 250, 800]) {
+      if (delay) await new Promise((r) => setTimeout(r, delay));
+      try {
+        await kv.set(`ride:${rideId}`, ride);
+        persisted = true;
+        break;
+      } catch (e: any) {
+        lastWriteError = String(e?.message || e);
+      }
+    }
+    if (!persisted) {
+      console.error(`❌ [RIDES/CREATE] Écriture impossible pour ${rideId}: ${lastWriteError}`);
+      await logAdminEvent("ride_create_failed", {
+        rideId,
+        passengerId: passengerIdForBlock || null,
+        category: vehicleCategory || null,
+        reason: lastWriteError || "écriture KV impossible",
+      }).catch(() => undefined);
+      return c.json({
+        success: false,
+        error: "RIDE_CREATE_UNAVAILABLE",
+        retry: true,
+        message: "Course non enregistrée. Réessayez dans un instant.",
+      }, 503);
+    }
+
     console.log("✅ Course créée:", rideId, "- Catégorie:", vehicleCategory);
-    
+
+    // 🔁 Mémorise la tentative pour l'idempotence (best effort).
+    if (clientRequestId) {
+      await kvSet(`ride_req:${clientRequestId}`, rideId).catch(() => undefined);
+    }
+
+    // 📊 Trace visible dans le journal admin (création de course).
+    await logAdminEvent("ride_created", {
+      rideId,
+      passengerId: passengerIdForBlock || null,
+      passengerName: rideData.passengerName || null,
+      category: vehicleCategory || null,
+      pickup: rideData.pickup?.address || rideData.pickupAddress || null,
+      destination: rideData.destination?.address || rideData.destinationAddress || null,
+      clientRequestId: clientRequestId || null,
+    }).catch(() => undefined);
+
     // 🎯 LANCER LE MATCHING ET NOTIFIER LES CHAUFFEURS
-    const matchingResult = await findAndNotifyNearbyDrivers(ride);
-    
+    let matchingResult: any;
+    try {
+      matchingResult = await findAndNotifyNearbyDrivers(ride);
+    } catch (e: any) {
+      console.error(`❌ [RIDES/CREATE] Matching en erreur pour ${rideId}:`, e);
+      matchingResult = { success: false, reason: "matching_error", error: String(e?.message || e) };
+    }
+
     if (matchingResult.success) {
       console.log(`✅ ${matchingResult.driversNotified} chauffeurs notifiés pour la course ${rideId}`);
     } else {
@@ -757,7 +844,7 @@ app.get("/status/:id", async (c) => {
 // ============================================
 app.post("/heal-stuck-state", async (c) => {
   try {
-    const drivers = await kv.getByPrefix('driver:');
+    const drivers = await loadDriversLite();
     const activeRideIds = await loadActiveRideIdSet();
 
     const staleDrivers: string[] = [];
@@ -817,7 +904,7 @@ app.post("/heal-stuck-state", async (c) => {
 // ============================================
 app.get("/debug-drivers", async (c) => {
   try {
-    const allDrivers = await kv.getByPrefix('driver:');
+    const allDrivers = await loadDriversLite();
     // Diagnostic fidèle : un verrou obsolète ne doit pas apparaître comme « occupé ».
     await repairStaleLocksInList(allDrivers);
     
@@ -874,6 +961,153 @@ app.get("/debug-drivers", async (c) => {
   }
 });
 
+/**
+ * Conducteurs en ligne + position, pour les cartes passager.
+ * Données volontairement minimales : prénom, position, disponibilité — ni
+ * téléphone, ni photo, ni solde.
+ */
+function toMapDrivers(
+  drivers: any[],
+  eligibleIds: Set<string> | null,
+  pickup?: { lat: number; lng: number },
+  radiusKm?: number,
+): any[] {
+  return drivers
+    .map((d: any) => {
+      const pos = readDriverPosition(d);
+      if (!pos) return null;
+      const distanceKm = pickup
+        ? calculateDistance(pickup.lat, pickup.lng, pos.lat, pos.lng)
+        : undefined;
+      if (radiusKm !== undefined && distanceKm !== undefined && distanceKm > radiusKm) return null;
+      const fullName = String(d.full_name || d.name || '').trim();
+      const driverCategory = d.vehicleCategory || d.vehicle_category ||
+        d.vehicle_type || d.vehicleType || d.vehicle?.category || d.vehicle?.type;
+      return {
+        id: d.id,
+        name: fullName.split(/\s+/)[0] || 'Chauffeur',
+        rating: d.rating,
+        totalRides: d.totalRides || d.total_rides,
+        vehicleType: driverCategory,
+        lat: pos.lat,
+        lng: pos.lng,
+        distanceKm,
+        available: eligibleIds ? eligibleIds.has(String(d.id)) : !driverHasActiveRide(d),
+      };
+    })
+    .filter(Boolean)
+    .sort((a: any, b: any) => (a.distanceKm ?? 9e9) - (b.distanceKm ?? 9e9));
+}
+
+// ============================================
+// GET /online-drivers - Conducteurs connectés + position (cartes passager)
+//   ?lat=&lng=   : trie par distance et filtre dans `radiusKm` (25 km par défaut)
+// Lecture allégée + instantané de 3 s : sûr à interroger toutes les 8 s.
+// ⚠️ À garder AVANT `GET /:id`, sinon « online-drivers » serait pris pour un id.
+// ============================================
+app.get("/online-drivers", async (c) => {
+  try {
+    const lat = Number(c.req.query('lat'));
+    const lng = Number(c.req.query('lng'));
+    const hasPoint = c.req.query('lat') !== undefined && c.req.query('lng') !== undefined &&
+      Number.isFinite(lat) && Number.isFinite(lng);
+    const radiusKm = Math.min(Math.max(Number(c.req.query('radiusKm')) || 25, 1), 100);
+
+    const drivers = await loadDriversLite({ maxAgeMs: 3000 });
+    const online = drivers.filter((d: any) =>
+      isDriverOnline(d) && (d.balance || d.creditBalance || 0) >= 0
+    );
+    // Un verrou de course obsolète ne doit pas griser un chauffeur réellement libre.
+    await repairStaleLocksInList(online);
+    const mapDrivers = toMapDrivers(
+      online,
+      null,
+      hasPoint ? { lat, lng } : undefined,
+      hasPoint ? radiusKm : undefined,
+    ).slice(0, 50);
+
+    return c.json({
+      success: true,
+      count: mapDrivers.length,
+      totalOnline: online.length,
+      drivers: mapDrivers,
+    });
+  } catch (error) {
+    console.error("❌ [ONLINE-DRIVERS] Lecture impossible:", error);
+    return c.json({ success: false, error: "DRIVERS_UNAVAILABLE", retry: true }, 503);
+  }
+});
+
+// Les opérations de maintenance exigent le secret admin (même règle que les
+// crédits manuels dans driver-routes.ts).
+function hasValidAdminSecret(c: any): boolean {
+  const expected =
+    Deno.env.get("EJPAY_ADMIN_SECRET") || Deno.env.get("ADMIN_CREATION_SECRET") || "";
+  if (!expected) return false;
+  return (c.req.header("x-admin-secret") || "") === expected;
+}
+
+// ============================================
+// POST /repair-drivers - Réparation à la demande des fiches conducteur
+//   en-tête : x-admin-secret (obligatoire)
+//   body    : { driverId?: string, purge?: boolean, all?: boolean }
+//     driverId : reconstruit CE conducteur (absent ou réduit à une coquille)
+//     all      : reconstruit toutes les fiches manquantes/coquilles (lourd)
+//     purge    : supprime les fiches fantômes issues d'une reconstruction
+// Réponse sans donnée personnelle (ids, booléens, compteurs).
+// ============================================
+app.post("/repair-drivers", async (c) => {
+  if (!hasValidAdminSecret(c)) {
+    return c.json({ success: false, error: "Non autorisé" }, 403);
+  }
+  const report: any = {};
+  try {
+    const body = await c.req.json().catch(() => ({}));
+
+    if (body?.purge === true) {
+      report.purged = await purgeBogusRecoveredDrivers();
+    }
+
+    if (body?.driverId) {
+      const id = String(body.driverId);
+      const before = await kv.get<any>(`driver:${id}`);
+      report.target = {
+        id,
+        existedBefore: !!before,
+        wasPlaceholder: !!before && !(before.full_name || before.name || before.phone || before.email),
+      };
+      const rebuilt = await rebuildDriverRecord(id);
+      report.target.rebuilt = !!rebuilt;
+      if (rebuilt) {
+        report.target.status = rebuilt.status;
+        report.target.isApproved = rebuilt.isApproved;
+        report.target.category = rebuilt.vehicleCategory;
+        report.target.balance = rebuilt.balance;
+        report.target.balanceSource = rebuilt.recoveredBalanceSource ?? null;
+        report.target.needsBalanceReview = rebuilt.needsBalanceReview ?? false;
+        report.target.hasFcmToken = !!rebuilt.fcmToken;
+        report.target.isOnline = rebuilt.isOnline === true;
+      }
+    }
+
+    if (body?.all === true) {
+      report.all = await rebuildAllDriverRecords();
+    }
+
+    const drivers = await loadDriversLite();
+    report.totalDrivers = drivers.length;
+    report.placeholders = drivers
+      .filter((d: any) => !(d.full_name || d.name || d.phone || d.email))
+      .map((d: any) => d.id);
+    report.online = drivers.filter((d: any) => isDriverOnline(d)).length;
+
+    return c.json({ success: true, ...report });
+  } catch (e: any) {
+    console.error("❌ [REPAIR-DRIVERS]", e);
+    return c.json({ success: false, error: String(e?.message || e), ...report }, 500);
+  }
+});
+
 // ============================================
 // GET /:id - Récupérer une course par ID
 // ============================================
@@ -892,7 +1126,9 @@ app.get("/:id", async (c) => {
     let driverLocation: any = null;
     if (ride.driverId) {
       try {
-        const driver = await kv.get<any>(`driver:${ride.driverId}`);
+        // Lecture ciblée (position seulement) : route sondée en continu pendant
+        // la course, inutile de charger la fiche complète avec sa photo.
+        const driver = await readDriverLiveLite(String(ride.driverId));
         const loc = driver?.currentLocation || driver?.current_location || driver?.location || null;
         if (loc && typeof loc.lat === 'number' && typeof loc.lng === 'number') {
           driverLocation = {
@@ -959,12 +1195,25 @@ app.get("/pending/:driverId", async (c) => {
 // ============================================
 app.post("/check-drivers-availability", async (c) => {
   try {
-    const { vehicleCategory } = await c.req.json();
+    const body = await c.req.json().catch(() => ({}));
+    const { vehicleCategory } = body || {};
+    const pickupLat = Number(body?.pickupLat);
+    const pickupLng = Number(body?.pickupLng);
+    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
     
     console.log(`🔍 Vérification disponibilité chauffeurs pour catégorie: ${vehicleCategory}`);
     
-    // Récupérer tous les chauffeurs
-    const allDrivers = await kv.getByPrefix('driver:');
+    // Lecture ALLÉGÉE (sans photos base64) + instantané de 3 s partagé entre
+    // les passagers qui interrogent en même temps. Si la base est
+    // indisponible on répond 503 (le client réessaie) au lieu d'un faux
+    // « aucun chauffeur ».
+    let allDrivers: any[];
+    try {
+      allDrivers = await loadDriversLite({ maxAgeMs: 3000 });
+    } catch (e) {
+      console.error("❌ [AVAILABILITY] Lecture des conducteurs impossible:", e);
+      return c.json({ success: false, error: "DRIVERS_UNAVAILABLE", retry: true }, 503);
+    }
     // 🧹 Un verrou de course obsolète ne doit pas faire croire qu'aucun
     // chauffeur n'est disponible (sinon le passager ne peut plus commander).
     await repairStaleLocksInList(allDrivers);
@@ -1036,6 +1285,17 @@ app.post("/check-drivers-availability", async (c) => {
       console.log(`🔄 Alternatives disponibles:`, alternatives);
     }
     
+    // ─── Positions des conducteurs connectés (carte passager) ────────────
+    // On renvoie TOUS les conducteurs en ligne, même ceux dont la catégorie ou
+    // la disponibilité ne correspond pas : la carte doit montrer « qui est
+    // connecté autour de moi », pas seulement qui est éligible.
+    const eligibleIds = new Set(eligibleDrivers.map((d: any) => String(d.id)));
+    const driverPositions = toMapDrivers(
+      allOnlineDrivers,
+      eligibleIds,
+      hasPickup ? { lat: pickupLat, lng: pickupLng } : undefined,
+    );
+
     return c.json({
       success: true,
       available,
@@ -1043,7 +1303,10 @@ app.post("/check-drivers-availability", async (c) => {
       totalOnline,
       categoryName: getCategoryName(vehicleCategory),
       alternatives,
-      noDriversOnlineAtAll: totalOnline === 0
+      noDriversOnlineAtAll: totalOnline === 0,
+      // ⬇️ consommé par l'écran de recherche pour placer les marqueurs
+      drivers: driverPositions,
+      driversWithPosition: driverPositions.length,
     });
   } catch (error) {
     console.error("❌ Erreur vérification disponibilité:", error);
@@ -1070,7 +1333,7 @@ app.get("/check-availability/:id", async (c) => {
     console.log(`🔍 Vérification disponibilité pour course ${rideId}, catégorie: ${ride.vehicleCategory}`);
     
     // Récupérer tous les chauffeurs disponibles pour cette catégorie
-    const allDrivers = await kv.getByPrefix('driver:');
+    const allDrivers = await loadDriversLite({ maxAgeMs: 3000 });
     await repairStaleLocksInList(allDrivers);
     const eligibleDrivers = allDrivers.filter((d: any) => {
       // ✅ FIX: isOnline correct + variable 'd'
@@ -1356,7 +1619,7 @@ app.post("/accept", async (c) => {
 
     // Notifier les autres drivers de la même catégorie que la course est prise
     try {
-      const allDrivers = await kv.getByPrefix('driver:');
+      const allDrivers = await loadDriversLite();
       const otherDrivers = allDrivers.filter((d: any) => {
         // ✅ FIX: variable 'd' + isOnline correct
         const driverCategory = d.vehicleCategory || 
@@ -1699,7 +1962,7 @@ app.post("/cancel", async (c) => {
 
     // ✅ FIX: Notifier tous les drivers - variable 'd' + isOnline correct
     try {
-      const allDriversForCancel = await kv.getByPrefix('driver:');
+      const allDriversForCancel = await loadDriversLite();
       const categoryDrivers = allDriversForCancel.filter((d: any) => {
         const driverCategory = d.vehicleCategory || 
                          d.vehicle_category ||
@@ -2013,7 +2276,7 @@ app.get("/admin/fraud-signals", async (c) => {
       }
     }
 
-    const drivers = await kv.getByPrefix("driver:");
+    const drivers = await loadDriversLite({ maxAgeMs: 30_000 });
     const nameOf: Record<string, string> = {};
     drivers.forEach((d: any) => { if (d.id) nameOf[d.id] = d.full_name || d.name || null; });
 

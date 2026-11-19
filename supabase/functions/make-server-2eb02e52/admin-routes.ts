@@ -491,13 +491,18 @@ const DEFAULT_SETTINGS = {
 };
 
 // ─── GET /settings/load — Charger la configuration globale ───────────────────
+// ⚠️ Ne renvoie JAMAIS les valeurs par défaut comme si c'était la config réelle :
+// l'écran admin les afficherait puis les sauvegarderait (taux de change écrasé).
 app.get("/settings/load", async (c) => {
   try {
     const stored = await kvGet(CONFIG_KEY);
-    return c.json({ success: true, settings: { ...DEFAULT_SETTINGS, ...(stored || {}) } });
+    if (!stored) {
+      return c.json({ success: false, error: "CONFIG_UNAVAILABLE", retry: true }, 503);
+    }
+    return c.json({ success: true, settings: { ...DEFAULT_SETTINGS, ...stored } });
   } catch (error) {
     console.error("❌ Erreur settings/load:", error);
-    return c.json({ success: true, settings: DEFAULT_SETTINGS });
+    return c.json({ success: false, error: "CONFIG_UNAVAILABLE", retry: true }, 503);
   }
 });
 
@@ -505,10 +510,30 @@ app.get("/settings/load", async (c) => {
 app.post("/settings/save", async (c) => {
   try {
     const body = await c.req.json().catch(() => ({}));
-    const existing = (await kvGet(CONFIG_KEY)) ?? DEFAULT_SETTINGS;
-    const merged = { ...existing, ...body, lastUpdated: new Date().toISOString() };
+
+    // Lecture STRICTE : une base momentanément indisponible ne doit pas faire
+    // réécrire la config avec les valeurs par défaut (taux 2500, commission 10).
+    const existing = await kvGet(CONFIG_KEY);
+    if (!existing) {
+      return c.json({ success: false, error: "CONFIG_UNAVAILABLE", retry: true }, 503);
+    }
+
+    const safeNumber = (value: any, fallback: number): number => {
+      const n = typeof value === "number" ? value : Number(value);
+      return Number.isFinite(n) && n > 0 ? n : fallback;
+    };
+
+    const merged = {
+      ...existing,
+      ...body,
+      exchangeRate: safeNumber(body.exchangeRate, safeNumber(existing.exchangeRate, DEFAULT_SETTINGS.exchangeRate)),
+      commissionRate: safeNumber(body.commissionRate, safeNumber(existing.commissionRate, DEFAULT_SETTINGS.commissionRate)),
+      // Version croissante : c'est elle que les apps comparent pour se mettre à jour.
+      configVersion: (Number(existing.configVersion) || 0) + 1,
+      lastUpdated: new Date().toISOString(),
+    };
     await kvSet(CONFIG_KEY, merged);
-    console.log("⚙️ [ADMIN/SETTINGS/SAVE] Configuration sauvegardée");
+    console.log(`⚙️ [ADMIN/SETTINGS/SAVE] Configuration sauvegardée (v${merged.configVersion})`);
     return c.json({ success: true, settings: merged });
   } catch (error) {
     console.error("❌ Erreur settings/save:", error);

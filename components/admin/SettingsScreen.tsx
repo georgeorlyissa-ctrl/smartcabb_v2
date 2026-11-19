@@ -27,6 +27,7 @@ import { toast } from '../../lib/toast';
 import { formatCDF } from '../../lib/pricing';
 import { supabase } from '../../lib/supabase';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { fetchGlobalConfigStrict, saveGlobalConfig } from '../../lib/config-sync';
 
 interface SettingsScreenProps {
   onBack?: () => void;
@@ -64,6 +65,27 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     smsNotifications: false,
     pushNotifications: true
   });
+
+  // 🔒 Taux & commission : lus SUR LE SERVEUR avant toute sauvegarde.
+  // Avant, l'écran partait de `state.systemSettings?.exchangeRate || 2500` :
+  // quand le cache était vide il affichait 2500, puis l'enregistrait — c'est
+  // l'une des causes du taux qui « changeait tout seul » dans le panneau.
+  const [configLoaded, setConfigLoaded] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetchGlobalConfigStrict()
+      .then((cfg) => {
+        if (!alive) return;
+        setCurrencySettings((prev) => ({ ...prev, exchangeRateUSDToCDF: cfg.exchangeRate }));
+        setPricing((prev) => ({ ...prev, commission: cfg.commissionRate }));
+        setConfigLoaded(true);
+      })
+      .catch((e) => {
+        console.warn('⚠️ [SETTINGS] Configuration serveur illisible : sauvegarde bloquée', e);
+        if (alive) setConfigLoaded(false);
+      });
+    return () => { alive = false; };
+  }, []);
 
   // Charger les paramètres de notifications depuis l'état global au montage
   useEffect(() => {
@@ -109,20 +131,30 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
       });
     }
     
-    // 🔥 AUSSI sauvegarder dans le KV store serveur (pour que le backend y accède)
+    if (!configLoaded) {
+      toast.error('Configuration non chargée', {
+        description: 'Le taux n\'a pas pu être lu sur le serveur. Aucune valeur n\'a été modifiée.'
+      });
+      return;
+    }
+
+    // 1️⃣ Taux de change + commission : chemin UNIQUE (`/config/update`), avec
+    // une base relue sur le serveur. Une lecture en échec refuse la sauvegarde
+    // au lieu d'écrire les valeurs par défaut.
+    const rateSaved = await saveGlobalConfig({
+      exchangeRate: currencySettings.exchangeRateUSDToCDF,
+      commissionRate: pricing.commission,
+    });
+    if (!rateSaved) {
+      toast.error('Taux non sauvegardé', {
+        description: 'Le serveur n\'a pas pu être lu. Aucune valeur n\'a été modifiée, réessayez.'
+      });
+      return;
+    }
+
+    // 2️⃣ Notifications : route admin (elle ne touche pas au taux).
     try {
-      const systemSettings = {
-        exchangeRate: currencySettings.exchangeRateUSDToCDF,
-        postpaidInterestRate: currencySettings.postpaidInterestRate,
-        commissionRate: pricing.commission,
-        emailNotifications: notifications.emailNotifications,
-        smsNotifications: notifications.smsNotifications,
-        pushNotifications: notifications.pushNotifications,
-        updatedAt: new Date().toISOString()
-      };
-      
-      console.log('📤 Envoi au backend:', systemSettings);
-      
+      console.log('📤 Envoi des notifications au backend');
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/admin/settings/save`,
         {
@@ -131,50 +163,55 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${publicAnonKey}`
           },
-          body: JSON.stringify(systemSettings)
+          body: JSON.stringify({
+            emailNotifications: notifications.emailNotifications,
+            smsNotifications: notifications.smsNotifications,
+            pushNotifications: notifications.pushNotifications,
+          })
         }
       );
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        console.warn('⚠️ Erreur sauvegarde KV store:', result.error);
-        toast.error('Erreur lors de la sauvegarde backend', {
-          description: result.error || 'Impossible de sauvegarder dans le backend'
+
+      const result = await response.json().catch(() => ({}));
+      if (!result?.success) {
+        console.warn('⚠️ Erreur sauvegarde notifications:', result?.error);
+        toast.error('Taux enregistré, notifications non sauvegardées', {
+          description: result?.error || 'Réessayez dans un instant'
         });
         return;
-      } else {
-        console.log('✅ Paramètres sauvegardés dans le KV store serveur:', result);
-        toast.success('Paramètres sauvegardés avec succès !', {
-          description: `Taux de change: ${currencySettings.exchangeRateUSDToCDF} CDF - Synchronisé sur tous les appareils`
-        });
-
-        // ─── Propagation immédiate côté client ────────────────────────────
-        try {
-          const patch = JSON.stringify({
-            exchangeRate: currencySettings.exchangeRateUSDToCDF,
-            postpaidInterestRate: currencySettings.postpaidInterestRate,
-          });
-          // Mettre à jour les deux clés pour que pricing.ts et config-sync.ts soient alignés
-          const existingCache = localStorage.getItem('smartcabb_config_cache');
-          const merged = existingCache
-            ? JSON.stringify({ ...JSON.parse(existingCache), exchangeRate: currencySettings.exchangeRateUSDToCDF })
-            : patch;
-          localStorage.setItem('smartcabb_config_cache', merged);
-          localStorage.setItem('smartcab_system_settings', merged);
-          localStorage.setItem('smartcabb_exchange_rate', String(currencySettings.exchangeRateUSDToCDF));
-          window.dispatchEvent(new CustomEvent('smartcabb:config-updated', {
-            detail: { exchangeRate: currencySettings.exchangeRateUSDToCDF }
-          }));
-          window.dispatchEvent(new CustomEvent('exchange-rate-updated', {
-            detail: { rate: currencySettings.exchangeRateUSDToCDF }
-          }));
-        } catch (_) {}
       }
+
+      console.log('✅ Paramètres sauvegardés:', result);
+      toast.success('Paramètres sauvegardés avec succès !', {
+        description: `Taux de change: ${currencySettings.exchangeRateUSDToCDF} CDF - Synchronisé sur tous les appareils`
+      });
+
+      // ─── Propagation immédiate côté client ────────────────────────────
+      try {
+        const existingCache = localStorage.getItem('smartcabb_config_cache');
+        const merged = existingCache
+          ? JSON.stringify({
+              ...JSON.parse(existingCache),
+              exchangeRate: currencySettings.exchangeRateUSDToCDF,
+              postpaidInterestRate: currencySettings.postpaidInterestRate,
+            })
+          : JSON.stringify({
+              exchangeRate: currencySettings.exchangeRateUSDToCDF,
+              postpaidInterestRate: currencySettings.postpaidInterestRate,
+            });
+        localStorage.setItem('smartcabb_config_cache', merged);
+        localStorage.setItem('smartcab_system_settings', merged);
+        localStorage.setItem('smartcabb_exchange_rate', String(currencySettings.exchangeRateUSDToCDF));
+        window.dispatchEvent(new CustomEvent('smartcabb:config-updated', {
+          detail: { exchangeRate: currencySettings.exchangeRateUSDToCDF }
+        }));
+        window.dispatchEvent(new CustomEvent('exchange-rate-updated', {
+          detail: { rate: currencySettings.exchangeRateUSDToCDF }
+        }));
+      } catch (_) {}
     } catch (err) {
       console.error('⚠️ Erreur appel serveur pour KV store:', err);
       toast.error('Erreur réseau', {
-        description: 'Impossible de contacter le serveur backend'
+        description: 'Le taux a été enregistré, mais les notifications non. Réessayez.'
       });
       return;
     }
@@ -257,7 +294,9 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
             </div>
             <Button
               onClick={handleSaveSettings}
-              className="bg-green-600 hover:bg-green-700"
+              disabled={!configLoaded}
+              title={!configLoaded ? 'Configuration non chargée depuis le serveur' : undefined}
+              className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
             >
               <Save className="w-4 h-4 mr-2" />
               Sauvegarder
@@ -698,7 +737,9 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
         >
           <Button
             onClick={handleSaveSettings}
-            className="w-full h-12 bg-green-600 hover:bg-green-700"
+            disabled={!configLoaded}
+            title={!configLoaded ? 'Configuration non chargée depuis le serveur' : undefined}
+            className="w-full h-12 bg-green-600 hover:bg-green-700 disabled:opacity-50"
           >
             <Save className="w-4 h-4 mr-2" />
             Sauvegarder les paramètres

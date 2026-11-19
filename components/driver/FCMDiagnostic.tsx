@@ -15,6 +15,8 @@ import {
   forceRefreshDriverFCMToken 
 } from '../../lib/driver-fcm';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { playRideNotification } from '../../lib/notification-sound';
+import { nativeTTSCheck, isNativeApp } from '../../lib/native-tts';
 
 interface FCMDiagnosticProps {
   driverId: string;
@@ -36,6 +38,11 @@ export function FCMDiagnostic({ driverId, driverName }: FCMDiagnosticProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+  // 🗣️ État de la synthèse vocale (sur téléphone : moteur natif Android)
+  const [ttsInfo, setTtsInfo] = useState<{ native: boolean; available: boolean | null; langs?: string[] }>({
+    native: false,
+    available: null,
+  });
 
   // Ajouter un log
   const addLog = (message: string, type: 'info' | 'success' | 'error' | 'warning' = 'info') => {
@@ -158,6 +165,59 @@ export function FCMDiagnostic({ driverId, driverName }: FCMDiagnosticProps) {
       }
     } catch (error: any) {
       addLog(`❌ Erreur: ${error.message}`, 'error');
+    }
+  };
+
+  // 🗣️ Vérifier le moteur de voix (natif sur l'APK)
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const native = isNativeApp();
+      let available: boolean | null = null;
+      let langs: string[] | undefined;
+      try {
+        if (native) {
+          const check = await nativeTTSCheck();
+          available = check.available;
+          langs = check.languages;
+        } else if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+          const voices = window.speechSynthesis.getVoices();
+          available = voices.length > 0;
+          langs = voices.map((v) => v.lang);
+        } else {
+          available = false;
+        }
+      } catch {
+        available = false;
+      }
+      if (!alive) return;
+      setTtsInfo({ native, available, langs });
+      addLog(
+        native
+          ? `Voix native (Android) : ${available ? 'disponible' : 'INDISPONIBLE — installez une voix française dans les paramètres du téléphone'}`
+          : `Voix navigateur : ${available ? 'disponible' : 'indisponible'}`,
+        available ? 'success' : 'error',
+      );
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // 🔊 Tester la sonnerie + l'annonce vocale
+  const handleTestVoice = async () => {
+    addLog('🔊 Test sonnerie + voix…', 'info');
+    try {
+      await playRideNotification({
+        passengerName: 'Test',
+        pickup: 'Avenue Kasavubu, Kinshasa',
+        destination: 'Boulevard du 30 Juin, Kinshasa',
+        distance: 3.5,
+        estimatedEarnings: 2500,
+      });
+      addLog('✅ Sonnerie + annonce terminées', 'success');
+      toast.success('Sonnerie et voix lancées');
+    } catch (e: any) {
+      addLog(`❌ Erreur son/voix: ${e?.message || e}`, 'error');
+      toast.error('Le son ou la voix a échoué');
     }
   };
 
@@ -330,6 +390,35 @@ export function FCMDiagnostic({ driverId, driverName }: FCMDiagnosticProps) {
           >
             🚀 Test PUSH Backend
           </button>
+
+          <button
+            onClick={handleTestVoice}
+            className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 text-sm font-medium"
+          >
+            🔊 Test Sonnerie + Voix
+          </button>
+        </div>
+
+        {/* État de la voix (téléphone / navigateur) */}
+        <div className={`mb-4 rounded-lg p-3 text-sm ${
+          ttsInfo.available === false ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-gray-50 text-gray-700'
+        }`}>
+          <div className="font-medium">
+            {ttsInfo.native ? 'Voix native du téléphone' : 'Voix du navigateur'} :{' '}
+            {ttsInfo.available === null ? 'vérification…' : ttsInfo.available ? '✅ disponible' : '❌ aucune voix'}
+          </div>
+          {ttsInfo.available === false && (
+            <div className="mt-1 text-xs">
+              Ouvrez les paramètres du téléphone → « Synthèse vocale » (ou « Sortie
+              texte-parole »), puis installez la voix <strong>Français</strong>. Sans voix
+              française, le téléphone ne peut pas lire l'annonce.
+            </div>
+          )}
+          {ttsInfo.langs && ttsInfo.langs.length > 0 && (
+            <div className="mt-1 text-xs text-gray-500 truncate">
+              {ttsInfo.langs.slice(0, 8).join(', ')}
+            </div>
+          )}
         </div>
 
         {/* Logs */}

@@ -13,6 +13,7 @@ import {
   GlobalConfig,
   DEFAULT_CONFIG,
   fetchGlobalConfig,
+  fetchGlobalConfigStrict,
   saveGlobalConfig,
   listenConfigUpdates,
   getConfigValue,
@@ -26,6 +27,13 @@ export function useGlobalConfig() {
   const [config, setConfig] = useState<GlobalConfig>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /**
+   * `true` seulement si la config a été lue SUR LE SERVEUR. Les écrans admin
+   * doivent interdire la sauvegarde tant que ce n'est pas le cas : sinon ils
+   * affichent (et enregistrent) les valeurs par défaut — d'où le taux de
+   * change qui « changeait tout seul ».
+   */
+  const [loaded, setLoaded] = useState(false);
 
   // Charger la configuration au montage
   useEffect(() => {
@@ -34,18 +42,28 @@ export function useGlobalConfig() {
     const loadConfig = async () => {
       try {
         setLoading(true);
-        const loadedConfig = await initConfigSync();
-        
+        // Lecture stricte : on saura si la config vient vraiment du serveur.
+        const loadedConfig = await fetchGlobalConfigStrict();
+        initConfigSync().catch(() => {});
+
         if (mounted) {
           setConfig(loadedConfig);
           setError(null);
+          setLoaded(true);
         }
       } catch (err) {
         console.error('❌ Erreur chargement config:', err);
         if (mounted) {
           setError('Erreur chargement configuration');
-          // Utiliser la config par défaut en cas d'erreur
-          setConfig(DEFAULT_CONFIG);
+          // On garde le cache local pour l'AFFICHAGE, mais `loaded` reste faux :
+          // aucune sauvegarde ne sera possible depuis cet écran.
+          try {
+            const cached = localStorage.getItem('smartcabb_config_cache');
+            setConfig(cached ? { ...DEFAULT_CONFIG, ...JSON.parse(cached) } : DEFAULT_CONFIG);
+          } catch {
+            setConfig(DEFAULT_CONFIG);
+          }
+          setLoaded(false);
         }
       } finally {
         if (mounted) {
@@ -111,12 +129,14 @@ export function useGlobalConfig() {
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      const freshConfig = await fetchGlobalConfig();
+      const freshConfig = await fetchGlobalConfigStrict();
       setConfig(freshConfig);
       setError(null);
+      setLoaded(true);
     } catch (err) {
       console.error('❌ Erreur refresh config:', err);
       setError('Erreur refresh configuration');
+      setLoaded(false);
     } finally {
       setLoading(false);
     }
@@ -126,6 +146,7 @@ export function useGlobalConfig() {
     config,
     loading,
     error,
+    loaded,
     updateConfig,
     refresh
   };

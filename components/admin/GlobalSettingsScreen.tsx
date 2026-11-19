@@ -25,7 +25,9 @@ import { toast } from '../../lib/toast';
 
 export function GlobalSettingsScreen() {
   const { setCurrentScreen } = useAppState();
-  const { config, loading, updateConfig, refresh } = useGlobalConfig();
+  // `loaded` = config réellement lue sur le serveur. Sans elle, on n'autorise
+  // PAS la sauvegarde (sinon les valeurs par défaut écrasent le taux de change).
+  const { config, loading, loaded, updateConfig, refresh } = useGlobalConfig();
   
   // État local pour les modifications
   const [localConfig, setLocalConfig] = useState(config);
@@ -56,6 +58,12 @@ export function GlobalSettingsScreen() {
 
   // Sauvegarder tous les changements
   const handleSave = async () => {
+    if (!loaded) {
+      toast.error('Configuration non chargée', {
+        description: 'Impossible de sauvegarder sans avoir lu la configuration du serveur. Réessayez dans un instant.',
+      });
+      return;
+    }
     setIsSaving(true);
     try {
       const success = await updateConfig(localConfig);
@@ -137,7 +145,8 @@ export function GlobalSettingsScreen() {
               <Button
                 size="sm"
                 onClick={handleSave}
-                disabled={isSaving || loading}
+                disabled={isSaving || loading || !loaded}
+                title={!loaded ? 'Configuration non chargée depuis le serveur' : undefined}
               >
                 <Save className="w-4 h-4 mr-2" />
                 {isSaving ? 'Sauvegarde...' : 'Sauvegarder'}
@@ -149,6 +158,13 @@ export function GlobalSettingsScreen() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {(!loaded && !loading) && (
+          <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <strong>Configuration non chargée.</strong> La lecture du serveur a échoué :
+            les valeurs affichées peuvent être incomplètes et la sauvegarde est bloquée
+            pour ne pas écraser le taux de change. Utilisez « Réinitialiser » pour réessayer.
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Commission */}

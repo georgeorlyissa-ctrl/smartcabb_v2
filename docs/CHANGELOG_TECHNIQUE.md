@@ -42,6 +42,122 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (20) — Taux de change stable, création de course fiable, diagnostic voix
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix / security / perf
+- **Objectif** : trois incidents signalés — (1) le **taux de change changeait tout seul** dans le panneau admin ; (2) après une course terminée, une **deuxième course n'était jamais notifiée** au conducteur ; (3) sur téléphone, la **sonnerie/voix** ne se déclenchait pas alors qu'elle fonctionnait sur ordinateur.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/config-routes.ts` | Lecture stricte de la config (retries), **plus aucune écriture des valeurs par défaut** en cas d'échec, version toujours croissante, garde-fous numériques |
+| `supabase/functions/make-server-2eb02e52/admin-routes.ts` | `/admin/settings/load` et `/save` alignés (503 + jamais de défauts, `configVersion` incrémentée) |
+| `lib/config-sync.ts` | `fetchGlobalConfigStrict()` ; `saveGlobalConfig()` relit la config **serveur** avant d'écrire (plus de base « cache vide / défauts ») |
+| `hooks/useGlobalConfig.ts` | Expose `loaded` (config réellement lue sur le serveur) ; cache local uniquement pour l'affichage |
+| `components/admin/GlobalSettingsScreen.tsx` | Sauvegarde bloquée tant que `loaded` est faux + bandeau d'alerte explicite |
+| `components/admin/SettingsScreen.tsx` | Taux/commission lus sur le serveur au montage, sauvegarde bloquée sans lecture, taux écrit via `/config/update` (chemin unique) |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `/rides/create` : idempotence (`clientRequestId`), écriture KV retentée, trace `ride_created`/`ride_create_failed`, matching non bloquant |
+| `components/passenger/SearchingDriversScreen.tsx` | `clientRequestId` stable, timeout 25 s, **3 tentatives** sur erreurs transitoires (réseau/5xx/503), message d'erreur clair |
+| `components/passenger/EstimateScreen.tsx` | Filet de sécurité : `isBooking` retombe après 20 s (bouton jamais bloqué) |
+| `components/driver/FCMDiagnostic.tsx` | Bouton « 🔊 Test Sonnerie + Voix » + état du moteur TTS (voix française installée ou non) |
+
+### Description technique
+**1. Taux de change — cause racine.** `GET /config/get` lisait le KV avec un helper qui renvoie `null` aussi bien pour « clé absente » que pour « base momentanément indisponible ». Le handler interprétait ce `null` comme une première utilisation et **réécrivait `smartcabb_global_config` avec `DEFAULT_CONFIG`** (taux `2500`, commission `10`, `configVersion` remis à 1, **numéros SOS effacés et `emergencySmsEnabled` à `false`**). Preuves en production : `configVersion` retombé 4 → 1 le 19/11 à 04:58, taux réel 2250, SOS désactivé.
+Correctifs : `kvGetStrict` (3 tentatives) ; sur échec → **503 `CONFIG_UNAVAILABLE`** et **aucune écriture** ; `configVersion = max(version serveur, version reçue) + 1` ; les champs numériques critiques (`exchangeRate`, `commissionRate`) retombent sur la valeur stockée si la valeur reçue est `NaN`/0/absente. Même traitement sur l'ancienne route `/admin/settings/save`.
+Côté admin, les deux écrans pouvaient afficher un défaut (`2500`/`2850`) quand le cache local était vide, puis le sauvegarder : ils lisent désormais le serveur (`fetchGlobalConfigStrict`) et **la sauvegarde est impossible tant que la config n'est pas chargée**. `saveGlobalConfig` relit le serveur avant de composer l'écriture : plus de réinitialisation accidentelle.
+Numéros SOS restaurés via `/config/update` : `support=0960624008`, `supportTech=0990666661`, `emergencySmsEnabled=true`.
+
+**2. Deuxième course sans notification.** Vérifications en production : FCM opérationnel (`/fcm/test-notification` → message accepté par Google), canal Android `smartcabb_rides` déjà créé par `lib/native-push.ts`, aucun passager bloqué, **et aucune course créée après celle de 04:59** — le problème était donc la **création** elle-même, pas le matching.
+`/rides/create` :
+- **idempotence** : `clientRequestId` → clé `ride_req:<id>` ; un réessai renvoie la même course (testé : même `rideId`, 1 s) ;
+- **écriture retentée** (3 essais, 0/250/800 ms) ; si elle échoue : `503 RIDE_CREATE_UNAVAILABLE` + événement `ride_create_failed` au lieu d'une 500 opaque ;
+- **trace** `ride_created` dans le journal admin (catégorie, départ/arrivée, passager) ;
+- le matching est enveloppé : une erreur de matching ne peut plus faire échouer une course déjà enregistrée.
+Client : identifiant de tentative stable, timeout de 25 s, 3 tentatives sur erreurs transitoires (même identifiant → aucun doublon), message « Service momentanément indisponible » après épuisement. `EstimateScreen` remet `isBooking` à `false` après 20 s pour qu'un bouton ne reste jamais grisé.
+
+**3. Sonnerie / voix sur téléphone.** Diagnostic ajouté dans le panneau « Diagnostic FCM » du tableau de bord conducteur : bouton **Test Sonnerie + Voix** et état du moteur TTS (`nativeTTSCheck`). Sur APK, la voix passe par le plugin natif `@capacitor-community/text-to-speech` (déjà embarqué : `android/app/src/main/assets/capacitor.plugins.json`) ; si le téléphone n'a **aucune voix française installée**, l'écran l'indique explicitement et donne la marche à suivre (Paramètres Android → Synthèse vocale).
+
+### Impact produit / comportement visible
+- Le taux de change et la commission ne bougent plus seuls ; le panneau admin refuse de sauvegarder une config qu'il n'a pas pu lire (message clair) au lieu d'écrire des valeurs par défaut.
+- Les **numéros SOS et les SMS d'urgence sont rétablis** (ils avaient été effacés par le même bug).
+- Une commande ne peut plus « ne rien faire » : soit la course est créée (et notifiée), soit un message explicite propose de réessayer ; aucun doublon possible.
+- Le conducteur peut tester sonnerie + voix depuis son tableau de bord et savoir si son téléphone a une voix française.
+- Le journal admin affiche les créations de course (`ride_created`) et les échecs d'enregistrement (`ride_create_failed`).
+
+### Risques & rollback
+- **Risque** : `/config/get` peut renvoyer 503 si la base est réellement indisponible — les clients basculent alors sur leur cache (comportement prévu) ; l'admin ne peut pas sauvegarder pendant cette fenêtre.
+- **Risque** : l'idempotence s'appuie sur `ride_req:<clientRequestId>` (TTL non appliqué) ; volume négligeable (une clé par tentative).
+- **Rollback** : `git revert` de ce commit ; les numéros SOS et le taux restent en KV (aucune migration de données à défaire).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npm run build` OK
+- [x] `/config/get` → taux 2250, commission 20 ; `/config/update` partiel → **valeur conservée**, version 1 → 2 → 3
+- [x] SOS vérifié après restauration : `support=0960624008`, `supportTech=0990666661`, `emergencySmsEnabled=true`
+- [x] `/rides/create` réel : `driversNotified=1` (Fabrice), trace `ride_created` ; second appel même `rideId` (idempotence) ; annulation de test nettoyée
+- [x] `/fcm/test-notification` → `success: true` (Google accepte le message)
+- [ ] À confirmer par le conducteur : notification reçue sur le téléphone (app ouverte **et** fermée) et annonce vocale audible
+
+---
+
+## 2026-11-19 (19) — Fiches conducteur auto-réparées, carte « bonhomme + chauffeurs », recherche rapide
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix / perf / ui
+- **Objectif** : la recherche de chauffeur restait sur « Chargement… » alors qu'un conducteur était en ligne ; sur la carte, le passager était affiché avec une **icône de véhicule** au lieu d'un bonhomme et les conducteurs connectés n'apparaissaient pas.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/driver-records.ts` | **Nouveau** : lecture allégée des conducteurs (projection JSON, retries), reconstruction des fiches perdues, lecture ciblée de position, purge des fiches fantômes |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `check-drivers-availability` (503 explicite + positions), `GET /online-drivers`, `toMapDrivers`, lectures allégées, `repairStaleLocksInList` qui ne réécrit plus les objets partiels, `POST /repair-drivers` (secret admin) |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | `loadDriverOrRebuild`, plus de fiche vierge écrasant une vraie fiche, lecture ciblée de la position, invalidation du cache |
+| `supabase/functions/make-server-2eb02e52/fcm-routes.ts` | `register-driver-token` : lecture stricte, reconstruction au lieu d'une coquille `pending`, 503 si la base est illisible, 404 sans création |
+| `supabase/functions/make-server-2eb02e52/auth-routes.ts` | Connexion : lecture stricte du profil (plus de réécriture d'un profil/conducteur vierge) |
+| `components/map/mapMarkers.ts` | **Nouveau** : icônes uniques (bonhomme, voiture chauffeur, épingle destination, véhicule suivi, pastille générique) |
+| `components/OpenStreetMapView.tsx` | Marqueurs typés (départ/arrivée/véhicule/chauffeurs/utilisateur), synchronisation par clé, cadrage stable |
+| `components/MapView.tsx` | Repli OSM : plus de liste plate (le départ n'est plus une voiture), bandeau discret, `userRole` |
+| `components/passenger/SearchingDriversMap.tsx` | Enveloppe autour de `OpenStreetMapView` (une seule implémentation) |
+| `components/passenger/SearchingDriversScreen.tsx` | Sondage séquentiel (plus d'empilement), libellés exacts, `driversLoaded`/`driversFailing` |
+| `components/RouteMapPreview.tsx`, `components/passenger/MapScreen.tsx` | Conducteurs connectés affichés sur les cartes passager |
+| `hooks/useNearbyDrivers.ts` | **Nouveau** : sondage séquentiel des conducteurs en ligne (distance, pause en arrière-plan) |
+| `components/driver/GPSNavigationScreen.tsx` | `userRole="driver"` (le conducteur se voit comme une voiture) |
+| `components/GoogleMapView.tsx` | Marqueur de départ = bonhomme (au lieu de 🚗) |
+| `hooks/useTranslation.ts` | Nouvelles clés FR/EN (chauffeurs disponibles, connexion lente, aucun chauffeur…) |
+
+### Description technique
+**Cause racine de la lenteur / « Chargement… »** : chaque fiche `driver:<id>` embarque la photo de profil en **base64** (jusqu'à 1,3 Mo). Lire tous les conducteurs (`like 'driver:%'`) renvoyait **~5,15 Mo** et prenait **~72 s** ; en cas d'échec, le helper renvoyait `[]` en silence → « chargement » infini ou « aucun chauffeur ». Mesure après correctif : `/rides/online-drivers` **0,5–0,9 s**, `check-drivers-availability` **0,6–0,9 s**.
+- `loadDriversLite()` : projection PostgREST (`value->champ`) limitée aux champs utiles (statut, catégorie, position, solde, token…), sans photos ; 3 tentatives ; repli « lecture complète sans images » ; **lève une erreur** si la base reste indisponible (le client reçoit 503 et réessaie au lieu d'un faux « 0 chauffeur »). Instantané partagé de 3 s pour les lectures répétées des cartes.
+- Fermeture d'un piège de données : `register-driver-token`, `GET /drivers/:id`, `/update-driver-location` et la connexion pouvaient **écraser une vraie fiche** par une coquille (`status: 'pending'`, solde 0) quand la lecture échouait. Ils utilisent désormais une lecture stricte + reconstruction ; plus aucune fiche « à vide » n'est créée.
+- `rebuildDriverRecord()` reconstruit depuis `profile:<id>` (nom, téléphone, véhicule, solde réel), Supabase Auth et l'historique (`ride:`, recharges `wallet_tx:`) ; exige un compte Auth existant ; l'approbation n'est reprise que sur preuve (profil approuvé ou courses effectuées).
+- Carte : `OpenStreetMapView` accepte `pickup`/`destination`/`vehicle`/`drivers`/`userMarker` ; le passager est un **bonhomme** (halo pulsant), chaque conducteur une **voiture avec son prénom** (grisée s'il est en course), la destination une épingle rouge. Les marqueurs sont synchronisés par clé (pas de clignotement) et le cadrage ne change que lorsque l'ensemble affiché change.
+- `GET /rides/online-drivers?lat=&lng=` : conducteurs connectés + position (prénom, distance, disponibilité), rayon 25 km, 50 max, sans téléphone ni photo.
+
+### Impact produit / comportement visible
+- Le passager voit immédiatement **combien de chauffeurs sont connectés** (ou un message honnête « aucun chauffeur connecté à proximité » / « connexion lente, nouvelle tentative »), au lieu d'un « Chargement… » sans fin.
+- Sur les cartes de repli OSM (tant que la facturation Google Maps n'est pas active), **le passager est un bonhomme et les conducteurs connectés sont visibles** avec leur prénom ; l'écran « Prix estimé » et la carte d'accueil affichent aussi les conducteurs.
+- Fiche de Ruth Shole restaurée (approuvée, Toyota Runx, solde réel 104 880 CDF, token push conservé) ; fiche fantôme « Conducteur » créée par erreur supprimée.
+- Les écrans de suivi lisent la position par une requête ciblée (au lieu de recharger la fiche complète, ~3,5 Mo, à chaque sondage).
+
+### Risques & rollback
+- **Risque** : la projection JSON dépend de PostgREST (`value->champ`) ; un repli automatique sur la lecture complète (sans images) est prévu.
+- **Risque** : `POST /rides/repair-drivers` est une opération lourde ; elle exige désormais l'en-tête `x-admin-secret` (`EJPAY_ADMIN_SECRET` ou `ADMIN_CREATION_SECRET`).
+- **Rollback** : `git revert` ; les fiches reconstruites restent en KV (elles sont valides et tracées par `recoveredFrom`/`recoveredAt`).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npm run build` OK ; Edge Function déployée
+- [x] Avant/après : `/drivers` ~5,15 Mo / 72 s → lecture allégée 0,5–0,9 s ; `debug-drivers` 24 conducteurs
+- [x] Réparation : `POST /rides/repair-drivers` → 1 fiche reconstruite (Ruth), 1 fantôme purgé, 0 coquille restante
+- [x] Positions renvoyées : `online-drivers` et `check-drivers-availability` exposent `lat`/`lng`/`distanceKm`
+- [x] Rendu des marqueurs vérifié sur une page de test (3 cartes, aucun emoji 🚗, bonhomme/voitures/épingle conformes, tous les marqueurs dans le cadre)
+- [x] `POST /rides/repair-drivers` sans secret → **403**
+
+---
+
 ## 2026-11-19 (18) — Écran de recherche : variante « vue de dessus » (plan de quartier)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

@@ -7,6 +7,13 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { isOTPRequired, verifyOTPToken } from "./otp-core.ts";
+import {
+  invalidateDriversLiteCache,
+  isPlaceholderDriverRecord,
+  readDriverLiveLite,
+  readKvStrict,
+  rebuildDriverRecord,
+} from "./driver-records.ts";
 
 const app = new Hono();
 
@@ -52,6 +59,19 @@ async function kvGetByPrefix(prefix: string): Promise<any[]> {
     if (error) { console.error("KV getByPrefix error:", prefix, error.message); return []; }
     return data?.map((d: any) => d.value) ?? [];
   } catch (e) { console.error("KV getByPrefix exception:", e); return []; }
+}
+
+/**
+ * Fiche COMPLÈTE d'un conducteur, reconstruite si elle est absente ou réduite à
+ * une coquille (voir driver-records.ts). Retourne `null` si le compte n'existe
+ * pas ou si la base est indisponible : l'appelant répond alors 404/503 et ne
+ * doit JAMAIS créer de fiche « à vide » (une lecture en échec écraserait la
+ * vraie fiche : solde, véhicule, photo).
+ */
+async function loadDriverOrRebuild(driverId: string): Promise<any | null> {
+  const current = await kvGet(`driver:${driverId}`);
+  if (current && !isPlaceholderDriverRecord(current)) return current;
+  return await rebuildDriverRecord(driverId);
 }
 
 // ─── Sécurité : les crédits manuels exigent le secret admin ──────────────────
@@ -141,7 +161,11 @@ app.post("/toggle-online-status", async (c) => {
 
     console.log(`🔄 [DRIVERS/TOGGLE-ONLINE] ${driverId} → ${isOnline ? "EN LIGNE" : "HORS LIGNE"}`);
 
-    const driver = await kvGet(`driver:${driverId}`);
+    // 🚑 Fiche perdue ou réduite à une coquille : reconstruite depuis le profil,
+    // Supabase Auth et l'historique. Sans cela le conducteur ne peut jamais
+    // repasser en ligne (403 « compte non approuvé ») et la recherche
+    // passager reste vide.
+    const driver = await loadDriverOrRebuild(driverId);
     if (!driver) {
       return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
     }
@@ -157,9 +181,13 @@ app.post("/toggle-online-status", async (c) => {
     }
 
     // Vérifier le solde si passage EN LIGNE
+    // ⚠️ Seul un solde NÉGATIF bloque : un solde à 0 est autorisé, comme dans
+    // le matching passager (`hasPositiveBalance` = >= 0). Cela évite qu'une
+    // fiche reconstruite (solde inconnu → 0) interdise définitivement de
+    // passer en ligne ; la commission reste contrôlée à l'acceptation.
     if (isOnline) {
       const balance = driver.creditBalance ?? driver.balance ?? 0;
-      if (balance <= 0) {
+      if (balance < 0) {
         return c.json({
           success: false,
           error: "Solde insuffisant ! Rechargez votre compte pour vous mettre en ligne.",
@@ -203,6 +231,7 @@ app.post("/toggle-online-status", async (c) => {
     };
 
     await kvSet(`driver:${driverId}`, updatedDriver);
+    invalidateDriversLiteCache();
 
     // Sync profil
     const profile = await kvGet(`profile:${driverId}`);
@@ -482,57 +511,26 @@ app.post("/:driverId/wallet/withdraw", async (c) => {
 app.get("/:driverId", async (c) => {
   try {
     const driverId = c.req.param("driverId");
-    let driver = await kvGet(`driver:${driverId}`);
 
-    // ✅ FIX: Si pas dans KV store, essayer de créer le profil depuis Auth Supabase
-    if (!driver) {
-      console.log(`⚠️ [DRIVERS/GET-ONE] Driver ${driverId} non trouvé dans KV, tentative depuis Auth...`);
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-      const { data: { user }, error: authError } = await supabase.auth.admin.getUserById(driverId);
-      if (authError || !user) {
-        console.error("❌ [DRIVERS/GET-ONE] Utilisateur Auth introuvable:", authError?.message);
+    // Lecture STRICTE : « base indisponible » ≠ « fiche absente ». Avant, une
+    // lecture en échec renvoyait `null` et ce handler créait une fiche vierge
+    // (solde 0, sans véhicule) écrite PAR-DESSUS la vraie fiche.
+    let driver: any;
+    try {
+      driver = await readKvStrict(`driver:${driverId}`);
+    } catch (e) {
+      console.error("❌ [DRIVERS/GET-ONE] Lecture impossible:", driverId, e);
+      return c.json({ success: false, error: "Service momentanément indisponible", retry: true }, 503);
+    }
+
+    // Absente ou réduite à une coquille : reconstruction depuis le profil,
+    // Supabase Auth et l'historique (jamais de fiche vierge).
+    if (!driver || isPlaceholderDriverRecord(driver)) {
+      console.log(`⚠️ [DRIVERS/GET-ONE] Driver ${driverId} absent/incomplet dans KV → reconstruction`);
+      driver = await rebuildDriverRecord(driverId);
+      if (!driver) {
         return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
       }
-
-      const now = new Date().toISOString();
-      const meta = user.user_metadata || {};
-      const phone = meta.phone || user.phone || "";
-
-      driver = {
-        id: user.id,
-        email: user.email || meta.email || "",
-        full_name: meta.full_name || meta.name || user.email?.split("@")[0] || "Conducteur",
-        name: meta.full_name || meta.name || user.email?.split("@")[0] || "Conducteur",
-        phone,
-        role: "driver",
-        status: "approved",
-        isApproved: true,
-        is_approved: true,
-        isOnline: false,
-        is_online: false,
-        is_available: false,
-        available: false,
-        balance: 0,
-        creditBalance: 0,
-        earningsBalance: 0,
-        bonusBalance: 0,
-        total_trips: 0,
-        total_rides: 0,
-        rating: 0,
-        rating_count: 0,
-        photo: null,
-        vehicle: null,
-        created_at: now,
-        updated_at: now,
-        last_login_at: now,
-      };
-
-      await kvSet(`driver:${driverId}`, driver);
-      await kvSet(`profile:${driverId}`, driver);
-      console.log(`✅ [DRIVERS/GET-ONE] Profil conducteur créé depuis Auth: ${driverId}`);
     }
 
     // ✅ Normaliser la photo : profile_photo → photo + photo_url (compatibilité frontend)
@@ -769,6 +767,7 @@ app.post("/:driverId/update", async (c) => {
     };
 
     await kvSet(`driver:${driverId}`, updatedDriver);
+    invalidateDriversLiteCache();
 
     // Sync profil
     const profile = await kvGet(`profile:${driverId}`);
@@ -801,7 +800,10 @@ app.post("/:driverId/status", async (c) => {
     const isOnline = status === "online";
     console.log(`🔄 [DRIVERS/STATUS] ${driverId} → ${status.toUpperCase()}`);
 
-    const driver = await kvGet(`driver:${driverId}`);
+    // 🚑 Fiche perdue ou réduite à une coquille : reconstruite (voir
+    // loadDriverOrRebuild). Sans cela le conducteur ne peut jamais repasser en
+    // ligne et la recherche passager reste vide.
+    const driver = await loadDriverOrRebuild(driverId);
     if (!driver) {
       return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
     }
@@ -817,9 +819,13 @@ app.post("/:driverId/status", async (c) => {
     }
 
     // Vérifier le solde si passage EN LIGNE
+    // ⚠️ Seul un solde NÉGATIF bloque : un solde à 0 est autorisé, comme dans
+    // le matching passager (`hasPositiveBalance` = >= 0). Cela évite qu'une
+    // fiche reconstruite (solde inconnu → 0) interdise définitivement de
+    // passer en ligne ; la commission reste contrôlée à l'acceptation.
     if (isOnline) {
       const balance = driver.creditBalance ?? driver.balance ?? 0;
-      if (balance <= 0) {
+      if (balance < 0) {
         return c.json({
           success: false,
           error: "Solde insuffisant ! Rechargez votre compte pour vous mettre en ligne.",
@@ -867,6 +873,7 @@ app.post("/:driverId/status", async (c) => {
     };
 
     await kvSet(`driver:${driverId}`, updatedDriver);
+    invalidateDriversLiteCache();
 
     // Sync profil
     const profile = await kvGet(`profile:${driverId}`);
@@ -948,7 +955,15 @@ app.get("/location/:driverId", async (c) => {
     const driverId = c.req.param("driverId");
     console.log(`📍 [DRIVERS/LOCATION-GET] ${driverId}`);
 
-    const driver = await kvGet(`driver:${driverId}`);
+    // Lecture ciblée (position seulement) : cette route est sondée toutes les
+    // quelques secondes par les écrans de suivi, inutile de charger la photo.
+    let driver: any;
+    try {
+      driver = await readDriverLiveLite(driverId);
+    } catch (e) {
+      console.error("❌ [DRIVERS/LOCATION-GET] Lecture impossible:", e);
+      return c.json({ success: false, error: "Service momentanément indisponible", retry: true }, 503);
+    }
     if (!driver) {
       return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
     }
@@ -986,7 +1001,9 @@ app.post("/:driverId/location", async (c) => {
 
     console.log(`📍 [DRIVERS/LOCATION-POST] ${driverId}: (${lat}, ${lng})`);
 
-    const driver = await kvGet(`driver:${driverId}`);
+    // 🚑 Fiche perdue ou coquille : on la reconstruit pour ne pas perdre la
+    // position (c'est elle qui alimente les marqueurs de la carte passager).
+    const driver = await loadDriverOrRebuild(driverId);
     if (!driver) {
       return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
     }
@@ -1024,18 +1041,12 @@ app.post("/update-driver-location", async (c) => {
 
     console.log(`📍 [DRIVERS/UPDATE-LOCATION] ${driverId}: (${lat}, ${lng})`);
 
-    const driver = await kvGet(`driver:${driverId}`);
+    // 🚑 Fiche perdue ou coquille : reconstruction (nom, catégorie, solde).
+    // On ne crée JAMAIS de fiche minimale : une lecture en échec l'aurait
+    // écrite par-dessus la vraie fiche du conducteur.
+    const driver = await loadDriverOrRebuild(driverId);
     if (!driver) {
-      // Créer une entrée minimale si inexistante
-      const locationObj = { lat, lng, updatedAt: new Date().toISOString() };
-      await kvSet(`driver:${driverId}`, {
-        id: driverId,
-        location: locationObj,
-        currentLocation: locationObj,
-        lastLocation: locationObj,
-        updated_at: new Date().toISOString(),
-      });
-      return c.json({ success: true, driverId, location: locationObj });
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
     }
 
     const locationObj = { lat, lng, updatedAt: new Date().toISOString() };

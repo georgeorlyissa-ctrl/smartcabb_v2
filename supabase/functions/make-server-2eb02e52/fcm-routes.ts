@@ -1,6 +1,12 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendFCMNotification, isFirebaseAdminConfigured } from './firebase-admin.ts';
+import {
+  isPlaceholderDriverRecord,
+  loadDriversLite,
+  readKvStrict,
+  rebuildDriverRecord,
+} from './driver-records.ts';
 
 const app = new Hono();
 
@@ -78,12 +84,32 @@ app.post("/register-driver-token", async (c) => {
 
     console.log(`🚗 Enregistrement token FCM pour conducteur ${driverId} (${platform || 'web'} ${appVersion || ''}):`, fcmToken.substring(0, 20) + '...');
 
-    // Récupérer les données actuelles du driver
+    // Récupérer les données actuelles du driver.
+    // Lecture STRICTE : une lecture en échec ne doit pas passer pour une fiche
+    // absente. Avant, le code créait alors une coquille `status: 'pending'`
+    // écrite PAR-DESSUS la vraie fiche → conducteur bloqué hors ligne (403
+    // « compte non approuvé ») et recherche passager vide.
     const driverKey = `driver:${driverId}`;
-    const driver = await kv.get(driverKey);
+    let driver: any;
+    try {
+      driver = await readKvStrict(driverKey);
+    } catch (e) {
+      console.error(`❌ [FCM] Lecture de ${driverKey} impossible:`, e);
+      return c.json({ success: false, error: "Service momentanément indisponible", retry: true }, 503);
+    }
+
+    // Fiche absente ou réduite à une coquille : reconstruction depuis le
+    // profil, Supabase Auth et l'historique des courses.
+    if (!driver || isPlaceholderDriverRecord(driver)) {
+      const rebuilt = await rebuildDriverRecord(driverId);
+      if (rebuilt) driver = rebuilt;
+    }
 
     if (!driver) {
-      console.error(`❌ Conducteur ${driverId} non trouvé dans KV store`);
+      // Compte inconnu : on conserve le token mais on ne fabrique AUCUNE fiche.
+      console.error(`❌ Conducteur ${driverId} non trouvé dans KV store (aucune fiche créée)`);
+      await kv.set(`fcm_token_${driverId}`, fcmToken);
+      return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
     }
 
     // ── Normalisation du vehicleCategory (tous les formats possibles) ──────────
@@ -164,15 +190,15 @@ app.post("/register-driver-token", async (c) => {
     // Sinon un meme telephone "possede" plusieurs chauffeurs et les
     // notifications partent vers la mauvaise personne.
     try {
-      const { data: rows } = await kvClient()
-        .from(KV_TABLE)
-        .select("key, value")
-        .like("key", "driver:%");
-      for (const row of rows || []) {
-        const other: any = row.value;
-        if (!other || other.id === driverId) continue;
+      // Lecture allégée (id + token seulement) ; la fiche complète n'est relue
+      // que pour les rares conducteurs qui partagent ce token.
+      const drivers = await loadDriversLite();
+      for (const other of drivers) {
+        if (!other?.id || other.id === driverId) continue;
         if (other.fcmToken !== fcmToken) continue;
-        await kv.set(row.key, { ...other, fcmToken: null, fcmTokenUpdatedAt: null });
+        const full = await kv.get(`driver:${other.id}`);
+        if (!full) continue;
+        await kv.set(`driver:${other.id}`, { ...full, fcmToken: null, fcmTokenUpdatedAt: null });
         console.log(`[FCM] Token partage retire du chauffeur ${other.id} (appartient a ${driverId})`);
       }
     } catch (e) {
@@ -538,7 +564,8 @@ app.post("/broadcast", async (c) => {
     // 2. Collecter les tokens FCM de la cible
     const tokens: string[] = [];
     if (target === 'drivers' || target === 'all') {
-      const drivers = await kv.getByPrefix('driver:');
+      // Lecture allégée : seul le token FCM est utile (pas les photos base64).
+      const drivers = await loadDriversLite();
       for (const d of drivers) {
         if (d?.fcmToken) tokens.push(d.fcmToken);
       }
