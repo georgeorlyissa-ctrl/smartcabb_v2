@@ -6,6 +6,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { AlternativeVehicleDialog } from './AlternativeVehicleDialog';
 import { CancelRideReasonModal } from './CancelRideReasonModal';
+import { SearchingDriverIllustration } from './SearchingDriverIllustration';
 import { VehicleCategory } from '../../lib/pricing';
 import { toast } from '../../lib/toast';
 import { getVehicleDisplayName } from '../../lib/vehicle-helpers';
@@ -893,19 +894,7 @@ return () => {
             className="bg-white rounded-2xl p-6 max-w-sm w-full"
           >
             <div className="flex items-center justify-center mb-4">
-              <div className="relative w-24 h-24">
-                <img
-                  src="/images/recherche-chauffeur.svg"
-                  alt="Recherche d'un véhicule disponible"
-                  className="w-24 h-24 select-none pointer-events-none"
-                  draggable={false}
-                />
-                <motion.div
-                  className="absolute inset-0 rounded-full border-4 border-blue-500"
-                  animate={{ scale: [1, 1.4, 1.6], opacity: [0.5, 0.2, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                />
-              </div>
+              <SearchingDriverIllustration size={96} />
             </div>
             
             <h3 className="text-lg font-semibold text-center mb-2">
@@ -1083,54 +1072,8 @@ return () => {
               exit={{ opacity: 0, scale: 0.9 }}
               className="flex-1 flex flex-col items-center justify-center space-y-6"
             >
-              {/* Animation de recherche */}
-              <div className="relative w-32 h-32">
-                <motion.div
-                  className="w-32 h-32 rounded-full flex items-center justify-center"
-                  animate={{
-                    scale: [1, 1.05, 1],
-                    y: [0, -3, 0]
-                  }}
-                  transition={{
-                    duration: 2.4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                >
-                  <img
-                    src="/images/recherche-chauffeur.svg"
-                    alt="Recherche d'un véhicule disponible"
-                    className="w-32 h-32 select-none pointer-events-none"
-                    draggable={false}
-                  />
-                </motion.div>
-                {/* Cercles d'ondes */}
-                <motion.div
-                  className="absolute inset-0 rounded-full border-4 border-secondary"
-                  animate={{ 
-                    scale: [1, 1.5, 2],
-                    opacity: [0.6, 0.3, 0]
-                  }}
-                  transition={{ 
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeOut"
-                  }}
-                />
-                <motion.div
-                  className="absolute inset-0 rounded-full border-4 border-primary"
-                  animate={{ 
-                    scale: [1, 1.5, 2],
-                    opacity: [0.6, 0.3, 0]
-                  }}
-                  transition={{ 
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeOut",
-                    delay: 0.5
-                  }}
-                />
-              </div>
+              {/* Illustration animée de recherche */}
+              <SearchingDriverIllustration size={128} />
 
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-bold text-primary">Recherche en cours...</h2>

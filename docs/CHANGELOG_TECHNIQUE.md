@@ -42,6 +42,55 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (17) — Écran de recherche : illustration **animée** (radar, roues, repère)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : ui / design
+- **Objectif** : rendre l'écran d'attente « Recherche en cours... » vivant et impressionnant pour le passager. L'illustration livrée juste avant (entrée 16) était **statique** : les animations `motion` de l'écran ne jouaient pas (voir ci-dessous), et l'image elle-même ne bougeait pas. Remplacer par une illustration totalement animée, en CSS pur.
+
+### ⚠️ Constat important (à connaître pour tout le projet)
+`lib/motion.tsx` réexporte `lib/motion-polyfill.tsx`, qui **ignore complètement** les props `initial` / `animate` / `transition` : il rend des éléments HTML nus (`React.createElement(type, { ref, ...htmlProps })`). **Toutes les animations framer-motion du projet sont donc inertes** (anneaux de recherche, transitions d'écrans, etc.) : elles s'affichent dans leur état final. Ce n'est pas propre à cet écran. Corriger le polyfill globalement est un chantier à part (risque de régressions sur tous les écrans) ; pour cette illustration, l'animation a donc été écrite en **CSS natif**, qui fonctionne dans tous les environnements (Chrome/Android WebView, Safari/iOS, PWA, desktop).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/SearchingDriverIllustration.tsx` | **Nouveau** : illustration SVG inline + animations CSS (radar, roues, repère, ondes, ombre), respect de `prefers-reduced-motion` |
+| `components/passenger/RideScreen.tsx` | Écran de recherche **et** modal `status === 'searching'` : `<img>` + `motion.div` → `<SearchingDriverIllustration size={128 | 96} />` ; anciens blocs `motion` inutiles supprimés |
+| `public/images/recherche-chauffeur.svg` | **Supprimé** (remplacé par le composant, plus aucun fichier statique à maintenir) |
+
+### Description technique
+Animations, toutes en `transform` / `opacity` (donc composées par le GPU, aucun repaint) :
+- **Balayage radar** : éventail de 12 parts d'angle (5° chacune) dont l'opacité croît de 0,04 à 0,38 (dégradé angulaire impossible en SVG, faute de `conic-gradient` dans les `defs`), plus un **bord d'attaque** clair ; rotation 360° en 3,6 s. L'ensemble est rogné au disque (`clipPath`) et dessiné **derrière** le véhicule.
+- **Anneau pointillé** : rotation très lente (26 s), `transform-box: view-box` + `transform-origin: 100px 104px` pour tourner autour du centre réel.
+- **Véhicule** : flottement vertical de 3,5 px (2,8 s).
+- **Roues** : rotation 360° en 1,1 s ; un moyeu en croix a été ajouté (une roue parfaitement circulaire ne laissait voir aucune rotation).
+- **Ombre au sol** : se rétracte (`scaleX .9`) et pâlit quand le véhicule monte — synchronisée sur la même période de 2,8 s.
+- **Repère jaune** : petit saut + halo qui pulse (scale 0,55 → 1,7, opacité → 0).
+- **Véhicules détectés** : deux points bleus qui clignotent en décalé (3,6 s).
+- **Ondes concentriques** : deux `span` en bordure qui s'étendent de 0,96 à 1,85 et s'effacent (2,8 s, décalage 1,4 s) — rendues hors du SVG pour ne pas être rognées.
+- `prefers-reduced-motion: reduce` → toutes les animations sont désactivées (accessibilité).
+- Le composant est autonome (styles injectés dans un `<style>`, aucune dépendance, aucun fichier à charger) : l'APK 1.6 le reçoit par simple déploiement Vercel.
+
+### Impact produit / comportement visible
+- Pendant l'attente, l'écran « vit » : le radar balaie, la voiture flotte et ses roues tournent, le repère pulse, des ondes sortent du disque.
+- Aucun impact sur les performances mesurable (animations `transform`/`opacity`, un seul SVG de ~4 Ko inline).
+- Correctif **web uniquement** : déploiement Vercel suffit, pas de nouveau versionCode.
+
+### Risques & rollback
+- **Risque** : `transform-box` (view-box / fill-box) requis pour les rotations SVG — supporté par Chrome 64+, Safari 11+, Firefox 55+ ; sur un navigateur très ancien, les rotations seraient simplement absentes (le dessin reste correct).
+- **Risque** : batterie sur très vieux téléphones → neutralisé par `prefers-reduced-motion` côté système.
+- **Rollback** : `git revert <hash>` (revient à l'image statique ; le fichier SVG est à recréer depuis l'entrée 16).
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK ; CSS des animations présent dans `dist/assets/PassengerApp-*.js`
+- [x] Géométrie de l'éventail radar vérifiée par rendu canvas 400×400 (dégradé régulier, pas de bandes visibles, bord d'attaque net)
+- [x] Plus aucune référence à `recherche-chauffeur.svg` dans le bundle
+- [ ] À vérifier sur téléphone après déploiement Vercel (Android + iPhone) : fluidité du balayage et rotation des roues
+- [ ] À traiter séparément (hors périmètre) : le polyfill `motion` inerte — décider soit de le remplacer par framer-motion réel, soit de convertir les animations utiles en CSS
+
+---
+
 ## 2026-11-19 (16) — Écran « Recherche de chauffeur » : illustration dédiée au lieu de l'icône véhicule
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
