@@ -42,6 +42,42 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (28) — Réservations : heure locale (UTC+1) respectée + fenêtre d'échéance sûre
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : une réservation saisie à **10:30 heure de Kinshasa** était comparée à l'heure **UTC** du serveur : elle était donc traitée à **11:30** (une heure de retard). Corrigé, avec une fenêtre d'échéance bornée pour éviter tout traitement surprise.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `process-scheduled` : conversion **UTC+1 → UTC** (`BUSINESS_UTC_OFFSET_MINUTES`, défaut 60), comparaisons en millisecondes, chargement jusqu'à J+1, fenêtre « pas plus de 24 h de retard » ; `/admin-process-one` : même conversion pour le garde des 15 min |
+
+### Description technique
+L'Edge Function tourne en **UTC** ; `scheduled_time` est stocké en `TIME` (sans fuseau). L'ancien code comparait des chaînes (`'10:30' <= '09:35'`) et construisait `new Date('2026-11-19T10:30')` **en UTC**, soit 11:30 à Kinshasa (UTC+1).
+Désormais :
+- `startTs()` convertit l'heure locale en UTC : `Date.parse(`${date}T${time}Z`) - offset`.
+- L'échéance est calculée en **millisecondes** : `start <= now + 5 min` (au lieu d'une comparaison de chaînes).
+- Le rappel H-1 utilise la même base temporelle.
+- La requête charge jusqu'à **J+1** (une course à 00:05 doit pouvoir être traitée avant minuit) et ignore les réservations de plus de **24 h** (aucun traitement surprise d'anciennes lignes).
+- `/admin-process-one` applique la même conversion au garde des 15 minutes.
+
+### Impact produit / comportement visible
+- Une réservation à 10:30 est traitée à **10:30 heure de Kinshasa** (création de la course ~5 min avant, par le cron).
+- Un test « dans 10 minutes » est donc réellement honoré à l'heure demandée.
+
+### Risques & rollback
+- **Risque** : si le fuseau métier change, ajuster `BUSINESS_UTC_OFFSET_MINUTES` (secret Supabase) sans redéploiement.
+- **Rollback** : `git revert`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [x] Edge Function redéployée ; `POST /rides/process-scheduled` répond sans erreur
+- [ ] À confirmer : réservation à +10 min → création à l'heure locale
+
+---
+
 ## 2026-11-19 (27) — Réservations : plus de traitement anticipé, démarrage à l'heure notifié
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

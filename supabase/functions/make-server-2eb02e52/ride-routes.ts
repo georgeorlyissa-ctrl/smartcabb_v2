@@ -2938,10 +2938,10 @@ app.post("/process-scheduled", async (c) => {
     );
 
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
+    // On charge jusqu'à demain (une course à 00:05 peut devoir être traitée
+    // quelques minutes avant minuit) ; l'échéance exacte est calculée en ms.
+    const tomorrowStr = new Date(now.getTime() + 24 * 60 * 60000).toISOString().slice(0, 10);
     const bufferMinutes = parseInt(Deno.env.get("SCHEDULED_RIDE_BUFFER_MINUTES") || "5");
-    const futureTime = new Date(now.getTime() + bufferMinutes * 60000);
-    const futureTimeStr = futureTime.toTimeString().slice(0, 5);
     // Fenêtre de rappel : course qui démarre dans ~1h (55-65 min)
     const remindFrom = new Date(now.getTime() + 55 * 60000);
     const remindTo = new Date(now.getTime() + 65 * 60000);
@@ -2950,7 +2950,7 @@ app.post("/process-scheduled", async (c) => {
       .from("scheduled_rides")
       .select("*")
       .in("status", ["scheduled", "confirmed"])
-      .lte("scheduled_date", today);
+      .lte("scheduled_date", tomorrowStr);
 
     if (error) {
       console.error("Erreur requete scheduled_rides:", error);
@@ -2961,7 +2961,14 @@ app.post("/process-scheduled", async (c) => {
       return c.json({ success: true, processed: 0, reminded: 0, message: "Aucune course programmee a traiter" });
     }
 
-    const startTs = (r: any) => new Date(`${r.scheduled_date}T${r.scheduled_time || "00:00"}`).getTime();
+    // 🌍 Les heures de réservation sont saisies en heure LOCALE de Kinshasa
+    // (UTC+1), alors que l'Edge Function tourne en UTC. Sans cette conversion,
+    // une course réservée à 10:30 était traitée à 11:30 (une heure de retard).
+    const businessOffsetMin = parseInt(Deno.env.get("BUSINESS_UTC_OFFSET_MINUTES") || "60");
+    const startTs = (r: any) => {
+      const raw = Date.parse(`${r.scheduled_date}T${String(r.scheduled_time || "00:00").slice(0, 8)}Z`);
+      return Number.isFinite(raw) ? raw - businessOffsetMin * 60000 : NaN;
+    };
     const results = [];
     let reminded = 0;
 
@@ -2990,7 +2997,12 @@ app.post("/process-scheduled", async (c) => {
         }
 
         // ── 2. Échéance : la course doit démarrer (passée ou dans ~5 min) ──
-        const isDue = sr.scheduled_date < today || sr.scheduled_time <= futureTimeStr;
+        // Fenêtre limitée aux 24 dernières heures : une très vieille réservation
+        // restée « scheduled » ne doit pas être traitée par surprise.
+        const notTooOld = now.getTime() - 24 * 60 * 60000;
+        const isDue = Number.isFinite(start) &&
+          start <= now.getTime() + bufferMinutes * 60000 &&
+          start >= notTooOld;
         if (!isDue) continue;
 
         const passengerProfile = await kv.get(`passenger:${sr.user_id}`);
@@ -3776,7 +3788,12 @@ app.post("/admin-process-one", async (c) => {
     // ⏰ Ne pas transformer une réservation en course AVANT l'heure prévue :
     // la course serait créée (et le chauffeur envoyé) une heure trop tôt, et à
     // l'heure réelle plus rien ne se déclencherait (réservation déjà « traitée »).
-    const startMs = new Date(`${sr.scheduled_date}T${sr.scheduled_time || "00:00"}`).getTime();
+    // Heure saisie en local Kinshasa (UTC+1) → conversion en UTC.
+    const offsetMin = parseInt(Deno.env.get("BUSINESS_UTC_OFFSET_MINUTES") || "60");
+    const rawStart = Date.parse(
+      `${sr.scheduled_date}T${String(sr.scheduled_time || "00:00").slice(0, 8)}Z`,
+    );
+    const startMs = Number.isFinite(rawStart) ? rawStart - offsetMin * 60000 : NaN;
     const minutesUntil = (startMs - Date.now()) / 60000;
     const earlyWindow = Number(Deno.env.get("SCHEDULED_RIDE_EARLY_MINUTES") || "15");
     if (Number.isFinite(minutesUntil) && minutesUntil > earlyWindow) {
