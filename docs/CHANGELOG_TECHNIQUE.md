@@ -42,6 +42,46 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (26) — Courses orphelines : plus aucune course acceptée après le départ du passager
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (flux)
+- **Objectif** : un passager a commandé alors que **tous les chauffeurs étaient en course**. Sa demande a bien affiché « aucun chauffeur disponible », mais après qu'un chauffeur a **clôturé sa course**, ce chauffeur s'est retrouvé sur « En route vers le client » pour cette course — alors que le passager était **revenu à son écran d'accueil**. Une course morte pouvait donc être acceptée plus tard.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `findAndNotifyNearbyDrivers` clôt la course (`no_driver_found`) quand **personne** n'a été notifié ; `/rides/accept` refuse (410 `RIDE_EXPIRED`) une recherche expirée |
+| `components/passenger/SearchingDriversScreen.tsx` | Annulation systématique si l'écran est quitté pendant la création ; `handleCancel` annule dès qu'une course existe ; variante de l'alerte « demande non enregistrée » avec **Réessayer** |
+
+### Description technique
+**Cause racine.** À la création, si aucun chauffeur n'était éligible, `findAndNotifyNearbyDrivers` faisait un simple `return` : **aucun `setTimeout` de fin de recherche n'était programmé**. La course restait donc `searching` indéfiniment (les expirations existantes ne s'appliquent qu'à la lecture du statut ou au matching lancé). Elle pouvait ensuite être acceptée par un chauffeur qui venait de se libérer, sans passager en face (course orpheline). Deuxième faille : côté passager, `handleCancel` n'annulait que si `phase === 'notifying'` **et** qu'une course locale existait déjà ; si l'utilisateur quittait pendant l'envoi, la réponse créait la course après le départ → orpheline également.
+
+**Correctifs.**
+1. **Serveur** : si `eligibleDrivers.length === 0`, la course passe **immédiatement** en `no_driver_found` (avec `noDriverFoundAt`), le `matching:` est supprimé et la réponse contient `reason: 'no_drivers_available'`. Plus aucune course morte ne traîne.
+2. **Serveur** : `/rides/accept` refuse désormais une course `searching` plus vieille que `MATCHING_TIMEOUT_MS + 15 s` (HTTP **410 `RIDE_EXPIRED`**) et la clôture au passage.
+3. **Client** : si la réponse de création arrive alors que l'écran a été quitté, la course est **annulée** (`/rides/cancel`, `cancelledBy: passenger`) au lieu d'être laissée active.
+4. **Client** : `handleCancel` annule dès qu'une course existe (plus de condition sur la phase).
+5. **Client** : quand le serveur répond `no_drivers_available`, on **ne navigue plus** vers l'écran de course : l'alerte affiche « Votre demande n'a pas été enregistrée » avec **Réessayer** / **Retour**.
+
+### Impact produit / comportement visible
+- Plus de course fantôme : après le départ du passager, aucun chauffeur ne peut être envoyé « en route vers le client ».
+- Quand aucun chauffeur n'est disponible, la réponse est **honnête et immédiate** (aucune course laissée en attente), avec possibilité de réessayer ou de changer de catégorie.
+- Les chauffeurs ne voient plus de course expirée : une acceptation tardive est refusée avec un message clair.
+
+### Risques & rollback
+- **Risque** : un passager qui commande pile au moment où un chauffeur se connecte peut recevoir « aucun chauffeur » et devoir relancer (auparavant, la course restait ouverte mais sans notification : elle n'aurait pas abouti non plus).
+- **Rollback** : `git revert` (aucune migration de données).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [x] Edge Function redéployée
+- [x] Lecture du code : plus aucun chemin où une course reste `searching` sans timeout ni notification
+- [ ] À confirmer : commande sans chauffeur → « demande non enregistrée » ; acceptation tardive refusée
+
+---
+
 ## 2026-11-19 (25) — Paiement : Ejpay réactivé, solde réel, alerte « aucun chauffeur »
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

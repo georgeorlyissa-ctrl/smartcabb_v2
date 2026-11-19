@@ -455,6 +455,17 @@ async function findAndNotifyNearbyDrivers(ride: any) {
       allDrivers.forEach((d: any) => {
         console.log(`  Driver ${d.full_name || d.name}: isOnline=${isDriverOnline(d)}, isAvailable=${isDriverAvailable(d)}, cat=${d.vehicleCategory||d.vehicle_category||d.vehicle?.category}, fcm=${!!d.fcmToken}`);
       });
+
+      // ⛔ Personne n'a été notifié : la course ne peut pas être servie. Sans
+      // cette clôture immédiate, elle restait `searching` POUR TOUJOURS (aucun
+      // timeout n'était programmé) et pouvait être acceptée plus tard par un
+      // chauffeur qui venait de terminer sa course — alors que le passager
+      // avait déjà quitté l'écran (course orpheline).
+      ride.status = 'no_driver_found';
+      ride.noDriverFoundAt = new Date().toISOString();
+      await kv.set(`ride:${ride.id}`, ride).catch(() => undefined);
+      await kv.delete(`matching:${ride.id}`).catch(() => undefined);
+
       return { success: false, reason: 'no_drivers_available' };
     }
 
@@ -1430,6 +1441,23 @@ app.post("/accept", async (c) => {
 
     if (ride.status !== 'pending' && ride.status !== 'searching') {
       return c.json({ success: false, error: "Course déjà acceptée ou terminée" }, 400);
+    }
+
+    // ⏰ Une recherche expirée ne doit plus être acceptée (course abandonnée
+    // par le passager ou restée sans chauffeur). On la clôture à la volée.
+    if (ride.status === 'searching') {
+      const createdMs = Date.parse(ride.createdAt || ride.created_at || '');
+      if (Number.isFinite(createdMs) && Date.now() - createdMs > MATCHING_TIMEOUT_MS + 15_000) {
+        ride.status = 'no_driver_found';
+        ride.noDriverFoundAt = new Date().toISOString();
+        await kv.set(`ride:${rideId}`, ride).catch(() => undefined);
+        await kv.delete(`matching:${rideId}`).catch(() => undefined);
+        return c.json({
+          success: false,
+          error: 'RIDE_EXPIRED',
+          message: "Cette course n'est plus disponible (recherche expirée).",
+        }, 410);
+      }
     }
 
     // ✅ NOUVEAU: Vérifier le solde du conducteur AVANT d'accepter

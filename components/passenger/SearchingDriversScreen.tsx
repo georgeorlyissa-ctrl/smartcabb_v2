@@ -70,6 +70,8 @@ export function SearchingDriversScreen() {
   const [noDriverInfo, setNoDriverInfo] = useState<{
     alternatives: { category: string; count: number }[];
     totalOnline: number;
+    /** false = aucune course enregistrée (personne à notifier). */
+    rideCreated?: boolean;
   } | null>(null);
   const noDriverShownRef = useRef(false);
 
@@ -160,6 +162,7 @@ export function SearchingDriversScreen() {
           setNoDriverInfo({
             alternatives: Array.isArray(data.alternatives) ? data.alternatives : [],
             totalOnline: Number(data.totalOnline) || 0,
+            rideCreated: true,
           });
         }
         // « Chargé » = une réponse VALIDE est arrivée. En cas d'échec on ne
@@ -207,6 +210,27 @@ export function SearchingDriversScreen() {
     const sleep = (ms: number) => new Promise<void>((resolve) => {
       timers.push(setTimeout(resolve, ms));
     });
+
+    // 🧹 Course créée alors que l'écran a été quitté (retour, changement de
+    // catégorie, fermeture) : on l'annule pour ne jamais laisser une course
+    // orpheline qu'un chauffeur pourrait accepter plus tard.
+    const cancelRideQuietly = (rideId: string) => {
+      if (!rideId) return;
+      try {
+        void fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/cancel`,
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rideId,
+              cancelledBy: 'passenger',
+              reason: 'Recherche annulée (écran quitté)',
+            }),
+          },
+        ).catch(() => undefined);
+      } catch { /* ignore */ }
+    };
 
     const postCreate = async () => {
       controller = new AbortController();
@@ -258,9 +282,23 @@ export function SearchingDriversScreen() {
         try {
           console.log(`🚖 Création de la course (tentative ${attempt}/3)…`);
           const { ok, status, json, text } = await postCreate();
-          if (cancelled) return;
+          if (cancelled) {
+            // Écran quitté pendant la requête : si la course a bien été créée,
+            // on l'annule immédiatement (aucune course fantôme).
+            if (ok && json?.success && json?.rideId) cancelRideQuietly(String(json.rideId));
+            return;
+          }
 
           if (ok && json?.success && json?.rideId) {
+            // ⛔ Aucun chauffeur n'a été notifié : le serveur a clôturé la
+            // course immédiatement. On ne navigue pas vers l'écran de course.
+            if ((json.matching as any)?.reason === 'no_drivers_available') {
+              console.warn('⚠️ Aucun chauffeur disponible → demande clôturée');
+              apiCalled.current = false;
+              setNoDriverInfo({ alternatives: [], totalOnline: 0, rideCreated: false });
+              return;
+            }
+
             console.log('✅ Course créée, rideId:', json.rideId);
 
             createRide({
@@ -327,7 +365,10 @@ export function SearchingDriversScreen() {
   const handleCancel = async () => {
     setIsCancelling(true);
 
-    if (phase === 'notifying' && state.currentRide?.id) {
+    // Annule dès qu'une course existe, quel que soit l'état affiché (avant, la
+    // condition `phase === 'notifying'` laissait des courses `searching`
+    // derrière elle quand l'utilisateur quittait pendant l'envoi).
+    if (state.currentRide?.id) {
       try {
         await fetch(
           `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/cancel`,
@@ -424,7 +465,9 @@ export function SearchingDriversScreen() {
                     : 'Aucun chauffeur connecté pour le moment'}
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  {noDriverInfo.alternatives.length > 0
+                  {noDriverInfo.rideCreated === false
+                    ? 'Votre demande n’a pas été enregistrée : aucun chauffeur n’est en ligne pour le moment.'
+                    : noDriverInfo.alternatives.length > 0
                     ? 'Des chauffeurs sont connectés dans d’autres catégories. Choisissez-en une pour être pris en charge tout de suite.'
                     : 'Tous nos chauffeurs sont hors ligne ou déjà en course. Réessayez dans quelques minutes.'}
                 </p>
@@ -451,18 +494,37 @@ export function SearchingDriversScreen() {
             )}
 
             <div className="flex gap-2 pt-1">
-              <button
-                onClick={() => setNoDriverInfo(null)}
-                className="flex-1 h-11 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200"
-              >
-                Continuer d’attendre
-              </button>
-              <button
-                onClick={() => { setNoDriverInfo(null); void handleCancel(); }}
-                className="flex-1 h-11 rounded-xl bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100"
-              >
-                Annuler
-              </button>
+              {noDriverInfo.rideCreated === false ? (
+                <>
+                  <button
+                    onClick={() => { setNoDriverInfo(null); handleRetry(); }}
+                    className="flex-1 h-11 rounded-xl bg-cyan-600 text-white text-sm font-semibold hover:bg-cyan-700"
+                  >
+                    Réessayer
+                  </button>
+                  <button
+                    onClick={() => { setNoDriverInfo(null); void handleCancel(); }}
+                    className="flex-1 h-11 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200"
+                  >
+                    Retour
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setNoDriverInfo(null)}
+                    className="flex-1 h-11 rounded-xl bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200"
+                  >
+                    Continuer d’attendre
+                  </button>
+                  <button
+                    onClick={() => { setNoDriverInfo(null); void handleCancel(); }}
+                    className="flex-1 h-11 rounded-xl bg-red-50 text-red-600 text-sm font-semibold hover:bg-red-100"
+                  >
+                    Annuler
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
