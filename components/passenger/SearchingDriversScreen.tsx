@@ -64,6 +64,8 @@ export function SearchingDriversScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const [dots, setDots] = useState('');
   const [sheetExpanded, setSheetExpanded] = useState(false);
+  // Incrémenté par « Continuer » pour relancer la création sans dépendre de `phase`
+  const [retryToken, setRetryToken] = useState(0);
 
   // Empêcher le double appel API
   const apiCalled = useRef(false);
@@ -175,8 +177,12 @@ export function SearchingDriversScreen() {
   // Réessai automatique sur les erreurs TRANSITOIRES (réseau, délai, 5xx, 503
   // de redéploiement) : le MÊME clientRequestId est renvoyé, donc jamais de
   // doublon. Un refus définitif (4xx) arrête immédiatement.
+  // ⚠️ Dépendances VOLONTAIREMENT limitées à `pendingRide` + `retryToken` :
+  // inclure `phase` ici déclenchait le nettoyage de l'effet au passage
+  // `searching → notifying`, ce qui **annulait la requête de création en vol**
+  // (AbortController) → aucune course créée, donc aucune notification.
   useEffect(() => {
-    if (phase !== 'searching' || !pendingRide || apiCalled.current) return;
+    if (!pendingRide || apiCalled.current) return;
 
     let cancelled = false;
     let controller: AbortController | null = null;
@@ -298,7 +304,7 @@ export function SearchingDriversScreen() {
       timers.forEach((t) => clearTimeout(t));
       controller?.abort();
     };
-  }, [phase, pendingRide]);
+  }, [pendingRide, retryToken]);
 
   // ─── Annulation ──────────────────────────────────────────────
   const handleCancel = async () => {
@@ -335,6 +341,7 @@ export function SearchingDriversScreen() {
     apiCalled.current = false;
     setPhase('searching');
     setErrorMsg('');
+    setRetryToken((n) => n + 1);
   };
 
   if (!pendingRide) return null;

@@ -42,6 +42,40 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (22) — **Régression critique : la course n'était plus créée** (requête annulée)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (régression)
+- **Objectif** : après le passage en production du nouvel écran de recherche, **aucune course n'était créée** : le conducteur ne recevait ni notification ni son et ne pouvait évidemment pas accepter.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/passenger/SearchingDriversScreen.tsx` | L'effet de création ne dépend plus de `phase` (seulement `pendingRide` + `retryToken`) ; `handleRetry` incrémente `retryToken` |
+
+### Description technique
+Régression introduite par l'entrée (20). L'effet qui appelle `POST /rides/create` avait pour dépendances `[phase, pendingRide]` **et** un `AbortController` annulé dans son nettoyage. Au moment où `run()` fait `setPhase('notifying')`, React relance l'effet : le nettoyage **abortait la requête de création en vol**. `run()` sortait alors sur `if (cancelled) return` sans afficher d'erreur : l'écran restait en « envoi de la demande », **aucune course n'existait côté serveur** (confirmé : aucun événement `ride_created` dans le journal).
+Correctif : l'effet ne dépend plus de `phase` (le changement de phase ne peut plus l'interrompre) ; le bouton « Continuer » relance via un compteur `retryToken`. Le nettoyage n'abandonne plus que lors d'un **démontage réel** de l'écran.
+Pourquoi cela fonctionnait avant : l'ancien code n'avait pas d'`AbortController` (le `fetch` survivait au nettoyage) et `apiCalled` bloquait la relance — d'où le succès de la course de 04:59 et l'échec de toutes les suivantes.
+
+### Impact produit / comportement visible
+- Une commande crée **à nouveau** la course : le conducteur reçoit la notification (push + son) et la carte d'acceptation (30 s).
+- En cas d'échec réel, le message d'erreur s'affiche (plus de blocage silencieux).
+
+### Risques & rollback
+- **Risque** : faible — retour au comportement antérieur (dépendances restreintes).
+- **Rollback** : `git revert`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npm run build` OK
+- [x] Analyse : `AbortController` + dépendance `phase` = annulation systématique au passage `searching → notifying`
+- [x] Côté serveur (déjà validé) : `/rides/create` → `driversNotified=1`, trace `ride_created`, `/rides/pending/:driver` renvoie la course
+- [ ] À confirmer : commande réelle passager → notification + son + acceptation conducteur
+
+---
+
 ## 2026-11-19 (21) — Voix Android (TTS) fiabilisée, fenêtre d'acceptation alignée
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
