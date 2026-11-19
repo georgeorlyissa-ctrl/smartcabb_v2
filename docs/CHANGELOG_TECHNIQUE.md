@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (21) — Voix Android (TTS) fiabilisée, fenêtre d'acceptation alignée
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : sur iPhone (Safari) la voix parle ; sur l'**APK Android** la sonnerie fonctionne mais **la voix ne parle pas** et le diagnostic restait sur « vérification… ». Le conducteur doit aussi pouvoir **accepter la course** sans que la fenêtre se referme trop tôt. Retrait de l'icône de test audio (passage en production).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/native-tts.ts` | `withTimeout()` autour des appels natifs (`stop` 3 s, `speak` 15 s, `getSupportedLanguages` 3 s) ; `nativeTTSCheck()` renvoie une **raison** (`plugin_absent` / `engine_timeout` / `error`) |
+| `lib/notification-sound.ts` | Repli sur la voix de la WebView si elle a des voix ; sinon événement `smartcabb:voice-unavailable` (au lieu d'un silence inexpliqué) |
+| `components/driver/DriverDashboardNew.tsx` | Retrait du bouton 🔊 ; bandeau d'aide « voix indisponible » (une fois, refermable) ; test du moteur TTS au démarrage ; **carte de course 30 s** ; plus de FCM web sur l'APK |
+| `components/driver/FCMDiagnostic.tsx` | Garde-fous natifs (`Notification` absent, actions FCM web sans objet) ; état du moteur TTS avec délai |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `MATCHING_TIMEOUT_MS` 30 s → **35 s** (marge au-dessus des 30 s de la carte) |
+
+### Description technique
+**1. Voix Android — cause.** Sur le téléphone testé, l'appel au moteur TTS natif ne rendait **jamais** la main (aucun moteur TTS / aucune voix installée) : la promesse restait en attente, l'écran affichait « vérification… » et l'annonce ne partait pas. Tous les appels natifs sont désormais bornés dans le temps ; l'échec est **explicite** et remonte à l'interface. Si la WebView possède des voix (fréquent sur iOS), on y bascule ; sinon le conducteur voit une consigne unique et refermable : *Paramètres Android → Synthèse vocale → Voix françaises*. Le test est aussi fait au démarrage du tableau de bord (3 s max), donc l'information apparaît même sans course.
+**2. Acceptation de la course.** La carte `RideNotification` était configurée à **15 s** (`timeoutSeconds={15}`) alors que le serveur laisse la course ouverte 30 s : au-delà de 15 s le composant appelait `/rides/decline` → le conducteur ne pouvait plus accepter (et il était le seul en ligne). La carte reste maintenant **30 s** et le serveur attend **35 s**, ce qui laisse le temps d'ouvrir l'app, d'écouter l'annonce et d'appuyer sur **Accepter** (→ écran `driver-navigation`).
+**3. Bruit FCM sur l'APK.** Le tableau de bord appelait le chemin FCM **web** même dans l'APK, où `Notification` n'existe pas : logs `Notification is not defined`, « Échec du rafraîchissement », et risque d'effacer l'état d'enregistrement local. Sur natif, seul `initNativePush()` (DriverApp) gère le token ; le panneau de diagnostic explique désormais que ces actions sont gérées par le plugin natif.
+**4. Production.** L'icône 🔊 (diagnostic) est retirée de l'en-tête conducteur ; le panneau reste dans le code mais n'est plus exposé.
+
+### Impact produit / comportement visible
+- Android : la sonnerie continue de fonctionner ; si le téléphone n'a pas de moteur de voix, un message clair indique comment l'installer (au lieu d'un silence).
+- iPhone : comportement inchangé (voix du navigateur, vérifiée par le conducteur).
+- Le conducteur a **30 s** pour accepter une course ; l'acceptation mène bien à l'écran de navigation.
+- Plus d'erreurs FCM trompeuses dans l'app native.
+
+### Risques & rollback
+- **Risque** : un moteur TTS lent (> 15 s) verrait son annonce coupée ; les messages sont courts, le seuil est large.
+- **Risque** : fenêtre d'acceptation plus longue = passager qui attend jusqu'à 35 s avant `no_driver_found` (auparavant 30 s).
+- **Rollback** : `git revert` (aucune donnée migrée).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npm run build` OK ; Edge Function redéployée
+- [x] Constat utilisateur intégré : iPhone = voix OK ; Android = sonnerie sans voix + diagnostic bloqué sur « vérification… »
+- [ ] À confirmer sur le téléphone Android : bandeau d'aide affiché, puis voix après installation d'une voix française
+- [ ] À confirmer : course acceptée dans les 30 s → écran de navigation
+
+---
+
 ## 2026-11-19 (20) — Taux de change stable, création de course fiable, diagnostic voix
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

@@ -65,6 +65,45 @@ async function loadPlugin() {
   return mod.TextToSpeech;
 }
 
+/**
+ * Course contre la montre autour d'un appel natif.
+ *
+ * ⚠️ Certains téléphones Android n'ont **aucun moteur TTS** : l'appel
+ * `speak()`/`getSupportedLanguages()` ne répond alors JAMAIS (ni succès ni
+ * erreur). Sans délai maximum, la promesse restait en attente pour toujours :
+ * l'écran de diagnostic affichait « vérification… » et l'annonce vocale ne
+ * partait pas. On tranche donc au bout de `ms`.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`${label} : délai dépassé (${ms} ms) — moteur TTS absent ?`));
+    }, ms);
+    promise.then(
+      (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        reject(error);
+      },
+    );
+  });
+}
+
+/** Les annonces sont courtes : au-delà de 15 s, le moteur est bloqué. */
+const SPEAK_TIMEOUT_MS = 15_000;
+/** Interrogation du moteur (langues, arrêt) : doit répondre vite. */
+const ENGINE_TIMEOUT_MS = 3_000;
+
 /** Vrai si la voix native peut être tentée (app native + plugin embarqué). */
 function canUseNativeTTS(): boolean {
   if (_nativeBroken || !isNativeApp() || !ttsPluginAvailable()) return false;
@@ -104,18 +143,22 @@ export async function nativeSpeak(
     for (const lang of candidates) {
       try {
         // Coupe une éventuelle annonce précédente (sinon les phrases se cumulent).
-        await TextToSpeech.stop().catch(() => {});
+        await withTimeout(TextToSpeech.stop(), ENGINE_TIMEOUT_MS, 'TTS stop').catch(() => {});
         // Certains moteurs TTS ignorent un `speak()` envoyé dans la même
         // milliseconde qu'un `stop()` : petite respiration = voix garantie.
         await new Promise((r) => setTimeout(r, 60));
 
-        await TextToSpeech.speak({
-          text,
-          ...(lang ? { lang } : {}),
-          rate: opts?.rate ?? 0.95,
-          pitch: 1.0,
-          volume: opts?.volume ?? 1.0,
-        });
+        await withTimeout(
+          TextToSpeech.speak({
+            text,
+            ...(lang ? { lang } : {}),
+            rate: opts?.rate ?? 0.95,
+            pitch: 1.0,
+            volume: opts?.volume ?? 1.0,
+          }),
+          SPEAK_TIMEOUT_MS,
+          'TTS speak',
+        );
 
         _preferredLang = lang || null;
         _nativeFailures = 0;
@@ -151,7 +194,7 @@ export async function nativeStopSpeak(): Promise<void> {
   if (!canUseNativeTTS()) return;
   try {
     const TextToSpeech = await loadPlugin();
-    await TextToSpeech.stop();
+    await withTimeout(TextToSpeech.stop(), ENGINE_TIMEOUT_MS, 'TTS stop').catch(() => {});
   } catch {}
 }
 
@@ -163,7 +206,11 @@ export async function nativeTTSWarmup(): Promise<void> {
   if (!canUseNativeTTS()) return;
   try {
     const TextToSpeech = await loadPlugin();
-    const { languages } = await TextToSpeech.getSupportedLanguages();
+    const { languages } = await withTimeout(
+      TextToSpeech.getSupportedLanguages(),
+      ENGINE_TIMEOUT_MS,
+      'TTS langues',
+    );
     if (!Array.isArray(languages) || languages.length === 0) {
       // Moteur TTS absent : on laisse parler le système si possible.
       console.warn('⚠️ [TTS NATIF] Aucune langue TTS installée sur l’appareil');
@@ -188,13 +235,22 @@ export async function nativeTTSWarmup(): Promise<void> {
 export async function nativeTTSCheck(): Promise<{
   available: boolean;
   languages?: string[];
+  /** `plugin_absent` | `engine_timeout` | `error` — pour guider l'utilisateur. */
+  reason?: 'plugin_absent' | 'engine_timeout' | 'error';
 }> {
-  if (!canUseNativeTTS()) return { available: false };
+  if (!canUseNativeTTS()) {
+    return { available: false, reason: 'plugin_absent' };
+  }
   try {
     const TextToSpeech = await loadPlugin();
-    const { languages } = await TextToSpeech.getSupportedLanguages();
+    const { languages } = await withTimeout(
+      TextToSpeech.getSupportedLanguages(),
+      ENGINE_TIMEOUT_MS,
+      'TTS langues',
+    );
     return { available: languages.some((l) => /^fr/i.test(l)), languages };
-  } catch {
-    return { available: false };
+  } catch (e: any) {
+    const timedOut = /délai dépassé/i.test(String(e?.message || e));
+    return { available: false, reason: timedOut ? 'engine_timeout' : 'error' };
   }
 }

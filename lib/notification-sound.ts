@@ -453,6 +453,19 @@ function splitPhrases(text: string): string[] {
   return text.split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
 }
 
+/**
+ * Prévient l'interface que l'annonce vocale n'est pas disponible sur cet
+ * appareil (téléphone sans moteur TTS / sans voix française). Le tableau de
+ * bord chauffeur affiche alors une consigne discrète (une seule fois) au lieu
+ * de laisser le conducteur croire que la voix est simplement coupée.
+ */
+function notifyVoiceUnavailable(reason: string) {
+  try {
+    window.dispatchEvent(new CustomEvent('smartcabb:voice-unavailable', { detail: { reason } }));
+  } catch { /* ignore */ }
+  console.warn('⚠️ [TTS] Voix indisponible sur cet appareil:', reason);
+}
+
 // ─── Synthèse vocale principale ───────────────────────────────────────────────
 async function speakMessage(
   message: string,
@@ -462,24 +475,34 @@ async function speakMessage(
   // 1️⃣ APK / app native : `speechSynthesis` n'existe pas dans la WebView
   //    Android → on utilise le moteur TTS natif du téléphone.
   if (isNativeApp()) {
+    let nativeSpoken = false;
     try {
-      const spoken = await nativeSpeak(message, { lang, rate: 0.95 });
-      if (spoken) {
+      nativeSpoken = await nativeSpeak(message, { lang, rate: 0.95 });
+      if (nativeSpoken) {
         console.log('✅ TTS natif terminé');
         return;
       }
-      // Plugin absent (APK < 1.6), moteur TTS non installé ou pause après
-      // erreurs : la `speechSynthesis` de la WebView ne parle jamais et
-      // n'émettrait aucun `onstart`. Inutile d'attendre 14 s (la sonnerie
-      // resterait coupée) : on rend la main tout de suite.
-      console.warn('⚠️ TTS natif indisponible — sonnerie conservée');
-      return;
     } catch (e) {
       // `nativeSpeak` ne rejette pas, mais on ne veut JAMAIS qu'une erreur de
       // voix fasse remonter une promesse non gérée jusqu'à l'overlay d'erreur.
       console.warn('⚠️ TTS natif indisponible:', e);
+    }
+
+    // Repli : certaines WebView embarquent une synthèse vocale utilisable
+    // (surtout sur iOS). On ne tente le coup que si des voix existent.
+    let webVoices = 0;
+    try {
+      webVoices = ('speechSynthesis' in window) ? window.speechSynthesis.getVoices().length : 0;
+    } catch { webVoices = 0; }
+
+    if (webVoices === 0) {
+      // Téléphone sans moteur TTS / sans voix : la sonnerie continue, la voix
+      // non. On le signale à l'UI (consigne d'installation) et on rend la main
+      // sans attendre 14 s (la sonnerie resterait coupée).
+      notifyVoiceUnavailable('native_tts_unavailable');
       return;
     }
+    console.warn('ℹ️ [TTS] Repli sur la voix de la WebView (TTS natif indisponible)');
   }
 
   if (!('speechSynthesis' in window)) {

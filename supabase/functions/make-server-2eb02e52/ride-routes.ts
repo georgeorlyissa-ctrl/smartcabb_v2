@@ -396,7 +396,10 @@ function calculateDriverScore(driver: any, distanceToPickup: number): number {
  * Le premier à accepter remporte la course.
  * Timeout global de 30s si aucun n'accepte.
  */
-const MATCHING_TIMEOUT_MS = 30000;
+// 35 s : la carte de course côté conducteur reste 30 s ouverte, il faut une
+// marge pour qu'il puisse accepter (30 s exactement = course expirée au moment
+// où il appuie).
+const MATCHING_TIMEOUT_MS = 35000;
 /** Au-delà de ce délai, une recherche encore « searching » est considérée sans chauffeur. */
 const SEARCH_STALE_MS = 45_000;
 

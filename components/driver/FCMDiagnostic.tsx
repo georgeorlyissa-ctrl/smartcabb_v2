@@ -100,6 +100,7 @@ export function FCMDiagnostic({ driverId, driverName }: FCMDiagnosticProps) {
 
   // Tester l'enregistrement FCM
   const handleTestRegistration = async () => {
+    if (guardNativeFcmAction('l\'enregistrement du token')) return;
     setIsLoading(true);
     addLog('🚀 Début du test d\'enregistrement FCM...', 'info');
     
@@ -124,6 +125,7 @@ export function FCMDiagnostic({ driverId, driverName }: FCMDiagnosticProps) {
 
   // Forcer le rafraîchissement
   const handleForceRefresh = async () => {
+    if (guardNativeFcmAction('le rafraîchissement du token')) return;
     setIsLoading(true);
     addLog('🔄 Rafraîchissement forcé du token FCM...', 'info');
     
@@ -148,6 +150,12 @@ export function FCMDiagnostic({ driverId, driverName }: FCMDiagnosticProps) {
 
   // Demander la permission
   const handleRequestPermission = async () => {
+    // ⚠️ Dans l'APK (WebView), l'API `Notification` du navigateur n'existe pas :
+    // la permission est demandée par le plugin natif (initNativePush).
+    if (typeof Notification === 'undefined') {
+      addLog('ℹ️ App native : permission gérée par le plugin push (pas de Notification web)', 'warning');
+      return;
+    }
     addLog('📱 Demande de permission pour les notifications...', 'info');
     
     try {
@@ -221,9 +229,21 @@ export function FCMDiagnostic({ driverId, driverName }: FCMDiagnosticProps) {
     }
   };
 
+  // Tester l'enregistrement du token (web) / rafraîchir : sans objet sur l'APK.
+  const guardNativeFcmAction = (action: string): boolean => {
+    if (!isNativeApp()) return false;
+    addLog(`ℹ️ App native : ${action} est géré par le plugin push natif`, 'warning');
+    return true;
+  };
+
   // Tester une notification locale
   const handleTestLocalNotification = () => {
     addLog('🔔 Test de notification locale...', 'info');
+
+    if (typeof Notification === 'undefined') {
+      addLog('ℹ️ App native : utilisez « Test PUSH Backend » (notification système)', 'warning');
+      return;
+    }
     
     if (Notification.permission !== 'granted') {
       addLog('❌ Permission non accordée', 'error');

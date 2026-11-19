@@ -16,6 +16,7 @@ import { registerDriverFCMToken } from '../../lib/driver-fcm';
 import { stopAllNotifications } from '../../lib/notification-sound';
 import { preloadVoices } from '../../lib/notification-sound';
 import { unlockMobileAudio } from '../../lib/notification-sound';
+import { isNativeApp, nativeTTSCheck } from '../../lib/native-tts';
 import { supabase } from '../../lib/supabase';
 import { consumePendingPushRide } from '../../lib/native-push';
 import { NotificationBell } from '../AppNotificationsScreen';
@@ -215,6 +216,45 @@ export function DriverDashboardNew() {
       return next;
     });
   };
+
+  // 🔇 Avertir UNE SEULE FOIS si le téléphone n'a pas de voix disponible
+  // (sonnerie OK mais moteur TTS absent / sans voix française).
+  const [showVoiceHint, setShowVoiceHint] = useState(false);
+  useEffect(() => {
+    const onVoiceUnavailable = () => {
+      try {
+        if (localStorage.getItem('smartcabb_voice_hint_dismissed') === '1') return;
+      } catch { /* ignore */ }
+      setShowVoiceHint(true);
+    };
+    window.addEventListener('smartcabb:voice-unavailable', onVoiceUnavailable as EventListener);
+    return () => window.removeEventListener('smartcabb:voice-unavailable', onVoiceUnavailable as EventListener);
+  }, []);
+  const dismissVoiceHint = () => {
+    setShowVoiceHint(false);
+    try { localStorage.setItem('smartcabb_voice_hint_dismissed', '1'); } catch { /* ignore */ }
+  };
+
+  // 🔎 Sur l'APK : vérifier le moteur de voix dès l'ouverture (délai 3 s côté
+  // module). Sur certains Android, l'appel ne répond jamais : sans ce test
+  // l'écran restait bloqué sur « vérification… » et la voix était silencieuse
+  // sans explication.
+  useEffect(() => {
+    if (!driver?.id || !isNativeApp()) return;
+    let alive = true;
+    (async () => {
+      const check = await nativeTTSCheck();
+      if (!alive) return;
+      if (!check.available) {
+        try {
+          if (localStorage.getItem('smartcabb_voice_hint_dismissed') === '1') return;
+        } catch { /* ignore */ }
+        setShowVoiceHint(true);
+        console.warn('⚠️ [TTS] Voix indisponible au démarrage:', check.reason, check.languages);
+      }
+    })();
+    return () => { alive = false; };
+  }, [driver?.id]);
 
   // ✅ Refresh des données quand on revient sur le dashboard (après clôture de course)
   useEffect(() => {
@@ -438,6 +478,16 @@ export function DriverDashboardNew() {
       try {
         // ✅ Pré-charger les voix TTS dès le démarrage (améliore réactivité 1ère notification)
         preloadVoices();
+
+        // 📱 APK : le FCM **web** n'existe pas dans la WebView (pas de
+        // `Notification`/`PushManager`). Le push natif est déjà enregistré par
+        // `initNativePush()` dans DriverApp : appeler le chemin web ici ne
+        // produisait que des erreurs (« Notification is not defined ») et
+        // pouvait effacer l'état local d'enregistrement.
+        if (isNativeApp()) {
+          console.log('ℹ️ [FCM] App native : push géré par initNativePush (pas de FCM web)');
+          return;
+        }
 
         const success = await registerDriverFCMToken(driver.id);
         if (!success) {
@@ -781,15 +831,7 @@ export function DriverDashboardNew() {
             >
               <span className="text-lg leading-none">{isDark ? '☀️' : '🌙'}</span>
             </button>
-            {/* 🔊 Diagnostic notifications + voix (sonnerie Android, TTS) */}
-            <button
-              onClick={() => setShowFCMDiagnostic(true)}
-              title="Tester la sonnerie et la voix"
-              aria-label="Tester la sonnerie et la voix"
-              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors flex-shrink-0"
-            >
-              <span className="text-lg leading-none">🔊</span>
-            </button>
+
             <button
               onClick={handleToggleOnline}
               disabled={statusPending}
@@ -841,6 +883,29 @@ export function DriverDashboardNew() {
       <div className="p-4 space-y-4">
         {activeTab === 'home' && (
           <>
+            {/* 🔇 Consigne voix (une seule fois) — la sonnerie, elle, fonctionne */}
+            {showVoiceHint && (
+              <div className="bg-amber-50 border border-amber-300 rounded-2xl p-3 flex items-start gap-2">
+                <span className="text-lg leading-none">🔇</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-900">
+                    La voix ne peut pas parler sur ce téléphone
+                  </p>
+                  <p className="text-xs text-amber-800 mt-1">
+                    Les nouvelles courses sonnent normalement. Pour entendre l'annonce,
+                    installez une voix française : <strong>Paramètres Android → Synthèse
+                    vocale → Voix françaises</strong> (ou « Sortie texte-parole »).
+                  </p>
+                </div>
+                <button
+                  onClick={dismissVoiceHint}
+                  className="text-amber-800 text-xs font-bold px-2 py-1 rounded-lg hover:bg-amber-100"
+                >
+                  OK
+                </button>
+              </div>
+            )}
+
             {/* 🔄 Transfert proposé — reprendre une course en cours */}
             {transferProposal && (
               <div className="bg-orange-500 text-white rounded-2xl p-4 shadow-lg">
@@ -1642,7 +1707,7 @@ export function DriverDashboardNew() {
             setPendingRideRequest(null);
             stopAllNotifications();
           }}
-          timeoutSeconds={15}
+          timeoutSeconds={30}
         />
       )}
 
