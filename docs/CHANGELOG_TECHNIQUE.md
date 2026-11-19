@@ -1,4 +1,4 @@
-# Journal technique des modifications — SmartCabb
+﻿# Journal technique des modifications — SmartCabb
 
 > **But** : garantir la traçabilité de toute modification apportée à l'application et faciliter les interventions ultérieures (debug, rollback, reprise par un autre développeur).
 >
@@ -62,6 +62,7 @@ Assez de détail pour comprendre le code sans le relire.>
 | `components/passenger/SearchingDriversScreen.tsx` | `clientRequestId` stable, timeout 25 s, **3 tentatives** sur erreurs transitoires (réseau/5xx/503), message d'erreur clair |
 | `components/passenger/EstimateScreen.tsx` | Filet de sécurité : `isBooking` retombe après 20 s (bouton jamais bloqué) |
 | `components/driver/FCMDiagnostic.tsx` | Bouton « 🔊 Test Sonnerie + Voix » + état du moteur TTS (voix française installée ou non) |
+| `components/driver/DriverDashboardNew.tsx` | Bouton 🔊 dans l'en-tête : ouvre le panneau de diagnostic (il était inaccessible) |
 
 ### Description technique
 **1. Taux de change — cause racine.** `GET /config/get` lisait le KV avec un helper qui renvoie `null` aussi bien pour « clé absente » que pour « base momentanément indisponible ». Le handler interprétait ce `null` comme une première utilisation et **réécrivait `smartcabb_global_config` avec `DEFAULT_CONFIG`** (taux `2500`, commission `10`, `configVersion` remis à 1, **numéros SOS effacés et `emergencySmsEnabled` à `false`**). Preuves en production : `configVersion` retombé 4 → 1 le 19/11 à 04:58, taux réel 2250, SOS désactivé.

@@ -781,6 +781,15 @@ export function DriverDashboardNew() {
             >
               <span className="text-lg leading-none">{isDark ? '☀️' : '🌙'}</span>
             </button>
+            {/* 🔊 Diagnostic notifications + voix (sonnerie Android, TTS) */}
+            <button
+              onClick={() => setShowFCMDiagnostic(true)}
+              title="Tester la sonnerie et la voix"
+              aria-label="Tester la sonnerie et la voix"
+              className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors flex-shrink-0"
+            >
+              <span className="text-lg leading-none">🔊</span>
+            </button>
             <button
               onClick={handleToggleOnline}
               disabled={statusPending}
