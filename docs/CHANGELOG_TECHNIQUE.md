@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (23) — Photos de profil : base64 → Supabase Storage (budget d'E/S disque)
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : perf / chore
+- **Objectif** : le projet Supabase affichait « budget d'E/S disque presque épuisé » (au-delà : débit plafonné à 5 Mo/s). Cause principale : les photos de profil étaient stockées **en base64 dans le KV** (jusqu'à 1,3 Mo par fiche ; PostgreSQL les stocke hors ligne et les relit à chaque lecture). Objectif : sortir ces images du JSONB et supprimer l'ancienne fonction Edge inutilisée.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/photo-storage.ts` | **Nouveau** : décodage des data URLs, bucket public `avatars`, migration idempotente (`migrateProfilePhotos`), téléversement à l'écriture (`storePhotoDataUrl`) |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | `POST /migrate-photos` (jeton temporaire `PHOTO_MIGRATION_TOKEN`) ; `POST /signup` et `POST /:driverId/update` téléversent les photos au lieu de stocker du base64 |
+| Supabase | Fonction Edge `make-server-fe68ee11` (5 mois, inutilisée) **supprimée** ; bucket `avatars` créé (public) ; secret `PHOTO_MIGRATION_TOKEN` posé puis **retiré** |
+
+### Description technique
+- **Migration exécutée en production** : 107 fiches scannées → **37 photos migrées (8,49 Mo)**, `0` restante. Pour chaque fiche : décodage `data:image/…;base64` → téléversement `avatars/<drivers|vehicles|profiles|passengers>/<id>.<ext>` → **vérification** → réécriture de la fiche avec `photo_url` (URL publique + `?v=<timestamp>`), `photo_storage_path`, `photo_migrated_at`, et **suppression** de `profile_photo`/`photo`/`avatar`. En cas d'échec du téléversement, la fiche reste **intacte** (aucune perte de photo). Opération **idempotente**, par lots (`limit`) pour rester sous la limite de temps de la fonction.
+- **Pas de régression à l'écriture** : l'inscription et la mise à jour du profil téléversent désormais l'image dans Storage et n'enregistrent que `photo_url` (repli base64 uniquement si le téléversement échoue). Le front lit déjà `photo || photo_url || profile_photo`.
+- **Accès** : la route de migration est protégée par `x-migration-token` = secret `PHOTO_MIGRATION_TOKEN`. Le secret a été **retiré** après l'opération : la route répond maintenant **403**.
+
+### Impact produit / comportement visible
+- **E/S disque fortement réduites** (les photos ne sont plus relues dans chaque requête).
+- `GET /drivers/:id` : **~3 550 Ko → ~2 Ko** (la photo est servie par Storage, avec cache navigateur).
+- `GET /drivers` (admin) : **5,15 Mo / 72 s → 0,04 Mo / 1,85 s**.
+- `debug-drivers` : ~2,4 s → **0,86 s** ; `online-drivers` : **0,33 s**.
+- Les avatars continuent de s'afficher (vérifié : URL Storage HTTP 200, `image/jpeg`).
+
+### Risques & rollback
+- **Risque** : bucket `avatars` **public** — les URLs sont non devinables mais accessibles sans authentification (comme l'était l'API avec la clé anon). Si un accès strictement privé devient nécessaire : passer au bucket privé + URLs signées.
+- **Risque** : une nouvelle photo envoyée en base64 par un client ancien est téléversée automatiquement ; en cas d'échec Storage, elle reste en base64 (fiche plus lourde, mais rien n'est perdu).
+- **Rollback** : le code peut être reverté ; les photos restent dans Storage et les fiches gardent leur `photo_url` (aucune donnée à restaurer).
+
+### Tests / vérifications
+- [x] Simulation puis migration réelle : **37/37 photos**, 8,49 Mo libérés, 0 échec final
+- [x] `GET /drivers/28501b8f…` → 2 Ko (avant 3 550 Ko) ; `photo_url` téléchargeable (HTTP 200, `image/jpeg`, 887 Ko)
+- [x] `GET /drivers` → 0,04 Mo / 1,85 s ; `debug-drivers` 0,86 s ; `online-drivers` 0,33 s
+- [x] Route `POST /drivers/migrate-photos` → **403** après retrait du secret
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [x] Fonction `make-server-fe68ee11` absente de la liste (seule `make-server-2eb02e52` reste)
+- [x] Config intacte après déploiement (taux 2250, commission 20, SOS actif)
+
+---
+
 ## 2026-11-19 (22) — **Régression critique : la course n'était plus créée** (requête annulée)
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

@@ -14,6 +14,7 @@ import {
   readKvStrict,
   rebuildDriverRecord,
 } from "./driver-records.ts";
+import { migrateProfilePhotos, storePhotoDataUrl } from "./photo-storage.ts";
 
 const app = new Hono();
 
@@ -119,6 +120,31 @@ app.get("/", async (c) => {
   } catch (error) {
     console.error("❌ [DRIVERS/GET-ALL] Erreur:", error);
     return c.json({ success: false, error: "Erreur serveur", drivers: [] }, 500);
+  }
+});
+
+// ─── POST /migrate-photos — Photos base64 (KV) → Supabase Storage ────────────
+// Protégé par un jeton temporaire (`PHOTO_MIGRATION_TOKEN`, secret Supabase) :
+// l'en-tête `x-migration-token` doit correspondre. Le jeton est retiré après
+// la migration (la route répond alors 403).
+//   body : { dryRun?: boolean, limit?: number }
+app.post("/migrate-photos", async (c) => {
+  const expected = Deno.env.get("PHOTO_MIGRATION_TOKEN") || "";
+  const provided = c.req.header("x-migration-token") || "";
+  if (!expected || provided !== expected) {
+    return c.json({ success: false, error: "Non autorisé" }, 403);
+  }
+
+  const body = await c.req.json().catch(() => ({}));
+  const dryRun = body?.dryRun === true;
+  const limit = Number(body?.limit) || 0;
+
+  try {
+    const report = await migrateProfilePhotos({ dryRun, limit });
+    return c.json({ success: report.failed.length === 0, dryRun, limit, ...report });
+  } catch (e: any) {
+    console.error("❌ [PHOTOS] Migration impossible:", e);
+    return c.json({ success: false, error: String(e?.message || e) }, 500);
   }
 });
 
@@ -665,6 +691,13 @@ app.post("/signup", async (c) => {
     const userId = createData.user.id;
     const now = new Date().toISOString();
 
+    // 🖼️ Photos (profil + véhicule) : téléversées dans Storage, jamais en base64
+    // dans le KV — les fiches restent petites et les lectures n'épuisent plus le
+    // budget d'E/S disque. En cas d'échec du téléversement, on garde la base64
+    // (aucune perte de photo).
+    const profilePhotoUrl = await storePhotoDataUrl(userId, profilePhoto, "drivers");
+    const vehiclePhotoUrl = await storePhotoDataUrl(userId, vehiclePhoto, "vehicles");
+
     const driverProfile = {
       id: userId,
       email: finalEmail,
@@ -689,18 +722,21 @@ app.post("/signup", async (c) => {
         license_plate: vehiclePlate,
         color: vehicleColor,
         category: vehicleCategory,
-        // 🚗 Photo du véhicule (Base64) — exigée par le formulaire d'inscription
-        photo: vehiclePhoto || null,
+        // 🚗 Photo du véhicule — URL Storage (base64 seulement si upload échoué)
+        photo: vehiclePhotoUrl ? null : (vehiclePhoto || null),
+        photo_url: vehiclePhotoUrl || null,
       },
       // 🚗 Photo du véhicule à plat (compatibilité lecture admin / driver app)
-      vehicle_photo: vehiclePhoto || null,
+      vehicle_photo: vehiclePhotoUrl ? null : (vehiclePhoto || null),
+      vehicle_photo_url: vehiclePhotoUrl || null,
+      photo_url: profilePhotoUrl || null,
       // ✅ Scoring intelligent : propreté du véhicule (1-5, défaut 3)
       cleanliness: 3,
       vehicle_cleanliness: 3,
       // ✅ Scoring intelligent : préférences de course
       preferences: {},
       ride_preferences: {},
-      profile_photo: profilePhoto || null,
+      profile_photo: profilePhotoUrl ? null : (profilePhoto || null),
       // Approbation
       status: "pending",
       isApproved: false,
@@ -755,6 +791,30 @@ app.post("/:driverId/update", async (c) => {
 
     const driver = await kvGet(`driver:${driverId}`);
     if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
+
+    // 🖼️ Une nouvelle photo arrive en base64 : on la téléverse dans Storage et
+    // on ne garde que l'URL (sinon la fiche regonfle et les lectures coûtent
+    // cher en E/S disque). En cas d'échec, la valeur d'origine est conservée.
+    const newPhotoUrl = await storePhotoDataUrl(
+      driverId,
+      updates.profile_photo ?? updates.photo ?? updates.photo_url,
+      "drivers",
+    );
+    if (newPhotoUrl) {
+      updates.profile_photo = null;
+      updates.photo = null;
+      updates.photo_url = newPhotoUrl;
+    }
+    const newVehiclePhotoUrl = await storePhotoDataUrl(
+      driverId,
+      updates.vehicle_photo ?? updates.vehiclePhoto,
+      "vehicles",
+    );
+    if (newVehiclePhotoUrl) {
+      updates.vehicle_photo = null;
+      updates.vehiclePhoto = null;
+      updates.vehicle_photo_url = newVehiclePhotoUrl;
+    }
 
     // Appliquer les mises à jour
     const updatedDriver = {
