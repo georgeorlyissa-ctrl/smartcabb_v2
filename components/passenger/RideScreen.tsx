@@ -893,13 +893,18 @@ return () => {
             className="bg-white rounded-2xl p-6 max-w-sm w-full"
           >
             <div className="flex items-center justify-center mb-4">
-              <div className="relative">
-                <motion.div
-                  className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full"
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              <div className="relative w-24 h-24">
+                <img
+                  src="/images/recherche-chauffeur.svg"
+                  alt="Recherche d'un véhicule disponible"
+                  className="w-24 h-24 select-none pointer-events-none"
+                  draggable={false}
                 />
-                <RefreshCw className="w-6 h-6 text-blue-500 absolute inset-0 m-auto" />
+                <motion.div
+                  className="absolute inset-0 rounded-full border-4 border-blue-500"
+                  animate={{ scale: [1, 1.4, 1.6], opacity: [0.5, 0.2, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                />
               </div>
             </div>
             
@@ -1020,7 +1025,9 @@ return () => {
                 {rideInProgress && 'Course en cours'}
               </h1>
               <p className="text-sm text-muted-foreground">
-                {currentRide?.vehicleType || 'Smart Flex'}
+                {currentRide?.vehicleType
+                  ? getVehicleDisplayName({ type: currentRide.vehicleType })
+                  : 'SmartCabb Standard'}
               </p>
             </div>
           </div>
@@ -1077,20 +1084,25 @@ return () => {
               className="flex-1 flex flex-col items-center justify-center space-y-6"
             >
               {/* Animation de recherche */}
-              <div className="relative">
+              <div className="relative w-32 h-32">
                 <motion.div
-                  className="w-32 h-32 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center"
-                  animate={{ 
-                    scale: [1, 1.1, 1],
-                    rotate: [0, 360]
+                  className="w-32 h-32 rounded-full flex items-center justify-center"
+                  animate={{
+                    scale: [1, 1.05, 1],
+                    y: [0, -3, 0]
                   }}
-                  transition={{ 
-                    duration: 2,
+                  transition={{
+                    duration: 2.4,
                     repeat: Infinity,
                     ease: "easeInOut"
                   }}
                 >
-                  <Car className="w-16 h-16 text-white" />
+                  <img
+                    src="/images/recherche-chauffeur.svg"
+                    alt="Recherche d'un véhicule disponible"
+                    className="w-32 h-32 select-none pointer-events-none"
+                    draggable={false}
+                  />
                 </motion.div>
                 {/* Cercles d'ondes */}
                 <motion.div

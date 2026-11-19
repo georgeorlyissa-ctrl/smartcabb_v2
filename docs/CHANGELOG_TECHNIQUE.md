@@ -42,6 +42,42 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-19 (16) — Écran « Recherche de chauffeur » : illustration dédiée au lieu de l'icône véhicule
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : ui / design
+- **Objectif** : sur l'écran plein « Recherche en cours... » (passager), l'illustration centrale était une simple icône de camionnette blanche sur un disque dégradé bleu qui tournait sur elle-même (rotation 360°). Remplacer par une illustration soignée qui évoque la recherche d'un véhicule **disponible à proximité**, et corriger au passage le sous-titre de l'en-tête qui affichait la clé technique `smart_standard`.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `public/images/recherche-chauffeur.svg` | **Nouveau** : illustration vectorielle 200×200 (3,3 Ko) — fond radial bleu clair, onde radar pointillée, repère de localisation jaune, voiture bleue SmartCabb avec ombre portée |
+| `components/passenger/RideScreen.tsx` | Écran de recherche : `<Car>` (icône) → `<img src="/images/recherche-chauffeur.svg">` ; rotation supprimée, remplacée par une légère respiration (`scale` 1 → 1,05 + `y` 0 → -3) ; les deux ondes circulaires animées sont conservées ; modal « Recherche en cours » aligné sur la même illustration ; sous-titre `currentRide.vehicleType` → `getVehicleDisplayName()` |
+
+### Description technique
+- Illustration **SVG autonome** (aucune dépendance, aucune requête externe, licence interne) : dégradés `#43B2FF → #0055B4` (couleurs `--secondary` / `--primary`), accent jaune `#FFD600` (`--accent`), fond `#F7FBFF → #BEDFFF`.
+- L'ancien bloc faisait tourner le disque à 360°/2 s ; une rotation aurait fait pivoter la voiture. Le mouvement est désormais porté par : la respiration de l'image (2,4 s) + les deux ondes concentriques existantes (inchangées).
+- Le même visuel est utilisé dans le modal `status === 'searching'` (taille 96 px) pour une expérience homogène entre les deux états de recherche.
+- Sous-titre de l'en-tête : `smart_standard` s'affichait tel quel (clé technique). Il passe par `getVehicleDisplayName({ type })` → « SmartCabb Standard » (ou « Confort », « Familiale », « Business », « Luxury »).
+- L'image est servie depuis `public/` → `/images/recherche-chauffeur.svg` (mise en cache navigateur et Vercel Edge, 3,3 Ko, mise à l'échelle nette sur tous les écrans).
+
+### Impact produit / comportement visible
+- Écran de recherche : illustration premium, cadre radar, repère de localisation — l'attente paraît plus courte et plus « technologique ».
+- Le nom de catégorie affiché est maintenant lisible (« SmartCabb Standard ») au lieu de `smart_standard`.
+- Correctif **web uniquement** : Vercel suffit (l'APK charge le web distant), aucun nouveau versionCode.
+
+### Risques & rollback
+- **Risque** : très faible (asset statique + libellé). Si l'image ne se charge pas, `alt` est affiché.
+- **Rollback** : supprimer `public/images/recherche-chauffeur.svg` et restaurer le bloc `<Car className="w-16 h-16 text-white" />` (ou `git revert`).
+
+### Tests / vérifications
+- [x] `npm run build` (Vite) OK ; `dist/images/recherche-chauffeur.svg` présent (3 365 octets) et référencé dans `PassengerApp-*.js`
+- [x] Rendu vérifié par capture (canvas 400×400) : voiture, onde radar, repère jaune et ombre correctement positionnés
+- [ ] À vérifier sur téléphone après déploiement : écran de recherche au lancement d'une course (l'image doit être nette, sans déformation)
+
+---
+
 ## 2026-11-18 (15) — Panneau admin : adresses Départ / Arrivée des courses affichées
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
