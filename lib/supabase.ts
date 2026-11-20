@@ -37,6 +37,10 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+    // Évite les « steal » du verrou Web Locks quand le réseau est lent :
+    // sans cette marge, une requête d'auth de plus de 5 s était interrompue
+    // par un autre onglet → « AbortError: Lock broken by another request ».
+    lockAcquireTimeout: 15000,
   },
 });
 

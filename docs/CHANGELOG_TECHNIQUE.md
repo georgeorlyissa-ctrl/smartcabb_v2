@@ -42,6 +42,77 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-20 (32) — Réservation 12:00 non déclenchée + overlay « AbortError: Lock broken »
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : (1) supprimer l'écran rouge « Promesse non gérée : AbortError: Lock broken by another request with the 'steal' option » ; (2) faire en sorte qu'une réservation déclenche **automatiquement** sa course **15 min avant** l'heure, sans clic admin.
+
+### Diagnostic (données réelles)
+
+Réservation `f3e37a17-a377-4357-9e1e-222eb72ba143` — **20/11/2026 12:00**, passagère Carmel ALI, conductrice Ruth Shole :
+
+| Fait constaté | Valeur |
+|---|---|
+| Conducteur accepté | oui (`driver_status = accepted`) |
+| Présence confirmée | oui (`presence_confirmed = true`, le 20/11 à 03:15) |
+| Rappel H-1 envoyé | oui (`reminder_sent_at = 09:55Z`, soit 10:55 locale) |
+| Statut final | `completed` à **10:55:20Z = 11:55 locale** |
+| Course créée | **aucune** (aucune course `scheduledRideId = f3e37a17…` chez Ruth ni chez Carmel) |
+
+**Cause n°1 — bouton « Traiter » trompeur.** Le bouton vert « Traiter » de l'écran Admin → Réservations appelait `POST /reservations/:id/admin-status` avec `status = completed`. Ce endpoint ne créait **aucune course** : il marquait seulement la réservation comme traitée. L'admin a cliqué à 11:55 (croyant lancer la course) ; le cron de 11:55 a ensuite vu la réservation déjà `completed` et l'a ignorée. Le passager n'a jamais eu de chauffeur.
+
+**Cause n°2 — déclenchement à T-5, pas T-15.** Le cron lisait la marge dans le secret `SCHEDULED_RIDE_BUFFER_MINUTES`, qui valait **5** (vérifié : empreinte SHA-256 de `5`). La course se créait donc au mieux 5 min avant, alors que l'admin attendait 11:45.
+
+**Cause n°3 — overlay d'erreur.** `@supabase/auth-js` utilise les **Web Locks** (`navigator.locks`) pour synchroniser la session entre onglets. Quand une opération d'auth dure plus de 5 s (réseau lent, plusieurs onglets), un autre onglet « vole » le verrou (`steal: true`) et le précédent reçoit `AbortError: Lock broken by another request with the 'steal' option`. Le filtre de `utils/diagnostics.ts` ne connaissait pas ce message → overlay rouge plein écran, alors que l'erreur est bénigne et auto-réparée.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `utils/diagnostics.ts` | `isAbortLike()` : ignore `AbortError` / `TimeoutError` / « Lock broken by another request » / « lock request is aborted » dans `error` et `unhandledrejection` (`preventDefault`, pas d'overlay) |
+| `lib/supabase.ts` | `auth.lockAcquireTimeout: 15000` (au lieu de 5 s) : moins de vols de verrou sur réseau lent |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Marge par défaut **15 min** (`leadMinutes`) ; commentaires ; index KV `scheduled_ride:<id>` → `rideId` écrit dans les 4 chemins de création (cron pré-attribué, cron matching, admin pré-attribué, admin matching) |
+| `supabase/functions/make-server-2eb02e52/reservation-routes.ts` | `POST /:id/admin-status` **refuse** `completed` (409) ; nouveau `POST /:id/reopen` (anti-doublon via l'index, refus des dates passées, remet en `scheduled`/`confirmed`) |
+| `components/admin/AdminScheduledRidesScreen.tsx` | Bouton « Traiter » **supprimé** ; bouton « ↩️ Rouvrir » pour une réservation clôturée le jour même ; rafraîchissement auto toutes les 60 s ; libellé « Création automatique vers HH:MM (15 min avant) » |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **Overlay** : `isAbortLike(error)` teste `error.name` (`AbortError`, `TimeoutError`) et les messages du Web Locks. Les deux listeners (`error`, `unhandledrejection`) appellent `event.preventDefault()` et se contentent d'un `console.warn`. Les vraies erreurs continuent d'afficher l'overlay.
+2. **Délai 15 min** : `leadMinutes` lit `SCHEDULED_RIDE_BUFFER_MINUTES` (défaut **15**). Le secret Supabase a été mis à **15**. Le cron `process-scheduled-rides` (`*/5 * * * *`) traite donc la réservation entre 10 et 15 min avant l'heure (selon le passage du cron). Le garde manuel `SCHEDULED_RIDE_EARLY_MINUTES` reste à 15 : les deux chemins sont cohérents.
+3. **Fin du piège « Traiter »** : le serveur répond **409** à toute demande `completed` via `admin-status`, avec un message qui renvoie vers « Créer maintenant » / « Matching auto ». La clôture légitime reste faite par `process-scheduled` / `admin-process-one`, qui créent la course **avant** de passer le statut à `completed`.
+4. **Rouvrir** : chaque création de course de réservation écrit `scheduled_ride:<reservationId> = <rideId>` dans le KV. `POST /reservations/:id/reopen` :
+   - refuse une réservation non `completed` (409) ;
+   - refuse une date antérieure à aujourd'hui (heure Kinshasa, UTC+1) ;
+   - refuse si l'index existe déjà (aucun doublon) ;
+   - remet `status = confirmed` (acompte reçu) ou `scheduled`, et `reminder_sent_at = null` ;
+   - le cron suivant crée la course (pré-attribuée si conducteur accepté + présence confirmée, sinon matching auto).
+5. **Admin** : la liste se rafraîchit toutes les 60 s (silencieusement), affiche l'heure de création automatique, et propose « Rouvrir » pour les réservations clôturées du jour. Le bouton « Créer maintenant » reste disponible pour forcer immédiatement (avec le garde des 15 min côté serveur).
+
+### Impact produit
+- Une réservation normale (conducteur accepté + présence confirmée) crée sa course **automatiquement vers T-15**, sans aucune action admin.
+- Il n'est plus possible de « griller » une réservation en la marquant traitée sans course.
+- Si une réservation a été clôturée par erreur (cas du 20/11 12:00), l'admin peut la rouvrir en un clic ; la course est recréée dans les 5 min.
+- L'overlay rouge ne s'affiche plus pour les courses annulées (`AbortController`) ni pour les verrous de session Supabase.
+
+### Risques & rollback
+- **Risque** : une réservation rouverte dont une ancienne course existerait **avant le déploiement de l'index** pourrait créer un doublon. Le bouton est limité aux réservations **du jour** ; les nouvelles créations sont protégées par l'index.
+- **Risque** : `lockAcquireTimeout` à 15 s retarde légèrement une opération d'auth si un verrou est réellement orphelin (puis vol automatique).
+- **Rollback** : `git revert` du commit ; remettre le secret `SCHEDULED_RIDE_BUFFER_MINUTES` à `5` si besoin. Aucune migration de base.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` OK (hors erreurs pré-existantes `_headers/Code-component-*.tsx`)
+- [x] `npm run build` OK
+- [x] Edge Function déployée ; `POST /rides/process-scheduled` répond `200` avec `x-cron-secret`
+- [x] Secret `SCHEDULED_RIDE_BUFFER_MINUTES=15` appliqué
+- [x] Diagnostic données : réservation `f3e37a17…` sans course (confirmé par l'historique Ruth et Carmel)
+- [ ] À confirmer : réservation de test à venir → course créée vers T-15, push conducteur + passager
+- [ ] À confirmer : « Rouvrir » sur la réservation du 20/11 12:00 → course recréée, passager notifié
+- [ ] À confirmer : plus d'overlay AbortError après plusieurs onglets / réseau lent
+
+---
+
 ## 2026-11-20 (31) — Écran de démarrage Android : splash marine + médaillon, fin de la page blanche
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

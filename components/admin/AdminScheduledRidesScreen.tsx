@@ -55,12 +55,16 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
 
   useEffect(() => {
     loadRides();
+    // Le cron crée la course 15 min avant l'heure : on rafraîchit la liste
+    // toutes les 60 s pour la voir apparaître sans action manuelle.
+    const timer = setInterval(() => loadRides(true), 60000);
+    return () => clearInterval(timer);
   }, []);
 
   // Chargement via backend service-role : marche même sans session Supabase
   // (le timeout admin déconnecte le Auth, ce qui vidait la liste en direct PostgREST)
-  const loadRides = async () => {
-    setLoading(true);
+  const loadRides = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const resp = await fetch(`${API}/reservations/admin/all?status=all&limit=500`, {
         headers: { 'Authorization': `Bearer ${publicAnonKey}` },
@@ -70,9 +74,9 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
       setRides(j.rides || []);
     } catch (err) {
       console.error('Erreur chargement reservations:', err);
-      toast.error('Erreur chargement — vérifiez votre connexion');
+      if (!silent) toast.error('Erreur chargement — vérifiez votre connexion');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -134,19 +138,26 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
     await setRideStatus(id, 'cancelled', 'Reservation annulee');
   };
 
-  const handleManualProcess = async (ride: ScheduledRide) => {
-    // 🚦 Le bouton « Traiter » n'est actif qu'après acceptation du conducteur.
-    // Double sécurité ici au cas où l'état aurait changé entre-temps.
-    if (ride.driver_status !== 'accepted') {
-      toast.error(
-        ride.driver_id
-          ? "En attente : le conducteur doit accepter la réservation avant de pouvoir la traiter"
-          : "Aucun conducteur assigné : attribuez la réservation et attendez son acceptation"
-      );
-      return;
+  // ♻️ Rouvre une réservation clôturée sans course (ancien bouton « Traiter »).
+  // Le serveur vérifie qu'aucune course n'existe déjà pour éviter les doublons.
+  const handleReopen = async (ride: ScheduledRide) => {
+    if (!confirm(
+      'Rouvrir cette réservation ?\n\n' +
+      'À utiliser uniquement si AUCUNE course n\'a été créée (ex. ancien bouton « Traiter »).\n' +
+      'La course sera créée automatiquement dans les 5 minutes, ou immédiatement avec « Créer maintenant ».'
+    )) return;
+    try {
+      const resp = await fetch(`${API}/reservations/${ride.id}/reopen`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${publicAnonKey}`, 'Content-Type': 'application/json' },
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur');
+      toast.success(j.message || 'Réservation rouverte');
+      loadRides();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erreur');
     }
-    if (!confirm('Clôturer cette réservation et la classer dans les traitées ?')) return;
-    await setRideStatus(ride.id, 'completed', 'Reservation marquee comme traitee');
   };
 
   const filters = [
@@ -201,8 +212,18 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
   const noPresenceSoon = ride.driver_status === 'accepted' && !(ride as any).presence_confirmed &&
     (ride.status === 'scheduled' || ride.status === 'confirmed') && minsToStart <= 30;
 
-  // 🚦 « Traiter » n'est cliquable qu'une fois la réservation acceptée par le conducteur
+  // 🚦 « Créer maintenant » n'est cliquable qu'une fois la réservation acceptée par le conducteur
   const driverAccepted = ride.driver_status === 'accepted';
+
+  // Le cron crée la course automatiquement 15 min avant l'heure prévue.
+  const autoAt = new Date(scheduledAt.getTime() - 15 * 60000);
+  const autoLabel = autoAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  // ♻️ Réservation clôturée aujourd'hui sans certitude de course : bouton Rouvrir.
+  // Le serveur refuse si une course existe déjà (index scheduled_ride:<id>).
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const canReopen = ride.status === 'completed' && scheduledAt >= startOfToday;
 
   return (
     <Card key={ride.id} className="p-4">
@@ -233,6 +254,11 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                       <Clock className="w-4 h-4 ml-2" />
                       {ride.scheduled_time}
                     </div>
+                    {isActive && minsToStart > 0 && (
+                      <p className="text-xs font-medium text-blue-700 mb-1">
+                        ⏱️ Création automatique de la course vers {autoLabel} (15 min avant)
+                      </p>
+                    )}
                     <p className="text-sm font-medium">{ride.pickup_address}</p>
                     <p className="text-xs text-gray-400">vers {ride.dropoff_address}</p>
                     <p className="text-xs text-gray-400 mt-1">Client: {ride.user_id}</p>
@@ -290,17 +316,6 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                           <XCircle className="w-4 h-4 mr-1" />
                           Annuler
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleManualProcess(ride)}
-                          className="bg-green-600"
-                          disabled={!driverAccepted}
-                          title={driverAccepted
-                            ? 'Clôturer la réservation et la classer dans les traitées'
-                            : "Disponible uniquement quand le conducteur a accepté la réservation"}
-                        >
-                          Traiter
-                        </Button>
                         {!driverAccepted && (
                           <span className="text-[10px] text-gray-500 text-center leading-tight max-w-[120px]">
                             {ride.driver_id
@@ -309,6 +324,17 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
                           </span>
                         )}
                       </>
+                    )}
+                    {canReopen && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleReopen(ride)}
+                        className="text-amber-700 border-amber-300"
+                        title="Rouvrir une réservation clôturée sans course (vérification anti-doublon côté serveur)"
+                      >
+                        ↩️ Rouvrir
+                      </Button>
                     )}
                   </div>
                 </div>

@@ -359,9 +359,22 @@ app.post("/:id/admin-status", async (c) => {
       return c.json({ success: false, error: "Statut invalide" }, 400);
     }
 
-    // 🚦 « Traiter » (status = completed) n'est autorisé QU'APRÈS acceptation du
-    // conducteur : l'admin ne peut pas clôturer une réservation que le chauffeur
-    // n'a pas encore confirmée. L'annulation reste libre.
+    // 🚫 Plus jamais de clôture « traitée » sans course : c'est ce bouton
+    // (« Traiter ») qui a marqué la réservation de 12:00 comme traitée à
+    // 11:55 sans créer de course, laissant le passager sans chauffeur.
+    // La clôture légitime est faite par /process-scheduled ou
+    // /admin-process-one, qui créent la course AVANT de passer en completed.
+    if (status === "completed") {
+      return c.json({
+        success: false,
+        error:
+          "Une réservation ne peut pas être marquée « traitée » sans course. " +
+          "Utilisez « Créer maintenant » (conducteur accepté) ou « Matching auto » : " +
+          "la course sera créée puis la réservation clôturée automatiquement.",
+      }, 409);
+    }
+
+    // Vérifier que la réservation existe (annulation uniquement à ce stade).
     const { data: ride, error: rideErr } = await sbAdmin()
       .from("scheduled_rides")
       .select("id,driver_id,driver_status")
@@ -369,16 +382,6 @@ app.post("/:id/admin-status", async (c) => {
       .maybeSingle();
     if (rideErr) throw new Error(rideErr.message);
     if (!ride) return c.json({ success: false, error: "Réservation introuvable" }, 404);
-
-    if (status === "completed" && ride.driver_status !== "accepted") {
-      return c.json({
-        success: false,
-        error: ride.driver_id
-          ? "Le conducteur doit accepter la réservation avant qu'elle puisse être traitée"
-          : "Aucun conducteur assigné : attribuez la réservation puis attendez son acceptation",
-        driverStatus: ride.driver_status ?? null,
-      }, 409);
-    }
 
     const { error } = await sbAdmin()
       .from("scheduled_rides")
@@ -389,6 +392,61 @@ app.post("/:id/admin-status", async (c) => {
     return c.json({ success: true });
   } catch (error) {
     console.error("❌ [RESERVATIONS/ADMIN-STATUS] Erreur:", error);
+    return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
+  }
+});
+
+// ─── POST /:id/reopen — Rouvrir une réservation clôturée sans course ──────────
+// Cas réel : l'ancien bouton « Traiter » marquait la réservation « completed »
+// sans créer de course (réservation de 12:00 du 20/11/2026). Ce bouton la remet
+// en circulation ; le cron la traite dans les 5 minutes (pré-attribution si le
+// conducteur a accepté et confirmé sa présence, sinon matching auto).
+app.post("/:id/reopen", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const { data: ride, error } = await sbAdmin()
+      .from("scheduled_rides").select("*").eq("id", id).maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!ride) return c.json({ success: false, error: "Réservation introuvable" }, 404);
+    if (ride.status !== "completed") {
+      return c.json({ success: false, error: "Seule une réservation clôturée peut être rouverte" }, 409);
+    }
+
+    // Heure locale Kinshasa (UTC+1) : on refuse de rouvrir une date passée.
+    const offsetMin = parseInt(Deno.env.get("BUSINESS_UTC_OFFSET_MINUTES") || "60");
+    const todayKin = new Date(Date.now() + offsetMin * 60000).toISOString().slice(0, 10);
+    const rideDate = String(ride.scheduled_date || "").slice(0, 10);
+    if (rideDate && rideDate < todayKin) {
+      return c.json({
+        success: false,
+        error: `Réservation du ${rideDate} : trop ancienne pour être rouverte. Créez une nouvelle réservation.`,
+      }, 409);
+    }
+
+    // Anti-doublon : si une course a déjà été créée pour cette réservation
+    // (index écrit par /process-scheduled et /admin-process-one), on refuse.
+    if (await kvGet(`scheduled_ride:${id}`)) {
+      return c.json({
+        success: false,
+        error: "Une course a déjà été créée pour cette réservation — aucune action nécessaire.",
+      }, 409);
+    }
+
+    const nextStatus = ride.deposit_received ? "confirmed" : "scheduled";
+    const { error: updErr } = await sbAdmin()
+      .from("scheduled_rides")
+      .update({ status: nextStatus, reminder_sent_at: null })
+      .eq("id", id);
+    if (updErr) throw new Error(updErr.message);
+
+    console.log(`♻️ [RESERVATIONS/REOPEN] ${id} → ${nextStatus} (${rideDate} ${ride.scheduled_time})`);
+    return c.json({
+      success: true,
+      status: nextStatus,
+      message: "Réservation rouverte. La course sera créée automatiquement dans les 5 minutes ; vous pouvez aussi cliquer « Créer maintenant ».",
+    });
+  } catch (error) {
+    console.error("❌ [RESERVATIONS/REOPEN] Erreur:", error);
     return c.json({ success: false, error: error instanceof Error ? error.message : "Erreur serveur" }, 500);
   }
 });

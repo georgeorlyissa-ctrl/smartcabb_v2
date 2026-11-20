@@ -2962,7 +2962,8 @@ async function notifyPassenger(userId: string, notif: { title: string; body: str
 // ============================================
 // Cycle Jour-J (cron toutes les 5 min) :
 //  1. Rappel H-1h au conducteur ayant accepté + demande de confirmation de présence.
-//  2. À l'heure : si conducteur accepté ET présent → course PRÉ-ATTRIBUÉE (pas de matching).
+//  2. 15 min avant l'heure (SCHEDULED_RIDE_BUFFER_MINUTES, défaut 15) :
+//     si conducteur accepté ET présent → course PRÉ-ATTRIBUÉE (pas de matching).
 //     Si accepté mais SANS confirmation → pas de création auto, alerte admin (badge + live-feed).
 //     Si aucun conducteur → matching auto même catégorie (comportement historique).
 // Traite les statuts 'scheduled' ET 'confirmed' (acompte payé).
@@ -2983,7 +2984,12 @@ app.post("/process-scheduled", async (c) => {
     // On charge jusqu'à demain (une course à 00:05 peut devoir être traitée
     // quelques minutes avant minuit) ; l'échéance exacte est calculée en ms.
     const tomorrowStr = new Date(now.getTime() + 24 * 60 * 60000).toISOString().slice(0, 10);
-    const bufferMinutes = parseInt(Deno.env.get("SCHEDULED_RIDE_BUFFER_MINUTES") || "5");
+    const bufferMinutes = parseInt(Deno.env.get("SCHEDULED_RIDE_BUFFER_MINUTES") || "15");
+    if (!Number.isFinite(bufferMinutes) || bufferMinutes < 1) {
+      // Sécurité : toujours au moins quelques minutes d'avance.
+      console.warn(`SCHEDULED_RIDE_BUFFER_MINUTES invalide (${Deno.env.get("SCHEDULED_RIDE_BUFFER_MINUTES")}) — repli sur 15`);
+    }
+    const leadMinutes = Number.isFinite(bufferMinutes) && bufferMinutes > 0 ? bufferMinutes : 15;
     // Fenêtre de rappel : course qui démarre dans ~1h (55-65 min)
     const remindFrom = new Date(now.getTime() + 55 * 60000);
     const remindTo = new Date(now.getTime() + 65 * 60000);
@@ -3043,7 +3049,7 @@ app.post("/process-scheduled", async (c) => {
         // restée « scheduled » ne doit pas être traitée par surprise.
         const notTooOld = now.getTime() - 24 * 60 * 60000;
         const isDue = Number.isFinite(start) &&
-          start <= now.getTime() + bufferMinutes * 60000 &&
+          start <= now.getTime() + leadMinutes * 60000 &&
           start >= notTooOld;
         if (!isDue) continue;
 
@@ -3116,6 +3122,9 @@ app.post("/process-scheduled", async (c) => {
           };
 
           await kv.set(`ride:${rideId}`, ride);
+          // Index réservation → course : permet à l'admin de savoir si la
+          // réservation a déjà été transformée en course (bouton « Rouvrir »).
+          await kv.set(`scheduled_ride:${sr.id}`, rideId);
           console.log(`Course pre-attribuee creee: ${rideId} (conducteur ${sr.driver_id})`);
 
           // ✅ Marquer le chauffeur occupe : il ne doit pas recevoir d'autres courses
@@ -3194,6 +3203,8 @@ app.post("/process-scheduled", async (c) => {
         };
 
         await kv.set(`ride:${rideId}`, ride);
+        // Index réservation → course (voir /reservations/:id/reopen).
+        await kv.set(`scheduled_ride:${sr.id}`, rideId);
         console.log(`Course programmee creee: ${rideId}`);
 
         const matchingResult = await findAndNotifyNearbyDrivers(ride);
@@ -3919,6 +3930,7 @@ app.post("/admin-process-one", async (c) => {
         acceptedAt: new Date().toISOString(),
       };
       await kv.set(`ride:${ride.id}`, ride);
+      await kv.set(`scheduled_ride:${sr.id}`, ride.id);
       await supabase.from("scheduled_rides").update({ status: "completed" }).eq("id", sr.id);
       if (driver?.fcmToken) {
         await sendFCMNotification(driver.fcmToken, {
@@ -3940,6 +3952,7 @@ app.post("/admin-process-one", async (c) => {
     await supabase.from("scheduled_rides").update({ driver_status: "declined" }).eq("id", sr.id);
     const ride = { ...base, status: "searching" };
     await kv.set(`ride:${ride.id}`, ride);
+    await kv.set(`scheduled_ride:${sr.id}`, ride.id);
     const matchingResult = await findAndNotifyNearbyDrivers(ride);
     await supabase.from("scheduled_rides").update({ status: "completed" }).eq("id", sr.id);
     await notifyPassenger(sr.user_id, {

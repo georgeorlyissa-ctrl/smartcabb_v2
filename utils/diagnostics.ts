@@ -71,6 +71,8 @@ export function setupErrorInterceptors() {
     'Non-Error exception captured',
     'Non-Error promise rejection captured',
     'was released because another request stole it', // Race bénigne supabase-js sur le verrou du token (multi-onglets)
+    'Lock broken by another request',                // Web Locks : un autre onglet a récupéré le verrou (erreur attendue)
+    'The lock request is aborted',                   // Variante Chromium du même événement
     'lock:sb-',                                      // Verrou d'auth supabase (transitoire, auto-réparé)
     'Acquiring lock',                                // Compétition de verrous auth, sans impact
     'chrome-extension://',
@@ -97,6 +99,25 @@ export function setupErrorInterceptors() {
     BENIGN_PATTERNS.some(p => message?.includes(p));
 
   /**
+   * AbortError / verrous Web Locks : opérations volontairement annulées
+   * (changement d'écran, refresh de session Supabase, autre onglet).
+   * Elles ne cassent rien et ne doivent jamais afficher l'overlay rouge.
+   */
+  const isAbortLike = (error: any): boolean => {
+    if (!error) return false;
+    const name = String(error.name || '');
+    const message = String(error.message || error || '');
+    return (
+      name === 'AbortError' ||
+      name === 'TimeoutError' ||
+      message.includes('AbortError') ||
+      message.includes('Lock broken by another request') ||
+      message.includes('lock request is aborted') ||
+      message.includes('was released because another request stole it')
+    );
+  };
+
+  /**
    * Erreur provenant d'un script tiers (Google Maps, widgets, etc.) :
    * elle ne doit JAMAIS afficher l'overlay technique à l'utilisateur.
    * On détecte via le nom de fichier et/ou la pile d'appels.
@@ -120,6 +141,13 @@ export function setupErrorInterceptors() {
   // Intercepter les erreurs JavaScript
   window.addEventListener('error', (event) => {
     const stack = (event.error as any)?.stack ? String((event.error as any).stack) : '';
+
+    // ✅ Opérations annulées (AbortController) et verrous Web Locks : bénin
+    if (isAbortLike(event.error) || isAbortLike(event.message)) {
+      event.preventDefault();
+      console.warn('⚠️ AbortError ignorée (pas d\'overlay):', event.message);
+      return;
+    }
 
     // ✅ Ignorer les erreurs bénignes
     if (isBenign(event.message)) {
@@ -154,6 +182,13 @@ export function setupErrorInterceptors() {
   window.addEventListener('unhandledrejection', (event) => {
     const reason = String(event.reason || '');
     const stack = (event.reason as any)?.stack ? String((event.reason as any).stack) : '';
+
+    // ✅ AbortError / verrou volé par un autre onglet : bénin, auto-réparé
+    if (isAbortLike(event.reason)) {
+      event.preventDefault();
+      console.warn('⚠️ Rejet AbortError ignoré (pas d\'overlay):', reason);
+      return;
+    }
 
     // ✅ Ignorer les rejets bénins
     if (isBenign(reason)) {
