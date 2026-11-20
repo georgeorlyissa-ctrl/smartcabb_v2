@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-20 (32) — Réservation 12:00 non déclenchée + overlay « AbortError: Lock broken »
 
-- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Commit** : `7abf2a0` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix
 - **Objectif** : (1) supprimer l'écran rouge « Promesse non gérée : AbortError: Lock broken by another request with the 'steal' option » ; (2) faire en sorte qu'une réservation déclenche **automatiquement** sa course **15 min avant** l'heure, sans clic admin.
