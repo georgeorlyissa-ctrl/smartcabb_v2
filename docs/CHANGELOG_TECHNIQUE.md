@@ -42,6 +42,60 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-20 (30) — Sonnerie + voix Android : fin du fonctionnement intermittent
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : la sonnerie et l'annonce vocale d'une nouvelle course fonctionnaient « des fois oui, des fois non » sur Android. Identifier chaque cause et rendre la chaîne audio déterministe, sans changer le parcours chauffeur.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/native-tts.ts` | Annulation propre entre annonces (`_speechGeneration`), langues réellement installées, timeouts bornés, cooldown 12 s, pré-chauffage throttlé, plus de langue vide |
+| `lib/notification-sound.ts` | Sonnerie non coupée sur Android (volume 0,3), ré-armement au retour au premier plan, watchdog 4 s, `_announcementSeq` / `isCurrent`, annonce raccourcie |
+| `components/driver/RideNotification.tsx` | `playedRideIdRef` : sonnerie + voix pour **chaque** nouvelle course, même si la carte n'est pas démontée |
+| `components/driver/DriverDashboardNew.tsx` | `pendingRideRequestRef` + `dismissPendingRide(rideId)` : un `ride_taken` d'une ancienne course ne coupe plus la notification de la suivante |
+
+### Description technique
+**Causes identifiées (toutes reproduites dans le code)**
+1. **Sonnerie coupée trop tôt sur Android** : la sonnerie était mise en pause 0,8 s après le début pour laisser parler le TTS. Si le moteur TTS mettait 2–5 s à démarrer (ou échouait), le chauffeur n'entendait qu'un demi « ding » puis un silence. Sur Android, la sonnerie `<audio>` et le TTS natif utilisent des flux différents : rien n'obligeait à la couper.
+2. **Annonce suivante coupée par l'arrêt de la précédente** : `playRideNotification()` appelait `nativeStopSpeak()` (asynchrone) puis, juste après, `nativeSpeak()`. Sur certains moteurs (Samsung), le `stop()` arrivait **après** le début du nouveau `speak()` et le tuait.
+3. **État « déjà joué » conservé** : `RideNotification` utilisait un booléen `hasPlayed`. Quand une 2e course remplaçait la 1re sans démonter le composant, la carte s'affichait mais **aucune sonnerie ni voix** n'était déclenchée.
+4. **`ride_taken` d'une ancienne course** : le push de fermeture (ou l'événement SW) ne portait pas de filtre par `rideId` ; un `ride_taken` tardif fermait la carte et coupait le son de la course **suivante**.
+5. **Timeouts TTS trop courts + 3 langues testées** : jusqu'à 3 × 15 s de silence pendant lesquelles la sonnerie restait baissée ; les langues non installées (`fr-FR` sur un téléphone sans voix française) étaient tentées avant la langue réelle du téléphone.
+6. **Pré-chauffage relancé à chaque geste** : `unlockMobileAudio()` appelait `nativeTTSWarmup()` à chaque toucher ; des dizaines d'appels natifs pouvaient saturer le moteur au moment précis où la course arrivait.
+7. **WebView en veille** : au retour au premier plan, la WebView pouvait avoir suspendu le média ; la sonnerie ne repartait pas d'elle-même.
+
+**Correctifs**
+- **Android** : la sonnerie n'est plus mise en pause ; son volume est **baissé à 0,3** pendant l'annonce (TTS à 1,0), puis restauré à 0,8. Sur iOS web (où un `<audio>` actif rend la voix muette), la pause reste, avec un **watchdog de 4 s** qui remonte la sonnerie si la voix ne démarre pas.
+- **Annulations** : `nativeSpeak()` incrémente un jeton de génération ; toute nouvelle annonce invalide la précédente. `stopAllNotifications()` invalide aussi les annonces en cours (plus de voix après acceptation). Côté web, `_announcementSeq` + `isCurrent()` empêchent une annonce périmée de continuer ou d'afficher « voix indisponible ».
+- **Langues** : le pré-chauffage mémorise `getSupportedLanguages()` ; on utilise la voix française réellement installée, sinon la langue du téléphone (ou la 1re installée). **Jamais de langue vide** (le plugin la remplaçait par `en-US` et rejetait). 2 tentatives maximum.
+- **Timeouts** : `speak()` 12–20 s selon la longueur (annonce bornée à ~38 caractères par adresse), interrogation du moteur 3 s. Sur timeout, le moteur est **stoppé** et on ne teste pas une 2e langue (même silence).
+- **Cooldown** : 2 échecs consécutifs → pause de **12 s** seulement (au lieu de 60 s), et seuls les vrais échecs comptent (langue non supportée ou moteur non initialisé ne mettent pas la voix en quarantaine).
+- **Ré-armement** : `_ringtoneWanted` mémorise que la sonnerie doit sonner ; sur `visibilitychange` (retour au premier plan), elle repart si la course est toujours en attente.
+- **Annonce courte** : « Nouvelle course SmartCabb. Départ : … Destination : … Confirmez vite. » avec adresses tronquées à 38 caractères → reste sous le timeout et réduit le temps où la sonnerie est baissée.
+- **Une seule lecture par course, mais pour chaque course** : `RideNotification` mémorise l'**id** de la dernière course annoncée (`playedRideIdRef`), plus un booléen. `DriverDashboardNew` conserve la course affichée dans `pendingRideRequestRef` et ignore un `ride_taken` / `RIDE_DISMISSED` qui concerne un autre `rideId`.
+
+### Impact produit / comportement visible
+- La sonnerie démarre dès la réception et **continue** (volume réduit pendant la voix) jusqu'à l'acceptation ou au refus.
+- La voix repart pour **chaque** course, y compris la suivante après clôture, sans fermer/rouvrir l'app.
+- Un ancien `ride_taken` ne coupe plus la notification de la course en cours.
+- Téléphone sans voix française : l'annonce est prononcée avec la voix du système (accent différent) au lieu d'un silence ; le bandeau d'aide reste affiché une seule fois.
+- Écran verrouillé / app en arrière-plan : **inchangé** — seule la notification système Android sonne (le JS de la WebView n'est pas exécuté). Une voix en arrière-plan exigerait un service natif (APK ≥ 1.7, `versionCode` 10).
+
+### Risques & rollback
+- **Risque** : volume de sonnerie perçu plus faible pendant ~2–4 s (0,3) sur Android ; comportement voulu pour entendre la voix.
+- **Risque** : sur un moteur TTS très lent, la sonnerie reste à 0,5 au bout de 4 s (watchdog) au lieu de 0,3 — toujours audible.
+- **Rollback** : `git revert` de ce commit ; aucun changement de schéma ni de backend, aucune migration.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [ ] À confirmer sur appareil : course réelle app ouverte → sonnerie continue + voix ; course suivante → la voix repart ; ancienne course prise entre-temps → la nouvelle sonne quand même
+- [ ] À confirmer : écran verrouillé → notification système uniquement (limite connue)
+
+---
+
 ## 2026-11-19 (29) — Réservations : reste à payer, gains sur le total, pénalité journalière, bascule passager
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

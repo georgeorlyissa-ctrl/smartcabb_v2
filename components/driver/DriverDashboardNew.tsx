@@ -158,6 +158,13 @@ export function DriverDashboardNew() {
   activeRideRef.current = state.currentRide;
   const [driver, setDriver] = useState<Driver | null>(null);
   const [pendingRideRequest, setPendingRideRequest] = useState<RideRequest | null>(null);
+  // Course affichée au moment où un push « prise/annulée » arrive : sans ça,
+  // le `ride_taken` d'une ANCIENNE course pouvait fermer la sonnerie et la
+  // carte de la course SUIVANTE (d'où « des fois ça ne sonne pas »).
+  const pendingRideRequestRef = useRef<RideRequest | null>(null);
+  useEffect(() => {
+    pendingRideRequestRef.current = pendingRideRequest;
+  }, [pendingRideRequest]);
   const [showWalletManager, setShowWalletManager] = useState(false);
   const [showFCMDiagnostic, setShowFCMDiagnostic] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -428,6 +435,17 @@ export function DriverDashboardNew() {
     unlockMobileAudio();
     preloadVoices();
 
+    // Ferme la course affichée — uniquement si le push la concerne vraiment.
+    const dismissPendingRide = (rideId?: string) => {
+      const current = pendingRideRequestRef.current;
+      if (current?.id && rideId && String(current.id) !== String(rideId)) {
+        console.log('⏭️ Dismiss ignoré : concerne une autre course', rideId, '≠', current.id);
+        return;
+      }
+      setPendingRideRequest(null);
+      stopAllNotifications();
+    };
+
     // Écouter les messages du Service Worker (app en arrière-plan)
    const handleSWMessage = (event: MessageEvent) => {
   const { type, detail } = event.data || {};
@@ -439,8 +457,7 @@ export function DriverDashboardNew() {
   }
 
   if (type === 'DECLINE_RIDE' || type === 'RIDE_DISMISSED') {
-    setPendingRideRequest(null);
-    stopAllNotifications();
+    dismissPendingRide(detail?.rideId || detail?.id);
   }
 };
     navigator.serviceWorker?.addEventListener('message', handleSWMessage);
@@ -453,10 +470,10 @@ export function DriverDashboardNew() {
     window.addEventListener('fcm-new-ride-request', handleFCMRide);
 
     // Écouter fermeture notification (course prise/annulée)
-    const handleRideDismissed = () => {
-      console.log('⏹️ Course dismissée');
-      setPendingRideRequest(null);
-      stopAllNotifications();
+    const handleRideDismissed = (event: any) => {
+      const dismissedId = event?.detail?.rideId || event?.detail?.id;
+      console.log('⏹️ Course dismissée:', dismissedId || '(sans id)');
+      dismissPendingRide(dismissedId);
     };
     window.addEventListener('fcm-ride-dismissed', handleRideDismissed);
 

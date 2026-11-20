@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapPin, User, DollarSign, Clock, X, Check } from '../../lib/icons';
 import { playRideNotification, stopAllNotifications } from '../../lib/notification-sound';
 
@@ -47,30 +47,39 @@ export function RideNotification({
   timeoutSeconds = 10
 }: RideNotificationProps) {
   const [timeLeft, setTimeLeft] = useState(timeoutSeconds);
-  const [hasPlayed, setHasPlayed] = useState(false);
+  // 🔔 On mémorise la DERNIÈRE course annoncée (et non un simple booléen) :
+  // quand une 2e course remplaçait la 1re sans démonter cette carte, l'état
+  // « déjà joué » restait à true → aucune sonnerie, aucune voix.
+  const playedRideIdRef = useRef<string | null>(null);
+  const soundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Compte à rebours
+  // Compte à rebours + sonnerie/voix
   useEffect(() => {
-  if (!rideRequest) {
-    setTimeLeft(timeoutSeconds);
-    setHasPlayed(false);
-    return;
-  }
-
-  if (!hasPlayed) {
-    // ✅ Déclencher le son après un court délai pour laisser le DOM se rendre
-    const soundTimer = setTimeout(() => {
-      playRideNotification({
-        passengerName: rideRequest.passengerName,
-        pickup: rideRequest.pickup.address,
-        destination: rideRequest.destination?.address,
-        distance: rideRequest.distance,
-        estimatedEarnings: rideRequest.estimatedEarnings
-      });
-    }, 300);
-    setHasPlayed(true);
+    if (!rideRequest) {
+      playedRideIdRef.current = null;
+      setTimeLeft(timeoutSeconds);
+      return;
+    }
 
     setTimeLeft(timeoutSeconds);
+
+    // Jouer la notification pour chaque nouvelle course (une seule fois par id).
+    if (playedRideIdRef.current !== rideRequest.id) {
+      playedRideIdRef.current = rideRequest.id;
+      if (soundTimerRef.current) clearTimeout(soundTimerRef.current);
+      // Court délai pour laisser le DOM se rendre.
+      soundTimerRef.current = setTimeout(() => {
+        soundTimerRef.current = null;
+        void playRideNotification({
+          passengerName: rideRequest.passengerName,
+          pickup: rideRequest.pickup.address,
+          destination: rideRequest.destination?.address,
+          distance: rideRequest.distance,
+          estimatedEarnings: rideRequest.estimatedEarnings
+        }).catch((e) => console.warn('Notification sonore:', e));
+      }, 300);
+    }
+
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -84,28 +93,13 @@ export function RideNotification({
 
     return () => {
       clearInterval(interval);
-      clearTimeout(soundTimer);
+      if (soundTimerRef.current) {
+        clearTimeout(soundTimerRef.current);
+        soundTimerRef.current = null;
+      }
       stopAllNotifications();
     };
-  }
-
-  setTimeLeft(timeoutSeconds);
-  const interval = setInterval(() => {
-    setTimeLeft((prev) => {
-      if (prev <= 1) {
-        clearInterval(interval);
-        onDecline(rideRequest.id);
-        return 0;
-      }
-      return prev - 1;
-    });
-  }, 1000);
-
-  return () => {
-    clearInterval(interval);
-    stopAllNotifications();
-  };
-}, [rideRequest?.id, timeoutSeconds]);
+  }, [rideRequest?.id, timeoutSeconds]);
 
   if (!rideRequest) return null;
 

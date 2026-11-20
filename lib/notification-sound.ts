@@ -105,6 +105,9 @@ function playNotificationBeep(): void {
 // (`setMediaPlaybackRequiresUserGesture(false)`).
 let _ringtoneEl: HTMLAudioElement | null = null;
 let _ringtoneUri: string | null = null;
+// La sonnerie DOIT-elle retentir ? (elle est ré-armée si l'app revient au
+// premier plan ou si le navigateur/la WebView avait bloqué la lecture)
+let _ringtoneWanted = false;
 
 function encodeWavBase64(samples: Float32Array, sampleRate: number): string {
   const bytes = new Uint8Array(44 + samples.length * 2);
@@ -210,6 +213,7 @@ function stopBeepLoop(): void {
  */
 export function playRideRingtone(): void {
   if (!_soundAllowed) return;
+  _ringtoneWanted = true;
 
   const el = getRingtoneElement();
   if (!el) { scheduleWebAudioBeeps(); return; }
@@ -240,6 +244,13 @@ export function playRideRingtone(): void {
 }
 
 // ─── Cache voix TTS ───────────────────────────────────────────────────────────
+/**
+ * Identifiant de l'annonce en cours. Toute nouvelle annonce (ou un arrêt)
+ * invalide les précédentes : une annonce lente ne doit ni reparler ni afficher
+ * « voix indisponible » après que la course a été acceptée.
+ */
+let _announcementSeq = 0;
+
 let _cachedVoices: SpeechSynthesisVoice[] | null = null;
 let _cachedVoice:  SpeechSynthesisVoice  | null = null; // voix française sélectionnée
 let _ttsWarmedUp = false;
@@ -426,7 +437,10 @@ function speakUtterance(
 let _pendingSpeech: string | null = null;
 let _pendingGestureHooked = false;
 
-function retrySpeechOnNextGesture(message: string): void {
+function retrySpeechOnNextGesture(
+  message: string,
+  isCurrent?: () => boolean,
+): void {
   _pendingSpeech = message;
   if (_pendingGestureHooked) return;
   _pendingGestureHooked = true;
@@ -439,9 +453,10 @@ function retrySpeechOnNextGesture(message: string): void {
     _pendingSpeech = null;
     // `_soundAllowed === false` = course acceptée/refusée → on ne rejoue pas.
     if (!pending || !_soundAllowed) return;
+    if (isCurrent && !isCurrent()) return;
     console.warn('🔁 [TTS] rejeu de l’annonce après geste utilisateur');
     primeSpeechSynthesis();
-    void speakMessage(pending, 'fr-FR');
+    void speakMessage(pending, 'fr-FR', { isCurrent });
   };
 
   window.addEventListener('pointerdown', handler, { once: true });
@@ -470,7 +485,12 @@ function notifyVoiceUnavailable(reason: string) {
 async function speakMessage(
   message: string,
   lang = 'fr-FR',
-  hooks?: { onStart?: () => void; onEnd?: () => void }
+  hooks?: {
+    onStart?: () => void;
+    onEnd?: () => void;
+    /** Annonce encore d'actualité ? (course pas acceptée / pas remplacée) */
+    isCurrent?: () => boolean;
+  }
 ): Promise<void> {
   // 1️⃣ APK / app native : `speechSynthesis` n'existe pas dans la WebView
   //    Android → on utilise le moteur TTS natif du téléphone.
@@ -480,6 +500,9 @@ async function speakMessage(
       nativeSpoken = await nativeSpeak(message, { lang, rate: 0.95 });
       if (nativeSpoken) {
         console.log('✅ TTS natif terminé');
+        // `nativeSpeak` résout à la FIN de l'annonce : on prévient l'UI que
+        // la voix a bien démarré (le `finally` ci-dessous appellera onEnd).
+        try { hooks?.onStart?.(); } catch {}
         return;
       }
     } catch (e) {
@@ -487,6 +510,10 @@ async function speakMessage(
       // voix fasse remonter une promesse non gérée jusqu'à l'overlay d'erreur.
       console.warn('⚠️ TTS natif indisponible:', e);
     }
+
+    // Annonce annulée (course acceptée/refusée, ou remplacée par une autre) :
+    // ce n'est PAS une panne de voix, on ne montre pas la consigne d'install.
+    if (hooks?.isCurrent && !hooks.isCurrent()) return;
 
     // Repli : certaines WebView embarquent une synthèse vocale utilisable
     // (surtout sur iOS). On ne tente le coup que si des voix existent.
@@ -552,6 +579,8 @@ async function speakMessage(
 
     for (let i = 0; i < phrases.length; i++) {
       if (!phrases[i]) continue;
+      // Une nouvelle annonce a pris la main : on n'enchaîne pas les phrases.
+      if (hooks?.isCurrent && !hooks.isCurrent()) return;
       const utt = new SpeechSynthesisUtterance(phrases[i]);
       utt.lang   = lang;
       utt.rate   = IS_IOS ? 1.0 : 0.88;
@@ -564,8 +593,9 @@ async function speakMessage(
     }
 
     if (!anyStarted) {
+      if (hooks?.isCurrent && !hooks.isCurrent()) return;
       console.warn('⚠️ TTS: aucune phrase n’a démarré — nouvel essai au prochain toucher');
-      if (IS_IOS || IS_ANDROID || isNativeApp()) retrySpeechOnNextGesture(message);
+      if (IS_IOS || IS_ANDROID || isNativeApp()) retrySpeechOnNextGesture(message, hooks?.isCurrent);
       return;
     }
 
@@ -624,9 +654,41 @@ function showBrowserNotification(
 // ─── API PUBLIQUE ─────────────────────────────────────────────────────────────
 
 /**
- * Déclenche la notification complète : beep × 3 + TTS + vibration.
- * Beep et TTS démarrent en parallèle, zéro latence si tout est pré-chauffé.
- * Retourne une Promise qui se résout quand le TTS est terminé.
+ * Adresse courte pour l'annonce vocale : une adresse complète de Kinshasa
+ * peut durer 10–15 s et faisait dépasser le délai du moteur TTS (l'annonce
+ * était alors coupée puis relancée → comportement « des fois ça parle »).
+ */
+function shortAddress(value?: string): string {
+  const clean = (value || '').replace(/\s+/g, ' ').trim();
+  if (!clean) return '';
+  if (clean.length <= 38) return clean;
+  const cut = clean.slice(0, 38);
+  const lastSpace = cut.lastIndexOf(' ');
+  return (lastSpace > 18 ? cut.slice(0, lastSpace) : cut).replace(/[,;:.\-–—]+$/, '').trim();
+}
+
+function buildRideAnnouncement(rideDetails?: {
+  pickup?: string;
+  destination?: string;
+}): string {
+  const pickup = shortAddress(rideDetails?.pickup);
+  const dest = shortAddress(rideDetails?.destination);
+  let msg = 'Nouvelle course SmartCabb.';
+  if (pickup && pickup !== 'Point de départ') msg += ` Départ : ${pickup}.`;
+  if (dest && dest !== 'Destination') msg += ` Destination : ${dest}.`;
+  msg += ' Confirmez vite.';
+  return msg;
+}
+
+/** Petite pause non bloquante. */
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Déclenche la notification complète : sonnerie + TTS + vibration.
+ * Retourne une Promise qui se résout quand la voix est terminée (la sonnerie,
+ * elle, continue tant que la course n'est pas acceptée/refusée).
  */
 export async function playRideNotification(rideDetails?: {
   passengerName?: string;
@@ -637,18 +699,27 @@ export async function playRideNotification(rideDetails?: {
 }): Promise<void> {
   console.log('🚖 playRideNotification');
   _soundAllowed = true;
+  _ringtoneWanted = true;
+  // Identifie cette annonce : si elle est remplacée ou si la course est
+  // acceptée entre-temps, elle ne doit ni continuer ni signaler une panne.
+  const announcementId = ++_announcementSeq;
+  const isCurrent = () => announcementId === _announcementSeq && _soundAllowed;
+
+  // Une annonce précédente ne doit jamais se superposer à celle-ci (deux
+  // courses rapprochées, ou test lancé pendant une vraie notification).
+  // ⚠️ Côté natif, c'est `nativeSpeak()` qui annule la génération précédente :
+  // appeler `nativeStopSpeak()` ici risquait de couper la NOUVELLE annonce
+  // (l'arrêt natif asynchrone pouvait arriver après le début du speak).
+  try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch {}
 
   // Sonnerie : fichier audio (3 ding-dong) + vibration
   playRideRingtone();
   vibrate([300, 100, 300, 100, 300]);
 
-  // Message vocal (construit avec adresses courtes pour réduire la durée)
-  let msg = 'Bonjour, vous avez une nouvelle course SmartCabb ! ';
+  // Message vocal (adresses bornées pour rester sous le délai du moteur TTS)
   const pickup = rideDetails?.pickup;
   const dest   = rideDetails?.destination;
-  if (pickup && pickup !== 'Point de départ') msg += `Départ : ${pickup}. `;
-  if (dest   && dest   !== 'Destination')     msg += `Destination : ${dest}. `;
-  msg += 'Confirmez vite.';
+  const msg    = buildRideAnnouncement({ pickup, destination: dest });
 
   // Notification navigateur — non-bloquante (fire-and-forget)
   const body = pickup && dest ? `${pickup} → ${dest}` : 'Nouvelle course disponible';
@@ -657,54 +728,86 @@ export async function playRideNotification(rideDetails?: {
   });
 
   const isMobile = IS_IOS || IS_ANDROID || isNativeApp();
+  if (!isMobile) {
+    // TTS — awaité pour que la Promise se résolve quand la voix est terminée
+    await speakMessage(msg, 'fr-FR', { isCurrent }).catch(e => console.error('TTS:', e));
+    return;
+  }
 
-  // Mobile : la sonnerie et la voix se disputent la session audio. Sur iOS, un
-  // <audio> en lecture rend carrément la voix muette (« juste un bip »), et
-  // sur Android la sonnerie masque l'annonce. On coupe donc la sonnerie le
-  // temps de l'annonce, puis on la reprend (si la course est toujours là).
-  let ringtonePaused = false;
+  // 📱 Mobile : sur Android la sonnerie et la voix peuvent se superposer
+  // (streams média distincts) → on baisse seulement le volume de la sonnerie.
+  // On ne la coupe plus : si le moteur TTS met 5 s à démarrer (ou échoue),
+  // le chauffeur entendait auparavant un silence total après 0,8 s.
+  // Sur iOS (web), un <audio> actif rend la voix muette → pause temporaire,
+  // avec un filet de sécurité qui la rétablit si la voix ne démarre pas.
+  const pauseForIOS = IS_IOS && !isNativeApp();
+  const RING_VOLUME = 0.8;
+  const DUCK_VOLUME = 0.3;
+  let ducked = false;
 
-  const pauseRingtoneForVoice = () => {
-    if (!isMobile || ringtonePaused) return;
+  const duckRingtone = () => {
+    if (ducked) return;
     try {
       if (_ringtoneEl && !_ringtoneEl.paused) {
-        _ringtoneEl.pause();
-        ringtonePaused = true;
-        console.log('🔇 Sonnerie en pause le temps de l’annonce vocale');
+        if (pauseForIOS) {
+          _ringtoneEl.pause();
+          console.log('🔇 Sonnerie en pause le temps de l’annonce (iOS)');
+        } else {
+          _ringtoneEl.volume = DUCK_VOLUME;
+          console.log('🔉 Sonnerie baissée le temps de l’annonce');
+        }
+        ducked = true;
       }
     } catch {}
   };
 
-  const resumeRingtoneAfterVoice = () => {
-    if (!ringtonePaused) return;
-    ringtonePaused = false;
-    if (!_soundAllowed) return; // course acceptée/refusée entre-temps
-    try { void _ringtoneEl?.play().catch(() => {}); } catch {}
+  const restoreRingtone = (volume = RING_VOLUME) => {
+    if (!_soundAllowed || !_ringtoneWanted) return;
+    try {
+      if (!_ringtoneEl) return;
+      _ringtoneEl.volume = volume;
+      if (_ringtoneEl.paused) void _ringtoneEl.play().catch(() => {});
+    } catch {}
   };
 
-  if (isMobile) {
-    // Laisse entendre la sonnerie ~0,8 s (le chauffeur sait qu'une course
-    // arrive) avant de laisser la place à la voix.
-    await new Promise(r => setTimeout(r, 800));
-    if (!_soundAllowed) return;
-    pauseRingtoneForVoice();
-    await speakMessage(msg, 'fr-FR', { onEnd: resumeRingtoneAfterVoice })
-      .catch(e => console.error('TTS:', e));
-    resumeRingtoneAfterVoice();
-    return;
-  }
+  // Laisse entendre la sonnerie un instant avant l'annonce.
+  await sleep(pauseForIOS ? 800 : 500);
+  if (!_soundAllowed) { restoreRingtone(); return; }
 
-  // TTS — awaité pour que la Promise se résolve quand la voix est terminée
-  await speakMessage(msg, 'fr-FR').catch(e => console.error('TTS:', e));
+  duckRingtone();
+
+  // Filet de sécurité : si la voix n'a pas démarré au bout de 4 s (moteur TTS
+  // lent/absent), on remonte partiellement la sonnerie au lieu de la laisser
+  // étouffée ou coupée jusqu'à l'acceptation.
+  const watchdog = setTimeout(() => restoreRingtone(0.5), 4_000);
+
+  try {
+    await speakMessage(msg, 'fr-FR', {
+      isCurrent,
+      onStart: () => clearTimeout(watchdog),
+      onEnd: () => restoreRingtone(),
+    }).catch(e => console.error('TTS:', e));
+  } finally {
+    clearTimeout(watchdog);
+    restoreRingtone();
+  }
 }
 
 /** Arrête tout (son + vibration) */
 export function stopAllNotifications(): void {
   _soundAllowed = false;
+  _ringtoneWanted = false;
+  _announcementSeq++; // invalide toute annonce encore en cours
   stopBeepLoop();
   try {
-    if (_ringtoneEl) { _ringtoneEl.pause(); _ringtoneEl.currentTime = 0; }
+    if (_ringtoneEl) {
+      _ringtoneEl.pause();
+      _ringtoneEl.currentTime = 0;
+      _ringtoneEl.volume = 0.8; // la prochaine annonce repart à volume normal
+    }
   } catch {}
+  // Annule aussi toute annonce native en attente (moteur lent) : sans ça,
+  // la voix pouvait repartir APRÈS l'acceptation de la course.
   void nativeStopSpeak();
   try {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
@@ -766,6 +869,7 @@ export function preloadVoices(): void {
  * sinon les sons d'arrivée restent muets alors qu'ils marchent sur PC.
  */
 let _audioUnlockListenerAdded = false;
+let _audioVisibilityListenerAdded = false;
 
 export function unlockMobileAudio(): void {
   if (typeof window === 'undefined') return;
@@ -820,6 +924,25 @@ export function unlockMobileAudio(): void {
       const onGesture = () => unlock(true);
       window.addEventListener('touchend', onGesture, { passive: true } as any);
       window.addEventListener('click', onGesture);
+    }
+    // Retour au premier plan : la WebView a pu suspendre le média quand
+    // l'écran s'est éteint. Si une course attend encore, on relance la
+    // sonnerie (elle doit sonner jusqu'à l'acceptation).
+    if (!_audioVisibilityListenerAdded) {
+      _audioVisibilityListenerAdded = true;
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (_soundAllowed && _ringtoneWanted) {
+          try {
+            const el = getRingtoneElement();
+            if (el) {
+              el.volume = 0.8;
+              if (el.paused) void el.play().catch(() => {});
+            }
+          } catch {}
+        }
+        unlock(false);
+      });
     }
     unlock(false); // appel au montage : pas de geste → aucune amorce TTS
   } catch {}
