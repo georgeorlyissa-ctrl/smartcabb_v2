@@ -102,6 +102,7 @@ Assez de détail pour comprendre le code sans le relire.>
 **Artefacts** :
 - AAB Play Store : `android/app/build/outputs/bundle/release/app-release.aab`
 - APK de test : `android/app/build/outputs/apk/release/app-release.apk`
+- Aperçu du rendu (splash natif + préchargeur web) : `docs/apercu-demarrage-1.7.png`
 
 ---
 
