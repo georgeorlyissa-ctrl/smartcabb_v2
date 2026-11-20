@@ -44,7 +44,7 @@ export function BrandLoader({ message }: { message?: string }) {
 
       <div className="sc-boot-inner">
         <div className="sc-boot-medal">
-          <img src="/logo-smartcabb.jpeg" alt="" aria-hidden="true" />
+          <img src="/splash-medallion.png" alt="" aria-hidden="true" />
         </div>
         <p className="sc-boot-brand">
           SMART<span>CABB</span>

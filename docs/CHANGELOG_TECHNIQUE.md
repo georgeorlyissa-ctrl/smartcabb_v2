@@ -42,6 +42,69 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-20 (31) — Écran de démarrage Android : splash marine + médaillon, fin de la page blanche
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix / design
+- **Objectif** : à l'ouverture de l'APK, le premier écran était une **page blanche avec un petit logo**. Remplacer ce splash par un écran fidèle à la charte (bleu nuit + médaillon CS), aligné sur le préchargeur web, et supprimer le flash blanc entre le natif et la WebView.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `android/app/src/main/res/values/styles.xml` | Splash AndroidX configuré (`windowSplashScreenBackground`, `windowSplashScreenAnimatedIcon`, `postSplashScreenTheme`), fond marine derrière la WebView |
+| `android/app/src/main/res/values-v31/styles.xml` | **Nouveau** — attributs natifs Android 12+ (`android:windowSplashScreen*`) |
+| `android/app/src/main/res/values/colors.xml` | **Nouveau** — `splash_background` = `#0D3145` |
+| `android/app/src/main/res/drawable-*/splash_icon.png` | **Nouveaux** — médaillon circulaire 288 dp (contenu dans le cercle de 192 dp) |
+| `android/app/src/main/java/com/smartcabb/app/MainActivity.java` | WebView peinte en `#0D3145` avant le premier rendu |
+| `android/app/src/main/res/drawable/splash_bg.xml` + `drawable-*/splash_logo.png` | Supprimés (ancien splash, plus référencé) |
+| `android/app/build.gradle` | `versionCode 10`, `versionName "1.7"` |
+| `public/splash-medallion.png` | **Nouveau** — même médaillon pour le préchargeur web |
+| `index.html` | Préchargement + markup + CSS critique du préchargeur alignés sur le médaillon |
+| `styles/globals.css` | Même CSS `.sc-boot-medal` (médaillon circulaire, 132 px / 112 px en petit écran) |
+| `components/BrandLoader.tsx` | Même image que le préchargeur natif |
+
+### Description technique
+**Cause** : le thème de lancement ne définissait que `android:background` (`splash_bg`). Depuis Android 12, le système **ignore** ce fond et fabrique son propre écran de démarrage avec l'icône de l'application sur le fond par défaut (blanc). D'où le « petit logo sur page blanche ». Aucun attribut `windowSplashScreenBackground` / `windowSplashScreenAnimatedIcon` n'était défini.
+
+**Design retenu** (conforme aux specs Android 12+) :
+- fond **bleu nuit `#0D3145`** de la charte ;
+- médaillon **circulaire givré** (dégradé blanc → bleu très clair), anneau **bleu clair `#7FB8D4`**, ombre douce ;
+- monogramme **CS** teal au centre (extrait du logo existant, fond rendu transparent) ;
+- aucune texte dans l'icône native (le système masque le drawable dans un cercle de 192 dp) : le nom `SMARTCABB` et le slogan apparaissent juste après dans le préchargeur web, avec le **même médaillon** → transition sans changement de forme.
+
+**Implémentation** :
+- Android 12+ : `values-v31/styles.xml` définit `android:windowSplashScreenBackground` et `android:windowSplashScreenAnimatedIcon`. Le drawable fait **288 dp** avec le médaillon de **180 dp** au centre, donc il reste dans le cercle visible de 192 dp.
+- Android 24–30 : le thème parent `Theme.SplashScreen` (core-splashscreen 1.2.0) utilise le même fond et la même icône via `windowSplashScreenBackground` / `windowSplashScreenAnimatedIcon` ; le drawable `compat_splash_screen_no_icon_background` applique le masque circulaire.
+- `AppTheme.NoActionBar` reçoit `android:windowBackground = @color/splash_background` ; `MainActivity` peint la WebView en `#0D3145`. Plus de flash blanc avant que la page distante n'affiche son préchargeur.
+- Le préchargeur web utilise le même asset `public/splash-medallion.png` (512 px, médaillon + ombre), en **132 px** (112 px sous 380 px de large). Le médaillon visible reste ~114 px, proche des 112 px précédents.
+
+**Conséquences** : le changement est **natif** (thème + icône) → il nécessite un **nouvel AAB** (1.7, `versionCode` 10). Le préchargeur web, lui, est déployé automatiquement par Vercel. Les installations 1.6 gardent l'ancien splash blanc tant qu'elles ne sont pas mises à jour.
+
+### Impact produit / comportement visible
+- Ouverture de l'app : fond bleu nuit + médaillon CS, plus de page blanche.
+- Transition continue vers le préchargeur web (même fond, même médaillon), puis vers l'app.
+- Aucun changement de parcours ni de données.
+
+### Risques & rollback
+- **Risque** : certains OEM Android 12 appliquent leur propre animation de splash ; le rendu peut varier légèrement (taille/masque), mais le fond et l'icône restent les nôtres.
+- **Risque** : l'icône 288 dp doit rester dans le cercle de 192 dp ; si elle est remplacée, respecter cette marge sinon les bords seront masqués.
+- **Rollback** : `git revert` puis reconstruire l'AAB ; aucune migration ni donnée à restaurer.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors erreurs pré-existantes `_headers/Code-component-*.tsx`) et `npm run build` OK
+- [x] `./gradlew bundleRelease` OK — AAB signé avec le certificat SmartCabb (`CN=SmartCabb`) ; `versionCode 10`, `versionName 1.7`
+- [x] Ressources compilées vérifiées : `drawable/splash_icon`, `color/splash_background`, style `AppTheme.NoActionBarLaunch` (base + v31)
+- [x] Préchargeur web visualisé (médaillon circulaire, `SMARTCABB`, devise, barre jaune)
+- [ ] À confirmer sur appareil Android 12+ : splash bleu nuit + médaillon, puis préchargeur sans flash blanc
+- [ ] À confirmer sur Android 11 ou antérieur : même rendu via core-splashscreen
+
+**Artefacts** :
+- AAB Play Store : `android/app/build/outputs/bundle/release/app-release.aab`
+- APK de test : `android/app/build/outputs/apk/release/app-release.apk`
+
+---
+
 ## 2026-11-20 (30) — Sonnerie + voix Android : fin du fonctionnement intermittent
 
 - **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fond du splash natif : bleu nuit de la charte SmartCabb.
+         Identique au fond du préchargeur web (.sc-boot) pour que la
+         transition splash natif -> WebView soit invisible. -->
+    <color name="splash_background">#0D3145</color>
+</resources>

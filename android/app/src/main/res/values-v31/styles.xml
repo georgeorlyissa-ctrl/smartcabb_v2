@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12+ : attributs natifs du SplashScreen.
+         Le système masque l'icône dans un cercle de 192 dp ; notre
+         drawable fait 288 dp avec le médaillon (180 dp) au centre. -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
