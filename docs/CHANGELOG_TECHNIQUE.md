@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-21 (35) — Réservation déclenchée mais course annulée par le nettoyage admin ; chauffeur invisible sans push
 
-- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Commit** : `f84e2d0` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix
 - **Objectif** : une réservation créée automatiquement à T-15 était annulée par le nettoyage du dashboard admin, le chauffeur ne voyait pas la course pré-attribuée si le push manquait, et « Rouvrir » refusait à cause de l'index anti-doublon.
