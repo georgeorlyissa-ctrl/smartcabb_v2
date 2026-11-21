@@ -76,6 +76,14 @@ export function RideInProgressScreen() {
   const { t } = useTranslation();
   const currentRide = state.currentRide;
 
+  // 💰 Réservation : le prix est fixé à la commande et 50 % ont déjà été versés.
+  // L'écran doit donc afficher le RESTE à payer, pas le compteur horaire.
+  const scheduledTotal   = Number((currentRide as any)?.scheduledTotalPrice) || 0;
+  const scheduledDeposit = Number((currentRide as any)?.scheduledDepositPaid) || 0;
+  const isReservedRide   = scheduledTotal > 0;
+  const remainingToPay   = isReservedRide ? Math.max(0, scheduledTotal - scheduledDeposit) : 0;
+  const displayCost      = (fallback: number) => (isReservedRide ? remainingToPay : (fallback || 0));
+
   const [elapsedTime, setElapsedTime] = useState(0);
   const [currentCost, setCurrentCost] = useState(0);
   const [currentCostUSD, setCurrentCostUSD] = useState(0);
@@ -623,10 +631,15 @@ export function RideInProgressScreen() {
                     </div>
                     <div className="text-right">
                       {/* ✅ TRADUIT */}
-                      <p className="text-xs text-white/80">{t('price')}</p>
+                      <p className="text-xs text-white/80">{isReservedRide ? 'Reste à payer' : t('price')}</p>
                       <p className="text-xl font-bold">
-                        {(calculateBillingCost(billingElapsedTime).costCDF || currentRide.estimatedPrice || 0).toLocaleString()} {t('cdf')}
+                        {displayCost(calculateBillingCost(billingElapsedTime).costCDF || currentRide.estimatedPrice).toLocaleString()} {t('cdf')}
                       </p>
+                      {isReservedRide && (
+                        <p className="text-[11px] text-white/80">
+                          Acompte {scheduledDeposit.toLocaleString()} CDF déjà versé
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -651,13 +664,18 @@ export function RideInProgressScreen() {
                     </div>
                     <div className="text-right">
                       {/* ✅ TRADUIT */}
-                      <p className="text-xs text-white/80">{t('price')}</p>
+                      <p className="text-xs text-white/80">{isReservedRide ? 'Reste à payer' : t('price')}</p>
                       <p className="text-3xl font-bold">
-                      {(currentCost || currentRide.estimatedPrice || 0).toLocaleString()} {t('cdf')}
+                      {displayCost(currentCost || currentRide.estimatedPrice).toLocaleString()} {t('cdf')}
                       </p>
                       <p className="text-xs text-white/70">
-                        ≈ {((currentCost || currentRide.estimatedPrice || 0) / (getExchangeRate() || 2500)).toFixed(2)} USD
+                        ≈ {(displayCost(currentCost || currentRide.estimatedPrice) / (getExchangeRate() || 2500)).toFixed(2)} USD
                       </p>
+                      {isReservedRide && (
+                        <p className="text-[11px] text-white/80 mt-0.5">
+                          Total {scheduledTotal.toLocaleString()} CDF · acompte {scheduledDeposit.toLocaleString()} CDF versé
+                        </p>
+                      )}
                     </div>
                   </div>
 

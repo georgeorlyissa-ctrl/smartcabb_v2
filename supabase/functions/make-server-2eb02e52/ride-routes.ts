@@ -53,6 +53,21 @@ function readDriverActiveRideId(driver: any): string | null {
   return id ? String(id) : null;
 }
 
+/**
+ * Index léger « course active du passager ».
+ * Évite de scanner toutes les courses (2000+) pour retrouver la course d'un
+ * passager : indispensable pour le filet de sécurité de l'app passagère, qui
+ * interroge l'API toutes les 8 s quand le push n'arrive pas.
+ */
+async function linkPassengerActiveRide(passengerId: string | null | undefined, rideId: string): Promise<void> {
+  if (!passengerId || !rideId) return;
+  try {
+    await kv.set(`passenger_active_ride:${passengerId}`, rideId);
+  } catch (e) {
+    console.warn("⚠️ Index course active passager non écrit:", passengerId, e);
+  }
+}
+
 /** Ensemble des identifiants de courses encore reellement en cours. */
 async function loadActiveRideIdSet(): Promise<Set<string>> {
   const set = new Set<string>();
@@ -771,6 +786,10 @@ app.post("/create", async (c) => {
 
     console.log("✅ Course créée:", rideId, "- Catégorie:", vehicleCategory);
 
+    // Index passager → course : filet de sécurité si l'app passagère redémarre
+    // ou si le push d'acceptation n'arrive pas.
+    await linkPassengerActiveRide(passengerIdForBlock, rideId);
+
     // 🔁 Mémorise la tentative pour l'idempotence (best effort).
     if (clientRequestId) {
       await kvSet(`ride_req:${clientRequestId}`, rideId).catch(() => undefined);
@@ -1225,6 +1244,35 @@ app.get("/active/:driverId", async (c) => {
     return c.json({ success: true, ride });
   } catch (error) {
     console.error("❌ Erreur course active chauffeur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ============================================
+// GET /passenger/:passengerId/active — Course active du passager
+// Filet de sécurité quand le push n'arrive pas (APK en WebView, réseau
+// instable, notification bloquée) : l'app interroge cet endpoint toutes les
+// 8 s et ouvre l'écran de course d'elle-même.
+// ============================================
+app.get("/passenger/:passengerId/active", async (c) => {
+  try {
+    const passengerId = c.req.param("passengerId");
+    const indexKey = `passenger_active_ride:${passengerId}`;
+    const indexed = await kv.get<any>(indexKey);
+    const rideId = typeof indexed === "string" ? indexed : indexed?.rideId;
+    if (!rideId) return c.json({ success: true, ride: null });
+
+    const ride = await kv.get<any>(`ride:${rideId}`);
+    const ACTIVE_STATUSES = ["searching", "accepted", "enroute", "arrived", "in_progress", "started"];
+    if (!ride || !ACTIVE_STATUSES.includes(ride.status)) {
+      await kv.delete(indexKey).catch(() => undefined);
+      return c.json({ success: true, ride: null });
+    }
+    const pid = ride.passengerId || ride.passenger_id;
+    if (pid && String(pid) !== passengerId) return c.json({ success: true, ride: null });
+    return c.json({ success: true, ride });
+  } catch (error) {
+    console.error("❌ Erreur course active passager:", error);
     return c.json({ success: false, error: "Erreur serveur" }, 500);
   }
 });
@@ -2226,11 +2274,20 @@ app.post("/sweep-fraud", async (c) => {
           if (typeof dlat === "number" && typeof dlng === "number" && cur &&
               distanceKm(cur.lat, cur.lng, dlat, dlng) < 0.2) {
             if (!dryRun) {
-              const price = ride.estimatedPrice || 0;
+              // Réservation : le prix total (acompte inclus) sert de base aux
+              // gains ; `estimatedPrice` ne contient que le reste à payer.
+              const scheduledTotal = Number(ride.scheduledTotalPrice) || 0;
+              const scheduledDeposit = Number(ride.scheduledDepositPaid) || 0;
+              const price = scheduledTotal > 0 ? scheduledTotal : (ride.estimatedPrice || 0);
               ride.status = "completed";
               ride.completedAt = new Date().toISOString();
               ride.totalPrice = price;
               ride.finalPrice = price;
+              if (scheduledTotal > 0) {
+                ride.depositPaid = scheduledDeposit;
+                ride.amountDue = Math.max(0, price - scheduledDeposit);
+                ride.paymentStatus = "settled";
+              }
               ride.autoCompleted = true;
               await kv.set(`ride:${ride.id}`, ride);
               await releaseDriverAfterRide(did, ride.id);
@@ -2624,8 +2681,24 @@ app.post("/complete", async (c) => {
     if (!alreadyCompleted) {
       ride.status      = 'completed';
       ride.completedAt = new Date().toISOString();
-      ride.totalPrice  = actualCost || ride.totalPrice || ride.estimatedPrice;
-      ride.finalPrice  = ride.totalPrice; // Alias pour compatibilité frontend
+      const scheduledTotal = Number(ride.scheduledTotalPrice) || 0;
+      if (scheduledTotal > 0) {
+        // 📌 RÉSERVATION : le prix est fixé à la commande et l'acompte (50 %) a
+        // déjà été encaissé. `actualCost` reçu du chauffeur = le RESTE à payer.
+        // On garde les deux montants pour le suivi temps réel côté admin.
+        const deposit = Number(ride.scheduledDepositPaid) || Math.round(scheduledTotal / 2);
+        const total = scheduledTotal + (Number(ride.penaltyCDF) || 0);
+        ride.scheduledDepositPaid = deposit;
+        ride.depositPaid   = deposit;
+        ride.totalPrice    = total;
+        ride.finalPrice    = total;
+        ride.amountDue     = Math.max(0, total - deposit);
+        ride.amountPaidAtCompletion = ride.amountDue;
+        ride.paymentStatus = 'settled'; // acompte + solde encaissés
+      } else {
+        ride.totalPrice  = actualCost || ride.totalPrice || ride.estimatedPrice;
+        ride.finalPrice  = ride.totalPrice; // Alias pour compatibilité frontend
+      }
     }
     if (endLocation)            ride.endLocation = endLocation;
     if (effectiveDriverId && !ride.driverId) ride.driverId = effectiveDriverId;
@@ -2762,8 +2835,24 @@ app.post("/:id/complete", async (c) => {
     if (!alreadyCompleted) {
       ride.status      = 'completed';
       ride.completedAt = new Date().toISOString();
-      ride.totalPrice  = actualCost || ride.totalPrice || ride.estimatedPrice;
-      ride.finalPrice  = ride.totalPrice; // Alias pour compatibilité frontend
+      const scheduledTotal = Number(ride.scheduledTotalPrice) || 0;
+      if (scheduledTotal > 0) {
+        // 📌 RÉSERVATION : le prix est fixé à la commande et l'acompte (50 %) a
+        // déjà été encaissé. `actualCost` reçu du chauffeur = le RESTE à payer.
+        // On garde les deux montants pour le suivi temps réel côté admin.
+        const deposit = Number(ride.scheduledDepositPaid) || Math.round(scheduledTotal / 2);
+        const total = scheduledTotal + (Number(ride.penaltyCDF) || 0);
+        ride.scheduledDepositPaid = deposit;
+        ride.depositPaid   = deposit;
+        ride.totalPrice    = total;
+        ride.finalPrice    = total;
+        ride.amountDue     = Math.max(0, total - deposit);
+        ride.amountPaidAtCompletion = ride.amountDue;
+        ride.paymentStatus = 'settled'; // acompte + solde encaissés
+      } else {
+        ride.totalPrice  = actualCost || ride.totalPrice || ride.estimatedPrice;
+        ride.finalPrice  = ride.totalPrice; // Alias pour compatibilité frontend
+      }
     }
     await kv.set(`ride:${rideId}`, ride);
 
@@ -3193,6 +3282,9 @@ app.post("/process-scheduled", async (c) => {
           // Index réservation → course : permet à l'admin de savoir si la
           // réservation a déjà été transformée en course (bouton « Rouvrir »).
           await kv.set(`scheduled_ride:${sr.id}`, rideId);
+          // Index passager → course : permet à l'app passagère de retrouver sa
+          // course même si le push `reservation_driver_enroute` est perdu.
+          await linkPassengerActiveRide(sr.user_id, rideId);
           console.log(`Course pre-attribuee creee: ${rideId} (conducteur ${sr.driver_id})`);
 
           // ✅ Marquer le chauffeur occupe : il ne doit pas recevoir d'autres courses
@@ -3273,6 +3365,7 @@ app.post("/process-scheduled", async (c) => {
         await kv.set(`ride:${rideId}`, ride);
         // Index réservation → course (voir /reservations/:id/reopen).
         await kv.set(`scheduled_ride:${sr.id}`, rideId);
+        await linkPassengerActiveRide(sr.user_id, rideId);
         console.log(`Course programmee creee: ${rideId}`);
 
         const matchingResult = await findAndNotifyNearbyDrivers(ride);
@@ -3999,6 +4092,7 @@ app.post("/admin-process-one", async (c) => {
       };
       await kv.set(`ride:${ride.id}`, ride);
       await kv.set(`scheduled_ride:${sr.id}`, ride.id);
+      await linkPassengerActiveRide(sr.user_id, ride.id);
       await supabase.from("scheduled_rides").update({ status: "completed" }).eq("id", sr.id);
       if (driver?.fcmToken) {
         await sendFCMNotification(driver.fcmToken, {
@@ -4021,6 +4115,7 @@ app.post("/admin-process-one", async (c) => {
     const ride = { ...base, status: "searching" };
     await kv.set(`ride:${ride.id}`, ride);
     await kv.set(`scheduled_ride:${sr.id}`, ride.id);
+    await linkPassengerActiveRide(sr.user_id, ride.id);
     const matchingResult = await findAndNotifyNearbyDrivers(ride);
     await supabase.from("scheduled_rides").update({ status: "completed" }).eq("id", sr.id);
     await notifyPassenger(sr.user_id, {

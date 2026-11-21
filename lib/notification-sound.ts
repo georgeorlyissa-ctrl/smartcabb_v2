@@ -208,6 +208,23 @@ function stopBeepLoop(): void {
 }
 
 /**
+ * Coupe UNIQUEMENT la sonnerie en boucle (sans interrompre la voix déjà en
+ * cours). Utilisé pour les courses PRÉ-ATTRIBUÉES (réservations) : il n'y a
+ * rien à accepter, la sonnerie ne doit donc pas sonner sans fin.
+ */
+export function stopRideRingtone(): void {
+  _ringtoneWanted = false;
+  stopBeepLoop();
+  try {
+    if (_ringtoneEl) {
+      _ringtoneEl.pause();
+      _ringtoneEl.currentTime = 0;
+      _ringtoneEl.volume = 0.8;
+    }
+  } catch {}
+}
+
+/**
  * Joue la sonnerie de course. Repli WebAudio si la lecture du fichier est
  * refusée, avec nouvelle tentative au premier toucher de l'écran.
  */
@@ -696,6 +713,13 @@ export async function playRideNotification(rideDetails?: {
   destination?: string;
   distance?: number;
   estimatedEarnings?: number;
+}, options?: {
+  /**
+   * Coupe la sonnerie au bout de N millisecondes (la voix continue).
+   * Indispensable pour une course PRÉ-ATTRIBUÉE (réservation) : il n'y a rien
+   * à accepter, donc la boucle ne s'arrêterait jamais d'elle-même.
+   */
+  stopRingAfterMs?: number;
 }): Promise<void> {
   console.log('🚖 playRideNotification');
   _soundAllowed = true;
@@ -704,6 +728,14 @@ export async function playRideNotification(rideDetails?: {
   // acceptée entre-temps, elle ne doit ni continuer ni signaler une panne.
   const announcementId = ++_announcementSeq;
   const isCurrent = () => announcementId === _announcementSeq && _soundAllowed;
+
+  // Course déjà attribuée : la sonnerie s'arrête d'elle-même après quelques
+  // secondes au lieu de sonner en boucle jusqu'à un « accepter » qui n'existe pas.
+  if (options?.stopRingAfterMs && options.stopRingAfterMs > 0) {
+    setTimeout(() => {
+      if (announcementId === _announcementSeq) stopRideRingtone();
+    }, options.stopRingAfterMs);
+  }
 
   // Une annonce précédente ne doit jamais se superposer à celle-ci (deux
   // courses rapprochées, ou test lancé pendant une vraie notification).

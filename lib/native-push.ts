@@ -128,9 +128,22 @@ function handleNotificationData(data: Record<string, any>, fromAction: boolean) 
   // conducteur. Sans ce cas, la notification s'affichait mais l'app restait sur
   // le tableau de bord (aucune course ouverte, ni sonnerie).
   if (type === 'reservation_started' && data.rideId) {
-    rememberPendingRide(data);
+    // ⚠️ Ne jamais rediriger un PASSAGER vers le tableau de bord chauffeur :
+    // son app écoute le même événement et ouvre l'écran de course.
+    if (currentTarget?.role === 'driver') {
+      rememberPendingRide(data);
+      window.dispatchEvent(new CustomEvent('fcm-reservation-started', { detail: data }));
+      openDriverDashboardIfNeeded();
+    } else {
+      window.dispatchEvent(new CustomEvent('fcm-reservation-started', { detail: data }));
+    }
+    return;
+  }
+
+  if (type === 'reservation_driver_enroute' && data.rideId) {
+    // Le passager doit voir sa course réservée s'ouvrir (le chauffeur est
+    // parti vers le point de départ).
     window.dispatchEvent(new CustomEvent('fcm-reservation-started', { detail: data }));
-    openDriverDashboardIfNeeded();
     return;
   }
 

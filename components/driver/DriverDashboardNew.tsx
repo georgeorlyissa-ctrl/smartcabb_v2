@@ -535,14 +535,16 @@ export function DriverDashboardNew() {
           status: 'accepted',
         } as any);
 
-        // 🔔 Sonnerie + annonce vocale (mêmes réglages que la carte de course)
+        // 🔔 Sonnerie + annonce vocale (mêmes réglages que la carte de course).
+        // ⚠️ Course déjà attribuée : la sonnerie doit s'arrêter d'elle-même
+        // (sinon elle bouclait indéfiniment, même après « Démarrer la course »).
         void playRideNotification({
           passengerName: ride.passengerName,
           pickup: pickup.address,
           destination: destination.address,
           distance: Number(ride.distance) || 0,
           estimatedEarnings: Number(ride.estimatedPrice) || 0,
-        }).catch(() => undefined);
+        }, { stopRingAfterMs: 8000 }).catch(() => undefined);
 
         setCurrentScreen('driver-navigation');
         toast.success('Course réservée : en route vers le client 🚗');
@@ -640,13 +642,14 @@ export function DriverDashboardNew() {
         setCurrentRide({ ...ride, status: 'accepted' } as any);
         setCurrentScreen('driver-navigation');
         toast.success('Course réservée : en route vers le client 🚖');
+        // Sonnerie brève : la course est déjà attribuée (rien à accepter).
         void playRideNotification({
           passengerName: ride.passengerName,
           pickup: ride.pickupAddress || ride.pickup?.address || 'Point de départ',
           destination: ride.destinationAddress || ride.destination?.address || 'Destination',
           distance: Number(ride.distance) || 0,
           estimatedEarnings: Number(ride.estimatedPrice) || 0,
-        }).catch(() => undefined);
+        }, { stopRingAfterMs: 8000 }).catch(() => undefined);
       } catch {
         // réseau instable : on réessaiera au prochain tick
       }

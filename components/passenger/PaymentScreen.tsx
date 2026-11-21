@@ -206,7 +206,17 @@ export function PaymentScreen() {
     return () => { alive = false; };
   }, []);
 
-  const ridePrice = currentRide?.finalPrice || currentRide?.totalPrice || currentRide?.estimatedPrice || 0;
+  // 💰 Réservation : `amountDue` = le solde restant (l'acompte de 50 % a déjà
+  // été versé). Sans cette priorité, le passager aurait été débité du TOTAL.
+  const scheduledTotal   = Number((currentRide as any)?.scheduledTotalPrice) || 0;
+  const scheduledDeposit = Number((currentRide as any)?.scheduledDepositPaid || (currentRide as any)?.depositPaid) || 0;
+  const rawDue = (currentRide as any)?.amountDue;
+  const hasAmountDue = rawDue !== null && rawDue !== undefined && Number.isFinite(Number(rawDue));
+  const ridePrice = hasAmountDue
+    ? Number(rawDue)
+    : (scheduledTotal > 0
+        ? Math.max(0, scheduledTotal - scheduledDeposit)
+        : (currentRide?.finalPrice || currentRide?.totalPrice || currentRide?.estimatedPrice || 0));
   const userBalance = liveBalance ?? currentUser?.walletBalance ?? currentUser?.balance ?? 0;
   const cashAmountNum = parseFloat(cashAmount) || 0;
   const mobileMoneyAmount = ridePrice - cashAmountNum;
@@ -600,6 +610,20 @@ export function PaymentScreen() {
                     {ridePrice.toLocaleString()} {t('cdf')}
                   </span>
                 </div>
+
+                {/* Réservation : détail acompte déjà versé / total de la course */}
+                {scheduledTotal > 0 && (
+                  <div className="mt-2 bg-blue-50 border border-blue-200 rounded-lg p-2 text-xs text-blue-900 space-y-0.5">
+                    <div className="flex justify-between">
+                      <span>Prix total de la course</span>
+                      <span className="font-semibold">{scheduledTotal.toLocaleString()} CDF</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Acompte déjà versé</span>
+                      <span className="font-semibold text-green-700">− {scheduledDeposit.toLocaleString()} CDF</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </Card>
           </motion.div>

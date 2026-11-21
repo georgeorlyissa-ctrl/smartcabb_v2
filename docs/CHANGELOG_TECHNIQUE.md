@@ -42,6 +42,68 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-21 (36) — Sonnerie conducteur en boucle, passager figé, prix « reste à payer » et suivi des paiements admin
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix + feat
+- **Objectif** : clore quatre anomalies constatées sur une course issue d'une réservation — sonnerie sans fin côté conducteur, écran passager figé, prix affiché (compteur horaire au lieu du reste à payer), et absence de suivi acompte/solde côté admin.
+
+### Diagnostic
+
+| Anomalie | Cause réelle |
+|---|---|
+| Sonnerie en boucle | `playRideNotification()` lance une sonnerie `loop = true` qui ne s'arrête qu'à `stopAllNotifications()`. Pour une course **pré-attribuée** (réservation), il n'y a rien à accepter : personne n'appelait l'arrêt, et `NavigationScreen` ne l'arrêtait ni à l'ouverture ni au clic « Démarrer la course ». |
+| Passager figé | L'écran de course n'était ouvert que par le push FCM **web**. Dans l'APK (WebView Capacitor), le FCM web n'existe pas et `initNativePush()` n'était jamais appelé côté passager → aucune notification reçue, aucun repli. |
+| Prix erroné | `calculateRideMeterCost()` facture à l'heure et ignorait `scheduledTotalPrice` / `scheduledDepositPaid`. La course affichait 13 500 CDF au lieu du reste à payer (67 500 CDF sur un total de 135 000). |
+| Suivi admin | Aucune vue ne distinguait l'acompte (50 % encaissés à la réservation) du solde encaissé à la clôture. |
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/notification-sound.ts` | Nouvelle fonction `stopRideRingtone()` (coupe la sonnerie sans tuer la voix) + option `stopRingAfterMs` sur `playRideNotification()` |
+| `components/driver/DriverDashboardNew.tsx` | Sonnerie limitée à **8 s** pour les courses pré-attribuées (push `reservation_started` et filet de sécurité `/rides/active`) |
+| `components/driver/NavigationScreen.tsx` | `stopAllNotifications()` à l'ouverture de l'écran et au démarrage ; affichage « Reste à payer » + rappel total/acompte ; gains calculés sur le prix total |
+| `components/RideCompletionSummaryDialog.tsx` | Nouveau champ optionnel `depositPaid` : ligne « Acompte déjà versé » et « Reste à payer maintenant » |
+| `pages/PassengerApp.tsx` | `initNativePush('passenger', …)`, écoute de `fcm-reservation-started`, polling de secours `/rides/passenger/:id/active` toutes les 8 s |
+| `lib/native-push.ts` | `reservation_started` / `reservation_driver_enroute` : ne redirige plus un passager vers `/app/driver` |
+| `components/passenger/RideInProgressScreen.tsx` | Affiche le reste à payer + total/acompte pour les réservations |
+| `components/passenger/PaymentScreen.tsx` | Priorité à `amountDue` (solde) au lieu de `finalPrice` (total) — évite de débiter 135 000 au lieu de 67 500 |
+| `components/passenger/PaymentReceiptScreen.tsx` | Reçu : « Reste réglé à la clôture » + total + acompte déduit |
+| `components/admin/AdminRidesScreen.tsx` | Carte « Paiements des réservations » (acomptes encaissés/en attente, soldes à encaisser/encaissés) + détail par course et par réservation ; rafraîchissement auto 30 s |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Index `passenger_active_ride:<passengerId>` (création, réservation, admin-process-one) ; endpoint `GET /rides/passenger/:passengerId/active` ; clôture et auto-clôture : `totalPrice` = prix total, `depositPaid`, `amountDue`, `paymentStatus` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **Sonnerie** : `stopRideRingtone()` met `_ringtoneWanted = false`, vide le timer WebAudio et met l'élément `<audio>` en pause sans toucher au TTS. `playRideNotification(details, { stopRingAfterMs })` programme cet arrêt (8 s pour une réservation). `NavigationScreen` appelle `stopAllNotifications()` au montage et dans `handleStartRide`.
+2. **Passager** : à la connexion, l'APK enregistre son token natif (`initNativePush('passenger', id)`), la notification `reservation_driver_enroute`/`reservation_started` déclenche `fcm-reservation-started`, et un polling de secours (8 s) interroge l'API. `getByPrefix('ride:')` étant trop coûteux, un index `passenger_active_ride:<id>` est écrit à chaque création/pré-attribution ; l'endpoint purge l'index si la course est terminale.
+3. **Prix** : pour une réservation, l'UI conducteur et passager affiche `scheduledTotalPrice − scheduledDepositPaid` ; le récapitulatif et le reçu détaillent total, acompte et solde. Le backend écrit désormais `totalPrice = scheduledTotalPrice (+ pénalité)` et `amountDue = total − acompte` pour la comptabilité.
+4. **Admin** : la carte « Paiements des réservations » agrège acomptes (50 % des réservations non annulées) et soldes ; chaque course réservée affiche « Acompte versé » et « Reste à encaisser (à la clôture / ✓) ». Rechargement toutes les 30 s.
+5. **Données corrigées** : la course `da634e56-aab7-45a1-b622-f55479c6cc0c` (clôturée avant ce correctif) a été mise à jour en base : total 135 000, acompte 67 500, reste 67 500, `paymentStatus = settled`.
+
+### Impact produit
+- Plus de sonnerie interminable : elle s'arrête seule (8 s) puis au démarrage de la course.
+- Le passager voit sa course réservée s'ouvrir même si le push est perdu.
+- Le chauffeur et le passager voient le montant réellement dû, pas le compteur horaire.
+- L'admin suit les encaissements (acompte puis solde) en temps réel, course par course.
+
+### Risques & rollback
+- **Risque** : le polling passager ajoute 1 requête / 8 s par passager connecté (lecture KV unique, coût faible).
+- **Risque** : les anciennes courses réservées sans index `passenger_active_ride` ne bénéficient pas du repli (le push reste le canal principal).
+- **Rollback** : `git revert` du commit ; aucune migration de schéma (uniquement des clés KV).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` OK
+- [x] `npm run build` OK
+- [x] Edge Function déployée
+- [x] `GET /rides/passenger/<id>/active` → `ride: null` (aucune course active)
+- [x] Index temporaire pointant vers une course terminée → endpoint renvoie `null` et supprime l'index
+- [x] Course `da634e56…` corrigée en base (135 000 / 67 500 / 67 500)
+- [ ] À confirmer sur téléphone : sonnerie qui s'arrête, ouverture auto côté passager, prix « reste à payer »
+
+---
+
 ## 2026-11-21 (35) — Réservation déclenchée mais course annulée par le nettoyage admin ; chauffeur invisible sans push
 
 - **Commit** : `f84e2d0` (branche `main`, poussée sur `origin`)

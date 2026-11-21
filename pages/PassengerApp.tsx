@@ -1,7 +1,8 @@
 import { RideInProgressScreen } from '../components/passenger/RideInProgressScreen';
 import { DriverApproachingScreen } from '../components/passenger/DriverApproachingScreen';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { setupFCMForUser } from '../src/utils/firebase';
+import { initNativePush } from '../lib/native-push';
 import { useAppState } from '../hooks/useAppState';
 import { useNavigate, useLocation, Routes, Route } from '../lib/simple-router';
 import { ErrorBoundary } from '../components/ErrorBoundary';
@@ -384,6 +385,11 @@ function PassengerAppContent() {
 
     console.log('🔥 Initialisation FCM pour passager:', state.currentUser.id);
 
+    // 📱 APK : le FCM web n'existe pas dans la WebView Capacitor → on enregistre
+    // le token NATIF. Sans ça, le passager ne recevait aucun push (course
+    // réservée, chauffeur en route…) et son écran restait figé.
+    void initNativePush('passenger', state.currentUser.id).catch(() => undefined);
+
     // 🚖 Réservation arrivée à l'heure : la course est déjà attribuée par le
     // serveur. On l'adopte et on ouvre l'écran de course, comme pour une
     // commande normale (sinon le passager restait sur son écran d'accueil).
@@ -420,6 +426,14 @@ function PassengerAppContent() {
       }
     };
 
+    // 📱 Push NATIF (APK) : `initNativePush` relaie les messages au travers
+    // d'événements window (le FCM web n'existe pas dans la WebView).
+    const onNativeReservationStarted = (event: any) => {
+      const rideId = event?.detail?.rideId ?? event?.detail?.ride_id;
+      if (rideId) void openScheduledRide(String(rideId));
+    };
+    window.addEventListener('fcm-reservation-started', onNativeReservationStarted);
+
     setupFCMForUser(state.currentUser.id, 'passenger', (payload) => {
       console.log('🔔 Notification passager reçue:', payload);
       
@@ -454,6 +468,74 @@ function PassengerAppContent() {
           console.log('🔔 Notification générique:', { title, body, data });
       }
     });
+
+    return () => {
+      window.removeEventListener('fcm-reservation-started', onNativeReservationStarted);
+    };
+  }, [state.currentUser?.id, state.currentView]);
+
+  // ============================================================
+  // ✅ Filet de sécurité PASSAGER — la course pré-attribuée (réservation)
+  // s'ouvre même si le push `reservation_driver_enroute` / `reservation_started`
+  // n'a pas été reçu (APK, réseau instable, notification bloquée).
+  // ============================================================
+  const currentScreenRef = useRef(currentScreen);
+  currentScreenRef.current = currentScreen;
+  const adoptedRideRef = useRef<string | null>(null);
+  useEffect(() => {
+    const passengerId = state.currentUser?.id;
+    if (!passengerId || state.currentView !== 'passenger') return;
+    let stopped = false;
+
+    const rideScreens = [
+      'ride', 'ride-in-progress', 'driver-found', 'tracking', 'ride-tracking',
+      'driver-approaching', 'payment', 'payment-receipt', 'rating', 'searching-drivers',
+    ];
+
+    const checkActiveRide = async () => {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/passenger/${passengerId}/active`,
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } },
+        );
+        const data = await res.json();
+        const ride = data?.ride;
+        if (stopped || !ride?.id) return;
+        if (adoptedRideRef.current === ride.id) return;
+        if (rideScreens.includes(currentScreenRef.current)) return;
+
+        const num = (value: any, fallback: number) => {
+          const n = Number(value);
+          return Number.isFinite(n) ? n : fallback;
+        };
+        const pickup = {
+          lat: num(ride.pickup?.coordinates?.lat ?? ride.pickup?.lat ?? ride.pickupLat, -4.3276),
+          lng: num(ride.pickup?.coordinates?.lng ?? ride.pickup?.lng ?? ride.pickupLng, 15.3136),
+          address: ride.pickupAddress || ride.pickup?.address || ride.pickup?.name || 'Point de départ',
+        };
+        const destination = {
+          lat: num(ride.destination?.coordinates?.lat ?? ride.destination?.lat ?? ride.destinationLat, -4.3276),
+          lng: num(ride.destination?.coordinates?.lng ?? ride.destination?.lng ?? ride.destinationLng, 15.3136),
+          address: ride.destinationAddress || ride.destination?.address || ride.destination?.name || 'Destination',
+        };
+
+        adoptedRideRef.current = ride.id;
+        setCurrentRide({ ...ride, pickup, destination } as any);
+        setCurrentScreen(ride.status === 'searching' ? 'ride' : 'ride-in-progress');
+        if (ride.status !== 'searching') {
+          toast.success(`🚖 ${ride.driverName || 'Votre chauffeur'} est en route`);
+        }
+      } catch {
+        // réseau instable : on réessaiera au prochain tick
+      }
+    };
+
+    void checkActiveRide();
+    const iv = setInterval(checkActiveRide, 8000);
+    return () => {
+      stopped = true;
+      clearInterval(iv);
+    };
   }, [state.currentUser?.id, state.currentView]);
 
   console.log('🎯 PassengerApp render - screenToShow:', screenToShow);

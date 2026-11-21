@@ -28,6 +28,7 @@ interface RideCompletionSummaryDialogProps {
     waitingTime: number; // temps d'attente en secondes
     waitingCost: number; // coût d'attente en CDF
     totalCost: number; // coût total en CDF
+    depositPaid?: number; // acompte déjà versé (réservation) — affiché comme déduction
     freeWaitingDisabled?: boolean; // si l'attente gratuite a été désactivée
     billingElapsedTime?: number; // NOUVEAU : temps de facturation figé (en secondes)
     driverName?: string;
@@ -305,7 +306,23 @@ export function RideCompletionSummaryDialog({
                 )}
                 
                 <Separator />
-                
+
+                {/* Réservation : l'acompte de 50 % a déjà été encaissé à la
+                    réservation. On affiche donc clairement ce qu'il reste à payer. */}
+                {rideData.depositPaid != null && rideData.depositPaid > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span>Acompte déjà versé</span>
+                      <span className="font-medium text-green-700">− {formatAmount(rideData.depositPaid)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold">
+                      <span>Reste à payer maintenant</span>
+                      <span>{formatAmount(Math.max(0, safeTotalCost - rideData.depositPaid))}</span>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+
                 <div className="flex justify-between font-semibold text-base">
                   <span>Total</span>
                   <span className="text-green-600">{formatAmount(totalWithTip)}</span>

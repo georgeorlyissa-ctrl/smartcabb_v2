@@ -34,6 +34,9 @@ export function PaymentReceiptScreen() {
   // ✅ FIX: Ajouter une vérification de sécurité pour éviter l'erreur "Cannot read properties of undefined"
   const assignedDriver = drivers?.find(d => d.id === state.currentRide?.driverId) || null;
   const currentRide = state.currentRide;
+  // 💰 Réservation : total fixé à la commande, acompte de 50 % déjà versé.
+  const receiptScheduledTotal = Number((currentRide as any)?.scheduledTotalPrice) || 0;
+  const receiptDeposit = Number((currentRide as any)?.scheduledDepositPaid || (currentRide as any)?.depositPaid) || 0;
 
   // Traitement du paiement via backend
   useEffect(() => {
@@ -265,9 +268,22 @@ export function PaymentReceiptScreen() {
                 <h4 className="font-bold">Détail du paiement</h4>
                 
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Course de base</span>
+                  <span className="text-gray-600">{receiptScheduledTotal > 0 ? 'Reste réglé à la clôture' : 'Course de base'}</span>
                   <span>{(currentRide.actualPrice || currentRide.estimatedPrice || 0).toLocaleString()} CDF</span>
                 </div>
+
+                {receiptScheduledTotal > 0 && (
+                  <>
+                    <div className="flex justify-between text-gray-600">
+                      <span>Prix total de la course</span>
+                      <span>{receiptScheduledTotal.toLocaleString()} CDF</span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>Acompte déjà versé</span>
+                      <span>− {receiptDeposit.toLocaleString()} CDF</span>
+                    </div>
+                  </>
+                )}
                 
                 {currentRide.tip && currentRide.tip > 0 && (
                   <div className="flex justify-between text-green-600">

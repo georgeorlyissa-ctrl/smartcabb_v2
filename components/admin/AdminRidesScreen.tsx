@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -44,25 +44,30 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
   const [sweeping, setSweeping] = useState(false);
   const [sweepResult, setSweepResult] = useState<any>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [rr, rs] = await Promise.all([
-          fetch(`${API}/admin/rides?limit=1000`, { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }).then((r) => r.json()),
-          fetch(`${API}/reservations/admin/all?status=all&limit=500`, { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }).then((r) => r.json()),
-        ]);
-        if (rr.success) setRides(rr.rides || []);
-        if (rs.success) setReservations(rs.rides || []);
-      } catch (e) {
-        console.error(e);
-        toast.error('Erreur chargement');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [rr, rs] = await Promise.all([
+        fetch(`${API}/admin/rides?limit=1000`, { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }).then((r) => r.json()),
+        fetch(`${API}/reservations/admin/all?status=all&limit=500`, { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }).then((r) => r.json()),
+      ]);
+      if (rr.success) setRides(rr.rides || []);
+      if (rs.success) setReservations(rs.rides || []);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur chargement');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // 🔄 Rafraîchissement auto (30 s) : les paiements de réservation (acompte à
+  // la commande, solde à la clôture) apparaissent sans recharger la page.
+  useEffect(() => {
+    void load();
+    const iv = setInterval(() => { void load(); }, 30_000);
+    return () => clearInterval(iv);
+  }, [load]);
 
   const stats = useMemo(() => {
     const now = Date.now();
@@ -121,6 +126,34 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
   ];
 
   const statuses = ['all', ...Array.from(new Set(rides.map((r) => r.status).filter(Boolean)))];
+
+  // 💰 Paiements des réservations : 50 % d'acompte à la commande, le solde à la
+  // clôture de la course. Ces totaux se recalculent à chaque rafraîchissement
+  // (30 s) pour un suivi « temps réel » sans recharger la page.
+  const payments = useMemo(() => {
+    let depositsReceived = 0;
+    let depositsPending = 0;
+    let remainingExpected = 0;
+    let remaindersCollected = 0;
+    for (const r of reservations) {
+      if (r.status === 'cancelled') continue;
+      const total = Number(r.estimated_price) || 0;
+      const half = Math.round(total / 2);
+      const upcoming = r.status === 'scheduled' || r.status === 'confirmed';
+      if (r.deposit_received) {
+        depositsReceived += half;
+        if (upcoming) remainingExpected += total - half;
+      } else if (upcoming) {
+        depositsPending += half;
+      }
+    }
+    for (const r of rides) {
+      if (!DONE.includes(r.status)) continue;
+      const dep = Number(r.scheduledDepositPaid || r.depositPaid || 0);
+      if (dep > 0) remaindersCollected += Number(r.amountDue || 0);
+    }
+    return { depositsReceived, depositsPending, remainingExpected, remaindersCollected };
+  }, [rides, reservations]);
 
   const loadSignals = async () => {
     try {
@@ -242,8 +275,33 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
         ))}
       </div>
 
-      <h2 className="text-sm font-bold text-gray-700 mb-2">Par catégorie (immédiates)</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+      {/* 💰 Paiements des réservations — acompte à la commande, solde à la clôture */}
+      <Card className="p-4 mb-6 border-emerald-200 bg-emerald-50/60">
+        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+          <p className="text-sm font-bold text-emerald-900">💰 Paiements des réservations</p>
+          <span className="text-[11px] text-emerald-700">Mise à jour automatique toutes les 30 s</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-gray-600">Acomptes encaissés (50 %)</p>
+            <p className="font-bold text-emerald-700">{payments.depositsReceived.toLocaleString()} CDF</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-600">Acomptes en attente</p>
+            <p className="font-bold text-amber-700">{payments.depositsPending.toLocaleString()} CDF</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-600">Soldes à encaisser (réservations à venir)</p>
+            <p className="font-bold text-blue-700">{payments.remainingExpected.toLocaleString()} CDF</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-600">Soldes encaissés à la clôture</p>
+            <p className="font-bold text-gray-800">{payments.remaindersCollected.toLocaleString()} CDF</p>
+          </div>
+        </div>
+      </Card>
+
+      <h2 className="text-sm font-bold text-gray-700 mb-2">Par catégorie (immédiates)</h2>      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
         {byCategory.map(([cat, e]) => (
           <Card key={cat} className="p-3">
             <p className="text-xs font-semibold text-gray-700">{CAT_LABELS[cat] || cat}</p>
@@ -344,9 +402,26 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
                     {r.pickup_address || r.pickup?.address || '—'} → {r.dropoff_address || r.destination?.address || '—'}
                   </span>
                 </div>
-                <span className="text-xs text-gray-500 flex-shrink-0">
-                  {(r.passengerName || 'Passager')} · {(r.driverName || 'sans chauffeur')} · {Number(r.total_amount || r.totalPrice || 0).toLocaleString()} CDF
-                </span>
+                <div className="text-xs text-gray-500 flex-shrink-0 text-right">
+                  <div>{(r.passengerName || 'Passager')} · {(r.driverName || 'sans chauffeur')}</div>
+                  <div className="font-semibold text-gray-700">
+                    {Number(r.totalPrice || r.finalPrice || r.total_amount || r.estimatedPrice || 0).toLocaleString()} CDF
+                  </div>
+                  {Number(r.scheduledTotalPrice || 0) > 0 && (() => {
+                    const total = Number(r.scheduledTotalPrice) || 0;
+                    const deposit = Number(r.scheduledDepositPaid || r.depositPaid || 0);
+                    const due = Number(r.amountDue ?? Math.max(0, total - deposit));
+                    const closed = DONE.includes(r.status);
+                    return (
+                      <div className="mt-0.5 space-y-0.5 text-[11px]">
+                        <div className="text-emerald-700">Acompte versé : {deposit.toLocaleString()} CDF ✓</div>
+                        <div className={closed ? 'text-gray-700' : 'text-blue-700'}>
+                          Reste à encaisser : {due.toLocaleString()} CDF{closed ? ' ✓' : ' (à la clôture)'}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
             </Card>
           ))}
@@ -367,9 +442,15 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
                     {r.scheduled_date} {(r.scheduled_time || '').slice(0, 5)} · {r.pickup_address} → {r.dropoff_address}
                   </span>
                 </div>
-                <span className="text-xs text-gray-500 flex-shrink-0">
-                  {Number(r.estimated_price || 0).toLocaleString()} CDF{r.deposit_received ? ' · acompte ✓' : ''}
-                </span>
+                <div className="text-xs text-gray-500 flex-shrink-0 text-right">
+                  <div className="font-semibold text-gray-700">{Number(r.estimated_price || 0).toLocaleString()} CDF</div>
+                  <div className="text-emerald-700">
+                    Acompte : {Math.round((Number(r.estimated_price) || 0) / 2).toLocaleString()} CDF {r.deposit_received ? '✓ reçu' : '— en attente'}
+                  </div>
+                  <div className="text-blue-700">
+                    Reste à la clôture : {Math.round((Number(r.estimated_price) || 0) / 2).toLocaleString()} CDF
+                  </div>
+                </div>
               </div>
             </Card>
           ))}

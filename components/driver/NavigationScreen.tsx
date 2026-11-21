@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { MapView } from '../MapView';
 import { RideCompletionSummaryDialog } from '../RideCompletionSummaryDialog';
 import { PreciseGPSTracker } from '../../lib/precise-gps';
+import { stopAllNotifications } from '../../lib/notification-sound';
 
 import { getCommissionRate, calculateCommission, calculateDriverEarnings, calculateRideMeterCost } from '../../lib/pricing';
 
@@ -65,6 +66,25 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
 
   const ride   = state.currentRide;
   const driver = state.currentDriver;
+
+  // ── Réservation : prix total fixé, dont 50 % d'acompte déjà versé ─────────
+  // Le compteur horaire ne doit pas s'afficher comme « prix de la course » :
+  // le chauffeur doit voir ce qu'il RESTE à encaisser à la fin.
+  const scheduledTotal    = Number((ride as any)?.scheduledTotalPrice) || 0;
+  const scheduledDeposit  = Number((ride as any)?.scheduledDepositPaid) || 0;
+  const isReservedRide    = scheduledTotal > 0;
+  const remainingDue      = isReservedRide ? Math.max(0, scheduledTotal - scheduledDeposit) : 0;
+  // Base des gains : le prix TOTAL de la course (acompte compris), comme le
+  // fait déjà le backend à la clôture.
+  const earningsBase      = isReservedRide
+    ? scheduledTotal
+    : (currentCost || ride?.estimatedPrice || 0);
+
+  // Dès que la navigation s'ouvre, plus aucune sonnerie : la course est déjà
+  // attribuée (le chauffeur n'a rien à accepter).
+  useEffect(() => {
+    stopAllNotifications();
+  }, []);
 
   const isBillingActive = freeWaitDisabled || waitingTime >= FREE_WAIT_SECONDS;
 
@@ -208,6 +228,8 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
       toast.error('Données de course manquantes');
       return;
     }
+    // Coupe toute sonnerie/annonce encore en cours : la course démarre.
+    stopAllNotifications();
     setIsStarting(true);
     try {
       const res = await fetch(
@@ -253,7 +275,9 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
     }
     setIsCompleting(true);
 
-    const finalCost = currentCost || ride?.estimatedPrice || ride?.fare || ride?.price || 0;
+    const finalCost = isReservedRide
+      ? remainingDue
+      : (currentCost || ride?.estimatedPrice || ride?.fare || ride?.price || 0);
     const pickupAddress = ride.pickup?.address || 'Point de départ';
     const destAddress   = ride.destination?.address || 'Destination';
 
@@ -324,7 +348,7 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
     } finally {
       setIsCompleting(false);
     }
-  }, [ride, driver?.id, currentCost, elapsedTime, updateRide, updateDriver]);
+  }, [ride, driver?.id, currentCost, elapsedTime, updateRide, updateDriver, isReservedRide, remainingDue]);
 
   // ── Step indicators ────────────────────────────────────────────────────────
   const steps = [
@@ -581,15 +605,31 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
                 </div>
                 <div className="bg-white rounded-lg p-3 text-center shadow-sm">
                   <DollarSign className="w-5 h-5 text-green-600 mx-auto mb-1" />
-                  <p className="text-xs text-gray-500">Coût actuel</p>
-                  <p className="text-xl font-bold text-green-700">{(currentCost || ride?.estimatedPrice || 0).toLocaleString()} <span className="text-sm">CDF</span></p>
+                  <p className="text-xs text-gray-500">{isReservedRide ? 'Reste à payer' : 'Coût actuel'}</p>
+                  <p className="text-xl font-bold text-green-700">
+                    {(isReservedRide ? remainingDue : (currentCost || ride?.estimatedPrice || 0)).toLocaleString()} <span className="text-sm">CDF</span>
+                  </p>
                 </div>
               </div>
 
+              {/* Réservation : rappel du prix total et de l'acompte déjà versé */}
+              {isReservedRide && (
+                <div className="mt-3 bg-white rounded-lg p-2 text-xs text-gray-600 space-y-1">
+                  <div className="flex justify-between">
+                    <span>Prix total de la course</span>
+                    <span className="font-semibold text-gray-800">{scheduledTotal.toLocaleString()} CDF</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Acompte déjà versé (50 %)</span>
+                    <span className="font-semibold text-green-700">{scheduledDeposit.toLocaleString()} CDF ✓</span>
+                  </div>
+                </div>
+              )}
+
               {/* Gains estimés */}
               <div className="mt-3 flex justify-between text-xs text-gray-500 bg-white rounded-lg p-2">
-                <span>Gain net ({100 - getCommissionRate()} %) : <span className="font-semibold text-green-700">{calculateDriverEarnings(currentCost || ride?.estimatedPrice || 0).toLocaleString()} CDF</span></span>
-                <span>Commission ({getCommissionRate()} %) : <span className="font-semibold text-orange-600">{calculateCommission(currentCost || ride?.estimatedPrice || 0).toLocaleString()} CDF</span></span>
+                <span>Gain net ({100 - getCommissionRate()} %) : <span className="font-semibold text-green-700">{calculateDriverEarnings(earningsBase).toLocaleString()} CDF</span></span>
+                <span>Commission ({getCommissionRate()} %) : <span className="font-semibold text-orange-600">{calculateCommission(earningsBase).toLocaleString()} CDF</span></span>
               </div>
             </div>
 
@@ -634,7 +674,8 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
           baseCost:             0,
           waitingTime:          waitingTime || 0,
           waitingCost:          0,
-          totalCost:            currentCost || ride?.estimatedPrice || 0,
+          totalCost:            isReservedRide ? scheduledTotal : (currentCost || ride?.estimatedPrice || 0),
+          depositPaid:          isReservedRide ? scheduledDeposit : 0,
           freeWaitingDisabled:  freeWaitDisabled,
           billingElapsedTime:   elapsedTime || 0,
           passengerName:        ride?.passengerName || 'Passager',
