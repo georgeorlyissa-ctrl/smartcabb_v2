@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-21 (34) — Rotation du secret cron + copie hors site planifiée
 
-- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Commit** : `c36a3b7` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security
 - **Objectif** : retirer du dépôt le secret cron historique `smartcabb-cron-2026`, le remplacer par un secret fort, et automatiser la copie hebdomadaire du dernier backup vers OneDrive.
