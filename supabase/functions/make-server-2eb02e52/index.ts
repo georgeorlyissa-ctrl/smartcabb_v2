@@ -32,6 +32,7 @@ import loyaltyRoutes from "./loyalty-routes.ts";
 import ejpayRoutes from "./ejpay-routes.ts";
 import reservationRoutes from "./reservation-routes.ts";
 import emergencyRoutes from "./emergency-routes.ts";
+import backupRoutes from "./backup-routes.ts";
 
 const app = new Hono();
 
@@ -127,6 +128,8 @@ app.route("/make-server-2eb02e52/reservations", reservationRoutes);
 app.route("/make-server-2eb02e52/ejpay", ejpayRoutes);
 // ✅ Route SOS / urgences (persistance + notification de l'équipe sécurité)
 app.route("/make-server-2eb02e52/emergency", emergencyRoutes);
+// 💾 Route sauvegardes automatiques (export JSON vers bucket privé)
+app.route("/make-server-2eb02e52/backups", backupRoutes);
 
 // Route 404
 app.notFound((c) => {

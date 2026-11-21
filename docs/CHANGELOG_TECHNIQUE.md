@@ -42,6 +42,63 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-21 (33) — Sauvegardes automatiques : export quotidien JSON, bucket privé, restauration
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : garantir la conservation des données avant la mise en production (profils, chauffeurs, courses, réservations, SOS, comptes, photos), avec une sauvegarde **automatique quotidienne** et un bouton de sauvegarde manuelle dans l'admin.
+
+### Diagnostic
+
+L'écran admin « Backup & Recovery » existant était une **maquette** : il appelait des routes `/backups/*` inexistantes et proposait des tables qui n'existent pas (`profiles`, `drivers`, `rides`, `settings`…). Aucune sauvegarde réelle n'était produite. Les données vivent dans 3 tables Supabase (`kv_store_2eb02e52`, `scheduled_rides`, `emergency_alerts`), dans `auth.users` et dans le bucket `avatars`.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/backup-routes.ts` | **Nouveau** : `POST /run`, `GET /list`, `GET /latest`, `GET /download/:name`, `DELETE /:name` |
+| `supabase/functions/make-server-2eb02e52/index.ts` | Montage de `/make-server-2eb02e52/backups` |
+| `components/admin/BackupAndRecoveryScreen.tsx` | Écran réel : état automatique, création manuelle, liste, téléchargement, suppression |
+| `supabase/setup-backups-cron.sql` | **Nouveau** : cron pg_cron quotidien 01:00 UTC (02:00 Kinshasa) |
+| `scripts/download-latest-backup.ps1` | **Nouveau** : copie hors site du dernier backup vers OneDrive |
+| `scripts/restore-backup.mjs` | **Nouveau** : restauration des tables + photos (dry-run par défaut) |
+| `docs/BACKUPS.md` | **Nouveau** : procédures, restauration, secrets, dépannage |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **Export** : la fonction pagine les 3 tables (1000 lignes/page, ordre stable), liste les comptes via `auth.admin.listUsers` (champs utiles uniquement, jamais de mot de passe) et parcourt récursivement le bucket `avatars`. Les photos sont incluses en base64 dans la limite de `BACKUP_MAX_AVATAR_MB` (20 Mo par défaut) ; les suivantes sont comptées dans `avatarSkipped`.
+2. **Fichier** : JSON `{ meta, data }` compressé en gzip, nommé `smartcabb-backup-<ISO>.json.gz`, uploadé dans le bucket **privé** `backups`.
+3. **Rétention** : `BACKUP_RETENTION_DAYS` (30 par défaut) ; les fichiers plus anciens sont supprimés après chaque sauvegarde.
+4. **Authentification** : `x-cron-secret` (cron / script hors site) **ou** jeton Supabase d'un utilisateur `admin`. La suppression exige un jeton admin.
+5. **Téléchargement** : URL signée de 10 minutes, jamais d'accès public au bucket.
+6. **Cron** : `0 1 * * *` → `POST /backups/run` (SQL idempotent, à exécuter une fois dans le SQL Editor).
+7. **Hors site** : `scripts/download-latest-backup.ps1` récupère l'URL signée du dernier backup et l'enregistre dans OneDrive ; à planifier une fois par semaine.
+8. **Restauration** : `scripts/restore-backup.mjs` (dry-run par défaut, `--apply` pour écrire) restaure le KV, les réservations, les SOS et les photos. Les comptes sont listés mais non recréés (mots de passe non exportés).
+
+### Impact produit
+- Plus aucune perte silencieuse : une sauvegarde complète existe chaque nuit.
+- L'admin peut créer/télécharger/supprimer un backup en un clic.
+- La copie hors site protège contre la perte totale du projet Supabase.
+- Les backups Supabase Pro (quotidiens + PITR) restent recommandés en complément.
+
+### Risques & rollback
+- **Risque** : un backup volumineux (photos) peut dépasser le temps d'exécution de l'Edge Function. Mitigation : plafond `BACKUP_MAX_AVATAR_MB`, pagination, logs de durée.
+- **Risque** : le secret cron historique est présent dans le dépôt. À faire tourner avant une exposition publique (nouveau `CRON_SECRET`, mise à jour du SQL et du script).
+- **Rollback** : `git revert` du commit ; supprimer le cron avec `SELECT cron.unschedule('smartcabb-daily-backup');`. Aucune migration de schéma.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` OK
+- [x] `npm run build` OK
+- [x] Edge Function déployée (version 160)
+- [x] `POST /backups/run` → backup de 8,57 Mo : 2188 KV, 47 réservations, 6 SOS, 43 comptes, 37 photos
+- [x] `GET /backups/list` → fichier listé avec taille et date
+- [x] Téléchargement via URL signée → JSON.gz valide, aucun mot de passe présent
+- [x] Restauration en dry-run sur le backup réel
+- [ ] Cron quotidien exécuté (vérifier `cron.job_run_details` après la première nuit)
+
+---
+
 ## 2026-11-20 (32) — Réservation 12:00 non déclenchée + overlay « AbortError: Lock broken »
 
 - **Commit** : `7abf2a0` (branche `main`, poussée sur `origin`)

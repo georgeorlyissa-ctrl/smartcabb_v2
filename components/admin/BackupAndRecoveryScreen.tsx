@@ -1,276 +1,148 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from '../../lib/motion';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
 import { useAppState } from '../../hooks/useAppState';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { supabase } from '../../lib/supabase';
+import { projectId } from '../../utils/supabase/info';
 import {
   ArrowLeft,
   Database,
   Download,
-  Upload,
   Shield,
-  Calendar,
   Clock,
-  HardDrive,
-  FileJson,
-  Users,
-  Car,
-  MapPin,
-  AlertTriangle,
   CheckCircle,
   RefreshCw,
   Trash2,
   Archive,
-  FileText
+  AlertTriangle,
+  HardDrive,
 } from '../../lib/admin-icons';
 import { toast } from '../../lib/toast';
 
+const API = `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52`;
+
 interface BackupItem {
-  id: string;
   name: string;
-  timestamp: string;
-  size: string;
-  type: 'auto' | 'manual';
-  tables: string[];
-  status: 'completed' | 'in_progress' | 'failed';
+  size: number;
+  sizeLabel: string;
+  createdAt: string | null;
+}
+
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) {
+    throw new Error('Session administrateur requise — déconnectez-vous puis reconnectez-vous.');
+  }
+  return { Authorization: `Bearer ${token}` };
 }
 
 export function BackupAndRecoveryScreen() {
   const { setCurrentScreen } = useAppState();
   const [backups, setBackups] = useState<BackupItem[]>([]);
-  const [autoBackupEnabled, setAutoBackupEnabled] = useState(true);
-  const [backupFrequency, setBackupFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [selectedTables, setSelectedTables] = useState<string[]>([
-    'profiles',
-    'drivers',
-    'rides',
-    'emergency_alerts',
-    'promo_codes',
-    'settings'
-  ]);
+  const [retentionDays, setRetentionDays] = useState(30);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [busyName, setBusyName] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Tables disponibles pour backup/export
-  const availableTables = [
-    { id: 'profiles', name: 'Profils utilisateurs', icon: Users, color: 'blue' },
-    { id: 'drivers', name: 'Conducteurs', icon: Car, color: 'green' },
-    { id: 'rides', name: 'Courses', icon: MapPin, color: 'purple' },
-    { id: 'emergency_alerts', name: 'Alertes SOS', icon: AlertTriangle, color: 'red' },
-    { id: 'promo_codes', name: 'Codes promo', icon: FileText, color: 'orange' },
-    { id: 'settings', name: 'Paramètres', icon: HardDrive, color: 'gray' }
-  ];
-
-  // Charger les backups existants
-  useEffect(() => {
-    loadBackups();
+  const loadBackups = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await fetch(`${API}/backups/list`, { headers: await authHeaders() });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur de chargement');
+      setBackups(j.backups || []);
+      setRetentionDays(j.retentionDays || 30);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Erreur de chargement';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const loadBackups = async () => {
+  useEffect(() => {
+    loadBackups();
+  }, [loadBackups]);
+
+  const createBackup = async () => {
+    setCreating(true);
+    const toastId = toast.loading('Sauvegarde en cours… (quelques secondes)');
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/backups/list`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`
-          }
-        }
+      const resp = await fetch(`${API}/backups/run`, {
+        method: 'POST',
+        headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur de sauvegarde');
+      toast.success(
+        `Backup créé : ${j.backup?.name || 'OK'} (${j.backup?.sizeLabel || ''})`,
+        { id: toastId },
       );
-
-      if (response.ok) {
-        const data = await response.json();
-        setBackups(data.backups || []);
-      }
-    } catch (error) {
-      console.error('Erreur chargement backups:', error);
-    }
-  };
-
-  // Créer un backup manuel
-  const createManualBackup = async () => {
-    if (selectedTables.length === 0) {
-      toast.error('Sélectionnez au moins une table à sauvegarder');
-      return;
-    }
-
-    setIsCreatingBackup(true);
-    const toastId = toast.loading('Création du backup en cours...');
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/backups/create`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            tables: selectedTables,
-            type: 'manual'
-          })
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        toast.success('✅ Backup créé avec succès !', { id: toastId });
-        
-        // Ajouter le nouveau backup à la liste
-        setBackups(prev => [data.backup, ...prev]);
-      } else {
-        const error = await response.json();
-        toast.error(`Erreur: ${error.message}`, { id: toastId });
-      }
-    } catch (error) {
-      console.error('Erreur création backup:', error);
-      toast.error('Erreur lors de la création du backup', { id: toastId });
+      await loadBackups();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Erreur de sauvegarde';
+      toast.error(msg, { id: toastId });
     } finally {
-      setIsCreatingBackup(false);
+      setCreating(false);
     }
   };
 
-  // Export de données (téléchargement direct)
-  const exportData = async () => {
-    if (selectedTables.length === 0) {
-      toast.error('Sélectionnez au moins une table à exporter');
-      return;
-    }
-
-    setIsExporting(true);
-    const toastId = toast.loading('Export des données en cours...');
-
+  const downloadBackup = async (name: string) => {
+    setBusyName(name);
+    const toastId = toast.loading('Préparation du téléchargement…');
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/export/data`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            tables: selectedTables,
-            format: 'json'
-          })
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Télécharger le fichier JSON
-        const blob = new Blob([JSON.stringify(data.export, null, 2)], { 
-          type: 'application/json' 
-        });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `smartcabb-export-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        toast.success('✅ Export terminé avec succès !', { id: toastId });
-      } else {
-        const error = await response.json();
-        toast.error(`Erreur: ${error.message}`, { id: toastId });
-      }
-    } catch (error) {
-      console.error('Erreur export données:', error);
-      toast.error('Erreur lors de l\'export des données', { id: toastId });
+      const resp = await fetch(`${API}/backups/download/${encodeURIComponent(name)}`, {
+        headers: await authHeaders(),
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success || !j.url) throw new Error(j.error || 'Lien indisponible');
+      const a = document.createElement('a');
+      a.href = j.url;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.success('Téléchargement lancé', { id: toastId });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur de téléchargement', { id: toastId });
     } finally {
-      setIsExporting(false);
+      setBusyName(null);
     }
   };
 
-  // Télécharger un backup
-  const downloadBackup = async (backupId: string) => {
-    const toastId = toast.loading('Téléchargement du backup...');
-
+  const deleteBackup = async (name: string) => {
+    if (!confirm(`Supprimer définitivement ${name} ?`)) return;
+    setBusyName(name);
+    const toastId = toast.loading('Suppression…');
     try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/backups/download/${backupId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`
-          }
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Télécharger le fichier
-        const blob = new Blob([JSON.stringify(data.backup, null, 2)], { 
-          type: 'application/json' 
-        });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `smartcabb-backup-${backupId}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-
-        toast.success('✅ Backup téléchargé !', { id: toastId });
-      } else {
-        toast.error('Erreur lors du téléchargement', { id: toastId });
-      }
-    } catch (error) {
-      console.error('Erreur téléchargement backup:', error);
-      toast.error('Erreur lors du téléchargement', { id: toastId });
+      const resp = await fetch(`${API}/backups/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+        headers: await authHeaders(),
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Erreur de suppression');
+      toast.success('Backup supprimé', { id: toastId });
+      setBackups((prev) => prev.filter((b) => b.name !== name));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erreur de suppression', { id: toastId });
+    } finally {
+      setBusyName(null);
     }
   };
 
-  // Supprimer un backup
-  const deleteBackup = async (backupId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce backup ?')) {
-      return;
-    }
-
-    const toastId = toast.loading('Suppression du backup...');
-
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/backups/delete/${backupId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`
-          }
-        }
-      );
-
-      if (response.ok) {
-        toast.success('✅ Backup supprimé !', { id: toastId });
-        setBackups(prev => prev.filter(b => b.id !== backupId));
-      } else {
-        toast.error('Erreur lors de la suppression', { id: toastId });
-      }
-    } catch (error) {
-      console.error('Erreur suppression backup:', error);
-      toast.error('Erreur lors de la suppression', { id: toastId });
-    }
-  };
-
-  // Toggle sélection table
-  const toggleTable = (tableId: string) => {
-    setSelectedTables(prev => {
-      if (prev.includes(tableId)) {
-        return prev.filter(id => id !== tableId);
-      } else {
-        return [...prev, tableId];
-      }
-    });
-  };
+  const lastBackup = backups[0];
+  const lastDate = lastBackup?.createdAt ? new Date(lastBackup.createdAt).toLocaleString('fr-FR') : '—';
+  const totalSize = backups.reduce((sum, b) => sum + (b.size || 0), 0);
+  const totalSizeLabel = totalSize > 1024 * 1024
+    ? `${(totalSize / (1024 * 1024)).toFixed(1)} Mo`
+    : `${Math.round(totalSize / 1024)} Ko`;
 
   return (
     <motion.div
@@ -291,276 +163,160 @@ export function BackupAndRecoveryScreen() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Backup & Recovery</h1>
-            <p className="text-blue-100 text-sm">Sauvegarde et récupération des données</p>
+            <h1 className="text-2xl font-bold">Sauvegardes</h1>
+            <p className="text-blue-100 text-sm">Sauvegarde automatique des données SmartCabb</p>
           </div>
         </div>
 
-        {/* Stats rapides */}
         <div className="grid grid-cols-3 gap-4 mt-6">
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
             <div className="text-center">
-              <Database className="w-6 h-6 mx-auto mb-2 text-white" />
+              <Archive className="w-6 h-6 mx-auto mb-2 text-white" />
               <p className="text-2xl font-bold">{backups.length}</p>
-              <p className="text-xs text-blue-100">Backups totaux</p>
+              <p className="text-xs text-blue-100">Backups disponibles</p>
             </div>
           </Card>
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
             <div className="text-center">
-              <CheckCircle className="w-6 h-6 mx-auto mb-2 text-green-300" />
-              <p className="text-2xl font-bold">
-                {backups.filter(b => b.status === 'completed').length}
-              </p>
-              <p className="text-xs text-blue-100">Réussis</p>
+              <Clock className="w-6 h-6 mx-auto mb-2 text-white" />
+              <p className="text-sm font-bold leading-tight">{lastDate}</p>
+              <p className="text-xs text-blue-100 mt-1">Dernier backup</p>
             </div>
           </Card>
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 p-4">
             <div className="text-center">
-              <Calendar className="w-6 h-6 mx-auto mb-2 text-white" />
-              <p className="text-2xl font-bold capitalize">{backupFrequency}</p>
-              <p className="text-xs text-blue-100">Fréquence auto</p>
+              <HardDrive className="w-6 h-6 mx-auto mb-2 text-white" />
+              <p className="text-2xl font-bold">{retentionDays} j</p>
+              <p className="text-xs text-blue-100">Conservation</p>
             </div>
           </Card>
         </div>
       </div>
 
       <div className="p-6 space-y-6">
-        {/* Configuration Auto-Backup */}
+        {/* Statut automatique */}
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                <RefreshCw className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold">Backup Automatique</h3>
-                <p className="text-sm text-gray-600">
-                  {autoBackupEnabled ? 'Activé' : 'Désactivé'}
-                </p>
-              </div>
+          <div className="flex items-start space-x-3">
+            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Shield className="w-6 h-6 text-green-600" />
             </div>
-            <Switch
-              checked={autoBackupEnabled}
-              onCheckedChange={setAutoBackupEnabled}
-            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold">Sauvegarde automatique</h3>
+                <Badge className="bg-green-100 text-green-800">Active</Badge>
+              </div>
+              <p className="text-sm text-gray-600">
+                Tous les jours à <strong>02:00 (heure de Kinshasa)</strong>, le serveur exporte
+                les profils, chauffeurs, courses, réservations, alertes SOS, comptes et photos.
+                Les {retentionDays} derniers backups sont conservés.
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Destination : bucket privé <code className="bg-gray-100 px-1 rounded">backups</code>
+                {' '}de Supabase — {backups.length} fichier(s), {totalSizeLabel}.
+              </p>
+            </div>
           </div>
 
-          {autoBackupEnabled && (
-            <div className="space-y-4 pt-4 border-t">
-              <div>
-                <Label>Fréquence de sauvegarde</Label>
-                <div className="grid grid-cols-3 gap-2 mt-2">
-                  <Button
-                    variant={backupFrequency === 'daily' ? 'default' : 'outline'}
-                    onClick={() => setBackupFrequency('daily')}
-                    className="h-12"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Quotidien
-                  </Button>
-                  <Button
-                    variant={backupFrequency === 'weekly' ? 'default' : 'outline'}
-                    onClick={() => setBackupFrequency('weekly')}
-                    className="h-12"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Hebdomadaire
-                  </Button>
-                  <Button
-                    variant={backupFrequency === 'monthly' ? 'default' : 'outline'}
-                    onClick={() => setBackupFrequency('monthly')}
-                    className="h-12"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Mensuel
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-start space-x-2">
-                  <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-semibold mb-1">Protection automatique activée</p>
-                    <p>
-                      Les backups {backupFrequency === 'daily' ? 'quotidiens' : backupFrequency === 'weekly' ? 'hebdomadaires' : 'mensuels'} 
-                      {' '}seront créés automatiquement à 2h00 du matin. Les 30 derniers backups sont conservés.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {/* Sélection des tables */}
-        <Card className="p-6">
-          <h3 className="font-semibold mb-4">Tables à sauvegarder/exporter</h3>
-          <div className="grid grid-cols-2 gap-3">
-            {availableTables.map((table) => {
-              const Icon = table.icon;
-              const isSelected = selectedTables.includes(table.id);
-              
-              return (
-                <button
-                  key={table.id}
-                  onClick={() => toggleTable(table.id)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
-                    isSelected
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      isSelected ? `bg-${table.color}-100` : 'bg-gray-100'
-                    }`}>
-                      <Icon className={`w-5 h-5 ${
-                        isSelected ? `text-${table.color}-600` : 'text-gray-600'
-                      }`} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{table.name}</p>
-                      <p className="text-xs text-gray-500">{table.id}</p>
-                    </div>
-                    {isSelected && (
-                      <CheckCircle className="w-5 h-5 text-blue-600" />
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Actions */}
-          <div className="grid grid-cols-2 gap-3 mt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
             <Button
-              onClick={createManualBackup}
-              disabled={isCreatingBackup || selectedTables.length === 0}
-              className="h-12 bg-green-500 hover:bg-green-600"
+              onClick={createBackup}
+              disabled={creating}
+              className="h-12 bg-green-600 hover:bg-green-700"
             >
-              {isCreatingBackup ? (
+              {creating ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Création...
+                  Sauvegarde en cours…
                 </>
               ) : (
                 <>
                   <Archive className="w-4 h-4 mr-2" />
-                  Créer backup
+                  Créer un backup maintenant
                 </>
               )}
             </Button>
             <Button
-              onClick={exportData}
-              disabled={isExporting || selectedTables.length === 0}
+              onClick={() => loadBackups()}
+              disabled={loading}
               variant="outline"
               className="h-12"
             >
-              {isExporting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Export...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 mr-2" />
-                  Exporter JSON
-                </>
-              )}
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Actualiser la liste
             </Button>
           </div>
+
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              {error}
+            </div>
+          )}
         </Card>
 
         {/* Liste des backups */}
         <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">Historique des backups</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadBackups}
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Actualiser
-            </Button>
-          </div>
+          <h3 className="font-semibold mb-4">Historique des backups</h3>
 
-          {backups.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-10 text-gray-500">
+              <RefreshCw className="w-8 h-8 mx-auto mb-2 animate-spin text-gray-300" />
+              Chargement…
+            </div>
+          ) : backups.length === 0 ? (
             <div className="text-center py-12">
               <Database className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">Aucun backup disponible</p>
-              <p className="text-sm text-gray-400">Créez votre premier backup ci-dessus</p>
+              <p className="text-gray-500">Aucun backup pour l'instant</p>
+              <p className="text-sm text-gray-400">Cliquez sur « Créer un backup maintenant »</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {backups.map((backup) => (
+              {backups.map((backup, index) => (
                 <div
-                  key={backup.id}
+                  key={backup.name}
                   className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        backup.type === 'auto' ? 'bg-blue-100' : 'bg-green-100'
-                      }`}>
-                        {backup.type === 'auto' ? (
-                          <RefreshCw className={`w-5 h-5 ${
-                            backup.type === 'auto' ? 'text-blue-600' : 'text-green-600'
-                          }`} />
-                        ) : (
-                          <Archive className="w-5 h-5 text-green-600" />
-                        )}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <Archive className="w-5 h-5 text-blue-600" />
                       </div>
-                      <div>
-                        <p className="font-medium">{backup.name}</p>
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <Clock className="w-3 h-3" />
-                          <span>{new Date(backup.timestamp).toLocaleString('fr-FR')}</span>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{backup.name}</p>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {backup.createdAt
+                              ? new Date(backup.createdAt).toLocaleString('fr-FR')
+                              : 'date inconnue'}
+                          </span>
                           <span>•</span>
-                          <span>{backup.size}</span>
+                          <span>{backup.sizeLabel}</span>
+                          {index === 0 && (
+                            <Badge className="bg-green-100 text-green-800 text-xs">Dernier</Badge>
+                          )}
                         </div>
                       </div>
                     </div>
-                    <Badge
-                      variant={
-                        backup.status === 'completed' ? 'default' :
-                        backup.status === 'in_progress' ? 'secondary' :
-                        'destructive'
-                      }
-                    >
-                      {backup.status === 'completed' ? 'Complété' :
-                       backup.status === 'in_progress' ? 'En cours' :
-                       'Échoué'}
-                    </Badge>
-                  </div>
-
-                  <div className="flex items-center space-x-2 mb-3">
-                    {backup.tables.map((table) => (
-                      <Badge key={table} variant="outline" className="text-xs">
-                        {table}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => downloadBackup(backup.id)}
-                      className="flex-1"
-                    >
-                      <Download className="w-3 h-3 mr-2" />
-                      Télécharger
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => deleteBackup(backup.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadBackup(backup.name)}
+                        disabled={busyName === backup.name}
+                      >
+                        <Download className="w-3 h-3 mr-2" />
+                        Télécharger
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteBackup(backup.name)}
+                        disabled={busyName === backup.name}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -568,68 +324,33 @@ export function BackupAndRecoveryScreen() {
           )}
         </Card>
 
-        {/* Plan de Disaster Recovery */}
+        {/* Conseils */}
         <Card className="p-6 bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
-          <div className="flex items-start space-x-3 mb-4">
+          <div className="flex items-start space-x-3 mb-3">
             <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
               <AlertTriangle className="w-6 h-6 text-orange-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-orange-900">Plan de Disaster Recovery</h3>
+              <h3 className="font-semibold text-orange-900">Pour ne rien perdre</h3>
               <p className="text-sm text-orange-700 mt-1">
-                Procédures de récupération en cas d'incident
+                Un backup stocké dans Supabase ne protège pas contre la perte totale du compte.
               </p>
             </div>
           </div>
-
-          <div className="space-y-3 text-sm text-orange-900">
-            <div className="flex items-start space-x-2">
-              <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-xs font-bold">1</span>
-              </div>
-              <div>
-                <p className="font-semibold">Backup automatique quotidien</p>
-                <p className="text-orange-700">Les données sont sauvegardées chaque nuit à 2h00</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-2">
-              <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-xs font-bold">2</span>
-              </div>
-              <div>
-                <p className="font-semibold">Rétention de 30 jours</p>
-                <p className="text-orange-700">Possibilité de restaurer jusqu'à 30 jours en arrière</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-2">
-              <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-xs font-bold">3</span>
-              </div>
-              <div>
-                <p className="font-semibold">Export manuel disponible</p>
-                <p className="text-orange-700">Téléchargez vos données en JSON à tout moment</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-2">
-              <div className="w-6 h-6 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-xs font-bold">4</span>
-              </div>
-              <div>
-                <p className="font-semibold">Supabase Point-in-Time Recovery</p>
-                <p className="text-orange-700">Restauration jusqu'à 7 jours en arrière via Supabase Dashboard</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 p-3 bg-white rounded-lg border border-orange-200">
-            <p className="text-xs text-orange-800">
-              <strong>En cas d'incident :</strong> Contactez immédiatement l'équipe technique et récupérez
-              le dernier backup disponible. La restauration prend généralement 15-30 minutes.
-            </p>
-          </div>
+          <ul className="space-y-2 text-sm text-orange-900">
+            <li className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 mt-0.5 text-orange-600 flex-shrink-0" />
+              <span>Téléchargez le dernier backup <strong>une fois par semaine</strong> sur votre PC/OneDrive.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 mt-0.5 text-orange-600 flex-shrink-0" />
+              <span>Activez les <strong>backups quotidiens Supabase Pro</strong> (Database → Backups) pour une restauration complète.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 mt-0.5 text-orange-600 flex-shrink-0" />
+              <span>Les mots de passe des comptes ne sont jamais exportés : les utilisateurs devront les réinitialiser.</span>
+            </li>
+          </ul>
         </Card>
       </div>
     </motion.div>
