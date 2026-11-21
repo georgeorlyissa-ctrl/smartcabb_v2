@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-21 (36) — Sonnerie conducteur en boucle, passager figé, prix « reste à payer » et suivi des paiements admin
 
-- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Commit** : `fc54ba9` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix + feat
 - **Objectif** : clore quatre anomalies constatées sur une course issue d'une réservation — sonnerie sans fin côté conducteur, écran passager figé, prix affiché (compteur horaire au lieu du reste à payer), et absence de suivi acompte/solde côté admin.
