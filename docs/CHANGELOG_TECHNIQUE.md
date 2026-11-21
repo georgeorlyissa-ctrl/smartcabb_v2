@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-21 (33) — Sauvegardes automatiques : export quotidien JSON, bucket privé, restauration
 
-- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Commit** : `a93e3b9` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat
 - **Objectif** : garantir la conservation des données avant la mise en production (profils, chauffeurs, courses, réservations, SOS, comptes, photos), avec une sauvegarde **automatique quotidienne** et un bouton de sauvegarde manuelle dans l'admin.
