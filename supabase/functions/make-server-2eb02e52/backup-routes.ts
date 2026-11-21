@@ -23,7 +23,7 @@
  * Variables d'environnement :
  *   BACKUP_RETENTION_DAYS   (défaut 30)
  *   BACKUP_MAX_AVATAR_MB    (défaut 20, photos incluses en base64)
- *   CRON_SECRET             (défaut historique smartcabb-cron-2026)
+ *   CRON_SECRET             (obligatoire : secret partagé avec le cron pg_cron)
  *
  * @version 1.0.0
  */
@@ -51,8 +51,8 @@ function sbAdmin() {
 
 function hasValidCronSecret(c: any): boolean {
   const got = c.req.header("x-cron-secret") || "";
-  const expected = Deno.env.get("CRON_SECRET") || "smartcabb-cron-2026";
-  return got !== "" && (got === expected || got === "smartcabb-cron-2026");
+  const expected = Deno.env.get("CRON_SECRET") || "";
+  return expected !== "" && got === expected;
 }
 
 async function hasValidAdminJwt(c: any): Promise<boolean> {

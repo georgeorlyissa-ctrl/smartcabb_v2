@@ -43,7 +43,7 @@ Ou en ligne de commande :
 ```powershell
 $api = "https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52"
 Invoke-RestMethod -Method Post -Uri "$api/backups/run" `
-  -Headers @{ "x-cron-secret" = "smartcabb-cron-2026" } `
+  -Headers @{ "x-cron-secret" = $env:SMARTCABB_CRON_SECRET } `
   -ContentType "application/json" -Body "{}"
 ```
 
@@ -118,7 +118,7 @@ survit pas à la perte du compte.
 |---|---|---|
 | `BACKUP_RETENTION_DAYS` | `30` | Nombre de jours de conservation |
 | `BACKUP_MAX_AVATAR_MB` | `20` | Taille maximale des photos incluses (base64) |
-| `CRON_SECRET` | `smartcabb-cron-2026` | Secret du cron (en-tête `x-cron-secret`) |
+| `CRON_SECRET` | **obligatoire** | Secret partagé avec le cron (en-tête `x-cron-secret`) |
 
 À configurer dans **Supabase → Settings → Edge Functions → Secrets**.
 
@@ -129,9 +129,11 @@ survit pas à la perte du compte.
   `GET /backups/download/:name` acceptent le secret cron **ou** un jeton de
   session dont le rôle est `admin`.
 - `DELETE /backups/:name` exige une session **admin**.
-- Le secret cron historique est présent dans le dépôt : le faire tourner
-  (nouveau `CRON_SECRET`) avant une mise en production publique, puis mettre à
-  jour le SQL du cron et le script hors site.
+- Le secret n'est plus présent dans le dépôt : il est stocké dans
+  `CRON_SECRET` (secrets Edge Functions) et dans la variable utilisateur Windows
+  `SMARTCABB_CRON_SECRET` (script hors site). Pour le faire tourner : définir un
+  nouveau `CRON_SECRET`, mettre à jour le SQL des deux crons, puis relancer le
+  script.
 
 ## 9. Dépannage
 

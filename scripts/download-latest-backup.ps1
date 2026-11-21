@@ -7,8 +7,15 @@
 param(
   [string]$Destination = "$env:USERPROFILE\OneDrive\SmartCabb-Backups",
   [string]$ProjectRef = "zaerjqchzqmcxqblkfkg",
-  [string]$CronSecret = "smartcabb-cron-2026"
+  [string]$CronSecret = $env:SMARTCABB_CRON_SECRET
 )
+
+if (-not $CronSecret) {
+  $CronSecret = [Environment]::GetEnvironmentVariable('SMARTCABB_CRON_SECRET', 'User')
+}
+if (-not $CronSecret) {
+  throw "Secret manquant : définir la variable d'environnement SMARTCABB_CRON_SECRET (voir docs/BACKUPS.md)."
+}
 
 $ErrorActionPreference = "Stop"
 $api = "https://$ProjectRef.supabase.co/functions/v1/make-server-2eb02e52"

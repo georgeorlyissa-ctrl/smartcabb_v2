@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { useAppState } from '../../hooks/useAppState';
+import { supabase } from '../../lib/supabase';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
 
@@ -136,12 +137,18 @@ export function AdminRidesScreen({ onBack }: { onBack?: () => void }) {
   const runSweep = async (dryRun: boolean) => {
     if (!dryRun && !confirm('Lancer le balayage anti-fraude ? (démarrages auto, annulations timeout, clôtures)')) return;
     setSweeping(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    if (!token) {
+      setSweeping(false);
+      toast.error('Session administrateur requise — déconnectez-vous puis reconnectez-vous');
+      return;
+    }
     const call = async () => fetch(`${API}/rides/sweep-fraud${dryRun ? '?dryRun=true' : ''}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${publicAnonKey}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
-        'x-cron-secret': 'smartcabb-cron-2026',
       },
       body: '{}',
     });

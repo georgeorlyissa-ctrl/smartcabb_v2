@@ -2069,7 +2069,8 @@ app.post("/cancel", async (c) => {
 
 // ============================================
 // 🛡️ POST /sweep-fraud - Balayage anti-fraude (timeout, mouvement, arrivée)
-// Protégé par CRON_SECRET. ?dryRun=true : simule sans rien modifier.
+// Protégé par CRON_SECRET (cron) ou une session admin (bouton du panneau).
+// ?dryRun=true : simule sans rien modifier.
 //  - accepté/arrivé jamais démarré depuis +15 min :
 //      * conducteur a bougé > 500 m depuis l'acceptation → démarrage auto + suspect
 //      * sinon → annulation auto (système) + restitution provision + strike
@@ -2077,7 +2078,7 @@ app.post("/cancel", async (c) => {
 // ============================================
 app.post("/sweep-fraud", async (c) => {
   try {
-    if (!hasValidCronSecret(c)) {
+    if (!(await hasValidCronOrAdmin(c))) {
       return c.json({ success: false, error: "Unauthorized" }, 401);
     }
     const url = new URL(c.req.url);
@@ -2231,12 +2232,38 @@ app.post("/sweep-fraud", async (c) => {
   }
 });
 
-// Le secret peut être celui configuré (CRON_SECRET) ou le défaut historique
-// 'smartcabb-cron-2026' (utilisé par le cron pg_cron et le panel admin).
+// Le secret cron est obligatoire (CRON_SECRET) : plus de repli sur l'ancien
+// secret historique, qui était présent dans le dépôt.
 function hasValidCronSecret(c: any): boolean {
   const got = c.req.header("x-cron-secret") || "";
-  const expected = Deno.env.get("CRON_SECRET") || "smartcabb-cron-2026";
-  return got !== "" && (got === expected || got === "smartcabb-cron-2026");
+  const expected = Deno.env.get("CRON_SECRET") || "";
+  return expected !== "" && got === expected;
+}
+
+/** Vérifie un jeton de session Supabase et exige le rôle `admin`. */
+async function hasValidAdminJwt(c: any): Promise<boolean> {
+  const header = c.req.header("Authorization") || c.req.header("authorization") || "";
+  const match = /^Bearer\s+(.+)$/i.exec(String(header).trim());
+  if (!match) return false;
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+    );
+    const { data, error } = await supabase.auth.getUser(match[1].trim());
+    if (error || !data?.user) return false;
+    const role = data.user.user_metadata?.role || data.user.app_metadata?.role || "passenger";
+    return role === "admin";
+  } catch (e) {
+    console.error("❌ [RIDES/AUTH] Erreur vérification jeton:", e instanceof Error ? e.message : e);
+    return false;
+  }
+}
+
+/** Le cron (x-cron-secret) ou un administrateur connecté. */
+async function hasValidCronOrAdmin(c: any): Promise<boolean> {
+  if (hasValidCronSecret(c)) return true;
+  return await hasValidAdminJwt(c);
 }
 async function pushToRidePartiesSafe(ride: any, title: string, body: string, rideId: string): Promise<void> {
   try {

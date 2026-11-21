@@ -42,6 +42,56 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-21 (34) — Rotation du secret cron + copie hors site planifiée
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security
+- **Objectif** : retirer du dépôt le secret cron historique `smartcabb-cron-2026`, le remplacer par un secret fort, et automatiser la copie hebdomadaire du dernier backup vers OneDrive.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `hasValidCronSecret` n'accepte plus que `CRON_SECRET` ; `/sweep-fraud` accepte le cron **ou** une session admin (`hasValidCronOrAdmin`) |
+| `supabase/functions/make-server-2eb02e52/backup-routes.ts` | `hasValidCronSecret` strict (plus de repli sur l'ancien secret) |
+| `components/admin/AdminRidesScreen.tsx` | Le balayage anti-fraude utilise le **jeton de session admin** ; plus de secret dans le bundle frontend |
+| `scripts/download-latest-backup.ps1` | Le secret est lu dans `SMARTCABB_CRON_SECRET` (variable utilisateur), plus de valeur en dur |
+| `supabase/setup-scheduled-rides-cron.sql` | Placeholder `<NOUVEAU_CRON_SECRET>` + `cron.unschedule` idempotent |
+| `supabase/setup-backups-cron.sql` | Placeholder `<NOUVEAU_CRON_SECRET>` |
+| `supabase/migrations/20260611000000_setup_scheduled_rides.sql` | Placeholder (plus d'ancien secret) |
+| `docs/BACKUPS.md` | Procédure de rotation et script hors site mis à jour |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **Nouveau secret** : 32 octets aléatoires (base64url), stocké dans **Supabase → Settings → Edge Functions → Secrets** sous `CRON_SECRET`, et dans la variable utilisateur Windows `SMARTCABB_CRON_SECRET`.
+2. **Backend strict** : `hasValidCronSecret` exige `CRON_SECRET` et refuse tout autre valeur (l'ancien secret renvoie **401**). Les deux crons (`process-scheduled-rides`, `smartcabb-daily-backup`) doivent être recréés avec le nouveau secret via les scripts SQL.
+3. **Frontend** : `AdminRidesScreen` appelle `/rides/sweep-fraud` avec `Authorization: Bearer <session>` ; le backend accepte un JWT dont le rôle est `admin` (ou le cron). Le secret n'est plus exposé dans le JavaScript public.
+4. **Copie hors site** : tâche Windows planifiée **« SmartCabb Backup hors site »**, hebdomadaire le **vendredi à 18:00**, avec `StartWhenAvailable` (rattrapage si le PC était éteint). Elle exécute `scripts/download-latest-backup.ps1`, qui lit le secret dans la variable utilisateur et enregistre le fichier dans `%USERPROFILE%\OneDrive\SmartCabb-Backups`.
+
+### Impact produit
+- L'ancien secret du dépôt ne permet plus d'appeler les endpoints cron (vérifié : 401).
+- Le panneau admin continue de fonctionner sans secret embarqué.
+- Une copie du backup est téléchargée automatiquement chaque semaine sur OneDrive.
+
+### Risques & rollback
+- **Risque** : tant que les deux scripts SQL n'ont pas été ré-exécutés avec le nouveau secret, les crons échouent (401). Les réservations ne sont pas traitées automatiquement pendant cette fenêtre.
+- **Rollback** : remettre l'ancien secret dans `CRON_SECRET` et redéployer ; recréer les crons avec l'ancienne valeur. Déconseillé.
+- **Rotation suivante** : générer un nouveau secret, mettre à jour `CRON_SECRET`, `SMARTCABB_CRON_SECRET`, puis ré-exécuter les deux scripts SQL.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` OK
+- [x] Edge Function redéployée
+- [x] `GET /backups/list` avec le nouveau secret → **200**
+- [x] `GET /backups/list` avec l'ancien secret → **401**
+- [x] `POST /rides/process-scheduled` avec le nouveau secret → **200** (`processed: 0`)
+- [x] `POST /rides/process-scheduled` avec l'ancien secret → **401**
+- [x] Script hors site exécuté → fichier présent dans OneDrive
+- [x] Tâche planifiée créée et testée → `LastTaskResult = 0`, prochaine exécution vendredi 18:00
+- [ ] Scripts SQL des deux crons ré-exécutés avec le nouveau secret (action utilisateur)
+
+---
+
 ## 2026-11-21 (33) — Sauvegardes automatiques : export quotidien JSON, bucket privé, restauration
 
 - **Commit** : `a93e3b9` (branche `main`, poussée sur `origin`)

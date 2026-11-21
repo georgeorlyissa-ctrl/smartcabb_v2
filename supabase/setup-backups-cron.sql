@@ -22,6 +22,10 @@ EXCEPTION
   WHEN OTHERS THEN NULL;
 END $$;
 
+-- ⚠️ Remplacer <NOUVEAU_CRON_SECRET> par la valeur du secret CRON_SECRET
+--    configuré dans Supabase → Settings → Edge Functions → Secrets.
+--    Ne jamais committer ce secret dans le dépôt.
+
 -- 3. Planifier la sauvegarde quotidienne
 SELECT cron.schedule(
   'smartcabb-daily-backup',
@@ -31,7 +35,7 @@ SELECT cron.schedule(
     url := 'https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52/backups/run',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-cron-secret', 'smartcabb-cron-2026'
+      'x-cron-secret', '<NOUVEAU_CRON_SECRET>'
     ),
     body := '{}'::jsonb
   );

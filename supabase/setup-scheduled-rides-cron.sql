@@ -28,7 +28,18 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_rides_status_date
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 CREATE EXTENSION IF NOT EXISTS pg_net;
 
+-- ⚠️ Remplacer <NOUVEAU_CRON_SECRET> par la valeur du secret CRON_SECRET
+--    configuré dans Supabase → Settings → Edge Functions → Secrets.
+--    Ne jamais committer ce secret dans le dépôt.
+
 -- 3. Programmer le cron toutes les 5 minutes
+DO $$
+BEGIN
+  PERFORM cron.unschedule('process-scheduled-rides');
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;
+
 SELECT cron.schedule(
   'process-scheduled-rides',
   '*/5 * * * *',
@@ -37,7 +48,7 @@ SELECT cron.schedule(
     url := 'https://zaerjqchzqmcxqblkfkg.supabase.co/functions/v1/make-server-2eb02e52/rides/process-scheduled',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'x-cron-secret', 'smartcabb-cron-2026'
+      'x-cron-secret', '<NOUVEAU_CRON_SECRET>'
     )
   );
   $$
