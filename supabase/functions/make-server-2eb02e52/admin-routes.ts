@@ -318,16 +318,49 @@ app.get("/stats", async (c) => {
     const cancelledRides = rides.filter((r: any) => r.status === "cancelled");
 
     // ─── Nettoyage automatique des courses bloquées ──────────────────────────
-    // Annuler les courses "searching" ou "accepted" de plus de 30 minutes
+    // Annuler les courses IMMÉDIATES "searching"/"accepted" de plus de 30 min.
+    // ⚠️ Les courses programmées (isScheduled) sont exclues : créées à T-15,
+    // elles peuvent attendre le chauffeur / le passager au-delà de 30 min.
+    // Le balayage anti-fraude les gère avec une grâce plus longue.
     const staleThreshold = Date.now() - 30 * 60 * 1000;
-    const staleRides = rides.filter((r: any) =>
-      (r.status === "searching" || r.status === "accepted") &&
-      new Date(r.createdAt || r.created_at || 0).getTime() < staleThreshold
-    );
+    const staleRides = rides.filter((r: any) => {
+      const isScheduled = r.isScheduled === true || !!r.scheduledRideId;
+      if (isScheduled) return false;
+      return (r.status === "searching" || r.status === "accepted") &&
+        new Date(r.createdAt || r.created_at || 0).getTime() < staleThreshold;
+    });
     for (const stale of staleRides) {
       try {
         const key = `ride:${stale.id}`;
         await kvSet(key, { ...stale, status: "cancelled", cancelledAt: new Date().toISOString(), cancelReason: "auto_expired" });
+        // Libérer le chauffeur : sans cela, activeRideId restait bloqué sur la
+        // course annulée et le chauffeur ne recevait plus de nouvelles courses.
+        const did = stale.driverId || stale.driver_id;
+        if (did) {
+          const driver = await kvGet<any>(`driver:${did}`);
+          if (driver && (driver.activeRideId === stale.id || driver.currentRideId === stale.id)) {
+            const online = driver.isOnline === true || driver.is_online === true || driver.status === "online";
+            await kvSet(`driver:${did}`, {
+              ...driver,
+              activeRideId: null,
+              currentRideId: null,
+              is_available: online,
+              available: online,
+              updated_at: new Date().toISOString(),
+            });
+            const profile = await kvGet<any>(`profile:${did}`);
+            if (profile) {
+              await kvSet(`profile:${did}`, {
+                ...profile,
+                activeRideId: null,
+                currentRideId: null,
+                available: online,
+                is_available: online,
+                updated_at: new Date().toISOString(),
+              });
+            }
+          }
+        }
         console.log("🧹 Course bloquée nettoyée:", stale.id, stale.status, "→ cancelled");
       } catch (e) {
         console.error("❌ Erreur nettoyage course bloquée:", stale.id, e);

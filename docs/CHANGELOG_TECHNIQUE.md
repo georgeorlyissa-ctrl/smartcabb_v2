@@ -42,6 +42,68 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-21 (35) — Réservation déclenchée mais course annulée par le nettoyage admin ; chauffeur invisible sans push
+
+- **Commit** : _(ce commit)_ (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix
+- **Objectif** : une réservation créée automatiquement à T-15 était annulée par le nettoyage du dashboard admin, le chauffeur ne voyait pas la course pré-attribuée si le push manquait, et « Rouvrir » refusait à cause de l'index anti-doublon.
+
+### Diagnostic (données réelles)
+
+Réservation `38a2b252-d4d8-4efe-8477-6c9377ac65fa` — **21/11/2026 11:30**, Carmel ALI / Ruth Shole :
+
+| Fait | Valeur |
+|---|---|
+| Course créée automatiquement | oui, `ffbb66fc-4e6c-456c-a735-b59db52d75a3`, à **11:15** (T-15), statut `accepted` |
+| Annulation | **11:47:36**, `cancelReason = auto_expired` |
+| Cause | `GET /admin/stats` annule les courses `searching`/`accepted` de plus de **30 min** (depuis `createdAt`) à chaque chargement du dashboard admin |
+| Chauffeur | `driver.activeRideId` restait bloqué sur la course annulée (`is_available=false`) |
+| « Rouvrir » | refusé (409) car l'index `scheduled_ride:38a2b252…` existait encore |
+| Visibilité chauffeur | le dashboard ne polle que `/rides/pending/:driverId` (courses `searching`) ; une course pré-attribuée `accepted` n'était visible que par le push `reservation_started` |
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/admin-routes.ts` | Le nettoyage des courses bloquées **exclut les courses programmées** (`isScheduled`/`scheduledRideId`) et **libère le chauffeur** (`activeRideId`/`currentRideId` remis à null) pour les courses immédiates annulées |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `sweep-fraud` : pour une course programmée, la grâce part de l'**heure prévue** et vaut **120 min** (`SCHEDULED_RIDE_START_GRACE_MINUTES`) au lieu de 15 min depuis la création ; nouvel endpoint `GET /active/:driverId` |
+| `supabase/functions/make-server-2eb02e52/reservation-routes.ts` | `POST /:id/reopen` : autorise la réouverture si la course liée est **annulée**, supprime l'index obsolète ; refuse seulement si une course est encore active |
+| `components/driver/DriverDashboardNew.tsx` | Polling de secours toutes les 8 s sur `/rides/active/:driverId` : ouvre la navigation même si le push n'est pas arrivé |
+| `components/admin/AdminScheduledRidesScreen.tsx` | Texte de confirmation « Rouvrir » adapté (course active vs annulée) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **Nettoyage admin** : `staleRides` ne contient plus les courses `isScheduled` ou liées à une réservation. Pour les courses immédiates, l'annulation libère aussi le chauffeur (objet `driver:` et `profile:`) en remettant `activeRideId`/`currentRideId` à null et la disponibilité selon son état en ligne.
+2. **Anti-fraude** : la fenêtre « jamais démarré » est calculée depuis `scheduledDate`/`scheduledTime` (conversion UTC+1) pour les réservations, avec `SCHEDULED_RIDE_START_GRACE_MINUTES` (secret Supabase, **120**). Une réservation de 11:30 peut donc être démarrée jusqu'à 13:30 avant l'annulation automatique.
+3. **Filet de sécurité chauffeur** : `GET /rides/active/:driverId` renvoie la course pointée par `activeRideId`/`currentRideId` si son statut est `accepted`, `enroute`, `arrived`, `in_progress` ou `started`. Le dashboard conducteur l'interroge toutes les 8 s et ouvre la navigation une seule fois par course (ref `activeRideFallbackRef`).
+4. **Rouvrir** : si l'index existe et que la course liée est `cancelled`, l'index est supprimé et la réservation repasse en `confirmed`/`scheduled` ; le cron recrée une course propre. Si la course liée est active, réponse 409.
+5. **Données corrigées** : la réservation `38a2b252…` a été rouverte, l'index supprimé, la conductrice libérée, puis le cron a créé la course `da634e56-aab7-45a1-b622-f55479c6cc0c` (pré-attribuée à Ruth, Carmel passagère) à 12:02.
+
+### Impact produit
+- Les réservations ne sont plus annulées par le simple chargement du dashboard admin.
+- Le chauffeur voit la course pré-attribuée même si le push FCM est perdu.
+- L'admin peut relancer une réservation dont la course a été annulée, sans doublon.
+- Les courses immédiates bloquées libèrent correctement le chauffeur.
+
+### Risques & rollback
+- **Risque** : une course programmée non démarrée reste active jusqu'à 120 min après l'heure prévue (réglable via `SCHEDULED_RIDE_START_GRACE_MINUTES`).
+- **Risque** : le polling `/rides/active` ajoute une requête toutes les 8 s par chauffeur connecté (cache KV, impact faible).
+- **Rollback** : `git revert` du commit ; remettre la grâce à 15 min si besoin. Aucune migration de schéma.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` OK
+- [x] `npm run build` OK
+- [x] Edge Function déployée
+- [x] `POST /rides/process-scheduled` → `processed: 1`, course `da634e56…` créée en `preassigned`
+- [x] `GET /rides/active/28501b8f…` → course `da634e56…`, statut `accepted`, Ruth / Carmel
+- [x] Index `scheduled_ride:38a2b252…` → `da634e56…`
+- [x] Objet chauffeur Ruth → `activeRideId = da634e56…`
+- [ ] À confirmer sur téléphone : ouverture automatique de la navigation conducteur et démarrage de la course
+- [ ] À confirmer : plus d'annulation `auto_expired` après chargement du dashboard admin
+
+---
+
 ## 2026-11-21 (34) — Rotation du secret cron + copie hors site planifiée
 
 - **Commit** : `c36a3b7` (branche `main`, poussée sur `origin`)

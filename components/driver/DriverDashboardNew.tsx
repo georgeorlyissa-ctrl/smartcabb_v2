@@ -165,6 +165,9 @@ export function DriverDashboardNew() {
   useEffect(() => {
     pendingRideRequestRef.current = pendingRideRequest;
   }, [pendingRideRequest]);
+  // Filet de sécurité : évite de rouvrir la même course active en boucle
+  // lorsque le push `reservation_started` n'est jamais arrivé.
+  const activeRideFallbackRef = useRef<string | null>(null);
   const [showWalletManager, setShowWalletManager] = useState(false);
   const [showFCMDiagnostic, setShowFCMDiagnostic] = useState(false);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
@@ -605,6 +608,54 @@ export function DriverDashboardNew() {
       window.removeEventListener('fcm-reservation-assigned', handleReservationAssigned);
       window.removeEventListener('fcm-reservation-started', handleReservationStarted);
       clearInterval(poll);
+    };
+  }, [driver?.id]);
+
+  // ============================================================
+  // ✅ Filet de sécurité : course pré-attribuée (réservation) visible
+  // même si le push `reservation_started` n'a pas été reçu.
+  // Le dashboard interroge l'API toutes les 8 s et ouvre la navigation
+  // dès qu'une course active est liée au chauffeur.
+  // ============================================================
+  useEffect(() => {
+    if (!driver?.id) return;
+    let stopped = false;
+    const checkActiveRide = async () => {
+      try {
+        const res = await fetch(
+          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/rides/active/${driver.id}`,
+          { headers: { Authorization: `Bearer ${publicAnonKey}` } },
+        );
+        const data = await res.json();
+        const ride = data?.ride;
+        if (stopped || !ride?.id) return;
+        if (!['accepted', 'enroute', 'arrived', 'in_progress', 'started'].includes(ride.status)) return;
+        if (activeRideFallbackRef.current === ride.id) return;
+        const current = activeRideRef.current;
+        if (current?.id === ride.id) {
+          activeRideFallbackRef.current = ride.id;
+          return;
+        }
+        activeRideFallbackRef.current = ride.id;
+        setCurrentRide({ ...ride, status: 'accepted' } as any);
+        setCurrentScreen('driver-navigation');
+        toast.success('Course réservée : en route vers le client 🚖');
+        void playRideNotification({
+          passengerName: ride.passengerName,
+          pickup: ride.pickupAddress || ride.pickup?.address || 'Point de départ',
+          destination: ride.destinationAddress || ride.destination?.address || 'Destination',
+          distance: Number(ride.distance) || 0,
+          estimatedEarnings: Number(ride.estimatedPrice) || 0,
+        }).catch(() => undefined);
+      } catch {
+        // réseau instable : on réessaiera au prochain tick
+      }
+    };
+    void checkActiveRide();
+    const iv = setInterval(checkActiveRide, 8000);
+    return () => {
+      stopped = true;
+      clearInterval(iv);
     };
   }, [driver?.id]);
 

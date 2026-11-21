@@ -1205,6 +1205,31 @@ app.get("/pending/:driverId", async (c) => {
 });
 
 // ============================================
+// GET /active/:driverId — Course active du chauffeur (filet de sécurité)
+// Si le push `reservation_started` n'est pas reçu (app fermée, FCM en échec),
+// le dashboard interroge cet endpoint et ouvre la navigation tout seul.
+// ============================================
+app.get("/active/:driverId", async (c) => {
+  try {
+    const driverId = c.req.param("driverId");
+    const driver = await kv.get<any>(`driver:${driverId}`);
+    const activeId = driver?.activeRideId || driver?.active_ride_id
+      || driver?.currentRideId || driver?.current_ride_id;
+    if (!activeId) return c.json({ success: true, ride: null });
+    const ride = await kv.get<any>(`ride:${activeId}`);
+    if (!ride) return c.json({ success: true, ride: null });
+    const ACTIVE_STATUSES = ["accepted", "enroute", "arrived", "in_progress", "started"];
+    if (!ACTIVE_STATUSES.includes(ride.status)) {
+      return c.json({ success: true, ride: null });
+    }
+    return c.json({ success: true, ride });
+  } catch (error) {
+    console.error("❌ Erreur course active chauffeur:", error);
+    return c.json({ success: false, error: "Erreur serveur" }, 500);
+  }
+});
+
+// ============================================
 // POST /check-drivers-availability - Vérifier la disponibilité des chauffeurs
 // ============================================
 app.post("/check-drivers-availability", async (c) => {
@@ -2115,8 +2140,24 @@ app.post("/sweep-fraud", async (c) => {
         const acceptedAt = new Date(ride.acceptedAt || ride.createdAt || 0).getTime();
         const startedAt = ride.startedAt ? new Date(ride.startedAt).getTime() : 0;
 
-        // ── 1. Accepté/arrivé mais jamais démarré depuis +15 min ──
-        if ((ride.status === "accepted" || ride.status === "arrived") && acceptedAt && now - acceptedAt > 15 * 60 * 1000) {
+        // ── 1. Accepté/arrivé mais jamais démarré ──
+        // Course immédiate : 15 min après acceptation.
+        // Course programmée : la grâce part de l'HEURE PRÉVUE (pas de la
+        // création à T-15) et vaut 60 min par défaut, le temps que le
+        // chauffeur arrive et que le passager embarque.
+        const isScheduled = ride.isScheduled === true || !!ride.scheduledRideId;
+        let startReference = acceptedAt;
+        if (isScheduled && ride.scheduledDate && ride.scheduledTime) {
+          const offsetMin = parseInt(Deno.env.get("BUSINESS_UTC_OFFSET_MINUTES") || "60");
+          const rawStart = Date.parse(
+            `${ride.scheduledDate}T${String(ride.scheduledTime).slice(0, 8)}Z`,
+          );
+          if (Number.isFinite(rawStart)) startReference = rawStart - offsetMin * 60000;
+        }
+        const startGraceMin = isScheduled
+          ? Math.max(15, Number(Deno.env.get("SCHEDULED_RIDE_START_GRACE_MINUTES") || "60"))
+          : 15;
+        if ((ride.status === "accepted" || ride.status === "arrived") && startReference && now - startReference > startGraceMin * 60 * 1000) {
           const driver = await kv.get<any>(`driver:${did}`);
           const snap = ride.acceptDriverLoc;
           const cur = driver?.currentLocation || driver?.current_location || driver?.location || null;

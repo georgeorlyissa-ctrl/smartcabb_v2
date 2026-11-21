@@ -40,6 +40,12 @@ async function kvSet(key: string, value: any): Promise<void> {
     if (error) throw new Error(error.message);
   } catch (e) { console.error("KV set error:", key, e); throw e; }
 }
+async function kvDel(key: string): Promise<void> {
+  try {
+    const { error } = await sbAdmin().from(KV_TABLE).delete().eq("key", key);
+    if (error) throw new Error(error.message);
+  } catch (e) { console.error("KV del error:", key, e); throw e; }
+}
 
 // ─── Accusés persistés par utilisateur (cloche uniforme sur tous les appareils) ─
 const USER_NOTIF_PREFIX = "user_notif:";
@@ -423,13 +429,21 @@ app.post("/:id/reopen", async (c) => {
       }, 409);
     }
 
-    // Anti-doublon : si une course a déjà été créée pour cette réservation
-    // (index écrit par /process-scheduled et /admin-process-one), on refuse.
-    if (await kvGet(`scheduled_ride:${id}`)) {
-      return c.json({
-        success: false,
-        error: "Une course a déjà été créée pour cette réservation — aucune action nécessaire.",
-      }, 409);
+    // Anti-doublon : on refuse seulement si la course liée est encore ACTIVE.
+    // Si elle a été annulée (auto_expired, annulation chauffeur/passager…),
+    // on autorise la réouverture et on supprime l'index pour permettre la
+    // création d'une nouvelle course.
+    const indexedRideId = await kvGet(`scheduled_ride:${id}`);
+    if (indexedRideId) {
+      const linkedRide = await kvGet(`ride:${indexedRideId}`);
+      const linkedStatus = linkedRide?.status;
+      if (linkedRide && linkedStatus !== "cancelled") {
+        return c.json({
+          success: false,
+          error: "Une course est déjà active pour cette réservation — aucune action nécessaire.",
+        }, 409);
+      }
+      await kvDel(`scheduled_ride:${id}`);
     }
 
     const nextStatus = ride.deposit_received ? "confirmed" : "scheduled";

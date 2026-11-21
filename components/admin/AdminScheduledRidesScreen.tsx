@@ -143,7 +143,7 @@ export function AdminScheduledRidesScreen({ onBack }: { onBack?: () => void }) {
   const handleReopen = async (ride: ScheduledRide) => {
     if (!confirm(
       'Rouvrir cette réservation ?\n\n' +
-      'À utiliser uniquement si AUCUNE course n\'a été créée (ex. ancien bouton « Traiter »).\n' +
+      'À utiliser si aucune course ACTIVE n\'existe (réservation clôturée par erreur, ou course annulée/expirée).\n' +
       'La course sera créée automatiquement dans les 5 minutes, ou immédiatement avec « Créer maintenant ».'
     )) return;
     try {
