@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-24 (37) — Matching limité aux chauffeurs proches (5 km) + nouvelle adresse et SEO local
 
-- **Commit** : `1920d50` + `c03c509` (branche `main`, poussée sur `origin`)
+- **Commit** : `1920d50` + `c03c509` + `59dd436` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat + fix + docs
 - **Objectif** : une course ne doit être proposée **qu'aux chauffeurs de la même catégorie réellement proches du point de départ** (une demande à Gombe ne doit jamais apparaître chez un chauffeur resté à Ngaba, Matete ou Ndjili) ; appliquer partout la nouvelle adresse officielle **« 63, Avenue Colonel MONDJIBA, C/NGALIEMA - KINSHASA, RDC »** et renforcer le référencement Google (NAP, données structurées, sitemap).
@@ -94,7 +94,7 @@ Assez de détail pour comprendre le code sans le relire.>
 ### Risques & rollback
 - **Risque** : avec une flotte réduite, un rayon de 5 km peut empêcher toute prise en charge si aucun chauffeur n'est connecté dans la zone. C'est le comportement demandé (pas de chauffeur lointain), mais il faut surveiller le taux de `no_driver_nearby`.
 - **Réglage sans redéploiement** : `smartcabb_global_config.rideMatchRadiusKm` (2 à 8). Repasser à une valeur plus large (ex. 8) si nécessaire.
-- **Rollback code** : `git revert c03c509 1920d50` puis redéployer l'Edge Function et Vercel.
+- **Rollback code** : `git revert 59dd436 c03c509 1920d50` puis redéployer l'Edge Function et Vercel.
 - **Rollback adresse/SEO** : revert du commit (aucune migration de données).
 
 ### Tests / vérifications
