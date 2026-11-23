@@ -141,6 +141,12 @@ function seoPrerender() {
       </section>
 
       <section>
+        <h2>Siège de SmartCabb à Kinshasa</h2>
+        <p>SmartCabb SARL — 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, République Démocratique du Congo.</p>
+        <p>Téléphone : <a href="tel:+243960624008">+243 960 624 008</a> — Email : <a href="mailto:contact@smartcabb.com">contact@smartcabb.com</a></p>
+      </section>
+
+      <section>
         <h2>Questions fréquentes sur SmartCabb</h2>
         <dl>
           <dt>Comment réserver un taxi SmartCabb à Kinshasa ?</dt>
@@ -159,9 +165,12 @@ function seoPrerender() {
 
       <footer>
         <p>SmartCabb — Service de taxi et VTC à Kinshasa, République Démocratique du Congo</p>
-        <p>Contact : <a href="mailto:contact@smartcabb.com">contact@smartcabb.com</a></p>
+        <p>Siège : 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, RDC</p>
+        <p>Contact : <a href="tel:+243960624008">+243 960 624 008</a> · <a href="mailto:contact@smartcabb.com">contact@smartcabb.com</a></p>
         <nav>
           <a href="https://www.smartcabb.com/">Accueil</a>
+          <a href="https://www.smartcabb.com/commander">Commander une course</a>
+          <a href="https://www.smartcabb.com/reserver">Réserver un chauffeur</a>
           <a href="https://www.smartcabb.com/services">Nos services</a>
           <a href="https://www.smartcabb.com/drivers">Devenir chauffeur</a>
           <a href="https://www.smartcabb.com/contact">Contact</a>
@@ -208,11 +217,27 @@ function generateSitemap() {
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
     <xhtml:link rel="alternate" hreflang="fr" href="https://www.smartcabb.com/"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://www.smartcabb.com/en/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.smartcabb.com/"/>
     <image:image>
       <image:loc>https://www.smartcabb.com/og-image.png</image:loc>
       <image:title>SmartCabb — Taxi et VTC à Kinshasa</image:title>
     </image:image>
+  </url>
+
+  <!-- Commander une course -->
+  <url>
+    <loc>https://www.smartcabb.com/commander</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Réserver un chauffeur à l'avance -->
+  <url>
+    <loc>https://www.smartcabb.com/reserver</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
 
   <!-- Services -->

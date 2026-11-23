@@ -67,9 +67,9 @@
 
     <!-- ── GÉOLOCALISATION DU SITE ────────────────────────── -->
     <meta name="geo.region" content="CD-KN" />
-    <meta name="geo.placename" content="Kinshasa, République Démocratique du Congo" />
-    <meta name="geo.position" content="-4.3276;15.3136" />
-    <meta name="ICBM" content="-4.3276, 15.3136" />
+    <meta name="geo.placename" content="Ngaliema, Kinshasa, République Démocratique du Congo" />
+    <meta name="geo.position" content="-4.3214;15.2750" />
+    <meta name="ICBM" content="-4.3214, 15.2750" />
 
     <!-- ═══════════════════════════════════════════════════════
          🌐 OPEN GRAPH (Facebook, WhatsApp, LinkedIn, Telegram)
@@ -107,9 +107,10 @@
       "@context": "https://schema.org",
       "@graph": [
         {
-          "@type": "LocalBusiness",
+          "@type": ["LocalBusiness", "TaxiService"],
           "@id": "https://www.smartcabb.com/#business",
           "name": "SmartCabb",
+          "legalName": "SmartCabb SARL",
           "alternateName": ["Smart Cabb", "SmartCab"],
           "description": "Service de taxi et VTC à Kinshasa, République Démocratique du Congo. Chauffeurs professionnels vérifiés, véhicules climatisés, paiement Mobile Money accepté.",
           "url": "https://www.smartcabb.com/",
@@ -120,20 +121,21 @@
             "height": 512
           },
           "image": "https://www.smartcabb.com/og-image.png",
-          "telephone": "+243000000000",
+          "telephone": "+243960624008",
           "email": "contact@smartcabb.com",
           "address": {
             "@type": "PostalAddress",
-            "streetAddress": "Kinshasa",
+            "streetAddress": "63, Avenue Colonel MONDJIBA",
             "addressLocality": "Kinshasa",
-            "addressCountry": "CD",
-            "addressRegion": "Kinshasa"
+            "addressRegion": "Ngaliema, Kinshasa",
+            "addressCountry": "CD"
           },
           "geo": {
             "@type": "GeoCoordinates",
-            "latitude": -4.3276,
-            "longitude": 15.3136
+            "latitude": -4.3214,
+            "longitude": 15.2750
           },
+          "hasMap": "https://www.openstreetmap.org/?mlat=-4.3214&mlon=15.2750#map=17/-4.3214/15.2750",
           "areaServed": {
             "@type": "City",
             "name": "Kinshasa",
@@ -148,13 +150,38 @@
             "opens": "00:00",
             "closes": "23:59"
           },
-          "priceRange": "$$",
+          "priceRange": "3000-60000 CDF",
           "currenciesAccepted": "CDF, USD",
-          "paymentAccepted": "Mobile Money, Cash, M-Pesa, Orange Money, Airtel Money",
+          "paymentAccepted": "Mobile Money, Cash, M-Pesa, Orange Money, Airtel Money, Afrimoney",
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "telephone": "+243960624008",
+            "contactType": "customer service",
+            "areaServed": "CD",
+            "availableLanguage": ["fr", "en"]
+          },
+          "potentialAction": {
+            "@type": "ReserveAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://www.smartcabb.com/reserver",
+              "inLanguage": "fr",
+              "actionPlatform": [
+                "http://schema.org/DesktopWebPlatform",
+                "http://schema.org/MobileWebPlatform",
+                "http://schema.org/AndroidPlatform"
+              ]
+            },
+            "result": {
+              "@type": "Reservation",
+              "name": "Réservation d'une course SmartCabb"
+            }
+          },
           "sameAs": [
             "https://www.facebook.com/profile.php?id=61596235596840",
             "https://www.instagram.com/smartcabb7",
-            "https://www.tiktok.com/@smartcabb7"
+            "https://www.tiktok.com/@smartcabb7",
+            "https://play.google.com/store/apps/details?id=com.smartcabb.app"
           ]
         },
         {
@@ -186,8 +213,13 @@
             "price": "0",
             "priceCurrency": "USD"
           },
-          "description": "Application de réservation de taxi et VTC à Kinshasa",
-          "url": "https://www.smartcabb.com/"
+          "description": "Application de réservation de taxi et VTC à Kinshasa : chauffeurs vérifiés, prix connu à l'avance, paiement Mobile Money et suivi de course en temps réel.",
+          "url": "https://play.google.com/store/apps/details?id=com.smartcabb.app",
+          "installUrl": "https://play.google.com/store/apps/details?id=com.smartcabb.app",
+          "downloadUrl": "https://play.google.com/store/apps/details?id=com.smartcabb.app",
+          "publisher": {
+            "@id": "https://www.smartcabb.com/#business"
+          }
         },
         {
           "@type": "FAQPage",
@@ -222,6 +254,30 @@
               "acceptedAnswer": {
                 "@type": "Answer",
                 "text": "SmartCabb propose 4 catégories : Standard (économique, 4 places), Confort (premium, 4 places, Internet), Familiale (6-7 places) et Business (VIP, avec rafraîchissements)."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Où se trouve SmartCabb à Kinshasa ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Le siège de SmartCabb est situé au 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, République Démocratique du Congo. Téléphone : +243 960 624 008."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Peut-on réserver une course SmartCabb à l'avance ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Oui. Depuis l'application ou le site smartcabb.com, vous pouvez programmer une course à l'avance (réservation) jusqu'à 15 minutes avant l'heure souhaitée, avec un acompte de 50 % réglé par Mobile Money."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "SmartCabb dessert-il toutes les communes de Kinshasa ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "SmartCabb couvre l'ensemble de Kinshasa : Gombe, Ngaliema, Kintambo, Lingwala, Barumbu, Kalamu, Lemba, Ngaba, Matete, Ndjili, Masina, Limete, Mont-Ngafula, Bumbu, Makala, Ngiri-Ngiri, Bandalungwa, Kasa-Vubu, Kisenso et Nsele."
               }
             }
           ]

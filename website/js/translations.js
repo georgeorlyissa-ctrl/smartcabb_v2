@@ -156,7 +156,7 @@ const translations = {
         'footer.services': 'Services',
         'footer.driver': 'Devenir Chauffeur',
         'footer.rights': 'Tous droits réservés',
-        'footer.address': '5D, Avenue du Tchad, C/ Gombe, Kinshasa, RDC',
+        'footer.address': '63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, RDC',
 
         // === BOUTONS COMMUNS ===
         'button.back_home': 'Retour à l\'accueil',
@@ -317,7 +317,7 @@ const translations = {
         'footer.services': 'Services',
         'footer.driver': 'Become a Driver',
         'footer.rights': 'All rights reserved',
-        'footer.address': '5D, Avenue du Tchad, C/ Gombe, Kinshasa, DRC',
+        'footer.address': '63, Avenue Colonel MONDJIBA, Ngaliema, Kinshasa, DRC',
 
         // === COMMON BUTTONS ===
         'button.back_home': 'Back to home',

@@ -95,7 +95,7 @@ export function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg mb-1">Adresse</h3>
-                    <p className="text-gray-600">Avenue de la Libération<br />Kinshasa, RD Congo</p>
+                    <p className="text-gray-600">63, Avenue Colonel MONDJIBA<br />C/ Ngaliema<br />Kinshasa, RD Congo</p>
                   </div>
                 </div>
 

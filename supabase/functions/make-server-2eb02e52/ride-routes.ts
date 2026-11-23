@@ -420,7 +420,27 @@ const SEARCH_STALE_MS = 45_000;
 
 async function findAndNotifyNearbyDrivers(ride: any) {
   try {
-    console.log(`🔍 Recherche de chauffeurs pour la course ${ride.id}`);
+    // Coordonnées de départ : sans elles, impossible de garantir la proximité.
+    const pickupLat = Number(
+      ride.pickup?.coordinates?.lat ?? ride.pickup?.lat ?? ride.pickupLat,
+    );
+    const pickupLng = Number(
+      ride.pickup?.coordinates?.lng ?? ride.pickup?.lng ?? ride.pickupLng,
+    );
+    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+
+    if (!hasPickup) {
+      console.warn(`⚠️ [MATCHING] Course ${ride.id} sans coordonnées de départ → aucun chauffeur notifié`);
+      ride.status = 'no_driver_found';
+      ride.noDriverFoundAt = new Date().toISOString();
+      ride.noDriverFoundReason = 'missing_pickup_coordinates';
+      await kv.set(`ride:${ride.id}`, ride).catch(() => undefined);
+      await kv.delete(`matching:${ride.id}`).catch(() => undefined);
+      return { success: false, reason: 'missing_pickup_coordinates' };
+    }
+
+    const radiusKm = await resolveMatchRadiusKm();
+    console.log(`🔍 Recherche de chauffeurs pour la course ${ride.id} — rayon ${radiusKm} km`);
 
     // Lecture ALLÉGÉE (sans photos base64 : ~5 Mo → quelques Ko) et fraîche.
     const allDrivers = await loadDriversLite();
@@ -449,6 +469,7 @@ async function findAndNotifyNearbyDrivers(ride: any) {
                          driver.vehicleType ||
                          driver.vehicle?.category ||
                          driver.vehicle?.type;
+        // 🎯 MÊME CATÉGORIE UNIQUEMENT (aucun mélange Standard/Confort/Plus).
         const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
 
         // Un verrou obsolète ne doit pas bloquer la disponibilité.
@@ -465,55 +486,128 @@ async function findAndNotifyNearbyDrivers(ride: any) {
       await Promise.allSettled(staleLockDriverIds.map((id) => releaseStaleDriverLock(id)));
     }
 
-    if (eligibleDrivers.length === 0) {
-      console.warn(`⚠️ Aucun chauffeur éligible pour ${ride.vehicleCategory}`);
+    // ─── FILTRE GÉOGRAPHIQUE STRICT ──────────────────────────────────────
+    // Un chauffeur hors rayon, sans GPS ou avec un GPS périmé n'est JAMAIS
+    // notifié (même s'il est en ligne et de la bonne catégorie).
+    const driversWithScore: any[] = [];
+    let outsideRadius = 0;
+    let noPosition = 0;
+    let stalePosition = 0;
+
+    for (const driver of eligibleDrivers) {
+      const { pos, ageMs } = readDriverPositionAge(driver);
+      if (!pos) { noPosition++; continue; }
+      if (ageMs !== null && ageMs > MATCH_POSITION_MAX_AGE_MS) { stalePosition++; continue; }
+
+      const distance = calculateDistance(pickupLat, pickupLng, pos.lat, pos.lng);
+      if (!Number.isFinite(distance)) { noPosition++; continue; }
+      if (distance > radiusKm) { outsideRadius++; continue; }
+
+      const score = calculateDriverScore(driver, distance);
+      console.log(`📊 Driver ${driver.full_name || driver.name}: distance=${distance.toFixed(1)}km (≤ ${radiusKm} km), note=${driver.rating || 0}, score=${score}`);
+      driversWithScore.push({ ...driver, distanceToPickup: distance, matchingScore: score });
+    }
+
+    console.log(
+      `📍 ${driversWithScore.length} chauffeur(s) dans le rayon de ${radiusKm} km ` +
+      `(hors rayon: ${outsideRadius}, sans GPS: ${noPosition}, GPS périmé: ${stalePosition})`,
+    );
+
+    if (driversWithScore.length === 0) {
+      console.warn(`⚠️ Aucun chauffeur ${ride.vehicleCategory} à proximité (${radiusKm} km) pour ${ride.id}`);
       allDrivers.forEach((d: any) => {
         console.log(`  Driver ${d.full_name || d.name}: isOnline=${isDriverOnline(d)}, isAvailable=${isDriverAvailable(d)}, cat=${d.vehicleCategory||d.vehicle_category||d.vehicle?.category}, fcm=${!!d.fcmToken}`);
       });
 
       // ⛔ Personne n'a été notifié : la course ne peut pas être servie. Sans
-      // cette clôture immédiate, elle restait `searching` POUR TOUJOURS (aucun
-      // timeout n'était programmé) et pouvait être acceptée plus tard par un
-      // chauffeur qui venait de terminer sa course — alors que le passager
-      // avait déjà quitté l'écran (course orpheline).
+      // cette clôture immédiate, elle restait `searching` POUR TOUJOURS et
+      // pouvait être acceptée plus tard par un chauffeur lointain.
       ride.status = 'no_driver_found';
       ride.noDriverFoundAt = new Date().toISOString();
+      ride.noDriverFoundReason = 'no_driver_nearby';
+      ride.matchingRadiusKm = radiusKm;
+      ride.driversOutsideRadius = outsideRadius;
       await kv.set(`ride:${ride.id}`, ride).catch(() => undefined);
       await kv.delete(`matching:${ride.id}`).catch(() => undefined);
 
-      return { success: false, reason: 'no_drivers_available' };
+      return {
+        success: false,
+        reason: 'no_driver_nearby',
+        radiusKm,
+        driversOutsideRadius: outsideRadius,
+        driversOnline: allDrivers.length,
+      };
     }
 
-    const pickupLat = ride.pickup?.coordinates?.lat || -4.3276;
-    const pickupLng = ride.pickup?.coordinates?.lng || 15.3136;
-
-    const driversWithScore = eligibleDrivers.map((driver: any) => {
-      const driverLat = driver.currentLocation?.lat || driver.current_location?.lat || driver.location?.lat || -4.3276;
-      const driverLng = driver.currentLocation?.lng || driver.current_location?.lng || driver.location?.lng || 15.3136;
-      const distance = calculateDistance(pickupLat, pickupLng, driverLat, driverLng);
-      const score = calculateDriverScore(driver, distance);
-      console.log(`📊 Driver ${driver.full_name || driver.name}: distance=${distance.toFixed(1)}km, note=${driver.rating || 0}, courses=${driver.totalRides || 0}, propreté=${driver.cleanliness || 3}, score=${score}`);
-      return { ...driver, distanceToPickup: distance, matchingScore: score };
-    });
-
     driversWithScore.sort((a, b) => b.matchingScore - a.matchingScore);
-    const nearbyDrivers = driversWithScore.slice(0, 10);
+    const firstWave = driversWithScore.slice(0, MATCH_FIRST_WAVE);
+    const secondWave = driversWithScore.slice(MATCH_FIRST_WAVE, MATCH_FIRST_WAVE + MATCH_SECOND_WAVE);
+    // `notified` est mis à jour par la 2e vague : le timeout nettoie TOUTES
+    // les notifications réellement envoyées.
+    const notified = new Map<string, any>();
+    for (const d of firstWave) notified.set(String(d.id), d);
 
-    console.log(`📍 ${nearbyDrivers.length} chauffeurs notifiés en parallèle`);
+    const matchingStartedAt = new Date().toISOString();
+    const matchingDeadline = Date.now() + MATCHING_TIMEOUT_MS;
+
+    ride.matchingRadiusKm = radiusKm;
+    ride.matchingStartedAt = matchingStartedAt;
+    await kv.set(`ride:${ride.id}`, ride).catch(() => undefined);
+
+    console.log(`📍 ${firstWave.length} chauffeur(s) notifié(s) en parallèle (rayon ${radiusKm} km)`);
 
     await kv.set(`matching:${ride.id}`, {
       rideId: ride.id,
-      queue: nearbyDrivers.map(d => d.id),
+      queue: Array.from(notified.keys()),
       currentIndex: 0,
-      startedAt: new Date().toISOString(),
+      radiusKm,
+      startedAt: matchingStartedAt,
       status: 'searching'
     });
 
-    // Notifier TOUS les chauffeurs en parallèle
-    const notifyPromises = nearbyDrivers.map(driver => notifyDriver(ride, driver));
-    await Promise.allSettled(notifyPromises);
+    // Notifier la 1re vague en parallèle
+    await Promise.allSettled(firstWave.map(driver => notifyDriver(ride, driver, matchingDeadline)));
 
-    // Timeout global : après 30s, si personne n'a accepté, annuler
+    // ─── 2e vague : plus de chauffeurs DANS LE MÊME RAYON ────────────────
+    // On élargit le nombre de destinataires, jamais la distance : un chauffeur
+    // de Ngaba/Matete/Ndjili reste exclu d'une course à Gombe.
+    if (secondWave.length > 0) {
+      setTimeout(async () => {
+        try {
+          const currentRide = await kv.get<any>(`ride:${ride.id}`);
+          if (!currentRide || currentRide.status !== 'searching' || currentRide.driverId) return;
+
+          const extra: any[] = [];
+          for (const candidate of secondWave) {
+            if (notified.has(String(candidate.id))) continue;
+            const fresh = await kv.get<any>(`driver:${candidate.id}`);
+            if (!fresh || !isDriverOnline(fresh) || driverHasActiveRide(fresh)) continue;
+            const { pos, ageMs } = readDriverPositionAge(fresh);
+            if (!pos || (ageMs !== null && ageMs > MATCH_POSITION_MAX_AGE_MS)) continue;
+            if (calculateDistance(pickupLat, pickupLng, pos.lat, pos.lng) > radiusKm) continue;
+            extra.push({ ...fresh, distanceToPickup: candidate.distanceToPickup });
+          }
+          if (extra.length === 0) return;
+
+          for (const d of extra) notified.set(String(d.id), d);
+          await kv.set(`matching:${ride.id}`, {
+            rideId: ride.id,
+            queue: Array.from(notified.keys()),
+            currentIndex: 0,
+            radiusKm,
+            startedAt: matchingStartedAt,
+            secondWaveAt: new Date().toISOString(),
+            status: 'searching'
+          });
+          await Promise.allSettled(extra.map(driver => notifyDriver(ride, driver, matchingDeadline)));
+          console.log(`📍 2e vague : ${extra.length} chauffeur(s) supplémentaire(s) dans ${radiusKm} km`);
+        } catch (e) {
+          console.error('❌ Erreur 2e vague matching:', e);
+        }
+      }, MATCHING_SECOND_WAVE_DELAY_MS);
+    }
+
+    // Timeout global : après 35 s, si personne n'a accepté, annuler
     setTimeout(async () => {
       try {
         const currentRide = await kv.get<any>(`ride:${ride.id}`);
@@ -521,11 +615,13 @@ async function findAndNotifyNearbyDrivers(ride: any) {
         // a peut-être validé la course pendant cette fenêtre.
         if (!currentRide || currentRide.status !== 'searching' || currentRide.driverId) return;
 
+        const allNotified = Array.from(notified.values());
+
         // 🔒 Anti-course avec l'acceptation : si un chauffeur notifié a déjà
         // verrouillé cette course, c'est qu'il l'a acceptée. On restaure la
         // course au lieu de la marquer « sans chauffeur » (sinon il restait
         // bloqué « en course » sur une course fantôme).
-        for (const candidate of nearbyDrivers) {
+        for (const candidate of allNotified) {
           const freshDriver = await kv.get<any>(`driver:${candidate.id}`);
           if (readDriverActiveRideId(freshDriver) !== ride.id) continue;
 
@@ -546,17 +642,18 @@ async function findAndNotifyNearbyDrivers(ride: any) {
         console.warn(`⏰ Timeout de ${MATCHING_TIMEOUT_MS/1000}s pour la course ${ride.id}`);
         currentRide.status = 'no_driver_found';
         currentRide.noDriverFoundAt = new Date().toISOString();
+        currentRide.noDriverFoundReason = 'timeout_no_acceptance';
         await kv.set(`ride:${ride.id}`, currentRide);
 
         // Nettoyer toutes les notifications
-        for (const d of nearbyDrivers) {
+        for (const d of allNotified) {
           await kv.delete(`driver_notification:${d.id}`);
         }
         await kv.delete(`matching:${ride.id}`);
 
         // ✅ Sécurité : libérer tout chauffeur dont le verrou pointe encore
         // cette course (évite un chauffeur bloqué « en course » à vie).
-        await Promise.allSettled(nearbyDrivers.map((d) => releaseStaleDriverLock(d.id)));
+        await Promise.allSettled(allNotified.map((d) => releaseStaleDriverLock(d.id)));
       } catch (e) {
         console.error('❌ Erreur timeout matching:', e);
       }
@@ -564,9 +661,11 @@ async function findAndNotifyNearbyDrivers(ride: any) {
 
     return {
       success: true,
-      driversNotified: nearbyDrivers.length,
-      totalEligible: nearbyDrivers.length,
-      nearbyDrivers: nearbyDrivers.map(d => ({
+      driversNotified: notified.size,
+      totalEligible: driversWithScore.length,
+      radiusKm,
+      driversOutsideRadius: outsideRadius,
+      nearbyDrivers: firstWave.map(d => ({
         id: d.id,
         name: d.full_name || d.name,
         distance: d.distanceToPickup
@@ -579,7 +678,7 @@ async function findAndNotifyNearbyDrivers(ride: any) {
   }
 }
 
-async function notifyDriver(ride: any, driver: any) {
+async function notifyDriver(ride: any, driver: any, expiresAtMs = Date.now() + MATCHING_TIMEOUT_MS) {
   const pickupName = ride.pickup?.name || 
                    ride.pickup?.address || 
                    ride.pickupAddress || 
@@ -616,8 +715,9 @@ async function notifyDriver(ride: any, driver: any) {
     estimatedPrice: estimatedPrice.toString(),
     vehicleCategory: ride.vehicleCategory,
     distanceToPickup: (driver.distanceToPickup || 0).toFixed(1),
+    matchingRadiusKm: (ride.matchingRadiusKm || 0).toString(),
     notifiedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + MATCHING_TIMEOUT_MS).toISOString()
+    expiresAt: new Date(expiresAtMs).toISOString()
   };
 
   await kv.set(`driver_notification:${driver.id}`, notificationPayload);
@@ -652,6 +752,81 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 📍 MATCHING DE PROXIMITÉ — une course n'est proposée qu'aux chauffeurs
+//    réellement proches du point de départ (et de la même catégorie).
+//    Ex. : une demande à Gombe ne doit JAMAIS apparaître chez un chauffeur
+//    resté à Ngaba, Matete ou Ndjili.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Rayon par défaut autour du point de départ (km). */
+const DEFAULT_MATCH_RADIUS_KM = 5;
+const MIN_MATCH_RADIUS_KM = 2;
+/** Plafond absolu : au-delà, on considère le chauffeur comme hors zone. */
+const MAX_MATCH_RADIUS_KM = 8;
+/** Position GPS plus vieille que 10 min → chauffeur non localisable, donc non notifié. */
+const MATCH_POSITION_MAX_AGE_MS = 10 * 60 * 1000;
+/** Nombre de chauffeurs notifiés immédiatement (les mieux classés). */
+const MATCH_FIRST_WAVE = 8;
+/** Chauffeurs de la 2e vague, notifiés seulement si personne n'a accepté. */
+const MATCH_SECOND_WAVE = 8;
+const MATCH_SECOND_WAVE_DELAY_MS = 18_000;
+
+/**
+ * Rayon de matching courant.
+ * Configurable sans redéploiement : `smartcabb_global_config.rideMatchRadiusKm`
+ * (Dashboard admin → config globale), borné entre 2 et 8 km.
+ */
+async function resolveMatchRadiusKm(): Promise<number> {
+  let configured: any = null;
+  try {
+    const cfg = await kvGet('smartcabb_global_config');
+    configured = cfg?.rideMatchRadiusKm ?? cfg?.matchRadiusKm;
+  } catch {
+    // config illisible : on garde la valeur par défaut
+  }
+  const value = Number(configured);
+  const radius = Number.isFinite(value) && value > 0 ? value : DEFAULT_MATCH_RADIUS_KM;
+  return Math.min(MAX_MATCH_RADIUS_KM, Math.max(MIN_MATCH_RADIUS_KM, radius));
+}
+
+/**
+ * Position du chauffeur + fraîcheur du relevé GPS.
+ * `ageMs = null` : ancien format sans horodatage (position acceptée telle quelle).
+ */
+function readDriverPositionAge(d: any): {
+  pos: { lat: number; lng: number } | null;
+  ageMs: number | null;
+} {
+  const pos = readDriverPosition(d);
+  if (!pos) return { pos: null, ageMs: null };
+
+  const containers = [
+    d?.currentLocation, d?.current_location, d?.location, d?.lastLocation,
+    d?.last_location, d?.position, d?.geo,
+  ];
+  let ts: number | null = null;
+  for (const c of containers) {
+    const raw = c?.updatedAt || c?.updated_at || c?.timestamp || c?.at;
+    if (!raw) continue;
+    const parsed = Date.parse(String(raw));
+    if (Number.isFinite(parsed)) { ts = parsed; break; }
+  }
+  if (ts === null) {
+    const raw = d?.locationUpdatedAt || d?.location_updated_at;
+    const parsed = raw ? Date.parse(String(raw)) : NaN;
+    if (Number.isFinite(parsed)) ts = parsed;
+  }
+  return { pos, ageMs: ts === null ? null : Math.max(0, Date.now() - ts) };
+}
+
+/** Un chauffeur ne reçoit une course que si son GPS est présent et récent. */
+function isDriverPositionFresh(d: any): boolean {
+  const { pos, ageMs } = readDriverPositionAge(d);
+  if (!pos) return false;
+  return ageMs === null || ageMs <= MATCH_POSITION_MAX_AGE_MS;
 }
 
 // ============================================
@@ -940,52 +1115,86 @@ app.get("/debug-drivers", async (c) => {
     const allDrivers = await loadDriversLite();
     // Diagnostic fidèle : un verrou obsolète ne doit pas apparaître comme « occupé ».
     await repairStaleLocksInList(allDrivers);
-    
-    const driversInfo = allDrivers.map((d: any) => ({
-      id: d.id,
-      name: d.full_name || d.name || '?',
-      // Champs status
-      status: d.status,           // approval status (pending/approved/rejected)
-      isOnline: d.isOnline,       // ← le bon champ
-      is_online: d.is_online,     // ← alias
-      status_online: d.status_online, // ← ancien champ potentiel
-      is_available: d.is_available,
-      available: d.available,
-      activeRideId: d.activeRideId || d.currentRideId || null,
-      busy: driverHasActiveRide(d),
-      // Flags calcules (memes regles que le matching)
-      onlineResolved: isDriverOnline(d),
-      availableResolved: isDriverAvailable(d),
-      // FCM Token
-      hasFcmToken: !!d.fcmToken,
-      fcmTokenPreview: d.fcmToken ? d.fcmToken.substring(0, 20) + '...' : null,
-      // 🔎 Origine du token : 'native' = plugin Capacitor (push réel), sinon web
-      fcmPlatform: d.fcmPlatform || 'web',
-      fcmAppVersion: d.fcmAppVersion || null,
-      fcmTokenUpdatedAt: d.fcmTokenUpdatedAt || null,
-      // Catégorie véhicule
-      vehicleCategory: d.vehicleCategory,
-      vehicle_category: d.vehicle_category,
-      vehicle_type: d.vehicle_type,
-      vehicleType: d.vehicleType,
-      vehicleFromObj: d.vehicle?.category || d.vehicle?.type,
-      // Solde
-      balance: d.balance,
-      creditBalance: d.creditBalance,
-      // Éligibilité (mêmes règles que findAndNotifyNearbyDrivers)
-      eligible: isDriverOnline(d) && isDriverAvailable(d) && !driverHasActiveRide(d) && !!d.fcmToken
-    }));
+
+    // 📍 Diagnostic du rayon : `?lat=…&lng=…` (ou `rideId=…` pour reprendre le
+    // point de départ d'une course). Sans coordonnées, le rayon n'est pas
+    // calculé et reste `null` (les autres infos restent disponibles).
+    const rideIdParam = c.req.query('rideId');
+    let refLat = Number(c.req.query('lat'));
+    let refLng = Number(c.req.query('lng'));
+    if (rideIdParam && isValidUUID(rideIdParam) && !(Number.isFinite(refLat) && Number.isFinite(refLng))) {
+      const refRide = await kv.get<any>(`ride:${rideIdParam}`);
+      refLat = Number(refRide?.pickup?.coordinates?.lat ?? refRide?.pickup?.lat ?? refRide?.pickupLat);
+      refLng = Number(refRide?.pickup?.coordinates?.lng ?? refRide?.pickup?.lng ?? refRide?.pickupLng);
+    }
+    const hasRef = Number.isFinite(refLat) && Number.isFinite(refLng);
+    const radiusKm = hasRef ? await resolveMatchRadiusKm() : null;
+
+    const driversInfo = allDrivers.map((d: any) => {
+      const { pos, ageMs } = readDriverPositionAge(d);
+      const distanceKm = hasRef && pos
+        ? Number(calculateDistance(refLat, refLng, pos.lat, pos.lng).toFixed(2))
+        : null;
+      return {
+        id: d.id,
+        name: d.full_name || d.name || '?',
+        // Champs status
+        status: d.status,           // approval status (pending/approved/rejected)
+        isOnline: d.isOnline,       // ← le bon champ
+        is_online: d.is_online,     // ← alias
+        status_online: d.status_online, // ← ancien champ potentiel
+        is_available: d.is_available,
+        available: d.available,
+        activeRideId: d.activeRideId || d.currentRideId || null,
+        busy: driverHasActiveRide(d),
+        // Flags calcules (memes regles que le matching)
+        onlineResolved: isDriverOnline(d),
+        availableResolved: isDriverAvailable(d),
+        // 📍 Position & proximité (mêmes règles que le matching : GPS absent
+        // ou plus vieux que 10 min → chauffeur non notifié)
+        hasPosition: !!pos,
+        positionAgeSeconds: ageMs === null ? null : Math.round(ageMs / 1000),
+        positionFresh: isDriverPositionFresh(d),
+        distanceKm,
+        inRadius: distanceKm === null || radiusKm === null ? null : distanceKm <= radiusKm,
+        // FCM Token
+        hasFcmToken: !!d.fcmToken,
+        fcmTokenPreview: d.fcmToken ? d.fcmToken.substring(0, 20) + '...' : null,
+        // 🔎 Origine du token : 'native' = plugin Capacitor (push réel), sinon web
+        fcmPlatform: d.fcmPlatform || 'web',
+        fcmAppVersion: d.fcmAppVersion || null,
+        fcmTokenUpdatedAt: d.fcmTokenUpdatedAt || null,
+        // Catégorie véhicule
+        vehicleCategory: d.vehicleCategory,
+        vehicle_category: d.vehicle_category,
+        vehicle_type: d.vehicle_type,
+        vehicleType: d.vehicleType,
+        vehicleFromObj: d.vehicle?.category || d.vehicle?.type,
+        // Solde
+        balance: d.balance,
+        creditBalance: d.creditBalance,
+        // Éligibilité (mêmes règles que findAndNotifyNearbyDrivers)
+        eligible: isDriverOnline(d) && isDriverAvailable(d) && !driverHasActiveRide(d) && !!d.fcmToken,
+        matchable: isDriverOnline(d) && isDriverAvailable(d) && !driverHasActiveRide(d) &&
+          !!d.fcmToken && isDriverPositionFresh(d) &&
+          (distanceKm === null || radiusKm === null || distanceKm <= radiusKm),
+      };
+    });
 
     const onlineCount = driversInfo.filter((d: any) => d.onlineResolved).length;
     const eligibleCount = driversInfo.filter((d: any) => d.eligible).length;
+    const matchableCount = driversInfo.filter((d: any) => d.matchable).length;
 
-    console.log(`🔍 [DEBUG] ${allDrivers.length} chauffeurs, ${onlineCount} en ligne, ${eligibleCount} éligibles`);
+    console.log(`🔍 [DEBUG] ${allDrivers.length} chauffeurs, ${onlineCount} en ligne, ${eligibleCount} éligibles` +
+      (hasRef ? `, ${matchableCount} dans ${radiusKm} km` : ''));
 
     return c.json({
       success: true,
       totalDrivers: allDrivers.length,
       onlineCount,
       eligibleCount,
+      matchableCount,
+      reference: hasRef ? { lat: refLat, lng: refLng, radiusKm } : null,
       drivers: driversInfo
     });
   } catch (error) {
@@ -1207,6 +1416,28 @@ app.get("/pending/:driverId", async (c) => {
       // Vérifier que la course est toujours en recherche (pas encore acceptée par un autre)
       const ride = await kv.get<any>(`ride:${notification.rideId}`);
       if (ride && ride.status === 'searching') {
+        // 📍 Contrôle de proximité au moment de l'affichage : si le chauffeur
+        // s'est éloigné (ou si sa position n'est plus fiable), la course ne
+        // doit pas lui être proposée. Un chauffeur de Ngaba/Matete/Ndjili ne
+        // voit donc jamais une demande faite à Gombe.
+        const pickupLat = Number(ride.pickup?.coordinates?.lat ?? ride.pickup?.lat ?? ride.pickupLat);
+        const pickupLng = Number(ride.pickup?.coordinates?.lng ?? ride.pickup?.lng ?? ride.pickupLng);
+        if (Number.isFinite(pickupLat) && Number.isFinite(pickupLng)) {
+          const radiusKm = Number(ride.matchingRadiusKm || notification.matchingRadiusKm) || await resolveMatchRadiusKm();
+          const driver = await kv.get<any>(`driver:${driverId}`);
+          const { pos, ageMs } = readDriverPositionAge(driver);
+          const tooOld = ageMs !== null && ageMs > MATCH_POSITION_MAX_AGE_MS;
+          const distanceKm = pos ? calculateDistance(pickupLat, pickupLng, pos.lat, pos.lng) : Infinity;
+          if (!pos || tooOld || distanceKm > radiusKm) {
+            await kv.delete(`driver_notification:${driverId}`);
+            console.log(
+              `🚫 Notification retirée pour ${driverId} : ` +
+              (pos ? `${distanceKm.toFixed(1)} km > ${radiusKm} km` : 'position GPS absente') +
+              (tooOld ? ' (GPS périmé)' : ''),
+            );
+            return c.json({ success: true, ride: null });
+          }
+        }
         console.log(`📋 Notification de course trouvée pour ${driverId}: ${notification.rideId}`);
         return c.json({ success: true, ride: { ...ride, ...notification } });
       } else {
@@ -1283,12 +1514,31 @@ app.get("/passenger/:passengerId/active", async (c) => {
 app.post("/check-drivers-availability", async (c) => {
   try {
     const body = await c.req.json().catch(() => ({}));
-    const { vehicleCategory } = body || {};
-    const pickupLat = Number(body?.pickupLat);
-    const pickupLng = Number(body?.pickupLng);
+    // Compatibilité : l'écran de recherche envoie `vehicleCategory`, d'anciens
+    // écrans envoient `vehicleType`/`category`.
+    const vehicleCategory = body?.vehicleCategory || body?.vehicleType || body?.category;
+    const pickupLat = Number(
+      body?.pickupLat ?? body?.pickup?.lat ?? body?.pickup?.coordinates?.lat,
+    );
+    const pickupLng = Number(
+      body?.pickupLng ?? body?.pickup?.lng ?? body?.pickup?.coordinates?.lng,
+    );
     const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
-    
-    console.log(`🔍 Vérification disponibilité chauffeurs pour catégorie: ${vehicleCategory}`);
+    // 📍 Même rayon que le matching : le passager ne voit « disponibles » que
+    // les chauffeurs qui recevront réellement sa course.
+    const radiusKm = await resolveMatchRadiusKm();
+
+    /** Le chauffeur est-il dans le rayon ET avec une position fiable ? */
+    const isNearPickup = (d: any): boolean => {
+      if (!hasPickup) return true;
+      const { pos, ageMs } = readDriverPositionAge(d);
+      if (!pos) return false;
+      if (ageMs !== null && ageMs > MATCH_POSITION_MAX_AGE_MS) return false;
+      return calculateDistance(pickupLat, pickupLng, pos.lat, pos.lng) <= radiusKm;
+    };
+
+    console.log(`🔍 Vérification disponibilité chauffeurs pour catégorie: ${vehicleCategory}` +
+      (hasPickup ? ` — rayon ${radiusKm} km` : ''));
     
     // Lecture ALLÉGÉE (sans photos base64) + instantané de 3 s partagé entre
     // les passagers qui interrogent en même temps. Si la base est
@@ -1307,7 +1557,7 @@ app.post("/check-drivers-availability", async (c) => {
     
     console.log(`👥 Total chauffeurs dans base: ${allDrivers.length}`);
     
-    // Filtrer les chauffeurs disponibles pour cette catégorie
+    // Filtrer les chauffeurs disponibles pour cette catégorie ET ce secteur
     const eligibleDrivers = allDrivers.filter((d: any) => {
       // ✅ FIX: isOnline correct + variable 'd' (pas 'driver')
       const isOnline = isDriverOnline(d);
@@ -1323,14 +1573,18 @@ app.post("/check-drivers-availability", async (c) => {
                       d.vehicle?.type;
       
       const categoryMatch = categoriesCompatible(driverCategory, vehicleCategory);
+      const nearby = isNearPickup(d);
       
       // Log détaillé pour debugging
       if (isOnline && isAvailable && hasPositiveBalance && !categoryMatch) {
         console.log(`⏭️ Driver ${d.full_name || d.name} online mais catégorie différente: ` +
           `${driverCategory} vs ${vehicleCategory}`);
       }
+      if (isOnline && isAvailable && hasPositiveBalance && categoryMatch && !nearby) {
+        console.log(`⏭️ Driver ${d.full_name || d.name} hors rayon (> ${radiusKm} km)`);
+      }
       
-      return isOnline && isAvailable && hasPositiveBalance && !driverHasActiveRide(d) && categoryMatch;
+      return isOnline && isAvailable && hasPositiveBalance && !driverHasActiveRide(d) && categoryMatch && nearby;
     });
     
     // Compter tous les chauffeurs en ligne (toutes catégories)
@@ -1363,7 +1617,8 @@ app.post("/check-drivers-availability", async (c) => {
                       d.vehicleType ||
                       d.vehicle?.category ||
                       d.vehicle?.type;
-            return isOnline && isAvailable && hasPositiveBalance && categoriesCompatible(driverCategory, cat);
+            return isOnline && isAvailable && hasPositiveBalance &&
+              categoriesCompatible(driverCategory, cat) && isNearPickup(d);
           }).length;
           return { category: cat, count };
         })
@@ -1388,6 +1643,11 @@ app.post("/check-drivers-availability", async (c) => {
       available,
       driversCount,
       totalOnline,
+      radiusKm,
+      nearbyOnly: hasPickup,
+      // Tous les chauffeurs sont en ligne, mais aucun dans le rayon : message
+      // spécifique côté passager (« aucun chauffeur à proximité »).
+      noDriversNearby: hasPickup && !available && totalOnline > 0,
       categoryName: getCategoryName(vehicleCategory),
       alternatives,
       noDriversOnlineAtAll: totalOnline === 0,
@@ -1417,7 +1677,27 @@ app.get("/check-availability/:id", async (c) => {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
     
-    console.log(`🔍 Vérification disponibilité pour course ${rideId}, catégorie: ${ride.vehicleCategory}`);
+    // 📍 Même règle de proximité que le matching réel : un chauffeur lointain
+    // ne doit jamais être compté comme « disponible » pour cette course.
+    const pickupLat = Number(
+      ride.pickup?.coordinates?.lat ?? ride.pickup?.lat ?? ride.pickupLat,
+    );
+    const pickupLng = Number(
+      ride.pickup?.coordinates?.lng ?? ride.pickup?.lng ?? ride.pickupLng,
+    );
+    const hasPickup = Number.isFinite(pickupLat) && Number.isFinite(pickupLng);
+    const radiusKm = Number(ride.matchingRadiusKm) || await resolveMatchRadiusKm();
+
+    const isNearPickup = (d: any): boolean => {
+      if (!hasPickup) return true;
+      const { pos, ageMs } = readDriverPositionAge(d);
+      if (!pos) return false;
+      if (ageMs !== null && ageMs > MATCH_POSITION_MAX_AGE_MS) return false;
+      return calculateDistance(pickupLat, pickupLng, pos.lat, pos.lng) <= radiusKm;
+    };
+
+    console.log(`🔍 Vérification disponibilité pour course ${rideId}, catégorie: ${ride.vehicleCategory}` +
+      (hasPickup ? ` — rayon ${radiusKm} km` : ' (sans coordonnées de départ)'));
     
     // Récupérer tous les chauffeurs disponibles pour cette catégorie
     const allDrivers = await loadDriversLite({ maxAgeMs: 3000 });
@@ -1436,7 +1716,8 @@ app.get("/check-availability/:id", async (c) => {
                       d.vehicle?.type;
       const categoryMatch = categoriesCompatible(driverCategory, ride.vehicleCategory);
       
-      return isOnline && isAvailable && hasPositiveBalance && !driverHasActiveRide(d) && categoryMatch;
+      return isOnline && isAvailable && hasPositiveBalance && !driverHasActiveRide(d) &&
+        categoryMatch && isNearPickup(d);
     });
     
     const available = eligibleDrivers.length > 0;
@@ -1460,7 +1741,8 @@ app.get("/check-availability/:id", async (c) => {
                       d.vehicleType ||
                       d.vehicle?.category ||
                       d.vehicle?.type;
-            return isOnline && isAvailable && hasPositiveBalance && categoriesCompatible(driverCategory, cat);
+            return isOnline && isAvailable && hasPositiveBalance &&
+              categoriesCompatible(driverCategory, cat) && isNearPickup(d);
           }).length;
           return { category: cat, count };
         })
@@ -1473,6 +1755,8 @@ app.get("/check-availability/:id", async (c) => {
       success: true,
       available,
       driversCount: eligibleDrivers.length,
+      radiusKm,
+      nearbyOnly: hasPickup,
       alternatives
     });
   } catch (error) {
@@ -1574,6 +1858,35 @@ app.post("/accept", async (c) => {
         rideCategory: rideCategoryRaw,
         driverCategory: driverCategoryRaw,
       }, 409);
+    }
+
+    // 📍 Defense en profondeur : refuser l'acceptation d'une course située
+    // hors du rayon, même si le chauffeur en connaît l'identifiant (ancien
+    // client, appel direct à l'API…). Tolérance de 1 km pour un GPS qui bouge.
+    // Si la position est absente ou périmée, on ne bloque pas (impossible de
+    // vérifier sans pénaliser un chauffeur légitime).
+    try {
+      const pickupLat = Number(ride.pickup?.coordinates?.lat ?? ride.pickup?.lat ?? ride.pickupLat);
+      const pickupLng = Number(ride.pickup?.coordinates?.lng ?? ride.pickup?.lng ?? ride.pickupLng);
+      if (Number.isFinite(pickupLat) && Number.isFinite(pickupLng)) {
+        const { pos, ageMs } = readDriverPositionAge(driver);
+        const radius = Number(ride.matchingRadiusKm) || await resolveMatchRadiusKm();
+        if (pos && (ageMs === null || ageMs <= MATCH_POSITION_MAX_AGE_MS)) {
+          const distance = calculateDistance(pickupLat, pickupLng, pos.lat, pos.lng);
+          if (distance > radius + 1) {
+            console.warn(`🚫 [ACCEPT] ${driverId} hors zone : ${distance.toFixed(1)} km > ${radius} km`);
+            return c.json({
+              success: false,
+              error: "HORS_ZONE",
+              message: "Cette course est trop éloignée de votre position actuelle.",
+              distanceKm: Number(distance.toFixed(1)),
+              radiusKm: radius,
+            }, 409);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ [ACCEPT] Contrôle de proximité ignoré:', e);
     }
 
     const driverBalance = driver.accountBalance || driver.balance || driver.creditBalance || 0;

@@ -55,9 +55,9 @@ const SEO_MAP: Record<string, SeoEntry> = {
     index: true,
   },
   '/contact': {
-    title: 'Contact SmartCabb Kinshasa | Réservation Taxi 24h/24',
+    title: 'Contact SmartCabb Kinshasa — 63, Avenue Colonel Mondjiba, Ngaliema | Taxi 24h/24',
     description:
-      'Contactez SmartCabb à Kinshasa : réservation de taxi, support client, partenariats. Disponible 24h/24, 7j/7. Réponse rapide.',
+      'Contactez SmartCabb : 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa (RDC) — +243 960 624 008. Réservation de taxi, support client, partenariats. Disponible 24h/24, 7j/7.',
     canonical: `${SITE}/contact`,
     index: true,
   },

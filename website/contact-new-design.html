@@ -646,8 +646,8 @@
                     <div class="info-icon">📍</div>
                     <div class="info-content">
                         <h3 data-i18n="contact.address-title">Adresse</h3>
-                        <p>5D, Avenue du Tchad</p>
-                        <p>C/ Gombe, Kinshasa - RDC</p>
+                        <p>63, Avenue Colonel MONDJIBA</p>
+                        <p>C/ Ngaliema, Kinshasa - RDC</p>
                     </div>
                 </div>
 
@@ -1070,8 +1070,8 @@
     <script src="js/config-local.js"></script>
 
     <script>
-        // Initialize map centered on Kinshasa
-        const map = L.map('map').setView([-4.3276, 15.3136], 13);
+        // Initialize map centered on the SmartCabb head office (Ngaliema)
+        const map = L.map('map').setView([-4.3214, 15.2750], 15);
 
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1080,8 +1080,8 @@
         }).addTo(map);
 
         // Add marker for SmartCabb office
-        const marker = L.marker([-4.3276, 15.3136]).addTo(map);
-        marker.bindPopup('<b>SmartCabb</b><br>5D, Avenue du Tchad<br>C/ Gombe, Kinshasa - RDC').openPopup();
+        const marker = L.marker([-4.3214, 15.2750]).addTo(map);
+        marker.bindPopup('<b>SmartCabb</b><br>63, Avenue Colonel MONDJIBA<br>C/ Ngaliema, Kinshasa - RDC').openPopup();
 
         // Form submission handler with REAL backend integration
         document.getElementById('contactForm').addEventListener('submit', async function(e) {

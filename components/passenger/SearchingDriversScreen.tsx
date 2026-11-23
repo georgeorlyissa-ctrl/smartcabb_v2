@@ -72,6 +72,10 @@ export function SearchingDriversScreen() {
     totalOnline: number;
     /** false = aucune course enregistrée (personne à notifier). */
     rideCreated?: boolean;
+    /** true = des chauffeurs sont connectés, mais aucun dans le rayon. */
+    nearbyOnly?: boolean;
+    /** Rayon de recherche appliqué (km) — affiché pour être transparent. */
+    radiusKm?: number;
   } | null>(null);
   const noDriverShownRef = useRef(false);
 
@@ -163,6 +167,10 @@ export function SearchingDriversScreen() {
             alternatives: Array.isArray(data.alternatives) ? data.alternatives : [],
             totalOnline: Number(data.totalOnline) || 0,
             rideCreated: true,
+            // 📍 Des chauffeurs sont connectés mais AUCUN dans le rayon :
+            // message dédié pour ne pas laisser croire que personne ne travaille.
+            nearbyOnly: !!data.noDriversNearby,
+            radiusKm: Number(data.radiusKm) || undefined,
           });
         }
         // « Chargé » = une réponse VALIDE est arrivée. En cas d'échec on ne
@@ -292,10 +300,21 @@ export function SearchingDriversScreen() {
           if (ok && json?.success && json?.rideId) {
             // ⛔ Aucun chauffeur n'a été notifié : le serveur a clôturé la
             // course immédiatement. On ne navigue pas vers l'écran de course.
-            if ((json.matching as any)?.reason === 'no_drivers_available') {
-              console.warn('⚠️ Aucun chauffeur disponible → demande clôturée');
+            const matchReason = (json.matching as any)?.reason;
+            if (
+              matchReason === 'no_drivers_available' ||
+              matchReason === 'no_driver_nearby' ||
+              matchReason === 'missing_pickup_coordinates'
+            ) {
+              console.warn(`⚠️ Aucun chauffeur notifié (${matchReason}) → demande clôturée`);
               apiCalled.current = false;
-              setNoDriverInfo({ alternatives: [], totalOnline: 0, rideCreated: false });
+              setNoDriverInfo({
+                alternatives: [],
+                totalOnline: Number((json.matching as any)?.driversOnline) || 0,
+                rideCreated: false,
+                nearbyOnly: matchReason === 'no_driver_nearby',
+                radiusKm: Number((json.matching as any)?.radiusKm) || undefined,
+              });
               return;
             }
 
@@ -460,12 +479,16 @@ export function SearchingDriversScreen() {
               </div>
               <div className="min-w-0">
                 <h2 className="text-base font-bold text-gray-900">
-                  {noDriverInfo.alternatives.length > 0
+                  {noDriverInfo.nearbyOnly
+                    ? `Aucun chauffeur ${VEHICLE_LABELS[pendingRide.vehicleType] || ''} à proximité`
+                    : noDriverInfo.alternatives.length > 0
                     ? `Aucun chauffeur ${VEHICLE_LABELS[pendingRide.vehicleType] || ''} en ligne`
                     : 'Aucun chauffeur connecté pour le moment'}
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  {noDriverInfo.rideCreated === false
+                  {noDriverInfo.nearbyOnly
+                    ? `Des chauffeurs sont connectés, mais aucun à moins de ${noDriverInfo.radiusKm ? `${noDriverInfo.radiusKm} km` : 'quelques kilomètres'} de votre point de départ. SmartCabb ne propose la course qu’aux chauffeurs réellement proches, pour une prise en charge rapide : réessayez dans quelques minutes ou déplacez légèrement votre point de départ.`
+                    : noDriverInfo.rideCreated === false
                     ? 'Votre demande n’a pas été enregistrée : aucun chauffeur n’est en ligne pour le moment.'
                     : noDriverInfo.alternatives.length > 0
                     ? 'Des chauffeurs sont connectés dans d’autres catégories. Choisissez-en une pour être pris en charge tout de suite.'

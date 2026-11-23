@@ -23,6 +23,28 @@ export function ProfessionalFooter() {
             <p className="text-gray-400 mb-6 leading-relaxed max-w-sm">
               {t('footer.description')}
             </p>
+
+            {/* NAP (Name / Address / Phone) — cohérence locale pour Google */}
+            <address className="not-italic text-sm text-gray-400 space-y-1 mb-6">
+              <p className="font-semibold text-gray-200">SmartCabb SARL</p>
+              <p>63, Avenue Colonel MONDJIBA, C/ Ngaliema</p>
+              <p>Kinshasa, République Démocratique du Congo</p>
+              <p>
+                <a href="tel:+243960624008" className="hover:text-blue-400 transition-colors">
+                  +243 960 624 008
+                </a>
+              </p>
+              <p>
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.smartcabb.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-blue-400 transition-colors"
+                >
+                  Google Play — SmartCabb
+                </a>
+              </p>
+            </address>
             
             {/* Réseaux sociaux */}
             <div className="flex gap-3">

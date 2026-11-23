@@ -14,7 +14,7 @@ export function LegalPage() {
     },
     {
       title: '2. Siège social',
-      content: 'SmartCabb SARL\nAvenue de la Libération\nCommune de Gombe\nKinshasa, République Démocratique du Congo\n\nTéléphone : +243 XX XXX XXXX\nEmail : contact@smartcabb.com'
+      content: 'SmartCabb SARL\n63, Avenue Colonel MONDJIBA\nCommune de Ngaliema\nKinshasa, République Démocratique du Congo\n\nTéléphone : +243 960 624 008\nEmail : contact@smartcabb.com'
     },
     {
       title: '3. Directeur de publication',
@@ -55,7 +55,7 @@ export function LegalPage() {
     },
     {
       title: '2. Registered Office',
-      content: 'SmartCabb SARL\nAvenue de la Libération\nCommune de Gombe\nKinshasa, Democratic Republic of Congo\n\nPhone: +243 XX XXX XXXX\nEmail: contact@smartcabb.com'
+      content: 'SmartCabb SARL\n63, Avenue Colonel MONDJIBA\nNgaliema\nKinshasa, Democratic Republic of Congo\n\nPhone: +243 960 624 008\nEmail: contact@smartcabb.com'
     },
     {
       title: '3. Publication Director',

@@ -137,7 +137,7 @@ export const PrivacyPolicy = memo(function PrivacyPolicy() {
             <p className="font-semibold">SMART CAB SARL</p>
             <p>À l'attention de : Le Responsable de la Protection des Données (RPD)</p>
             <p>Adresse e-mail : <a href="mailto:rssi@smartcab.com" className="text-blue-600 underline">rssi@smartcab.com</a></p>
-            <p>Adresse du Siège Social : 5D, Avenue du Tchad, C/ Gombe, Kinshasa, RDC</p>
+            <p>Adresse du Siège Social : 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, RDC</p>
           </div>
         </section>
 

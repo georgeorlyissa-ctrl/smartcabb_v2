@@ -43,6 +43,9 @@ export function DriverAvailabilityCheck({
   const [alternatives, setAlternatives] = useState<Alternative[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [noDriversOnlineAtAll, setNoDriversOnlineAtAll] = useState(false); // ✅ NOUVEAU FLAG
+  // 📍 Des conducteurs sont en ligne, mais aucun dans le rayon de recherche
+  const [noDriversNearby, setNoDriversNearby] = useState(false);
+  const [radiusKm, setRadiusKm] = useState<number | null>(null);
 
   // Vérifier la disponibilité des conducteurs
   useEffect(() => {
@@ -78,9 +81,18 @@ export function DriverAvailabilityCheck({
       if (data.success) {
         setAvailable(data.available);
         setDriversCount(data.driversCount);
-        setCategoryName(data.requestedCategoryName);
-        setAlternatives(data.alternatives || []);
+        // Le serveur renvoie `categoryName` (l'ancien nom `requestedCategoryName`
+        // n'existe plus → le libellé s'affichait vide).
+        setCategoryName(data.categoryName || data.requestedCategoryName || vehicleType);
+        // Le serveur renvoie `{ category, count }` : on normalise pour l'affichage.
+        setAlternatives((data.alternatives || []).map((alt: any) => ({
+          category: alt.category,
+          driversCount: Number(alt.count ?? alt.driversCount) || 0,
+          categoryName: alt.categoryName || alt.category,
+        })));
         setNoDriversOnlineAtAll(data.noDriversOnlineAtAll || false); // ✅ NOUVEAU FLAG
+        setNoDriversNearby(!!data.noDriversNearby);
+        setRadiusKm(Number(data.radiusKm) || null);
       } else {
         setError(data.error || 'Erreur inconnue');
       }
@@ -231,8 +243,7 @@ export function DriverAvailabilityCheck({
 
   // Aucun conducteur et aucune alternative ❌
   // ✅ CORRECTION : N'afficher ce message QUE si AUCUN conducteur n'est en ligne dans TOUTES les catégories
-  if (noDriversOnlineAtAll) {
-    return (
+  if (noDriversOnlineAtAll) {    return (
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -252,6 +263,38 @@ export function DriverAvailabilityCheck({
               variant="outline"
               size="sm"
               className="mt-3 border-red-300 text-red-700 hover:bg-red-100"
+            >
+              Vérifier à nouveau
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // 📍 Des conducteurs sont connectés, mais aucun dans le rayon de recherche
+  if (noDriversNearby) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`bg-amber-50 border-2 border-amber-300 rounded-xl p-4 ${className}`}
+      >
+        <div className="flex items-start space-x-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-900">
+              Aucun conducteur à proximité
+            </p>
+            <p className="text-xs text-amber-800 mt-1">
+              Des conducteurs sont connectés, mais aucun à moins de {radiusKm ? `${radiusKm} km` : 'quelques kilomètres'} de votre point de départ.
+              SmartCabb ne propose la course qu'aux conducteurs réellement proches pour une prise en charge rapide.
+            </p>
+            <Button
+              onClick={checkAvailability}
+              variant="outline"
+              size="sm"
+              className="mt-3 border-amber-300 text-amber-800 hover:bg-amber-100"
             >
               Vérifier à nouveau
             </Button>

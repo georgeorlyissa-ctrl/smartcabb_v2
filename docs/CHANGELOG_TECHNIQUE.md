@@ -42,6 +42,69 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-24 (37) — Matching limité aux chauffeurs proches (5 km) + nouvelle adresse et SEO local
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat + fix + docs
+- **Objectif** : une course ne doit être proposée **qu'aux chauffeurs de la même catégorie réellement proches du point de départ** (une demande à Gombe ne doit jamais apparaître chez un chauffeur resté à Ngaba, Matete ou Ndjili) ; appliquer partout la nouvelle adresse officielle **« 63, Avenue Colonel MONDJIBA, C/NGALIEMA - KINSHASA, RDC »** et renforcer le référencement Google (NAP, données structurées, sitemap).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Matching géographique strict + catégorie stricte ; helpers rayon/fraîcheur GPS ; `/pending/:driverId` revalide la proximité ; `/check-drivers-availability`, `/check-availability/:id` et `/accept` filtrent par rayon ; `/debug-drivers` expose distance/rayon |
+| `components/passenger/SearchingDriversScreen.tsx` | Message dédié « aucun chauffeur à proximité » (avec rayon) ; prise en compte des motifs `no_driver_nearby` / `missing_pickup_coordinates` |
+| `components/passenger/DriverAvailabilityCheck.tsx` | Bloc « Aucun conducteur à proximité » ; normalisation `alternatives` (`count` → `driversCount`) et `categoryName` (libellé vide corrigé) |
+| `pages/LegalPage.tsx` | Siège social FR/EN : nouvelle adresse + téléphone réel `+243 960 624 008` |
+| `pages/ContactPage.tsx` | Adresse affichée : 63, Avenue Colonel MONDJIBA, C/ Ngaliema |
+| `components/shared/PrivacyPolicy.tsx` | Adresse du siège social mise à jour |
+| `components/shared/TermsOfService.tsx` | Adresse de contact complète |
+| `components/driver/DriverRegistrationScreen.tsx` | Adresse du bureau d'inscription conducteur |
+| `components/ProfessionalFooter.tsx` | Bloc NAP (SmartCabb SARL, adresse, téléphone, lien Google Play) |
+| `components/SeoHead.tsx` | Title/description `/contact` avec adresse + téléphone |
+| `website/contact-new-design.html` | Texte d'adresse + popup carte et centrage carte sur le siège (Ngaliema) |
+| `website/mentions-legales.html` | Siège social + adresse de contact |
+| `website/cgu.html` | Adresse de contact |
+| `website/js/translations.js` | `footer.address` FR/EN |
+| `index.html` | Géo `-4.3214/15.2750`, téléphone réel, JSON-LD `LocalBusiness` + `TaxiService`, `ReserveAction`, `MobileApplication` Play Store, FAQ enrichie |
+| `vite.config.ts` | Prerender SEO : section siège + NAP ; sitemap : hreflang `/en/` supprimé, `/commander` et `/reserver` ajoutés |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **Rayon de matching** : `DEFAULT_MATCH_RADIUS_KM = 5`, borné `2–8 km`, surchargeable sans redéploiement via `smartcabb_global_config.rideMatchRadiusKm` (`resolveMatchRadiusKm()`). Aucun élargissement géographique : la 2e vague notifie d'autres chauffeurs **dans le même rayon** (8 + 8, 18 s d'écart).
+2. **Pré-requis GPS** : `readDriverPositionAge()` lit la position et son horodatage (`currentLocation.updatedAt`, `locationUpdatedAt`…). Position absente **ou** vieille de plus de 10 min (`MATCH_POSITION_MAX_AGE_MS`) → chauffeur **non notifié**. Plus de coordonnées par défaut (Gombe) comme avant.
+3. **Catégorie** : `categoriesCompatible()` (normalisation Standard) reste strict : aucun mélange Standard/Confort/Familiale/Business.
+4. **`findAndNotifyNearbyDrivers()`** : sans coordonnées de départ → course clôturée `no_driver_found` (`missing_pickup_coordinates`). Si aucun chauffeur dans le rayon → clôture immédiate (`no_driver_nearby`) avec `matchingRadiusKm`, `driversOutsideRadius`, `driversOnline` (la course ne reste plus `searching` à vie). Le payload de notification porte `matchingRadiusKm` et `distanceToPickup`.
+5. **`/pending/:driverId`** : à l'affichage, la position du chauffeur est relue ; s'il est hors rayon ou si son GPS est périmé, la notification est supprimée et `ride: null` est renvoyé → il ne voit pas la course.
+6. **`/check-drivers-availability`** et **`/check-availability/:id`** : filtrent avec le même rayon et la même règle de fraîcheur ; renvoient `radiusKm`, `nearbyOnly`, `noDriversNearby`.
+7. **`/accept`** (défense en profondeur) : refuse `HORS_ZONE` si un chauffeur dont la position est **fraîche** est à plus de `rayon + 1 km` ; ne bloque pas si la position est inconnue/périmée.
+8. **`/debug-drivers`** : `?lat=&lng=` (ou `?rideId=`) → `distanceKm`, `positionAgeSeconds`, `positionFresh`, `inRadius`, `matchable`, `reference.radiusKm` pour diagnostiquer un rayon.
+9. **Adresse** : nouvelle adresse appliquée aux pages légales, contact, CGU, confidentialité, inscription conducteur, footer et site statique `website/`. Coordonnées géocodées : **-4.3214, 15.2750** (63, Avenue Colonel Mondjiba, Basoko/Ngaliema — Silikin Village / Kadea).
+10. **SEO** : JSON-LD `LocalBusiness` + `TaxiService` (téléphone `+243960624008`, adresse complète, géo, `hasMap`, `ReserveAction`), `MobileApplication` pointant vers `https://play.google.com/store/apps/details?id=com.smartcabb.app`, 3 FAQ supplémentaires (siège, réservation à l'avance, communes desservies). Sitemap régénéré au build avec `/commander` et `/reserver`, hreflang `/en/` inexistant retiré.
+
+### Impact produit / comportement visible
+- Un chauffeur de Ngaba/Matete/Ndjili **ne voit plus** une demande faite à Gombe ; seuls les chauffeurs de la même catégorie et dans un rayon de 5 km (paramétrable 2–8 km) reçoivent la notification.
+- Le passager voit un message explicite : « Aucun chauffeur à proximité » avec le rayon, au lieu d'attendre une course que personne ne peut prendre.
+- L'adresse officielle est identique partout (site, app, documents légaux, footer, carte de contact).
+- Google dispose du NAP complet, des données structurées TaxiService et des URL de conversion dans le sitemap.
+
+### Risques & rollback
+- **Risque** : avec une flotte réduite, un rayon de 5 km peut empêcher toute prise en charge si aucun chauffeur n'est connecté dans la zone. C'est le comportement demandé (pas de chauffeur lointain), mais il faut surveiller le taux de `no_driver_nearby`.
+- **Réglage sans redéploiement** : `smartcabb_global_config.rideMatchRadiusKm` (2 à 8). Repasser à une valeur plus large (ex. 8) si nécessaire.
+- **Rollback code** : `git revert <hash>` puis redéployer l'Edge Function et Vercel.
+- **Rollback adresse/SEO** : revert du commit (aucune migration de données).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune erreur hors `_headers/Code-component-*.tsx` (pré-existantes)
+- [x] `npm run build` — OK ; `dist/sitemap.xml` contient `/commander`, `/reserver`, sans `/en/` ; `dist/index.html` contient l'adresse, `TaxiService` et le téléphone
+- [x] Edge Function déployée (`npx supabase functions deploy make-server-2eb02e52 --project-ref zaerjqchzqmcxqblkfkg`)
+- [x] `GET /rides/debug-drivers?lat=-4.3214&lng=15.2750` → `radius=5`, 2 chauffeurs en ligne mais **hors rayon** (9,2 km) → `matchable=0`
+- [x] `POST /rides/check-drivers-availability` (pickup Gombe) → `available=false`, `noDriversNearby=true`, `radiusKm=5`, aucune alternative
+- [ ] Test réel d'une course avec deux comptes situés à moins de 5 km (à faire avec accord)
+
+---
+
 ## 2026-11-21 (36) — Sonnerie conducteur en boucle, passager figé, prix « reste à payer » et suivi des paiements admin
 
 - **Commit** : `fc54ba9` (branche `main`, poussée sur `origin`)

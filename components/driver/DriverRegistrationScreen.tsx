@@ -784,7 +784,7 @@ export function DriverRegistrationScreen() {
             
             <div className="mt-4 p-3 bg-white/70 rounded-lg">
               <p className="text-xs text-yellow-900">
-                <strong>📍 Adresse :</strong> Bureau SmartCabb, Kinshasa
+                <strong>📍 Adresse :</strong> Bureau SmartCabb, 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa
                 <br />
                 <strong>📞 Info :</strong> Contactez-nous pour prendre rendez-vous
               </p>
