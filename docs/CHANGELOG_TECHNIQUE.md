@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-24 (38) — Commission différenciée : 20 % réservation / 15 % course instantanée
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `0f2c0bf` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat
 - **Objectif** : appliquer **20 % de commission sur les réservations** et **15 % sur les courses instantanées**, partout (déduction réelle du solde, gains chauffeur, historique, rapports admin), et rendre les deux taux modifiables sans redéploiement.
@@ -86,7 +86,7 @@ Assez de détail pour comprendre le code sans le relire.>
 ### Risques & rollback
 - **Risque** : une course ancienne sans marqueur de réservation est commissionnée à 15 % (comportement par défaut).
 - **Réglage sans redéploiement** : `commissionRate` et `reservationCommissionRate` dans `smartcabb_global_config` (ou écrans admin → Paramètres / Commission).
-- **Rollback** : `git revert <hash>` + redéploiement Edge Function ; remettre `commissionRate = 20` et supprimer `reservationCommissionRate` si retour à l'ancien régime.
+- **Rollback** : `git revert 0f2c0bf` + redéploiement Edge Function ; remettre `commissionRate = 20` et supprimer `reservationCommissionRate` si retour à l'ancien régime.
 
 ### Tests / vérifications
 - [x] `npx tsc --noEmit` (hors `_headers/Code-component-*.tsx`)
