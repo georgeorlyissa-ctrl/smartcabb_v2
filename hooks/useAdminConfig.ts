@@ -23,6 +23,7 @@ const LEGACY_KEY   = 'smartcab_system_settings';
 export interface AdminConfig {
   exchangeRate:          number;
   commissionRate:        number;
+  reservationCommissionRate: number;
   nightTimeStart:        string;
   nightTimeEnd:          string;
   freeWaitingMinutes:    number;
@@ -39,7 +40,8 @@ export interface AdminConfig {
 
 const DEFAULTS: AdminConfig = {
   exchangeRate:          2500,
-  commissionRate:        10,
+  commissionRate:        15,
+  reservationCommissionRate: 20,
   nightTimeStart:        '21:00',
   nightTimeEnd:          '06:00',
   freeWaitingMinutes:    3,

@@ -92,7 +92,8 @@ export function PaymentConfirmationScreen() {
       toast.success('Paiement confirmé !');
       
       // ✅ v518.1: Rafraîchir le solde du conducteur après la clôture de la course
-      // Le backend a automatiquement déduit 15% du solde
+      // Le backend a automatiquement déduit la commission (15 % course instantanée,
+      // 20 % réservation)
       if (state.currentDriver?.id || state.currentUser?.id) {
         const driverId = state.currentDriver?.id || state.currentUser?.id;
         try {

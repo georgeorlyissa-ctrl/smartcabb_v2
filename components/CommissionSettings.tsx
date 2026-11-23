@@ -30,7 +30,8 @@ interface CommissionSettingsProps {
 export function CommissionSettings({ userType, driverId }: CommissionSettingsProps) {
   const { state, updateAdminSettings } = useAppState();
   const [commissionEnabled, setCommissionEnabled] = useState(true);
-  const [commissionRate, setCommissionRate] = useState(15); // Percentage
+  const [commissionRate, setCommissionRate] = useState(15); // Course instantanée (%)
+  const [reservationCommissionRate, setReservationCommissionRate] = useState(20); // Réservation (%)
   const [minimumCommission, setMinimumCommission] = useState(500); // CDF
   const [paymentFrequency, setPaymentFrequency] = useState<'immediate' | 'daily' | 'weekly'>('immediate');
   const [autoDeduction, setAutoDeduction] = useState(true);
@@ -85,6 +86,7 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
       if (data.success && data.settings) {
         setCommissionEnabled(data.settings.commissionEnabled ?? true);
         setCommissionRate(data.settings.commissionRate ?? 15);
+        setReservationCommissionRate(data.settings.reservationCommissionRate ?? 20);
         setMinimumCommission(data.settings.minimumCommission ?? 500);
         setPaymentFrequency(data.settings.paymentFrequency ?? 'immediate');
         setAutoDeduction(data.settings.autoDeduction ?? true);
@@ -159,6 +161,7 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
       ...state.adminSettings,
       commissionEnabled,
       commissionRate,
+      reservationCommissionRate,
       minimumCommission,
       paymentFrequency,
       autoDeduction,
@@ -209,8 +212,8 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
     }
   };
 
-  const calculateCommission = (rideAmount: number) => {
-    const commission = (rideAmount * commissionRate) / 100;
+  const calculateCommission = (rideAmount: number, rate: number = commissionRate) => {
+    const commission = (rideAmount * rate) / 100;
     return Math.max(commission, minimumCommission);
   };
 
@@ -307,9 +310,9 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
 
           <Separator />
 
-          {/* Commission Rate */}
+          {/* Commission Rates */}
           <div className="space-y-3">
-            <Label className="font-medium">Taux de commission (%)</Label>
+            <Label className="font-medium">Taux de commission — course instantanée (%)</Label>
             <div className="flex items-center space-x-3">
               <Input
                 type="number"
@@ -324,7 +327,27 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
               <span className="text-sm text-gray-600">% par course</span>
             </div>
             <p className="text-xs text-gray-500">
-              Commission prélevée sur chaque course terminée
+              Commission prélevée sur chaque course commandée immédiatement
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="font-medium">Taux de commission — réservation (%)</Label>
+            <div className="flex items-center space-x-3">
+              <Input
+                type="number"
+                value={reservationCommissionRate}
+                onChange={(e) => setReservationCommissionRate(Number(e.target.value))}
+                className="w-32"
+                min="0"
+                max="50"
+                step="0.5"
+                disabled={!commissionEnabled}
+              />
+              <span className="text-sm text-gray-600">% par réservation</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Courses programmées, transfert aéroport, location à la journée…
             </p>
           </div>
 
@@ -413,19 +436,28 @@ export function CommissionSettings({ userType, driverId }: CommissionSettingsPro
           </div>
           
           <div className="space-y-2">
-            <Label className="text-sm">Commission ({commissionRate}%)</Label>
+            <Label className="text-sm">Commission course instantanée ({commissionRate}%)</Label>
             <div className="p-3 bg-blue-50 rounded-lg text-center">
               <span className="font-semibold text-blue-600">
-                {calculateCommission(15000).toLocaleString()} CDF
+                {calculateCommission(15000, commissionRate).toLocaleString()} CDF
               </span>
             </div>
           </div>
-          
+
           <div className="space-y-2">
-            <Label className="text-sm">Montant conducteur</Label>
+            <Label className="text-sm">Commission réservation ({reservationCommissionRate}%)</Label>
+            <div className="p-3 bg-indigo-50 rounded-lg text-center">
+              <span className="font-semibold text-indigo-600">
+                {calculateCommission(15000, reservationCommissionRate).toLocaleString()} CDF
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm">Montant conducteur (course instantanée)</Label>
             <div className="p-3 bg-green-50 rounded-lg text-center">
               <span className="font-semibold text-green-600">
-                {(15000 - calculateCommission(15000)).toLocaleString()} CDF
+                {(15000 - calculateCommission(15000, commissionRate)).toLocaleString()} CDF
               </span>
             </div>
           </div>

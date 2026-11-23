@@ -42,7 +42,8 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     perKmRate: 1.20,
     perMinuteRate: 0.25,
     minimumFare: 5.00,
-    commission: 20
+    commission: 15,
+    commissionReservation: 20
   });
 
   const [currencySettings, setCurrencySettings] = useState(() => ({
@@ -77,7 +78,11 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
       .then((cfg) => {
         if (!alive) return;
         setCurrencySettings((prev) => ({ ...prev, exchangeRateUSDToCDF: cfg.exchangeRate }));
-        setPricing((prev) => ({ ...prev, commission: cfg.commissionRate }));
+        setPricing((prev) => ({
+          ...prev,
+          commission: cfg.commissionRate,
+          commissionReservation: cfg.reservationCommissionRate ?? 20,
+        }));
         setConfigLoaded(true);
       })
       .catch((e) => {
@@ -109,7 +114,11 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
             setCurrencySettings(prev => ({ ...prev, exchangeRateUSDToCDF: parsed.exchangeRate }));
           }
           if (parsed.commissionRate) {
-            setPricing(prev => ({ ...prev, commission: parsed.commissionRate ?? prev.commission }));
+            setPricing(prev => ({
+              ...prev,
+              commission: parsed.commissionRate ?? prev.commission,
+              commissionReservation: parsed.reservationCommissionRate ?? prev.commissionReservation,
+            }));
           }
         }
       } catch {}
@@ -144,6 +153,7 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
     const rateSaved = await saveGlobalConfig({
       exchangeRate: currencySettings.exchangeRateUSDToCDF,
       commissionRate: pricing.commission,
+      reservationCommissionRate: pricing.commissionReservation,
     });
     if (!rateSaved) {
       toast.error('Taux non sauvegardé', {
@@ -257,13 +267,17 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
         allowMixedPayment: true,
         allowUSDPayment: true
       });
-      setPricing({
-        baseFare: state.systemSettings.baseFare || 2.50,
-        perKmRate: state.systemSettings.perKmRate || 1.20,
-        perMinuteRate: state.systemSettings.perMinuteRate || 0.25,
-        minimumFare: state.systemSettings.minimumFare || 5.00,
-        commission: state.systemSettings.commission || 20
-      });
+      setPricing((prev) => ({
+        ...prev,
+        baseFare: state.systemSettings!.baseFare || 2.50,
+        perKmRate: state.systemSettings!.perKmRate || 1.20,
+        perMinuteRate: state.systemSettings!.perMinuteRate || 0.25,
+        minimumFare: state.systemSettings!.minimumFare || 5.00,
+        // Ne pas écraser les taux lus sur le serveur par un défaut local.
+        commission: state.systemSettings!.commission || prev.commission,
+        commissionReservation:
+          (state.systemSettings as any).reservationCommissionRate || prev.commissionReservation,
+      }));
     }
   }, [state.systemSettings]);
 
@@ -465,13 +479,27 @@ export function SettingsScreen({ onBack }: SettingsScreenProps) {
                 </div>
 
                 <div>
-                  <Label htmlFor="commission">Commission SmartCabb (%)</Label>
+                  <Label htmlFor="commission">Commission — course instantanée (%)</Label>
                   <div className="relative mt-2">
                     <Input
                       id="commission"
                       type="number"
                       value={pricing.commission}
                       onChange={(e) => setPricing(prev => ({ ...prev, commission: parseInt(e.target.value) }))}
+                      className="pr-10"
+                    />
+                    <Percent className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="commissionReservation">Commission — réservation (%)</Label>
+                  <div className="relative mt-2">
+                    <Input
+                      id="commissionReservation"
+                      type="number"
+                      value={pricing.commissionReservation}
+                      onChange={(e) => setPricing(prev => ({ ...prev, commissionReservation: parseInt(e.target.value) }))}
                       className="pr-10"
                     />
                     <Percent className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />

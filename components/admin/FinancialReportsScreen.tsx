@@ -42,6 +42,7 @@ interface Summary {
   netRevenue: number;
   totalRides: number;
   commissionRate: number;
+  reservationCommissionRate?: number;
   month: string;
 }
 
@@ -56,6 +57,7 @@ interface Report {
   refunds_amount: number;
   net_revenue: number;
   commission_rate?: number;
+  reservation_commission_rate?: number;
   by_category?: Record<string, { rides: number; revenue: number }>;
   status: 'pending' | 'finalized' | 'archived';
   created_at: string;
@@ -197,7 +199,7 @@ export function FinancialReportsScreen({ onBack }: FinancialReportsScreenProps) 
     csv += `MÉTRIQUES,MONTANT\n`;
     csv += `Revenus totaux,${report.total_revenue} CDF\n`;
     csv += `Nombre de courses,${report.total_rides}\n`;
-    csv += `Commission SmartCabb (${report.commission_rate ?? 10}%),${report.commission_amount} CDF\n`;
+    csv += `Commission SmartCabb (${report.commission_rate ?? 15}% course / ${report.reservation_commission_rate ?? 20}% réservation),${report.commission_amount} CDF\n`;
     csv += `Gains conducteurs,${report.driver_earnings} CDF\n`;
     csv += `Remboursements,-${report.refunds_amount} CDF\n`;
     csv += `Revenu net,${report.net_revenue} CDF\n`;
@@ -271,7 +273,9 @@ export function FinancialReportsScreen({ onBack }: FinancialReportsScreenProps) 
                 <p className="text-xs text-gray-500 mt-1">{summary.totalRides} courses</p>
               )}
               {label === 'Commission' && summary && (
-                <p className="text-xs text-gray-500 mt-1">Taux : {summary.commissionRate}%</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Taux : {summary.commissionRate}% course / {summary.reservationCommissionRate ?? 20}% réservation
+                </p>
               )}
             </Card>
           ))}
@@ -343,7 +347,7 @@ export function FinancialReportsScreen({ onBack }: FinancialReportsScreenProps) 
                         <p className="font-bold text-gray-800">{report.total_rides}</p>
                       </div>
                       <div className="bg-blue-50 rounded-lg p-3">
-                        <p className="text-xs text-gray-500">Commission ({report.commission_rate ?? 10}%)</p>
+                        <p className="text-xs text-gray-500">Commission ({report.commission_rate ?? 15}% / {report.reservation_commission_rate ?? 20}% rés.)</p>
                         <p className="font-bold text-blue-700">{fmt(report.commission_amount)} CDF</p>
                       </div>
                       <div className="bg-purple-50 rounded-lg p-3">

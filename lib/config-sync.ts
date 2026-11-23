@@ -18,7 +18,10 @@ const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-2eb0
 export interface GlobalConfig {
   // Tarification
   exchangeRate: number;
+  /** Commission sur une course instantanée (%). */
   commissionRate: number;
+  /** Commission sur une course issue d'une réservation (%). */
+  reservationCommissionRate: number;
   
   // Horaires
   nightTimeStart: string;
@@ -71,7 +74,8 @@ export interface GlobalConfig {
  */
 export const DEFAULT_CONFIG: GlobalConfig = {
   exchangeRate: 2500,
-  commissionRate: 10,
+  commissionRate: 15,
+  reservationCommissionRate: 20,
   nightTimeStart: '21:00',
   nightTimeEnd: '06:00',
   freeWaitingMinutes: 3,

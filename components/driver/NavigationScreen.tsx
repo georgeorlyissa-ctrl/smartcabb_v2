@@ -6,7 +6,7 @@ import { RideCompletionSummaryDialog } from '../RideCompletionSummaryDialog';
 import { PreciseGPSTracker } from '../../lib/precise-gps';
 import { stopAllNotifications } from '../../lib/notification-sound';
 
-import { getCommissionRate, calculateCommission, calculateDriverEarnings, calculateRideMeterCost } from '../../lib/pricing';
+import { getCommissionRateForRide, calculateCommission, calculateDriverEarnings, calculateRideMeterCost } from '../../lib/pricing';
 
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { toast } from '../../lib/toast';
@@ -79,6 +79,8 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
   const earningsBase      = isReservedRide
     ? scheduledTotal
     : (currentCost || ride?.estimatedPrice || 0);
+  // 🧮 20 % pour une réservation, 15 % pour une course instantanée.
+  const commissionRate    = getCommissionRateForRide(isReservedRide);
 
   // Dès que la navigation s'ouvre, plus aucune sonnerie : la course est déjà
   // attribuée (le chauffeur n'a rien à accepter).
@@ -335,9 +337,9 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
         });
       }
 
-      const commission  = calculateCommission(finalCost);
-      const netEarning  = calculateDriverEarnings(finalCost);
-      const rate        = getCommissionRate();
+      const rate        = getCommissionRateForRide(isReservedRide);
+      const commission  = calculateCommission(earningsBase, rate);
+      const netEarning  = calculateDriverEarnings(earningsBase, rate);
       toast.success('🎉 Course clôturée !', {
         description: `Gain net : ${netEarning.toLocaleString()} CDF (+${100 - rate}%) | Commission : ${commission.toLocaleString()} CDF (${rate}%)`
       });
@@ -628,8 +630,8 @@ export function NavigationScreen({ onBack }: NavigationScreenProps) {
 
               {/* Gains estimés */}
               <div className="mt-3 flex justify-between text-xs text-gray-500 bg-white rounded-lg p-2">
-                <span>Gain net ({100 - getCommissionRate()} %) : <span className="font-semibold text-green-700">{calculateDriverEarnings(earningsBase).toLocaleString()} CDF</span></span>
-                <span>Commission ({getCommissionRate()} %) : <span className="font-semibold text-orange-600">{calculateCommission(earningsBase).toLocaleString()} CDF</span></span>
+                <span>Gain net ({100 - commissionRate} %) : <span className="font-semibold text-green-700">{calculateDriverEarnings(earningsBase, commissionRate).toLocaleString()} CDF</span></span>
+                <span>Commission ({commissionRate} %{isReservedRide ? ' réservation' : ''}) : <span className="font-semibold text-orange-600">{calculateCommission(earningsBase, commissionRate).toLocaleString()} CDF</span></span>
               </div>
             </div>
 

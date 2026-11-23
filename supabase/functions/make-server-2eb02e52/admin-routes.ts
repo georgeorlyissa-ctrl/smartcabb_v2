@@ -514,7 +514,7 @@ app.get("/stats", async (c) => {
 // ─── Constante config ─────────────────────────────────────────────────────────
 const CONFIG_KEY = "smartcabb_global_config";
 const DEFAULT_SETTINGS = {
-  exchangeRate: 2500, commissionRate: 10, nightTimeStart: "21:00",
+  exchangeRate: 2500, commissionRate: 15, reservationCommissionRate: 20, nightTimeStart: "21:00",
   nightTimeEnd: "06:00", freeWaitingMinutes: 3, distantZoneMultiplier: 2,
   postpaidEnabled: true, postpaidFee: 5000,
   smsEnabled: true, smsProvider: "ejsms", notificationsEnabled: true,
@@ -522,6 +522,39 @@ const DEFAULT_SETTINGS = {
   minimumCommission: 500, paymentFrequency: "immediate", autoDeduction: true,
   postpaidInterestRate: 15,
 };
+
+/** Une course est-elle issue d'une réservation programmée ? */
+function isReservationRide(ride: any): boolean {
+  if (!ride || typeof ride !== "object") return false;
+  return (
+    ride.isScheduled === true ||
+    !!ride.scheduledRideId ||
+    !!ride.reservationId ||
+    Number(ride.scheduledTotalPrice) > 0 ||
+    ride.serviceType === "reservation"
+  );
+}
+
+/** Montant facturé au passager pour cette course. */
+function rideRevenue(ride: any): number {
+  return Number(
+    ride?.totalPrice ?? ride?.finalPrice ?? ride?.finalAmount ?? ride?.estimatedPrice ?? 0,
+  ) || 0;
+}
+
+/** Commission réelle d'une course : 20 % réservation, 15 % instantanée. */
+function rideCommission(cfg: any, ride: any): number {
+  if (cfg?.commissionEnabled === false) return 0;
+  const isReservation = isReservationRide(ride);
+  const configured = Number(
+    isReservation ? cfg?.reservationCommissionRate : cfg?.commissionRate,
+  );
+  const rate = Number.isFinite(configured) && configured > 0
+    ? configured
+    : (isReservation ? 20 : 15);
+  const minimum = Number(cfg?.minimumCommission) || 0;
+  return Math.max(Math.round(rideRevenue(ride) * rate / 100), minimum);
+}
 
 // ─── GET /settings/load — Charger la configuration globale ───────────────────
 // ⚠️ Ne renvoie JAMAIS les valeurs par défaut comme si c'était la config réelle :
@@ -545,7 +578,7 @@ app.post("/settings/save", async (c) => {
     const body = await c.req.json().catch(() => ({}));
 
     // Lecture STRICTE : une base momentanément indisponible ne doit pas faire
-    // réécrire la config avec les valeurs par défaut (taux 2500, commission 10).
+    // réécrire la config avec les valeurs par défaut (taux 2500, commission 15).
     const existing = await kvGet(CONFIG_KEY);
     if (!existing) {
       return c.json({ success: false, error: "CONFIG_UNAVAILABLE", retry: true }, 503);
@@ -561,6 +594,10 @@ app.post("/settings/save", async (c) => {
       ...body,
       exchangeRate: safeNumber(body.exchangeRate, safeNumber(existing.exchangeRate, DEFAULT_SETTINGS.exchangeRate)),
       commissionRate: safeNumber(body.commissionRate, safeNumber(existing.commissionRate, DEFAULT_SETTINGS.commissionRate)),
+      reservationCommissionRate: safeNumber(
+        body.reservationCommissionRate,
+        safeNumber(existing.reservationCommissionRate, DEFAULT_SETTINGS.reservationCommissionRate),
+      ),
       // Version croissante : c'est elle que les apps comparent pour se mettre à jour.
       configVersion: (Number(existing.configVersion) || 0) + 1,
       lastUpdated: new Date().toISOString(),
@@ -727,7 +764,6 @@ app.post("/reports/generate", async (c) => {
     ]);
 
     const cfg = config || DEFAULT_SETTINGS;
-    const commissionRate = (cfg.commissionRate ?? 10) / 100;
     const start = new Date(startDate).getTime();
     const end   = new Date(endDate).getTime();
 
@@ -737,9 +773,9 @@ app.post("/reports/generate", async (c) => {
       return done && ts >= start && ts <= end;
     });
 
-    const totalRevenue = periodRides.reduce((s: number, r: any) =>
-      s + (r.totalPrice ?? r.finalPrice ?? r.finalAmount ?? r.estimatedPrice ?? 0), 0);
-    const commissionAmount = Math.round(totalRevenue * commissionRate);
+    const totalRevenue = periodRides.reduce((s: number, r: any) => s + rideRevenue(r), 0);
+    // 🧮 Commission réelle, course par course (20 % réservation / 15 % instantanée).
+    const commissionAmount = periodRides.reduce((s: number, r: any) => s + rideCommission(cfg, r), 0);
     const driverEarnings   = Math.round(totalRevenue - commissionAmount);
     const netRevenue       = Math.round(totalRevenue); // pas de remboursements
 
@@ -762,7 +798,8 @@ app.post("/reports/generate", async (c) => {
       driver_earnings:  driverEarnings,
       refunds_amount:   0,
       net_revenue:      netRevenue,
-      commission_rate:  cfg.commissionRate ?? 10,
+      commission_rate:  Number(cfg.commissionRate ?? 15),
+      reservation_commission_rate: Number(cfg.reservationCommissionRate ?? 20),
       by_category:      byCategory,
       status:           "pending",
       created_at:       new Date().toISOString(),
@@ -814,7 +851,6 @@ app.get("/reports/summary", async (c) => {
     ]);
 
     const cfg = config || DEFAULT_SETTINGS;
-    const commissionRate = (cfg.commissionRate ?? 10) / 100;
 
     const now   = new Date();
     const month = now.getMonth();
@@ -826,9 +862,8 @@ app.get("/reports/summary", async (c) => {
         (r.status === "completed" || r.status === "rated");
     });
 
-    const totalRevenue    = monthRides.reduce((s: number, r: any) =>
-      s + (r.totalPrice ?? r.finalPrice ?? r.estimatedPrice ?? 0), 0);
-    const commissionAmount = Math.round(totalRevenue * commissionRate);
+    const totalRevenue    = monthRides.reduce((s: number, r: any) => s + rideRevenue(r), 0);
+    const commissionAmount = monthRides.reduce((s: number, r: any) => s + rideCommission(cfg, r), 0);
     const driverEarnings  = Math.round(totalRevenue - commissionAmount);
 
     return c.json({
@@ -839,7 +874,8 @@ app.get("/reports/summary", async (c) => {
         driverEarnings,
         netRevenue:      Math.round(totalRevenue),
         totalRides:      monthRides.length,
-        commissionRate:  cfg.commissionRate ?? 10,
+        commissionRate:  Number(cfg.commissionRate ?? 15),
+        reservationCommissionRate: Number(cfg.reservationCommissionRate ?? 20),
         month:           now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }),
       },
     });

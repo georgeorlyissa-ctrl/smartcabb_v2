@@ -42,6 +42,62 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-24 (38) — Commission différenciée : 20 % réservation / 15 % course instantanée
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat
+- **Objectif** : appliquer **20 % de commission sur les réservations** et **15 % sur les courses instantanées**, partout (déduction réelle du solde, gains chauffeur, historique, rapports admin), et rendre les deux taux modifiables sans redéploiement.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | `getCommissionSettings()` renvoie `rate` (15) + `reservationRate` (20) ; helpers `isReservationRide()` / `commissionRateForRide()` ; application du bon taux à l'acceptation (provision), à la clôture (`/complete`, `/:id/complete`), à l'auto-clôture anti-fraude et aux stats de gains |
+| `supabase/functions/make-server-2eb02e52/admin-routes.ts` | Config par défaut (`commissionRate: 15`, `reservationCommissionRate: 20`), sauvegarde des deux taux, rapports financiers calculés **course par course** |
+| `supabase/functions/make-server-2eb02e52/config-routes.ts` | Valeurs par défaut + fusion sécurisée de `reservationCommissionRate` |
+| `lib/pricing.ts` | `getReservationCommissionRate()`, `getCommissionRateForRide(isReservation)`, `isReservationRide()` ; défaut course instantanée ramené à 15 % |
+| `components/driver/NavigationScreen.tsx` | Aperçu gains/commission avec le bon taux (20 % réservation), base = prix total |
+| `components/driver/DriverDashboardNew.tsx` | Historique des courses : gains nets recalculés avec le taux adapté |
+| `components/passenger/PaymentScreen.tsx` | `driverEarnings` transmis avec le taux adapté |
+| `components/admin/SettingsScreen.tsx`, `components/admin/GlobalSettingsScreen.tsx`, `components/CommissionSettings.tsx` | Deux champs : commission course instantanée / réservation |
+| `components/admin/FinancialReportsScreen.tsx` | Rapports et CSV : affichage des deux taux |
+| `lib/config-sync.ts`, `hooks/useAdminConfig.ts`, `hooks/useSettings.ts`, `types/index.ts` | Types + valeurs par défaut (15 / 20) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **Configuration** : `smartcabb_global_config` contient désormais `commissionRate = 15` (course instantanée) et `reservationCommissionRate = 20` (réservation). Défauts alignés dans tous les fichiers (`15` / `20`), bornés et fusionnés sans jamais réécrire la config si la base est illisible.
+2. **Détection d'une réservation** : `isReservationRide()` → `isScheduled`, `scheduledRideId`, `reservationId`, `scheduledTotalPrice > 0` ou `serviceType = reservation`. Les courses créées par `/process-scheduled` et par la validation admin d'une réservation portent ces champs.
+3. **Calcul** : `commissionRateForRide(cs, ride)` retourne 20 % pour une réservation, 15 % sinon. Appliqué à :
+   - la **provision** prélevée à l'acceptation (`estimatedPrice`, soit le reste à payer) ;
+   - la **clôture** (`/complete` et `/:id/complete`) sur la base du prix total (acompte inclus) ;
+   - l'**auto-clôture anti-fraude** (`/sweep-fraud`) ;
+   - les **statistiques** `/driver/:id/earnings` et `/driver/:id/rides` (somme des nets course par course) ;
+   - les **rapports admin** `/admin/reports/generate` et `/admin/reports/summary`.
+4. **Correction associée** : `/:id/complete` déduit maintenant la provision déjà prélevée (`commission - commissionHold`) comme `/complete`, au lieu de refacturer la commission entière.
+5. **Notification chauffeur** : le payload `new_ride_request` transporte `isScheduled`, `scheduledTotalPrice` et `scheduledDepositPaid` pour que l'aperçu des gains soit juste avant l'ouverture de la navigation.
+6. **Config live** : `commissionRate` passé de 20 à **15**, ajout de `reservationCommissionRate = 20`, `configVersion = 5` (taux de change inchangé à 2 250).
+
+### Impact produit / comportement visible
+- Une course instantanée est commissionnée à **15 %** ; une réservation (course programmée, transfert aéroport, location à la journée réservée) à **20 %**.
+- Le chauffeur voit le bon taux et le bon gain net avant et après la course.
+- Les gains chauffeur et les rapports admin reflètent la somme réelle des commissions, plus un taux unique.
+
+### Risques & rollback
+- **Risque** : une course ancienne sans marqueur de réservation est commissionnée à 15 % (comportement par défaut).
+- **Réglage sans redéploiement** : `commissionRate` et `reservationCommissionRate` dans `smartcabb_global_config` (ou écrans admin → Paramètres / Commission).
+- **Rollback** : `git revert <hash>` + redéploiement Edge Function ; remettre `commissionRate = 20` et supprimer `reservationCommissionRate` si retour à l'ancien régime.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors `_headers/Code-component-*.tsx`)
+- [x] `npm run build`
+- [x] Edge Function déployée
+- [x] `GET /config/get` → `commissionRate=15`, `reservationCommissionRate=20`, `configVersion=5`, `exchangeRate=2250`
+- [x] `GET /rides/driver/<Ruth>/earnings?period=week` → commission 45 675 CDF sur 259 500 CDF (6 courses), soit 6 750 CDF de plus qu'un taux unique de 15 % = 5 % supplémentaires sur la réservation de 135 000 CDF ✔️
+- [x] `GET /rides/driver/<Ruth>/rides` → stats cohérentes (net 213 825 CDF)
+
+---
+
 ## 2026-11-24 (37) — Matching limité aux chauffeurs proches (5 km) + nouvelle adresse et SEO local
 
 - **Commit** : `1920d50` + `c03c509` + `59dd436` (branche `main`, poussée sur `origin`)

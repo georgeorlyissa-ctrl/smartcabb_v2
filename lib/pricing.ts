@@ -100,7 +100,7 @@ export function getPostpaidInterestRate(): number {
  */
 export function getCommissionRate(): number {
   try {
-    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return 10;
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return 15;
     const configStr = localStorage.getItem('smartcabb_config_cache');
     if (configStr) {
       const config = JSON.parse(configStr);
@@ -113,7 +113,48 @@ export function getCommissionRate(): number {
       if (typeof settings.commissionRate === 'number') return settings.commissionRate;
     }
   } catch (e) { console.warn('⚠️ Erreur lecture commissionRate:', e); }
-  return 10; // ✅ Défaut aligné sur la config backend (DEFAULT_CONFIG)
+  return 15; // ✅ Défaut aligné sur la config backend (course instantanée)
+}
+
+/**
+ * Taux de commission d'une RÉSERVATION (défaut 20 %).
+ */
+export function getReservationCommissionRate(): number {
+  try {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return 20;
+    const configStr = localStorage.getItem('smartcabb_config_cache');
+    if (configStr) {
+      const config = JSON.parse(configStr);
+      if (typeof config.reservationCommissionRate === 'number') return config.reservationCommissionRate;
+    }
+    const settingsStr = localStorage.getItem('smartcab_system_settings');
+    if (settingsStr) {
+      const settings = JSON.parse(settingsStr);
+      if (typeof settings.reservationCommissionRate === 'number') return settings.reservationCommissionRate;
+    }
+  } catch (e) { console.warn('⚠️ Erreur lecture reservationCommissionRate:', e); }
+  return 20;
+}
+
+/**
+ * Taux applicable à une course : 20 % si réservation, 15 % si instantanée.
+ */
+export function getCommissionRateForRide(isReservation: boolean): number {
+  return isReservation ? getReservationCommissionRate() : getCommissionRate();
+}
+
+/**
+ * Détecte une course issue d'une réservation (mêmes règles que le backend).
+ */
+export function isReservationRide(ride: any): boolean {
+  if (!ride || typeof ride !== 'object') return false;
+  return (
+    ride.isScheduled === true || ride.isScheduled === 'true' ||
+    !!ride.scheduledRideId ||
+    !!ride.reservationId ||
+    Number(ride.scheduledTotalPrice) > 0 ||
+    ride.serviceType === 'reservation'
+  );
 }
 
 /**
@@ -171,6 +212,9 @@ export const CONSTANTS = {
   },
   get COMMISSION_RATE() {
     return getCommissionRate();
+  },
+  get RESERVATION_COMMISSION_RATE() {
+    return getReservationCommissionRate();
   },
   WALLET_DISCOUNT_THRESHOLD: 20,
   WALLET_DISCOUNT_PERCENT: 5

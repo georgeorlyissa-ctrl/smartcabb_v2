@@ -165,7 +165,8 @@ export interface AppState {
     smartPlusRate: number; // CDF per hour
     freeWaitingTime: number; // seconds (default 180 = 3 minutes)
     commissionEnabled: boolean;
-    commissionRate: number; // percentage
+    commissionRate: number; // percentage — course instantanée
+    reservationCommissionRate?: number; // percentage — réservation
     minimumCommission: number; // CDF
     autoDeduction: boolean;
     paymentFrequency: 'immediate' | 'daily' | 'weekly';

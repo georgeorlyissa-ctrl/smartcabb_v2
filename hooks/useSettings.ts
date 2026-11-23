@@ -6,6 +6,7 @@ import type { Setting } from '../lib/supabase';
 export interface AppSettings {
   // Commission
   commissionRate: number;
+  reservationCommissionRate: number;
   
   // SMS
   smsProvider: 'ejsms' | 'disabled';
@@ -31,7 +32,8 @@ export interface AppSettings {
 
 // Valeurs par défaut
 const DEFAULT_SETTINGS: AppSettings = {
-  commissionRate: 10,
+  commissionRate: 15,
+  reservationCommissionRate: 20,
   smsProvider: 'ejsms',
   smsEnabled: true,
   nightTimeStart: '21:00',

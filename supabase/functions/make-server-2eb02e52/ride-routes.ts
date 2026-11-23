@@ -259,18 +259,49 @@ async function kvDel(key: string): Promise<void> {
   try { await kvClient().from(KV_TABLE).delete().eq("key", key); } catch (e) { console.error("KV del error:", e); }
 }
 // ✅ Lecture complète des paramètres de commission (taux + activé + minimum)
-async function getCommissionSettings(): Promise<{ rate: number; enabled: boolean; minimum: number }> {
+// Deux taux distincts :
+//  - `rate` : course instantanée (défaut 15 %) ;
+//  - `reservationRate` : course issue d'une réservation (défaut 20 %).
+async function getCommissionSettings(): Promise<{
+  rate: number;
+  reservationRate: number;
+  enabled: boolean;
+  minimum: number;
+}> {
   try {
     const config = await kvGet('smartcabb_global_config');
     if (config && typeof config === 'object') {
       return {
-        rate:    typeof config.commissionRate === 'number' ? config.commissionRate : 10,
+        rate:    typeof config.commissionRate === 'number' ? config.commissionRate : 15,
+        reservationRate: typeof config.reservationCommissionRate === 'number'
+          ? config.reservationCommissionRate
+          : 20,
         enabled: config.commissionEnabled !== false, // défaut : activé
         minimum: typeof config.minimumCommission === 'number' ? config.minimumCommission : 0,
       };
     }
   } catch (e) { console.error('Error reading commission settings:', e); }
-  return { rate: 10, enabled: true, minimum: 0 };
+  return { rate: 15, reservationRate: 20, enabled: true, minimum: 0 };
+}
+
+/** Une course est-elle issue d'une réservation programmée ? */
+function isReservationRide(ride: any): boolean {
+  if (!ride || typeof ride !== 'object') return false;
+  return (
+    ride.isScheduled === true ||
+    !!ride.scheduledRideId ||
+    !!ride.reservationId ||
+    Number(ride.scheduledTotalPrice) > 0 ||
+    ride.serviceType === 'reservation'
+  );
+}
+
+/** Taux applicable à CETTE course (20 % réservation, 15 % course instantanée). */
+function commissionRateForRide(
+  cs: { rate: number; reservationRate: number },
+  ride: any,
+): number {
+  return isReservationRide(ride) ? cs.reservationRate : cs.rate;
 }
 async function kvGetByPrefix(prefix: string): Promise<any[]> {
   try { const { data } = await kvClient().from(KV_TABLE).select("key, value").like("key", prefix + "%"); return data?.map((d: any) => d.value) ?? []; } catch { return []; }
@@ -722,6 +753,11 @@ async function notifyDriver(ride: any, driver: any, expiresAtMs = Date.now() + M
     duration: (ride.duration || 0).toString(),
     estimatedPrice: estimatedPrice.toString(),
     vehicleCategory: ride.vehicleCategory,
+    // 🧾 Réservation : permet au chauffeur d'afficher le bon taux (20 %)
+    // avant même d'ouvrir l'écran de navigation.
+    isScheduled: ride.isScheduled ? 'true' : 'false',
+    scheduledTotalPrice: (Number(ride.scheduledTotalPrice) || 0).toString(),
+    scheduledDepositPaid: (Number(ride.scheduledDepositPaid) || 0).toString(),
     distanceToPickup: (driver.distanceToPickup || 0).toFixed(1),
     matchingRadiusKm: (ride.matchingRadiusKm || 0).toString(),
     notifiedAt: new Date().toISOString(),
@@ -1970,7 +2006,8 @@ app.post("/accept", async (c) => {
     try {
       const csHold = await getCommissionSettings();
       if (csHold.enabled) {
-        commissionHold = Math.max(Math.round((ride.estimatedPrice || 0) * csHold.rate / 100), csHold.minimum);
+        const holdRate = commissionRateForRide(csHold, ride);
+        commissionHold = Math.max(Math.round((ride.estimatedPrice || 0) * holdRate / 100), csHold.minimum);
       }
       if (commissionHold > 0) {
         const newBal = (driver.balance || 0) - commissionHold;
@@ -2622,7 +2659,10 @@ app.post("/sweep-fraud", async (c) => {
                 if (drv) {
                   const cs = await getCommissionSettings();
                   let commission = 0;
-                  if (cs.enabled) commission = Math.max(Math.round(price * cs.rate / 100), cs.minimum);
+                  if (cs.enabled) {
+                    const rate = commissionRateForRide(cs, ride);
+                    commission = Math.max(Math.round(price * rate / 100), cs.minimum);
+                  }
                   const due = commission - (ride.commissionHold || 0);
                   const nb = (drv.balance || 0) - due;
                   drv.balance = nb;
@@ -2932,8 +2972,9 @@ app.post("/complete", async (c) => {
           ? Number(ride.scheduledTotalPrice) + (Number(ride.penaltyCDF) || 0)
           : (actualCost || 0);
         let commission = 0;
+        const appliedRate = commissionRateForRide(cs, ride);
         if (cs.enabled) {
-          commission = Math.max(Math.round(baseForDriver * cs.rate / 100), cs.minimum);
+          commission = Math.max(Math.round(baseForDriver * appliedRate / 100), cs.minimum);
         }
         const driverEarnings  = baseForDriver - commission;
 
@@ -2995,8 +3036,8 @@ app.post("/complete", async (c) => {
         ride._driverNewBalance    = newBalance;
 
         console.log(`💰 [RIDE-COMPLETE] Driver ${effectiveDriverId}:`);
-        console.log(`   - Commission (${cs.enabled ? cs.rate + '%' : 'DÉSACTIVÉE'}): ${commission.toLocaleString('fr-FR')} CDF`);
-        console.log(`   - Gains (${cs.enabled ? 100 - cs.rate + '%' : '100%'}): ${driverEarnings.toLocaleString('fr-FR')} CDF`);
+        console.log(`   - Commission (${cs.enabled ? appliedRate + '%' : 'DÉSACTIVÉE'}${isReservationRide(ride) ? ' réservation' : ''}): ${commission.toLocaleString('fr-FR')} CDF`);
+        console.log(`   - Gains (${cs.enabled ? 100 - appliedRate + '%' : '100%'}): ${driverEarnings.toLocaleString('fr-FR')} CDF`);
         console.log(`   - Nouveau solde: ${newBalance.toLocaleString('fr-FR')} CDF`);
         console.log(`   - Forcé hors ligne: ${forcedOffline}`);
         console.log(`   - Total courses: ${driver.totalRides}`);
@@ -3099,12 +3140,17 @@ app.post("/:id/complete", async (c) => {
           ? Number(ride.scheduledTotalPrice) + (Number(ride.penaltyCDF) || 0)
           : (actualCost || 0);
         let commission = 0;
+        const appliedRate = commissionRateForRide(cs, ride);
         if (cs.enabled) {
-          commission = Math.max(Math.round(baseForDriver * cs.rate / 100), cs.minimum);
+          commission = Math.max(Math.round(baseForDriver * appliedRate / 100), cs.minimum);
         }
         const driverEarnings  = baseForDriver - commission;
 
-        const newBalance = (driver.balance || 0) - commission;
+        // 🛡️ Même logique que /complete : la provision prélevée à l'acceptation
+        // est déduite pour ne jamais facturer deux fois la commission.
+        const hold = ride.commissionHold || 0;
+        const due = commission - hold;
+        const newBalance = (driver.balance || 0) - due;
 
         // ✅ FIX BUG SOLDE : Synchroniser balance ET creditBalance
         driver.balance         = newBalance;
@@ -3221,11 +3267,16 @@ app.get("/driver/:driverId/earnings", async (c) => {
     }
     
     const cs = await getCommissionSettings();
-    const effectiveRate = cs.enabled ? cs.rate : 0;
-    const totalEarnings = filteredRides.reduce((sum: number, r: any) => 
-      sum + (r.totalPrice || r.estimatedPrice || 0), 0
-    );
-    const commission = Math.round(totalEarnings * effectiveRate / 100);
+    const baseOf = (r: any) =>
+      Number(r.totalPrice ?? r.finalPrice ?? r.estimatedPrice ?? 0) || 0;
+    const totalEarnings = filteredRides.reduce((sum: number, r: any) => sum + baseOf(r), 0);
+    // 🧮 Commission par course : 20 % si réservation, 15 % si course instantanée.
+    const commission = cs.enabled
+      ? Math.round(filteredRides.reduce((sum: number, r: any) => {
+          const rate = commissionRateForRide(cs, r);
+          return sum + Math.max(Math.round(baseOf(r) * rate / 100), cs.minimum);
+        }, 0))
+      : 0;
     const netEarnings = totalEarnings - commission;
     
     return c.json({
@@ -3344,19 +3395,26 @@ app.get("/driver/:driverId/rides", async (c) => {
     const weekStart   = new Date(now.getTime() - 7  * 24 * 60 * 60 * 1000);
     const monthStart  = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const sumPrice = (rides: any[]) => rides.reduce((s: number, r: any) => s + (r.totalPrice || r.actualPrice || r.estimatedPrice || 0), 0);
-
     const todayRides = completedRides.filter((r: any) => new Date(r.completedAt || r.createdAt) >= todayStart);
     const weekRides  = completedRides.filter((r: any) => new Date(r.completedAt || r.createdAt) >= weekStart);
     const monthRides = completedRides.filter((r: any) => new Date(r.completedAt || r.createdAt) >= monthStart);
 
     const cs = await getCommissionSettings();
-    const effRate = cs.enabled ? cs.rate : 0;
+    // 🧮 Gains nets par course (20 % réservation / 15 % instantanée) : on ne peut
+    // plus appliquer un taux unique, sinon les totaux chauffeur sont faux.
+    const sumNet = (rides: any[]) => Math.round(rides.reduce((s: number, r: any) => {
+      const base = Number(r.totalPrice || r.actualPrice || r.estimatedPrice || 0) || 0;
+      if (!cs.enabled || base <= 0) return s + base;
+      const rate = commissionRateForRide(cs, r);
+      const commission = Math.max(Math.round(base * rate / 100), cs.minimum);
+      return s + (base - commission);
+    }, 0));
+
     const stats = {
-      today:  { count: todayRides.length,  earnings: Math.round(sumPrice(todayRides)  * (1 - effRate / 100)) },
-      week:   { count: weekRides.length,   earnings: Math.round(sumPrice(weekRides)   * (1 - effRate / 100)) },
-      month:  { count: monthRides.length,  earnings: Math.round(sumPrice(monthRides)  * (1 - effRate / 100)) },
-      total:  { count: completedRides.length, earnings: Math.round(sumPrice(completedRides) * (1 - effRate / 100)) },
+      today:  { count: todayRides.length,  earnings: sumNet(todayRides) },
+      week:   { count: weekRides.length,   earnings: sumNet(weekRides) },
+      month:  { count: monthRides.length,  earnings: sumNet(monthRides) },
+      total:  { count: completedRides.length, earnings: sumNet(completedRides) },
     };
 
     console.log(`✅ [RIDES/HISTORY-DRIVER] ${driverRides.length} course(s), stats:`, stats);

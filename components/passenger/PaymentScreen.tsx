@@ -16,7 +16,7 @@ import type { PaymentInitData } from '../../lib/payment-providers/base-provider'
 import { useEjpayCheckout } from '../../hooks/useEjpayCheckout';
 import { EjpayWaitingModal } from './EjpayWaitingModal';
 import { VodacomMpesaLogo, OrangeMoneyLogo, AirtelMoneyLogo, AfrimoneyLogo } from '../mobile-money-logos';
-import { calculateDriverEarnings } from '../../lib/pricing';
+import { calculateDriverEarnings, getCommissionRateForRide, isReservationRide } from '../../lib/pricing';
 
 // ─── Réseaux Mobile Money ─────────────────────────────────────
 const MOBILE_MONEY_NETWORKS = [
@@ -264,7 +264,7 @@ export function PaymentScreen() {
             paymentTransactionId: transactionId,
             cashAmount: cashPart,
             mobileMoneyAmount: mobilePart,
-            driverEarnings: calculateDriverEarnings(ridePrice),
+            driverEarnings: calculateDriverEarnings(ridePrice, getCommissionRateForRide(isReservationRide(currentRide))),
             duration: durationInSeconds || 0,
             distance: distance || 0
           })

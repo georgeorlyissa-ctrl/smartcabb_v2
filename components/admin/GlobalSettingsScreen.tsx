@@ -185,7 +185,7 @@ export function GlobalSettingsScreen() {
               
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="commissionRate">Taux de commission (%)</Label>
+                  <Label htmlFor="commissionRate">Commission — course instantanée (%)</Label>
                   <Input
                     id="commissionRate"
                     type="number"
@@ -198,6 +198,22 @@ export function GlobalSettingsScreen() {
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Actuellement : {localConfig.commissionRate}%
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="reservationCommissionRate">Commission — réservation (%)</Label>
+                  <Input
+                    id="reservationCommissionRate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={localConfig.reservationCommissionRate}
+                    onChange={(e) => handleChange('reservationCommissionRate', parseFloat(e.target.value))}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Actuellement : {localConfig.reservationCommissionRate}% (courses programmées / aéroport / journée)
                   </p>
                 </div>
               </div>

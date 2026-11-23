@@ -72,7 +72,9 @@ async function kvSet(key: string, value: any): Promise<void> {
 
 const DEFAULT_CONFIG = {
   exchangeRate:           2500,
-  commissionRate:         10,
+  // Commission : 15 % sur une course instantanée, 20 % sur une réservation.
+  commissionRate:         15,
+  reservationCommissionRate: 20,
   nightTimeStart:         "21:00",
   nightTimeEnd:           "06:00",
   freeWaitingMinutes:     3,
@@ -177,6 +179,10 @@ app.post("/update", async (c) => {
       ...config,
       exchangeRate: safeNumber(config.exchangeRate, safeNumber(base.exchangeRate, DEFAULT_CONFIG.exchangeRate)),
       commissionRate: safeNumber(config.commissionRate, safeNumber(base.commissionRate, DEFAULT_CONFIG.commissionRate)),
+      reservationCommissionRate: safeNumber(
+        config.reservationCommissionRate,
+        safeNumber(base.reservationCommissionRate, DEFAULT_CONFIG.reservationCommissionRate),
+      ),
       // Version TOUJOURS croissante (elle repartait à 1 quand la config avait
       // été réécrite par les valeurs par défaut).
       configVersion: Math.max(
