@@ -514,7 +514,14 @@ async function findAndNotifyNearbyDrivers(ride: any) {
     );
 
     if (driversWithScore.length === 0) {
-      console.warn(`⚠️ Aucun chauffeur ${ride.vehicleCategory} à proximité (${radiusKm} km) pour ${ride.id}`);
+      // Distinguer « personne de disponible » de « des chauffeurs sont en
+      // ligne mais aucun dans le rayon » : le passager reçoit un message juste.
+      const noDriverReason = eligibleDrivers.length === 0
+        ? 'no_drivers_available'
+        : 'no_driver_nearby';
+      const onlineDrivers = allDrivers.filter((d: any) => isDriverOnline(d)).length;
+
+      console.warn(`⚠️ Aucun chauffeur ${ride.vehicleCategory} notifiable (${noDriverReason}, rayon ${radiusKm} km) pour ${ride.id}`);
       allDrivers.forEach((d: any) => {
         console.log(`  Driver ${d.full_name || d.name}: isOnline=${isDriverOnline(d)}, isAvailable=${isDriverAvailable(d)}, cat=${d.vehicleCategory||d.vehicle_category||d.vehicle?.category}, fcm=${!!d.fcmToken}`);
       });
@@ -524,7 +531,7 @@ async function findAndNotifyNearbyDrivers(ride: any) {
       // pouvait être acceptée plus tard par un chauffeur lointain.
       ride.status = 'no_driver_found';
       ride.noDriverFoundAt = new Date().toISOString();
-      ride.noDriverFoundReason = 'no_driver_nearby';
+      ride.noDriverFoundReason = noDriverReason;
       ride.matchingRadiusKm = radiusKm;
       ride.driversOutsideRadius = outsideRadius;
       await kv.set(`ride:${ride.id}`, ride).catch(() => undefined);
@@ -532,10 +539,11 @@ async function findAndNotifyNearbyDrivers(ride: any) {
 
       return {
         success: false,
-        reason: 'no_driver_nearby',
+        reason: noDriverReason,
         radiusKm,
         driversOutsideRadius: outsideRadius,
-        driversOnline: allDrivers.length,
+        driversOnline: onlineDrivers,
+        eligibleSameCategory: eligibleDrivers.length,
       };
     }
 
@@ -3699,8 +3707,12 @@ app.post("/process-scheduled", async (c) => {
             const token = typeof fcmTokenData === "string" ? fcmTokenData : fcmTokenData.token;
             if (token) {
               await sendFCMNotification(token, {
-                title: "SmartCabb - Course programmee",
-                body: `Votre course ${sr.pickup_address} vers ${sr.dropoff_address} est en cours de traitement. Un chauffeur arrive bientot.`,
+                title: matchingResult.success
+                  ? "SmartCabb - Course programmee"
+                  : "SmartCabb - Aucun chauffeur a proximite",
+                body: matchingResult.success
+                  ? `Votre course ${sr.pickup_address} vers ${sr.dropoff_address} est en cours de traitement. Un chauffeur arrive bientot.`
+                  : `Aucun chauffeur n'est disponible a proximite de ${sr.pickup_address}. Contactez le support au +243 960 624 008.`,
                 data: { rideId, type: "scheduled_ride_processing" }
               });
             }
@@ -4432,8 +4444,12 @@ app.post("/admin-process-one", async (c) => {
     const matchingResult = await findAndNotifyNearbyDrivers(ride);
     await supabase.from("scheduled_rides").update({ status: "completed" }).eq("id", sr.id);
     await notifyPassenger(sr.user_id, {
-      title: "SmartCabb - Course programmee",
-      body: `Votre course ${sr.pickup_address} vers ${sr.dropoff_address} est en cours de traitement. Un chauffeur arrive bientot.`,
+      title: matchingResult.success
+        ? "SmartCabb - Course programmee"
+        : "SmartCabb - Aucun chauffeur a proximite",
+      body: matchingResult.success
+        ? `Votre course ${sr.pickup_address} vers ${sr.dropoff_address} est en cours de traitement. Un chauffeur arrive bientot.`
+        : `Aucun chauffeur n'est disponible a proximite de ${sr.pickup_address}. Contactez le support au +243 960 624 008.`,
       data: { type: "scheduled_ride_processing", rideId: ride.id, reservationId: sr.id },
     });
     console.log(`Course forcee matching auto: ${ride.id} (reservation ${sr.id})`);

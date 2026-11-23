@@ -66,6 +66,7 @@ Assez de détail pour comprendre le code sans le relire.>
 | `website/mentions-legales.html` | Siège social + adresse de contact |
 | `website/cgu.html` | Adresse de contact |
 | `website/js/translations.js` | `footer.address` FR/EN |
+| `components/ChatWidget.tsx` | Adresse du siège dans la réponse « contact » ; application Android annoncée comme disponible sur Google Play |
 | `index.html` | Géo `-4.3214/15.2750`, téléphone réel, JSON-LD `LocalBusiness` + `TaxiService`, `ReserveAction`, `MobileApplication` Play Store, FAQ enrichie |
 | `vite.config.ts` | Prerender SEO : section siège + NAP ; sitemap : hreflang `/en/` supprimé, `/commander` et `/reserver` ajoutés |
 | `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
@@ -82,6 +83,7 @@ Assez de détail pour comprendre le code sans le relire.>
 8. **`/debug-drivers`** : `?lat=&lng=` (ou `?rideId=`) → `distanceKm`, `positionAgeSeconds`, `positionFresh`, `inRadius`, `matchable`, `reference.radiusKm` pour diagnostiquer un rayon.
 9. **Adresse** : nouvelle adresse appliquée aux pages légales, contact, CGU, confidentialité, inscription conducteur, footer et site statique `website/`. Coordonnées géocodées : **-4.3214, 15.2750** (63, Avenue Colonel Mondjiba, Basoko/Ngaliema — Silikin Village / Kadea).
 10. **SEO** : JSON-LD `LocalBusiness` + `TaxiService` (téléphone `+243960624008`, adresse complète, géo, `hasMap`, `ReserveAction`), `MobileApplication` pointant vers `https://play.google.com/store/apps/details?id=com.smartcabb.app`, 3 FAQ supplémentaires (siège, réservation à l'avance, communes desservies). Sitemap régénéré au build avec `/commander` et `/reserver`, hreflang `/en/` inexistant retiré.
+11. **Réservations programmées** : le motif `no_drivers_available` (personne de disponible) est désormais distingué de `no_driver_nearby` (chauffeurs en ligne mais hors rayon), et le passager est informé honnêtement (« Aucun chauffeur à proximité — contactez le support ») au lieu de « un chauffeur arrive bientôt » quand le matching échoue. Le chatbot indique la nouvelle adresse et l'app Android sur Google Play.
 
 ### Impact produit / comportement visible
 - Un chauffeur de Ngaba/Matete/Ndjili **ne voit plus** une demande faite à Gombe ; seuls les chauffeurs de la même catégorie et dans un rayon de 5 km (paramétrable 2–8 km) reçoivent la notification.

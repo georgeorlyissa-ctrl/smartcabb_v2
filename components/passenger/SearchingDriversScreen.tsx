@@ -483,13 +483,17 @@ export function SearchingDriversScreen() {
                     ? `Aucun chauffeur ${VEHICLE_LABELS[pendingRide.vehicleType] || ''} à proximité`
                     : noDriverInfo.alternatives.length > 0
                     ? `Aucun chauffeur ${VEHICLE_LABELS[pendingRide.vehicleType] || ''} en ligne`
+                    : noDriverInfo.totalOnline > 0
+                    ? `Aucun chauffeur ${VEHICLE_LABELS[pendingRide.vehicleType] || ''} disponible`
                     : 'Aucun chauffeur connecté pour le moment'}
                 </h2>
                 <p className="text-sm text-gray-600 mt-1">
                   {noDriverInfo.nearbyOnly
                     ? `Des chauffeurs sont connectés, mais aucun à moins de ${noDriverInfo.radiusKm ? `${noDriverInfo.radiusKm} km` : 'quelques kilomètres'} de votre point de départ. SmartCabb ne propose la course qu’aux chauffeurs réellement proches, pour une prise en charge rapide : réessayez dans quelques minutes ou déplacez légèrement votre point de départ.`
                     : noDriverInfo.rideCreated === false
-                    ? 'Votre demande n’a pas été enregistrée : aucun chauffeur n’est en ligne pour le moment.'
+                    ? (noDriverInfo.totalOnline > 0
+                        ? 'Aucun chauffeur de cette catégorie n’est disponible pour le moment. Votre demande n’a pas été enregistrée. Réessayez dans quelques minutes.'
+                        : 'Votre demande n’a pas été enregistrée : aucun chauffeur n’est en ligne pour le moment.')
                     : noDriverInfo.alternatives.length > 0
                     ? 'Des chauffeurs sont connectés dans d’autres catégories. Choisissez-en une pour être pris en charge tout de suite.'
                     : 'Tous nos chauffeurs sont hors ligne ou déjà en course. Réessayez dans quelques minutes.'}

@@ -103,10 +103,10 @@ We're planning to expand to Lubumbashi, Matadi and Kisangani in the coming month
     keywords: ['application', 'app', 'télécharger', 'installer', 'download', 'mobile', 'smartphone', 'site', 'web', 'site web'],
     fr: `Vous pouvez utiliser SmartCabb directement depuis votre navigateur, sur smartcabb.com, sans rien installer. Le site fonctionne très bien sur mobile.
 
-Une application native sera bientôt disponible sur le Play Store et l'App Store. En attendant, vous avez déjà accès à la réservation en quelques clics, à l'estimation du prix en temps réel, au suivi GPS du chauffeur, au paiement par mobile money, à votre historique de courses et à notre support intégré.`,
+L'application Android est disponible sur Google Play. Vous y retrouvez la réservation en quelques clics, l'estimation du prix en temps réel, le suivi GPS du chauffeur, le paiement par mobile money, votre historique de courses et notre support intégré.`,
     en: `You can use SmartCabb directly from your browser at smartcabb.com, no installation needed. The site works great on mobile.
 
-A native app will be available soon on the Play Store and App Store. In the meantime, you already have access to booking in a few clicks, real-time price estimates, GPS driver tracking, mobile money payment, your trip history, and our built-in support.`
+The Android app is available on Google Play. It gives you booking in a few clicks, real-time price estimates, GPS driver tracking, mobile money payment, your trip history, and our built-in support.`
   },
 
   paiement: {
@@ -153,10 +153,10 @@ Vehicles are regularly inspected and insured, and every trip is tracked by GPS. 
     keywords: ['contact', 'téléphone', 'email', 'joindre', 'appeler', 'call', 'reach', 'support', 'aide', 'help', 'service client', 'hotline', 'whatsapp'],
     fr: `Vous pouvez nous joindre par téléphone au +243 960 624 008, par email à admin@smartcabb.com, ou directement ici dans ce chat.
 
-Vous nous retrouverez aussi sur Facebook, Instagram (smartcabb7) et TikTok. Notre siège se trouve à Kinshasa. Pour une réponse rapide, le téléphone ou ce chat restent les options les plus efficaces.`,
+Vous nous retrouverez aussi sur Facebook, Instagram (smartcabb7) et TikTok. Notre siège se trouve au 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa (RDC). Pour une réponse rapide, le téléphone ou ce chat restent les options les plus efficaces.`,
     en: `You can reach us by phone at +243 960 624 008, by email at admin@smartcabb.com, or right here in this chat.
 
-You'll also find us on Facebook, Instagram (smartcabb7) and TikTok. Our headquarters are in Kinshasa. For a fast response, calling or using this chat are your best options.`
+You'll also find us on Facebook, Instagram (smartcabb7) and TikTok. Our head office is at 63, Avenue Colonel MONDJIBA, Ngaliema, Kinshasa (DRC). For a fast response, calling or using this chat are your best options.`
   },
 
   bagages: {
