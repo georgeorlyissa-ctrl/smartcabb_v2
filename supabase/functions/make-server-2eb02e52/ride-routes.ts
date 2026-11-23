@@ -1432,18 +1432,22 @@ app.get("/pending/:driverId", async (c) => {
         const pickupLng = Number(ride.pickup?.coordinates?.lng ?? ride.pickup?.lng ?? ride.pickupLng);
         if (Number.isFinite(pickupLat) && Number.isFinite(pickupLng)) {
           const radiusKm = Number(ride.matchingRadiusKm || notification.matchingRadiusKm) || await resolveMatchRadiusKm();
-          const driver = await kv.get<any>(`driver:${driverId}`);
-          const { pos, ageMs } = readDriverPositionAge(driver);
-          const tooOld = ageMs !== null && ageMs > MATCH_POSITION_MAX_AGE_MS;
-          const distanceKm = pos ? calculateDistance(pickupLat, pickupLng, pos.lat, pos.lng) : Infinity;
-          if (!pos || tooOld || distanceKm > radiusKm) {
-            await kv.delete(`driver_notification:${driverId}`);
-            console.log(
-              `🚫 Notification retirée pour ${driverId} : ` +
-              (pos ? `${distanceKm.toFixed(1)} km > ${radiusKm} km` : 'position GPS absente') +
-              (tooOld ? ' (GPS périmé)' : ''),
-            );
-            return c.json({ success: true, ride: null });
+          // Lecture ciblée (position uniquement) : cette route est sondée toutes
+          // les 8 s par chaque chauffeur, inutile de charger la fiche complète.
+          const driver = await readDriverLiveLite(driverId).catch(() => null);
+          if (driver) {
+            const { pos, ageMs } = readDriverPositionAge(driver);
+            const tooOld = ageMs !== null && ageMs > MATCH_POSITION_MAX_AGE_MS;
+            const distanceKm = pos ? calculateDistance(pickupLat, pickupLng, pos.lat, pos.lng) : Infinity;
+            if (!pos || tooOld || distanceKm > radiusKm) {
+              await kv.delete(`driver_notification:${driverId}`);
+              console.log(
+                `🚫 Notification retirée pour ${driverId} : ` +
+                (pos ? `${distanceKm.toFixed(1)} km > ${radiusKm} km` : 'position GPS absente') +
+                (tooOld ? ' (GPS périmé)' : ''),
+              );
+              return c.json({ success: true, ride: null });
+            }
           }
         }
         console.log(`📋 Notification de course trouvée pour ${driverId}: ${notification.rideId}`);
