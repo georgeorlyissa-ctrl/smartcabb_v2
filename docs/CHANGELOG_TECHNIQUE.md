@@ -42,6 +42,53 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-25 (39) — Inscription passager : OTP SMS obligatoire avant confirmation du numéro
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat + security
+- **Objectif** : à l'inscription d'un client passager, un code OTP doit **toujours** être envoyé par SMS et vérifié avant que le numéro soit considéré comme confirmé (et avant la création du compte). Le contournement « OTP désactivé en config » est supprimé.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/auth-routes.ts` | `/signup` exige un jeton OTP valide pour tout compte **passager** ; profil enrichi `phoneVerified` / `phoneVerifiedAt` ; `/delete-user-by-phone` protégé par un jeton OTP |
+| `supabase/functions/make-server-2eb02e52/otp-core.ts` | Nouvelle fonction `peekOTPToken()` (valide sans consommer le jeton) |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | `/drivers/delete-user-by-phone` protégé par un jeton OTP |
+| `components/passenger/RegisterScreen.tsx` | Suppression du contournement `otpRequired` : l'écran OTP s'affiche systématiquement ; suppression du nettoyage préalable redondant |
+| `components/PhoneVerificationStep.tsx` | Texte « envoyé par SMS » (plus de mention WhatsApp), canal unique EJ SMS |
+| `components/driver/DriverRegistrationScreen.tsx` | Nettoyage préalable redondant supprimé |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **Backend** : dans `/auth/signup`, `otpMandatory = (role || "passenger") === "passenger"`. Si un numéro est fourni pour un passager, `verifyOTPToken(phone, "registration", body.otpToken)` est **toujours** exécuté. Sans jeton valide → `400 { error, code: "OTP_REQUIRED" }`, aucune création de compte.
+2. **Jeton** : émis par `/otp/verify` après saisie du code, lié au numéro + `purpose = registration`, valable 10 minutes, **usage unique** (consommé par `/signup`).
+3. **Profil** : `phoneVerified = true` et `phoneVerifiedAt` sont enregistrés dans `profile:<id>`, `passenger:<id>` et `user_metadata.phone_verified`.
+4. **SMS** : envoi via EJ SMS (EJSARL) uniquement (`sendOTPViaSMS`), cooldown 60 s, 5 tentatives max, code à 6 chiffres valable 10 min.
+5. **Sécurité** : les endpoints `delete-user-by-phone` (auth + drivers) ne suppriment plus un compte sur simple numéro : ils exigent un jeton OTP « registration » encore valide (`peekOTPToken`, non consommé). Le nettoyage préalable côté client a été supprimé car `/signup` et `/drivers/signup` gèrent déjà un ancien compte.
+6. **Conducteurs** : comportement inchangé (OTP piloté par `otpRequired`), pour ne pas bloquer les clients conducteurs déjà déployés.
+
+### Impact produit / comportement visible
+- Le passager remplit le formulaire → reçoit un **SMS** avec un code à 6 chiffres → saisit le code → le compte est créé et le numéro est marqué vérifié.
+- Impossible de créer un compte passager sans prouver la possession du numéro, même si `otpRequired = false` dans la config admin.
+- Les anciennes versions en cache qui n'envoient pas `otpToken` reçoivent « Vérification du numéro requise (code OTP) » ; un simple rechargement de l'app charge le nouveau parcours.
+
+### Risques & rollback
+- **Risque** : dépendance au crédit EJ SMS. Si le fournisseur tombe, aucune inscription passager n'aboutit (message d'erreur explicite).
+- **Rollback** : `git revert <hash>` + redéploiement Edge Function + Vercel.
+- **Aucune migration** : uniquement des champs de profil supplémentaires.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors `_headers/Code-component-*.tsx`)
+- [x] `npm run build`
+- [x] Edge Function déployée
+- [x] `POST /auth/signup` (rôle passager, sans `otpToken`) → **400** `{"code":"OTP_REQUIRED","error":"Vérification du numéro requise (code OTP)."}` (aucun compte créé)
+- [x] `POST /otp/send` avec numéro invalide → **400** « Numéro de téléphone invalide »
+- [ ] Test réel avec un numéro de téléphone valide (réception SMS + inscription) — à faire avec accord
+
+---
+
 ## 2026-11-24 (38) — Commission différenciée : 20 % réservation / 15 % course instantanée
 
 - **Commit** : `0f2c0bf` (branche `main`, poussée sur `origin`)

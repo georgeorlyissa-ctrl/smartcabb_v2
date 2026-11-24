@@ -203,6 +203,31 @@ export async function verifyOTP(
 }
 
 /**
+ * Vérifie un jeton SANS le consommer (utile pour une action complémentaire
+ * avant le /signup, comme le nettoyage d'un ancien compte).
+ */
+export async function peekOTPToken(
+  phone: string,
+  purpose: string,
+  token: string | null | undefined
+): Promise<{ ok: boolean; error?: string }> {
+  if (!token) {
+    return { ok: false, error: "Vérification du numéro requise (code OTP)." };
+  }
+  const entry = await kvGet(otpVerifiedKey(phone, purpose));
+  if (!entry) {
+    return { ok: false, error: "Numéro non vérifié. Veuillez confirmer votre code OTP." };
+  }
+  if (entry.token !== token) {
+    return { ok: false, error: "Jeton de vérification invalide." };
+  }
+  if (Date.now() > (entry.expiresAt as number)) {
+    return { ok: false, error: "Vérification expirée. Veuillez redemander un code OTP." };
+  }
+  return { ok: true };
+}
+
+/**
  * Vérifie le jeton de vérification fourni au /signup (consommé après usage).
  */
 export async function verifyOTPToken(

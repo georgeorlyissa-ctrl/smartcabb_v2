@@ -9,8 +9,6 @@ import { UnifiedPolicyModal } from '../shared/UnifiedPolicyModal';
 import { signUp } from '../../lib/auth-service';
 import { sendSMS } from '../../lib/sms-service';
 import { PhoneVerificationStep } from '../PhoneVerificationStep';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
-import { fetchGlobalConfig } from '../../lib/config-sync';
 
 // Icônes inline (évite import lib/icons qui n'existe plus)
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -89,15 +87,8 @@ export function RegisterScreen() {
       return;
     }
 
-    // 🔐 Étape OTP : vérifier le numéro de téléphone avant l'inscription
-    // Phase de test : si l'OTP est désactivé côté config, inscription directe
-    try {
-      const cfg = await fetchGlobalConfig();
-      if (cfg && cfg.otpRequired !== true) {
-        await handleOtpVerified('');
-        return;
-      }
-    } catch {}
+    // 🔐 Étape OTP OBLIGATOIRE : le numéro doit être confirmé par SMS avant
+    // la création du compte passager (le backend refuse le /signup sans jeton).
     setShowOtp(true);
   };
 
@@ -107,35 +98,13 @@ export function RegisterScreen() {
     setLoading(true);
     
     try {
-      // 🧹 NETTOYER LES UTILISATEURS ORPHELINS AVANT L'INSCRIPTION
-      try {
-        const cleanupResponse = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/auth/delete-user-by-phone`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${publicAnonKey}`
-            },
-            body: JSON.stringify({ phone: formData.phone })
-          }
-        );
-        
-        const cleanupResult = await cleanupResponse.json();
-        if (cleanupResult.deletedAuth || cleanupResult.deletedProfile) {
-          console.log('✅ Utilisateur orphelin nettoyé avant inscription');
-        }
-      } catch (cleanupError) {
-        console.log('⚠️ Nettoyage préalable ignoré:', cleanupError);
-        // Continuer même si le nettoyage échoue
-      }
-      
       console.log('📱 Début inscription avec:', { 
         phone: formData.phone, 
         name: formData.name 
       });
       
-      // Inscription avec Supabase
+      // Inscription avec Supabase — le jeton OTP prouve la possession du numéro.
+      // Le backend gère lui-même un éventuel ancien compte (même numéro).
       const result = await signUp({
         phone: formData.phone,
         password: formData.password,

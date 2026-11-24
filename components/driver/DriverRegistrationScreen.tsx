@@ -15,7 +15,6 @@ import { SmartCabbLogo } from '../SmartCabbLogo';
 import { signUpDriver } from '../../lib/auth-service-driver-signup';
 import { PhoneVerificationStep } from '../PhoneVerificationStep';
 import { sendSMS } from '../../lib/sms-service';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { fetchGlobalConfig } from '../../lib/config-sync';
 import { useNavigate } from '../../lib/simple-router';
 
@@ -278,29 +277,6 @@ export function DriverRegistrationScreen() {
     setLoading(true);
 
     try {
-      // 🧹 NETTOYER LES UTILISATEURS ORPHELINS AVANT L'INSCRIPTION
-      try {
-        const cleanupResponse = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-2eb02e52/drivers/delete-user-by-phone`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${publicAnonKey}`
-            },
-            body: JSON.stringify({ phone: formData.phone })
-          }
-        );
-        
-        const cleanupResult = await cleanupResponse.json();
-        if (cleanupResult.deletedAuth || cleanupResult.deletedProfile) {
-          console.log('✅ Utilisateur conducteur orphelin nettoyé avant inscription');
-        }
-      } catch (cleanupError) {
-        console.log('⚠️ Nettoyage préalable conducteur ignoré:', cleanupError);
-        // Continuer même si le nettoyage échoue
-      }
-      
       // Inscription via Supabase
       // 🚦 Une seule catégorie Standard (la variante « sans clim » est en pause)
       const vehicleCategory = formData.vehicleType as 'smart_standard' | 'smart_confort' | 'smart_plus' | 'smart_business';

@@ -6,7 +6,7 @@
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { isOTPRequired, verifyOTPToken } from "./otp-core.ts";
+import { isOTPRequired, peekOTPToken, verifyOTPToken } from "./otp-core.ts";
 import {
   invalidateDriversLiteCache,
   isPlaceholderDriverRecord,
@@ -986,11 +986,20 @@ app.post("/:driverId/status", async (c) => {
 
 app.post("/delete-user-by-phone", async (c) => {
   try {
-    const { phone } = await c.req.json();
+    const { phone, otpToken } = await c.req.json();
     if (!phone) return c.json({ success: false, error: "Téléphone requis" }, 400);
 
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!normalizedPhone) return c.json({ success: false, error: "Format invalide" }, 400);
+
+    // 🔒 Suppression d'un compte conducteur : uniquement par le propriétaire du
+    // numéro, prouvé par un jeton OTP « registration » valide. Sans ce garde-fou,
+    // l'API permettait de supprimer le compte de n'importe quel numéro.
+    const proof = await peekOTPToken(normalizedPhone, "registration", otpToken);
+    if (!proof.ok) {
+      console.warn("⛔ [DRIVERS/DELETE-BY-PHONE] Jeton OTP absent/invalide pour", normalizedPhone);
+      return c.json({ success: false, error: proof.error || "Vérification du numéro requise" }, 403);
+    }
 
     const phoneDigits = normalizedPhone.replace(/\D/g, "");
     const generatedEmail = `u${phoneDigits}@smartcabb.app`;

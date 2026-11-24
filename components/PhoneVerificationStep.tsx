@@ -5,7 +5,7 @@ import { sendOTPCode, verifyOTPCode } from '../lib/otp-service';
 
 /**
  * 🔐 ÉTAPE DE VÉRIFICATION DU NUMÉRO PAR OTP
- * Envoie automatiquement un code (WhatsApp, fallback SMS) et vérifie la saisie.
+ * Envoie automatiquement un code par SMS (EJ SMS) et vérifie la saisie.
  * Appelle onVerified(token) après succès — le token doit être transmis au /signup.
  */
 export function PhoneVerificationStep({
@@ -28,7 +28,6 @@ export function PhoneVerificationStep({
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [channel, setChannel] = useState<'whatsapp' | 'sms' | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const stopCountdown = useCallback(() => {
@@ -56,7 +55,6 @@ export function PhoneVerificationStep({
       return;
     }
 
-    setChannel(result.channel || null);
     setCountdown(60);
     startCountdown(60);
   }, [phone, purpose, sending]);
@@ -113,13 +111,8 @@ export function PhoneVerificationStep({
         </div>
         <h2 className="text-lg font-medium">{title}</h2>
         <p className="text-sm text-gray-600 mt-2">
-          Un code à 6 chiffres a été envoyé au{' '}
+          Un code à 6 chiffres a été envoyé <span className="font-semibold">par SMS</span> au{' '}
           <span className="font-semibold">{phone}</span>
-          {channel ? (
-            <> par <span className="capitalize font-medium text-gray-800">{channel}</span></>
-          ) : (
-            <> (WhatsApp ou SMS)</>
-          )}
         </p>
       </div>
 

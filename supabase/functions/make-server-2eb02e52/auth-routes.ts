@@ -7,7 +7,7 @@
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { isOTPRequired, verifyOTPToken } from "./otp-core.ts";
+import { isOTPRequired, peekOTPToken, verifyOTPToken } from "./otp-core.ts";
 import { readKvStrict } from "./driver-records.ts";
 import { rateLimiter } from "../lib/rate-limit.ts";
 
@@ -111,16 +111,28 @@ app.post("/signup", rateLimiter(), async (c) => {
     const normalizedEmail = normalizeEmail(finalEmail);
     const normalizedPhone = phone ? normalizePhoneNumber(phone) : null;
 
-    // 🔐 Vérification OTP du numéro (requise seulement si activée dans la config admin)
-    if (normalizedPhone) {
-      const otpRequired = await isOTPRequired();
-      if (otpRequired) {
-        const otpCheck = await verifyOTPToken(normalizedPhone, "registration", body.otpToken);
-        if (!otpCheck.ok) {
-          console.warn("⚠️ [AUTH/SIGNUP] OTP non vérifié:", otpCheck.error);
-          return c.json({ success: false, error: otpCheck.error }, 400);
-        }
+    // 🔐 Vérification OTP du numéro.
+    // • Client passager : OTP **toujours obligatoire** (le numéro doit être
+    //   confirmé par SMS avant que le compte soit créé).
+    // • Conducteurs / autres rôles : comportement piloté par `otpRequired`
+    //   (rétrocompatible avec les clients déjà déployés).
+    const normalizedRole = String(role || "passenger").toLowerCase();
+    const otpMandatory = normalizedRole === "passenger";
+    let phoneVerified = false;
+    if (normalizedPhone && (otpMandatory || await isOTPRequired())) {
+      const otpCheck = await verifyOTPToken(normalizedPhone, "registration", body.otpToken);
+      if (!otpCheck.ok) {
+        console.warn("⚠️ [AUTH/SIGNUP] OTP non vérifié:", otpCheck.error);
+        return c.json({
+          success: false,
+          error: otpCheck.error || "Vérification du numéro requise. Demandez un code par SMS.",
+          code: "OTP_REQUIRED",
+        }, 400);
       }
+      phoneVerified = true;
+    } else if (normalizedPhone) {
+      // Numéro fourni sans vérification (rôle non passager, flag désactivé).
+      phoneVerified = false;
     }
 
     const supabase = createClient(
@@ -162,6 +174,7 @@ app.post("/signup", rateLimiter(), async (c) => {
         name: resolvedName,
         phone: normalizedPhone,
         role: role || "passenger",
+        phone_verified: phoneVerified,
       },
     });
 
@@ -183,6 +196,8 @@ app.post("/signup", rateLimiter(), async (c) => {
       full_name: resolvedName,
       phone: normalizedPhone,
       role: role || "passenger",
+      phoneVerified,
+      phoneVerifiedAt: phoneVerified ? new Date().toISOString() : null,
       balance: 0,
       created_at: data.user.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -333,11 +348,20 @@ app.post("/logout", async (c) => {
 
 app.post("/delete-user-by-phone", async (c) => {
   try {
-    const { phone } = await c.req.json();
+    const { phone, otpToken } = await c.req.json();
     if (!phone) return c.json({ success: false, error: "Téléphone requis" }, 400);
 
     const normalizedPhone = normalizePhoneNumber(phone);
     if (!normalizedPhone) return c.json({ success: false, error: "Format invalide" }, 400);
+
+    // 🔒 Suppression d'un compte par simple numéro : réservée au propriétaire
+    // du numéro, prouvé par un jeton OTP « registration » encore valide.
+    // Sans ce garde-fou, n'importe qui pouvait supprimer le compte d'un tiers.
+    const proof = await peekOTPToken(normalizedPhone, "registration", otpToken);
+    if (!proof.ok) {
+      console.warn("⛔ [AUTH/DELETE-BY-PHONE] Jeton OTP absent/invalide pour", normalizedPhone);
+      return c.json({ success: false, error: proof.error || "Vérification du numéro requise" }, 403);
+    }
 
     const phoneDigits = normalizedPhone.replace(/\D/g, "");
     const generatedEmail = `u${phoneDigits}@smartcabb.app`;
