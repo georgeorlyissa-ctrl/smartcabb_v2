@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-25 (39) — Inscription passager : OTP SMS obligatoire avant confirmation du numéro
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `f1f8f44` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat + security
 - **Objectif** : à l'inscription d'un client passager, un code OTP doit **toujours** être envoyé par SMS et vérifié avant que le numéro soit considéré comme confirmé (et avant la création du compte). Le contournement « OTP désactivé en config » est supprimé.
@@ -76,7 +76,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ### Risques & rollback
 - **Risque** : dépendance au crédit EJ SMS. Si le fournisseur tombe, aucune inscription passager n'aboutit (message d'erreur explicite).
-- **Rollback** : `git revert <hash>` + redéploiement Edge Function + Vercel.
+- **Rollback** : `git revert f1f8f44` + redéploiement Edge Function + Vercel.
 - **Aucune migration** : uniquement des champs de profil supplémentaires.
 
 ### Tests / vérifications
