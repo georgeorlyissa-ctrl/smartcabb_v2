@@ -472,6 +472,7 @@ function App() {
                   <Route path="/auth/create-auth-from-profile" element={<CreateAuthFromProfilePage />} />
                   
                   {/* Redirections */}
+                  <Route path="/login" element={<Navigate to="/app" replace />} />
                   <Route path="/passenger" element={<Navigate to="/app" replace />} />
                   <Route path="/passager" element={<Navigate to="/app" replace />} />
                   <Route path="/conducteur" element={<Navigate to="/driver" replace />} />
@@ -486,9 +487,6 @@ function App() {
                       ces routes client prennent le relais en navigation interne SPA) */}
                   <Route path="/preview_page_v2.html" element={<Navigate to="/" replace />} />
                   <Route path="/index.html" element={<Navigate to="/" replace />} />
-                  {/* Anciens liens : évite les pages blanches (aucune route /login) */}
-                  <Route path="/login" element={<Navigate to="/app" replace />} />
-                  <Route path="/forgot-password" element={<Navigate to="/auth/forgot-password" replace />} />
 
                   {/* 404 explicite noindex — ne plus renvoyer la homepage en déguisé */}
                   <Route path="*" element={<NotFoundPage />} />

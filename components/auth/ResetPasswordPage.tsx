@@ -15,11 +15,7 @@ export function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [sessionEstablished, setSessionEstablished] = useState(false);
   const [checkingToken, setCheckingToken] = useState(true);
-  const [accountRole, setAccountRole] = useState<string | null>(null);
   const navigate = useNavigate();
-
-  /** Destination après réinitialisation : admin → panneau admin, sinon app passager. */
-  const isAdminAccount = accountRole === 'admin';
 
   useEffect(() => {
     let cancelled = false;
@@ -29,12 +25,10 @@ export function ResetPasswordPage() {
       if (!cancelled) setCheckingToken(false);
     };
 
-    const markRecoverySession = (reason: string, user?: any) => {
+    const markRecoverySession = (reason: string) => {
       if (cancelled || recoveryReady) return;
       recoveryReady = true;
-      const role = user?.user_metadata?.role || user?.app_metadata?.role || null;
-      console.log('✅ Session de récupération prête:', reason, '| rôle:', role);
-      if (role) setAccountRole(String(role));
+      console.log('✅ Session de récupération prête:', reason);
       setSessionEstablished(true);
       setError('');
       finishChecking();
@@ -62,14 +56,14 @@ export function ResetPasswordPage() {
     //    on écoute l'événement de récupération, puis on retombe sur getSession().
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        markRecoverySession(event, session?.user);
+        markRecoverySession(event);
       }
     });
 
     const bootstrap = async () => {
       try {
         if (accessToken) {
-          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          const { error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
@@ -79,13 +73,13 @@ export function ResetPasswordPage() {
             finishChecking();
             return;
           }
-          markRecoverySession('jeton du lien', sessionData?.user);
+          markRecoverySession('jeton du lien');
           return;
         }
 
         const { data } = await supabase.auth.getSession();
         if (data.session) {
-          markRecoverySession('session existante', data.session.user);
+          markRecoverySession('session existante');
           return;
         }
 
@@ -94,7 +88,7 @@ export function ResetPasswordPage() {
           if (cancelled || recoveryReady) return;
           const { data: retry } = await supabase.auth.getSession();
           if (retry.session) {
-            markRecoverySession('session différée', retry.session.user);
+            markRecoverySession('session différée');
           } else {
             setError(expiredMessage());
             finishChecking();
@@ -149,42 +143,28 @@ export function ResetPasswordPage() {
         throw error;
       }
 
-      const role =
-        (data as any)?.user?.user_metadata?.role ||
-        (data as any)?.user?.app_metadata?.role ||
-        accountRole ||
-        null;
+      console.log('✅ Mot de passe mis à jour:', data);
+
+      // 🔑 Déterminer l'espace de connexion AVANT la déconnexion
+      const { data: userData } = await supabase.auth.getUser();
+      const role = userData?.user?.user_metadata?.role || userData?.user?.app_metadata?.role;
       const isAdmin = role === 'admin';
+
+      // 🚪 Déconnexion : on veut la page de connexion, pas une session héritée
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.warn('⚠️ Déconnexion après réinitialisation échouée:', signOutError);
+      }
 
       setSuccess(true);
       toast.success('Mot de passe réinitialisé avec succès !');
 
-      // 🔒 On ferme la session de récupération : l'utilisateur doit se
-      // reconnecter proprement avec son nouveau mot de passe.
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch {
-        /* la déconnexion ne doit jamais bloquer la redirection */
-      }
-
+      // Rediriger vers la connexion correspondante (admin → panneau admin)
       const target = isAdmin ? '/admin' : '/app';
-      console.log(`↪️ Redirection post-réinitialisation vers ${target} (rôle: ${role || 'inconnu'})`);
-
-      // Rechargement complet pour repartir d'un état propre.
+      console.log('➡️ Redirection après réinitialisation:', target);
       setTimeout(() => {
-        if (isAdmin) {
-          try {
-            [
-              'smartcab_is_admin',
-              'smartcab_current_admin',
-              'smartcab_current_screen',
-              'smartcab_current_view',
-            ].forEach((key) => localStorage.removeItem(key));
-          } catch {
-            /* ignore */
-          }
-        }
-        window.location.replace(target);
+        window.location.href = target;
       }, 2500);
 
     } catch (error: any) {
@@ -222,9 +202,7 @@ export function ResetPasswordPage() {
               Votre mot de passe a été mis à jour avec succès.
             </p>
             <p className="text-sm text-gray-500">
-              {isAdminAccount
-                ? 'Redirection vers la page de connexion administrateur...'
-                : 'Redirection vers la page de connexion...'}
+              Redirection vers la page de connexion...
             </p>
           </div>
         </motion.div>
@@ -274,9 +252,7 @@ export function ResetPasswordPage() {
                 <Button
                   variant="link"
                   className="text-red-600 p-0 h-auto mt-2"
-                  onClick={() =>
-                    navigate(isAdminAccount ? '/admin/forgot-password' : '/auth/forgot-password')
-                  }
+                  onClick={() => navigate('/forgot-password')}
                 >
                   Demander un nouveau lien
                 </Button>
