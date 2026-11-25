@@ -4,6 +4,23 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Checkbox } from '../ui/checkbox';
+import { User, Lock, ArrowRight, ShieldCheck, CreditCard, MapPin } from '../../lib/icons';
+import {
+  AuthShell,
+  AuthCard,
+  AuthCardBrand,
+  AuthEyebrow,
+  AuthHeading,
+  AuthField,
+  AuthInput,
+  AuthPasswordInput,
+  AuthButton,
+  AuthAlert,
+  AuthFootnote,
+  AuthBackButton,
+  AuthCheckbox,
+  PasswordStrength,
+} from '../auth/AuthKit';
 import { PhoneInput } from '../PhoneInput';
 import { UnifiedPolicyModal } from '../shared/UnifiedPolicyModal';
 import { signUp } from '../../lib/auth-service';
@@ -188,216 +205,231 @@ export function RegisterScreen() {
   };
 
   return (
-    <div 
-      className="min-h-screen bg-white flex flex-col pb-safe-page"
+    <AuthShell
+      audience="passenger"
+      headline="Rejoignez SmartCabb."
+      subline="Un compte, une application, et un chauffeur à votre porte en quelques minutes."
+      highlights={[
+        {
+          icon: <MapPin className="h-[18px] w-[18px]" />,
+          title: 'Partout à Kinshasa',
+          text: 'Des chauffeurs disponibles dans toutes les communes de la capitale.',
+        },
+        {
+          icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+          title: 'Numéro vérifié',
+          text: 'Chaque compte est confirmé par SMS pour protéger vos trajets.',
+        },
+        {
+          icon: <CreditCard className="h-[18px] w-[18px]" />,
+          title: 'Paiement flexible',
+          text: 'Espèces, Mobile Money ou portefeuille SmartCabb.',
+        },
+      ]}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            console.log('⬅️ Retour vers la page d\'accueil');
-            setCurrentView(null);
-            setCurrentScreen('landing');
-          }}
-          className="w-10 h-10"
-        >
-          <ArrowLeftIcon className="w-5 h-5" />
-        </Button>
-        <h1 className="text-xl">Inscription</h1>
-        <div className="w-10" />
-      </div>
+      <AuthCard>
+        <AuthCardBrand audience="passenger" />
 
-      {/* Form / OTP */}
-      <div className="flex-1 px-6 py-8 overflow-y-auto">
         {showOtp ? (
-          <PhoneVerificationStep
-            phone={formData.phone}
-            purpose="registration"
-            onVerified={handleOtpVerified}
-            onBack={() => setShowOtp(false)}
-            title="Confirmez votre numéro"
-          />
+          <>
+            <AuthEyebrow audience="passenger">Vérification</AuthEyebrow>
+            <AuthHeading
+              title="Confirmez votre numéro"
+              subtitle="Saisissez le code à 6 chiffres reçu par SMS pour activer votre compte."
+            />
+            <div className="mt-5">
+              <PhoneVerificationStep
+                phone={formData.phone}
+                purpose="registration"
+                onVerified={handleOtpVerified}
+                onBack={() => setShowOtp(false)}
+                title="Code de vérification"
+                accentClass="bg-[#007AFF] hover:bg-[#0069DB]"
+              />
+            </div>
+          </>
         ) : (
-        <div
-          className="space-y-6"
-        >
-          <p className="text-gray-600 mb-8 text-center">
-            Créez votre compte SmartCabb
-          </p>
-
-          {/* Messages de succès et d'erreur */}
-          {successMsg && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <p className="text-green-800 font-medium">{successMsg}</p>
+          <>
+            <div className="mb-4">
+              <AuthBackButton
+                label="Accueil"
+                onClick={() => {
+                  setCurrentView(null);
+                  setCurrentScreen('landing');
+                }}
+              />
             </div>
-          )}
 
-          {errorMsg && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
-              <div className="flex items-center gap-3 mb-3">
-                <AlertCircleIcon className="w-5 h-5 text-red-500 flex-shrink-0" />
-                <p className="text-red-800 font-medium">{errorMsg}</p>
+            <AuthEyebrow audience="passenger">Nouveau compte</AuthEyebrow>
+            <AuthHeading
+              title="Créez votre compte"
+              subtitle="Quelques informations suffisent pour commander votre première course."
+            />
+
+            {(successMsg || errorMsg) && (
+              <div className="mt-4 space-y-2">
+                {successMsg && <AuthAlert tone="success">{successMsg}</AuthAlert>}
+                {errorMsg && (
+                  <AuthAlert
+                    tone="error"
+                    title="Inscription impossible"
+                    action={
+                      (errorMsg.includes('déjà inscrit') || errorMsg.includes('already registered')) ? (
+                        <button
+                          type="button"
+                          onClick={() => setCurrentScreen('login')}
+                          className="w-full rounded-xl bg-[#007AFF] px-3 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[#0069DB]"
+                        >
+                          Aller à la connexion
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    {errorMsg}
+                  </AuthAlert>
+                )}
               </div>
-              
-              {/* Si c'est une erreur "déjà inscrit", afficher un bouton de connexion */}
-              {(errorMsg.includes('déjà inscrit') || errorMsg.includes('already registered')) && (
-                <Button
-                  onClick={() => setCurrentScreen('login')}
-                  className="w-full mt-3 bg-cyan-500 hover:bg-cyan-600 text-white"
-                >
-                  Aller à la connexion
-                </Button>
-              )}
-            </div>
-          )}
+            )}
 
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="name">Nom complet</Label>
-              <div className="mt-2">
-                <Input
+            <form
+              className="mt-5 space-y-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!loading) handleRegister();
+              }}
+            >
+              <AuthField label="Nom complet" htmlFor="register-name">
+                <AuthInput
                   id="register-name"
                   type="text"
-                  placeholder="Ex: Jean Mulamba"
+                  placeholder="Ex : Jean Mulamba"
                   value={formData.name}
                   onChange={(e) => updateFormData('name', e.target.value)}
-                  className="px-4 h-12 bg-gray-50 border-0 rounded-xl text-base"
                   autoComplete="off"
                   autoCorrect="off"
                   autoCapitalize="words"
-                  spellCheck="false"
+                  spellCheck={false}
+                  icon={<User className="h-[18px] w-[18px]" />}
                 />
-              </div>
-            </div>
+              </AuthField>
 
-            <div>
-              <Label htmlFor="phone">
-                Téléphone <span className="text-red-500">*</span>
-              </Label>
-              <div className="mt-2">
+              <AuthField
+                label="Téléphone"
+                htmlFor="register-phone"
+                hint="Format congolais : +243 suivi de 9 chiffres."
+              >
                 <PhoneInput
                   id="register-phone"
+                  variant="auth"
                   value={formData.phone}
                   onChange={(value) => updateFormData('phone', value)}
                 />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Format: +243 XX XXX XXXX (9 chiffres)</p>
-            </div>
+              </AuthField>
 
-            <div>
-              <Label htmlFor="password">Mot de passe</Label>
-              <div className="mt-2">
-                <Input
+              <AuthField label="Mot de passe" htmlFor="register-password">
+                <AuthPasswordInput
                   id="register-password"
-                  type="password"
-                  placeholder="••••••••"
                   value={formData.password}
                   onChange={(e) => updateFormData('password', e.target.value)}
-                  className="px-4 h-12 bg-gray-50 border-0 rounded-xl text-base"
                   autoComplete="new-password"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
+                  icon={<Lock className="h-[18px] w-[18px]" />}
                 />
-              </div>
-            </div>
+                <PasswordStrength password={formData.password} />
+              </AuthField>
 
-            <div>
-              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-              <div className="mt-2">
-                <Input
+              <AuthField
+                label="Confirmer le mot de passe"
+                htmlFor="register-confirmPassword"
+                hint={
+                  formData.confirmPassword && formData.confirmPassword !== formData.password
+                    ? undefined
+                    : undefined
+                }
+              >
+                <AuthPasswordInput
                   id="register-confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
                   value={formData.confirmPassword}
                   onChange={(e) => updateFormData('confirmPassword', e.target.value)}
-                  className="px-4 h-12 bg-gray-50 border-0 rounded-xl text-base"
                   autoComplete="new-password"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
+                  icon={<Lock className="h-[18px] w-[18px]" />}
                 />
+                {formData.confirmPassword.length > 0 && (
+                  <p
+                    className={`mt-1.5 text-[11px] font-semibold ${
+                      formData.confirmPassword === formData.password ? 'text-[#0F9D58]' : 'text-[#E11D48]'
+                    }`}
+                  >
+                    {formData.confirmPassword === formData.password
+                      ? '✓ Les mots de passe correspondent'
+                      : '✕ Les mots de passe ne correspondent pas'}
+                  </p>
+                )}
+              </AuthField>
+
+              <div className="rounded-2xl border border-[#E4E9F0] bg-[#FBFCFE] p-3.5">
+                <div className="flex items-start gap-2.5">
+                  <AuthCheckbox
+                    id="terms"
+                    checked={termsAccepted}
+                    onChange={(checked) => setTermsAccepted(checked)}
+                  />
+                  <label htmlFor="terms" className="text-[11.5px] leading-relaxed text-[#64748B]">
+                    J'accepte les{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowTermsModal(true);
+                      }}
+                      className="inline p-0 align-baseline font-semibold text-[#0063D1] hover:underline" style={{ minHeight: 0 }}
+                    >
+                      conditions d'utilisation
+                    </button>{' '}
+                    et la{' '}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setShowPrivacyModal(true);
+                      }}
+                      className="inline p-0 align-baseline font-semibold text-[#0063D1] hover:underline" style={{ minHeight: 0 }}
+                    >
+                      politique de confidentialité
+                    </button>{' '}
+                    de SmartCabb.
+                  </label>
+                </div>
               </div>
+
+              <div className="flex items-start gap-2.5 rounded-2xl bg-[#EFF6FF] px-3.5 py-3">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#007AFF]" />
+                <p className="text-[11.5px] leading-snug text-[#1E40AF]">
+                  Un code SMS à 6 chiffres vous sera demandé pour confirmer votre numéro.
+                </p>
+              </div>
+
+              <AuthButton
+                type="submit"
+                loading={loading}
+                disabled={!termsAccepted}
+                trailingIcon={<ArrowRight className="h-4 w-4" />}
+              >
+                Créer mon compte
+              </AuthButton>
+            </form>
+
+            <div className="mt-5">
+              <AuthFootnote
+                text="Déjà un compte ?"
+                actionLabel="Se connecter"
+                onAction={() => setCurrentScreen('login')}
+                disabled={loading}
+              />
             </div>
-          </div>
-        </div>
+          </>
         )}
-      </div>
+      </AuthCard>
 
-      {/* Terms and Conditions */}
-      {!showOtp && (
-      <div
-        className="px-6"
-      >
-        <div className="flex items-start space-x-2 mb-4">
-          <Checkbox
-            id="terms"
-            checked={termsAccepted}
-            onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-            className="mt-1"
-          />
-          <label htmlFor="terms" className="text-sm text-gray-600 leading-relaxed">
-            J'accepte les{' '}
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowTermsModal(true);
-              }}
-              className="text-green-500 hover:underline"
-            >
-              conditions d'utilisation
-            </button>{' '}
-            et la{' '}
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowPrivacyModal(true);
-              }}
-              className="text-green-500 hover:underline"
-            >
-              politique de confidentialité
-            </button>{' '}
-            de SmartCabb.
-          </label>
-        </div>
-      </div>
-      )}
-
-      {/* Actions */}
-      {!showOtp && (
-      <div
-        className="px-6 pb-8 space-y-4"
-      >
-        <Button
-          onClick={handleRegister}
-          disabled={loading || !termsAccepted}
-          className="w-full h-14 bg-green-500 hover:bg-green-600 text-white rounded-xl disabled:opacity-50"
-        >
-          {loading ? 'Inscription...' : 'Valider'}
-        </Button>
-        
-        <p className="text-center text-gray-600">
-          Déjà un compte ?{' '}
-          <button
-            onClick={() => setCurrentScreen('login')}
-            className="text-green-500 hover:underline"
-          >
-            Se connecter
-          </button>
-        </p>
-      </div>
-      )}
-
-      {/* Terms Modal */}
       <UnifiedPolicyModal
         isOpen={showTermsModal}
         onAccept={() => setShowTermsModal(false)}
@@ -410,6 +442,6 @@ export function RegisterScreen() {
         showCloseButton={true}
         mode="privacy"
       />
-    </div>
+    </AuthShell>
   );
 }

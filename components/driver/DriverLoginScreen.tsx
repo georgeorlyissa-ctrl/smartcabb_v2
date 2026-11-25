@@ -1,5 +1,18 @@
 import { useState } from 'react';
 import { Car, Lock, Eye, EyeOff } from '../../lib/icons';
+import { Smartphone, ArrowRight, MapPin, Wallet, ShieldCheck, Sparkles } from '../../lib/icons';
+import {
+  AuthShell,
+  AuthCard,
+  AuthCardBrand,
+  AuthEyebrow,
+  AuthHeading,
+  AuthField,
+  AuthInput,
+  AuthPasswordInput,
+  AuthButton,
+  AuthBackButton,
+} from '../auth/AuthKit';
 import { toast } from '../../lib/toast';
 import { signIn } from '../../lib/auth-service';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
@@ -228,115 +241,118 @@ export function DriverLoginScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in duration-300">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Car className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Connexion Conducteur</h1>
-          <p className="text-gray-600">Accédez à votre dashboard</p>
-        </div>
+    <AuthShell
+      audience="driver"
+      headline="Roulez avec SmartCabb."
+      subline="Recevez des courses proches de vous, suivez vos gains et gardez le contrôle de votre activité."
+      highlights={[
+        {
+          icon: <MapPin className="h-[18px] w-[18px]" />,
+          title: 'Courses à proximité',
+          text: 'Vous n’êtes notifié que pour les demandes proches de votre position.',
+        },
+        {
+          icon: <Wallet className="h-[18px] w-[18px]" />,
+          title: 'Gains transparents',
+          text: 'Commission, solde et historique visibles après chaque course.',
+        },
+        {
+          icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+          title: 'Support 24/7',
+          text: 'Une équipe joignable à tout moment, en plus du bouton SOS.',
+        },
+      ]}
+    >
+      <AuthCard>
+        <AuthCardBrand audience="driver" />
 
-        <div className="space-y-6">
-          <div>
-            <Label htmlFor="identifier">Numéro de téléphone</Label>
-            <div className="relative mt-2">
-              <Car className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="+243 XXX XXX XXX"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                className="pl-12 h-12"
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                disabled={loading}
-              />
-            </div>
-          </div>
+        <AuthEyebrow audience="driver">Espace chauffeur</AuthEyebrow>
+        <AuthHeading
+          title="Connexion chauffeur"
+          subtitle="Accédez à votre tableau de bord et à vos courses en cours."
+        />
 
-          <div>
-            <Label htmlFor="password">Mot de passe</Label>
-            <div className="relative mt-2">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-12 pr-12 h-12"
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                disabled={loading}
-              />
+        <form
+          className="mt-5 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!loading) handleLogin();
+          }}
+        >
+          <AuthField
+            label="Téléphone ou email"
+            htmlFor="driver-identifier"
+            hint="Utilisez le numéro renseigné lors de votre inscription."
+          >
+            <AuthInput
+              id="driver-identifier"
+              type="text"
+              placeholder="+243 81 234 5678"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              disabled={loading}
+              autoComplete="username"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              icon={<Smartphone className="h-[18px] w-[18px]" />}
+            />
+          </AuthField>
+
+          <AuthField
+            label="Mot de passe"
+            htmlFor="driver-password"
+            action={
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                onClick={() => setCurrentScreen('forgot-password-driver')}
                 disabled={loading}
+                className="inline p-0 align-baseline text-[11px] font-bold text-[#0063D1] transition-colors hover:text-[#004A9E] hover:underline disabled:opacity-50" style={{ minHeight: 0 }}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                Mot de passe oublié ?
               </button>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleLogin();
-            }}
-            disabled={loading}
-            className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white text-lg transition-colors"
+            }
           >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Connexion...</span>
-              </div>
-            ) : (
-              'Se connecter'
-            )}
-          </Button>
-
-          <div className="text-center">
-            <button 
-              type="button"
-              onClick={() => setCurrentScreen('forgot-password-driver')}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+            <AuthPasswordInput
+              id="driver-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-            >
-              Mot de passe oublié ?
-            </button>
-          </div>
+              autoComplete="current-password"
+              icon={<Lock className="h-[18px] w-[18px]" />}
+            />
+          </AuthField>
 
-          <div className="text-center">
-            <p className="text-gray-600">
-              Nouveau conducteur ?{' '}
-              <button 
-                type="button"
-                onClick={() => setCurrentScreen('driver-registration')}
-                className="text-blue-500 hover:text-blue-600 font-semibold transition-colors"
-                disabled={loading}
-              >
-                Postuler maintenant
-              </button>
-            </p>
-          </div>
+          <AuthButton
+            type="submit"
+            variant="driver"
+            loading={loading}
+            trailingIcon={<ArrowRight className="h-4 w-4" />}
+          >
+            Accéder à mon tableau de bord
+          </AuthButton>
+        </form>
 
-          <div className="text-center hide-in-apk">
-            <button 
+        <div className="mt-5 flex items-start gap-2.5 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] px-3.5 py-3">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#B45309]" />
+          <p className="text-[11.5px] leading-snug text-[#92400E]">
+            Nouveau chauffeur ?{' '}
+            <button
               type="button"
-              onClick={() => setCurrentScreen('driver-welcome')}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              onClick={() => setCurrentScreen('driver-registration')}
               disabled={loading}
+              className="font-bold underline underline-offset-2 hover:no-underline disabled:opacity-50"
             >
-              ← Retour
-            </button>
-          </div>
+              Déposez votre candidature
+            </button>{' '}
+            — validation sous 48 h.
+          </p>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-4 flex justify-center hide-in-apk">
+          <AuthBackButton label="Retour" onClick={() => setCurrentScreen('driver-welcome')} />
+        </div>
+      </AuthCard>
+    </AuthShell>
   );
 }

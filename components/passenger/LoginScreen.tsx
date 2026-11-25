@@ -9,6 +9,20 @@ import { PhoneInput } from '../PhoneInput'; // ✅ FIX: Ajout import PhoneInput
 import { useAppState } from '../../hooks/useAppState';
 import { toast } from '../../lib/toast';
 import { Eye, EyeOff, AlertCircle } from '../../lib/icons';
+import { Lock, ArrowRight, ShieldCheck, CreditCard, MapPin } from '../../lib/icons';
+import {
+  AuthShell,
+  AuthCard,
+  AuthCardBrand,
+  AuthEyebrow,
+  AuthHeading,
+  AuthField,
+  AuthPasswordInput,
+  AuthButton,
+  AuthAlert,
+  AuthFootnote,
+  AuthBackButton,
+} from '../auth/AuthKit';
 import { useNavigate } from '../../lib/simple-router';
 import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import { validatePhoneNumberRDC } from '../../lib/phone-utils';
@@ -341,141 +355,126 @@ export function LoginScreen() {
 
   try {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 flex items-center justify-center p-4 pb-safe-page">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 animate-in fade-in duration-300">
-          <div className="text-center mb-8">
-            <SmartCabbLogo plain className="w-16 h-16 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Connexion</h1>
-            <p className="text-gray-600">Bienvenue sur SmartCabb</p>
-          </div>
+      <AuthShell
+        audience="passenger"
+        headline="Votre chauffeur, à portée de main."
+        subline="Des trajets sûrs, un tarif affiché avant le départ et un suivi en temps réel, partout à Kinshasa."
+        highlights={[
+          {
+            icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+            title: 'Chauffeurs vérifiés',
+            text: 'Identité et véhicule contrôlés par notre équipe avant chaque mise en ligne.',
+          },
+          {
+            icon: <CreditCard className="h-[18px] w-[18px]" />,
+            title: 'Prix transparents',
+            text: 'Le tarif est connu avant le départ : aucune surprise à l’arrivée.',
+          },
+          {
+            icon: <MapPin className="h-[18px] w-[18px]" />,
+            title: 'Suivi en direct',
+            text: 'Suivez votre course et partagez votre trajet avec vos proches.',
+          },
+        ]}
+      >
+        <AuthCard>
+          <AuthCardBrand audience="passenger" />
 
-          {/* Messages de succès et d'erreur */}
-          {successMsg && (
-            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <p className="text-green-800 font-medium">{successMsg}</p>
+          <AuthEyebrow audience="passenger">Espace passager</AuthEyebrow>
+          <AuthHeading
+            title="Content de vous revoir"
+            subtitle="Connectez-vous pour commander votre prochaine course."
+          />
+
+          {(successMsg || errorMsg) && (
+            <div className="mt-4 space-y-2">
+              {successMsg && <AuthAlert tone="success">{successMsg}</AuthAlert>}
+              {errorMsg && <AuthAlert tone="error" title="Connexion impossible">{errorMsg}</AuthAlert>}
             </div>
           )}
 
-          {errorMsg && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-              <p className="text-red-800 font-medium">{errorMsg}</p>
-            </div>
-          )}
-
-          <div className="space-y-6">
-            <div>
+          <form
+            className="mt-5 space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!loading) doLogin();
+            }}
+          >
+            <AuthField label="Numéro de téléphone" htmlFor="passenger-identifier">
               <PhoneInput
                 id="passenger-identifier"
+                variant="auth"
                 value={identifier}
                 onChange={(value) => setIdentifier(value)}
-                onKeyPress={handleKeyPress}
-                className="px-4 h-12 text-base"
                 disabled={loading}
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck="false"
-                label="Numéro de téléphone"
               />
-            </div>
+            </AuthField>
 
-            <div>
-              <Label htmlFor="password">Mot de passe</Label>
-              <div className="relative mt-2">
-                <Input
-                  id="passenger-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="px-4 pr-12 h-12 text-base"
-                  disabled={loading}
-                  autoComplete="new-password"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                />
+            <AuthField
+              label="Mot de passe"
+              htmlFor="passenger-password"
+              action={
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
+                  onClick={() => setCurrentScreen('forgot-password')}
                   disabled={loading}
+                  className="inline p-0 align-baseline text-[11px] font-bold text-[#0063D1] transition-colors hover:text-[#004A9E] hover:underline disabled:opacity-50" style={{ minHeight: 0 }}
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  Mot de passe oublié ?
                 </button>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                doLogin();
-              }}
-              disabled={loading}
-              className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white text-lg transition-colors"
+              }
             >
-              {loading ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Connexion...</span>
-                </div>
-              ) : (
-                'Se connecter'
-              )}
-            </Button>
-
-            <div className="text-center">
-              <button 
-                type="button"
-                onClick={() => setCurrentScreen('forgot-password')}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              <AuthPasswordInput
+                id="passenger-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-              >
-                Mot de passe oublié ?
-              </button>
-            </div>
+                autoComplete="new-password"
+                icon={<Lock className="h-[18px] w-[18px]" />}
+              />
+            </AuthField>
 
-            <div className="text-center">
-              <p className="text-gray-600">
-                Pas de compte ?{' '}
-                <button 
-                  type="button"
-                  onClick={() => setCurrentScreen('register')}
-                  className="text-blue-500 hover:text-blue-600 font-semibold transition-colors"
-                  disabled={loading}
-                >
-                  S'inscrire
-                </button>
-              </p>
-            </div>
+            <AuthButton
+              type="submit"
+              loading={loading}
+              trailingIcon={<ArrowRight className="h-4 w-4" />}
+            >
+              Se connecter
+            </AuthButton>
+          </form>
 
-            <div className="text-center hide-in-apk">
-              <button 
-                type="button"
-                onClick={() => {
-                  console.log('⬅️ Retour vers la page d\'accueil');
-                  setCurrentView(null);
-                  setCurrentScreen('landing');
-                  navigate('/');
-                }}
-                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-                disabled={loading}
-              >
-                ← Retour
-              </button>
-            </div>
+          <div className="mt-5 flex items-start gap-2.5 rounded-2xl bg-[#F6F8FB] px-3.5 py-3">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#007AFF]" />
+            <p className="text-[11.5px] leading-snug text-[#64748B]">
+              Connexion sécurisée : votre numéro et votre mot de passe ne sont jamais partagés.
+            </p>
           </div>
-        </div>
-      </div>
+
+          <div className="mt-5">
+            <AuthFootnote
+              text="Pas encore de compte ?"
+              actionLabel="Créer un compte"
+              onAction={() => setCurrentScreen('register')}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="mt-4 flex justify-center hide-in-apk">
+            <AuthBackButton
+              label="Retour à l'accueil"
+              onClick={() => {
+                setCurrentView(null);
+                setCurrentScreen('landing');
+                navigate('/');
+              }}
+            />
+          </div>
+        </AuthCard>
+      </AuthShell>
     );
   } catch (error) {
     console.error('❌ CRASH dans le JSX du LoginScreen:', error);

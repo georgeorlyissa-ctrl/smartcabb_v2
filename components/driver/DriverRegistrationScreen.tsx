@@ -11,6 +11,21 @@ import { motion } from '../../lib/motion';
 import { toast } from '../../lib/toast';
 import { useAppState } from '../../hooks/useAppState';
 import { ArrowLeft, Lock, User, Car, Upload, FileCheck, AlertCircle, Camera } from '../../lib/icons';
+import { ArrowRight, Wallet, ShieldCheck, Clock } from '../../lib/icons';
+import {
+  AuthShell,
+  AuthCard,
+  AuthCardBrand,
+  AuthEyebrow,
+  AuthHeading,
+  AuthField,
+  AuthInput,
+  AuthPasswordInput,
+  AuthButton,
+  AuthBackButton,
+  AuthCheckbox,
+  PasswordStrength,
+} from '../auth/AuthKit';
 import { SmartCabbLogo } from '../SmartCabbLogo';
 import { signUpDriver } from '../../lib/auth-service-driver-signup';
 import { PhoneVerificationStep } from '../PhoneVerificationStep';
@@ -346,506 +361,547 @@ export function DriverRegistrationScreen() {
     setLoading(false);
   };
 
+  const goToStep = (next: number) => {
+    if (next === 2) {
+      if (!formData.name || !formData.phone || !formData.password) {
+        toast.error('Veuillez remplir tous les champs obligatoires');
+        return;
+      }
+      const phoneDigits = formData.phone.replace(/\D/g, '');
+      const localDigits = phoneDigits.startsWith('243') ? phoneDigits.substring(3) : phoneDigits;
+      if (localDigits.length < 9 || localDigits.length > 10) {
+        toast.error('Le numéro de téléphone doit contenir 9 ou 10 chiffres');
+        return;
+      }
+      if (formData.password.length < 6) {
+        toast.error('Le mot de passe doit contenir au moins 6 caractères');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        toast.error('Les mots de passe ne correspondent pas');
+        return;
+      }
+      if (!profilePhoto) {
+        toast.error('Veuillez ajouter votre photo de profil');
+        return;
+      }
+    }
+    setStep(next);
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {}
+  };
+
   return (
-    <motion.div 
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: -300, opacity: 0 }}
-      transition={{ type: 'spring', damping: 25 }}
-      className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex flex-col"
+    <AuthShell
+      audience="driver"
+      headline="Devenez chauffeur SmartCabb."
+      subline="Rejoignez une flotte professionnelle, recevez des courses près de vous et suivez vos gains en temps réel."
+      highlights={[
+        {
+          icon: <Wallet className="h-[18px] w-[18px]" />,
+          title: 'Revenus lisibles',
+          text: 'Chaque course affiche son prix, la commission et votre gain net.',
+        },
+        {
+          icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+          title: 'Dossier vérifié',
+          text: 'Validation humaine de votre véhicule et de vos documents.',
+        },
+        {
+          icon: <Clock className="h-[18px] w-[18px]" />,
+          title: 'Vous choisissez',
+          text: 'Acceptez uniquement les courses proches de votre position.',
+        },
+      ]}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleBack}
-          className="w-10 h-10"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <div className="flex items-center space-x-2">
-          <SmartCabbLogo size="small" plain />
-          <h1 className="text-xl">Devenir Conducteur</h1>
-        </div>
-        <div className="w-10" />
-      </div>
+      <AuthCard>
+        <AuthCardBrand audience="driver" />
 
-      {/* Form / OTP */}
-      <div className="flex-1 px-6 py-4 overflow-y-auto">
         {showOtp ? (
-          <div className="bg-white rounded-xl p-6">
-            <PhoneVerificationStep
-              phone={formData.phone}
-              purpose="registration"
-              onVerified={handleOtpVerified}
-              onBack={() => setShowOtp(false)}
+          <>
+            <AuthEyebrow audience="driver">Vérification</AuthEyebrow>
+            <AuthHeading
               title="Confirmez votre numéro"
-              accentClass="bg-blue-500 hover:bg-blue-600"
+              subtitle="Saisissez le code à 6 chiffres reçu par SMS pour finaliser votre candidature."
             />
-          </div>
+            <div className="mt-5">
+              <PhoneVerificationStep
+                phone={formData.phone}
+                purpose="registration"
+                onVerified={handleOtpVerified}
+                onBack={() => setShowOtp(false)}
+                title="Code de vérification"
+                accentClass="bg-[#FFCC00] hover:bg-[#FFD633] text-[#001B3D]"
+              />
+            </div>
+          </>
         ) : (
-        <div className="space-y-4">
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-center mb-6"
-        >
-          <h2 className="text-lg font-bold mb-2">Inscription Conducteur</h2>
-          <p className="text-gray-600 text-sm">
-            Rejoignez notre équipe de conducteurs professionnels
-          </p>
-        </motion.div>
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <AuthBackButton
+                label={step === 1 ? 'Retour' : 'Identité'}
+                onClick={() => (step === 1 ? handleBack() : goToStep(1))}
+              />
+              <span className="rounded-full bg-[#F1F5F9] px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.14em] text-[#64748B]">
+                Étape {step} / 2
+              </span>
+            </div>
 
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-4"
-        >
-          {/* Personal Information */}
-          <div className="bg-white rounded-xl p-4 space-y-4">
-            <h3 className="font-medium text-gray-800">Informations personnelles</h3>
-            
-            <div>
-              <Label htmlFor="name">Nom complet *</Label>
-              <div className="relative mt-1">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  id="name"
-                  placeholder="Jean Kabongo"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="pl-10 h-11 bg-gray-50 border-gray-200"
+            <div className="mt-4">
+              <AuthEyebrow audience="driver">Candidature chauffeur</AuthEyebrow>
+              <AuthHeading
+                title={step === 1 ? 'Vos informations' : 'Votre véhicule'}
+                subtitle={
+                  step === 1
+                    ? 'Identité, contact et photo : la base de votre dossier.'
+                    : 'Renseignez votre véhicule, puis joignez les photos demandées.'
+                }
+              />
+            </div>
+
+            {/* Progression */}
+            <div className="mt-4 flex gap-1.5">
+              {[1, 2].map((s) => (
+                <span
+                  key={s}
+                  className="h-1.5 flex-1 rounded-full transition-all duration-300"
+                  style={{ background: step >= s ? '#FFCC00' : '#E4E9F0' }}
                 />
-              </div>
+              ))}
             </div>
 
-            <div>
-              <Label htmlFor="phone">
-                Téléphone <span className="text-red-500">*</span>
-              </Label>
-              <div className="mt-1">
-                <PhoneInput
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(value) => handleInputChange('phone', value)}
-                  className="h-11"
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">Format: +243 XX XXX XXXX (9 chiffres)</p>
-            </div>
+            {step === 1 ? (
+              <div className="mt-5 space-y-4">
+                <AuthField label="Nom complet" htmlFor="name">
+                  <AuthInput
+                    id="name"
+                    placeholder="Jean Kabongo"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    autoComplete="name"
+                    autoCapitalize="words"
+                    icon={<User className="h-[18px] w-[18px]" />}
+                  />
+                </AuthField>
 
-            <div>
-              <Label htmlFor="password">Mot de passe *</Label>
-              <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  className="pl-10 h-11 bg-gray-50 border-gray-200"
-                />
-              </div>
-            </div>
+                <AuthField
+                  label="Téléphone"
+                  htmlFor="phone"
+                  hint="Un code SMS confirmera ce numéro à la dernière étape."
+                >
+                  <PhoneInput
+                    id="phone"
+                    variant="auth"
+                    value={formData.phone}
+                    onChange={(value) => handleInputChange('phone', value)}
+                  />
+                </AuthField>
 
-            <div>
-              <Label htmlFor="confirmPassword">Confirmer le mot de passe *</Label>
-              <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  className="pl-10 h-11 bg-gray-50 border-gray-200"
-                />
-              </div>
-            </div>
+                <AuthField label="Mot de passe" htmlFor="password">
+                  <AuthPasswordInput
+                    id="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    autoComplete="new-password"
+                    icon={<Lock className="h-[18px] w-[18px]" />}
+                  />
+                  <PasswordStrength password={formData.password} />
+                </AuthField>
 
-            {/* Photo de profil */}
-            <div>
-              <Label htmlFor="photo">Photo de profil *</Label>
-              <div className="mt-2">
-                <input
-                  type="file"
-                  accept=".jpg,.jpeg"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                  id="photo-upload"
-                />
-                <label htmlFor="photo-upload" className="cursor-pointer">
-                  <div className="flex items-center space-x-4 p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors">
-                    {profilePhotoPreview ? (
-                      <img
-                        src={profilePhotoPreview}
-                        alt="Photo de profil"
-                        className="w-16 h-16 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Camera className="w-6 h-6 text-gray-400" />
-                      </div>
-                    )}
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">
-                        {profilePhotoPreview ? 'Changer la photo' : 'Ajouter une photo'}
-                      </p>
-                      <p className="text-xs text-gray-500">JPG uniquement, max 1MB</p>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          </div>
+                <AuthField label="Confirmer le mot de passe" htmlFor="confirmPassword">
+                  <AuthPasswordInput
+                    id="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    autoComplete="new-password"
+                    icon={<Lock className="h-[18px] w-[18px]" />}
+                  />
+                  {formData.confirmPassword.length > 0 && (
+                    <p
+                      className={`mt-1.5 text-[11px] font-semibold ${
+                        formData.confirmPassword === formData.password ? 'text-[#0F9D58]' : 'text-[#E11D48]'
+                      }`}
+                    >
+                      {formData.confirmPassword === formData.password
+                        ? '✓ Les mots de passe correspondent'
+                        : '✕ Les mots de passe ne correspondent pas'}
+                    </p>
+                  )}
+                </AuthField>
 
-          {/* Vehicle Information */}
-          <div className="bg-white rounded-xl p-4 space-y-4">
-            <h3 className="font-medium text-gray-800">Informations du véhicule</h3>
-
-            {/* Photo du véhicule — obligatoire pour valider le dossier chauffeur */}
-            <div>
-              <Label htmlFor="vehicle-photo-upload">Photo du véhicule *</Label>
-              <div className="mt-2">
-                <input
-                  type="file"
-                  accept=".jpg,.jpeg"
-                  onChange={handleVehiclePhotoUpload}
-                  className="hidden"
-                  id="vehicle-photo-upload"
-                />
-                <label htmlFor="vehicle-photo-upload" className="cursor-pointer block">
-                  <div
-                    className={`relative rounded-xl overflow-hidden border-2 border-dashed transition-colors bg-gray-50 flex flex-col items-center justify-center ${
-                      vehiclePhotoPreview ? 'border-gray-200 hover:border-blue-400' : 'border-amber-300 hover:border-blue-400'
-                    }`}
-                    style={{ height: 160 }}
-                  >
-                    {vehiclePhotoPreview ? (
-                      <img
-                        src={vehiclePhotoPreview}
-                        alt="Photo du véhicule"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <>
-                        <SmartCabbLogo className="h-20 w-20 mx-auto mb-2 opacity-80" plain />
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Camera className="w-3 h-3" /> Ajouter une photo (obligatoire)
-                        </span>
-                      </>
-                    )}
-                    {vehiclePhotoPreview && (
-                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                        <span className="text-white text-xs font-medium flex items-center gap-1">
-                          <Camera className="w-4 h-4" /> Changer la photo
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </label>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Obligatoire : la photo du véhicule (JPG, max 1 MB) est vérifiée par l'équipe avant la validation du compte chauffeur.
-              </p>
-            </div>
-            
-            <div>
-              <Label htmlFor="vehicleSelect">Marque et Modèle *</Label>
-              <Select 
-                value={isOtherMake ? 'Autre' : `${formData.vehicleMake}-${formData.vehicleModel}`} 
-                onValueChange={(value) => {
-                  if (value === 'Autre') {
-                    setIsOtherMake(true);
-                    handleInputChange('vehicleMake', '');
-                    handleInputChange('vehicleModel', '');
-                    handleInputChange('vehicleType', '');
-                  } else {
-                    const selectedVehicle = predefinedVehicles.find(v => `${v.make}-${v.model}` === value);
-                    if (selectedVehicle) {
-                      setIsOtherMake(false);
-                      handleInputChange('vehicleMake', selectedVehicle.make);
-                      handleInputChange('vehicleModel', selectedVehicle.model);
-                      handleInputChange('vehicleType', selectedVehicle.type);
-                      toast.success(`Type automatique : ${vehicleTypes.find(t => t.value === selectedVehicle.type)?.label || 'Type inconnu'}`);
-                    }
-                  }
-                }}
-              >
-                <SelectTrigger className="mt-1 h-11 bg-gray-50 border-gray-200">
-                  <SelectValue placeholder="Sélectionnez votre véhicule" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  {predefinedVehicles.map((vehicle) => (
-                    <SelectItem key={`${vehicle.make}-${vehicle.model}`} value={`${vehicle.make}-${vehicle.model}`}>
-                      {vehicle.label}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="Autre" className="bg-yellow-50 border-t-2 border-yellow-300 font-medium">
-                    🔸 Autre véhicule (saisie manuelle)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {isOtherMake && (
-              <div className="p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg space-y-3">
-                <div className="flex items-center space-x-2 mb-2">
-                  <AlertCircle className="w-4 h-4 text-yellow-600" />
-                  <p className="text-sm text-yellow-800">Saisie manuelle activée</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="customMake" className="text-xs">Marque *</Label>
-                    <Input
-                      id="customMake"
-                      placeholder="Ex: Peugeot"
-                      value={formData.vehicleMake}
-                      onChange={(e) => handleInputChange('vehicleMake', e.target.value)}
-                      className="mt-1 h-11 bg-white border-yellow-400 focus:border-yellow-500"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="customModel" className="text-xs">Modèle *</Label>
-                    <Input
-                      id="customModel"
-                      placeholder="Ex: 508"
-                      value={formData.vehicleModel}
-                      onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
-                      className="mt-1 h-11 bg-white border-yellow-400 focus:border-yellow-500"
-                    />
-                  </div>
-                </div>
-                
                 <div>
-                  <Label htmlFor="customType" className="text-xs">Type de véhicule *</Label>
-                  <Select 
-                    value={formData.vehicleType} 
-                    onValueChange={(value) => handleInputChange('vehicleType', value)}
+                  <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#64748B]">
+                    Photo de profil *
+                  </p>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                    id="photo-upload"
+                  />
+                  <label htmlFor="photo-upload" className="cursor-pointer">
+                    <div className="flex items-center gap-3.5 rounded-2xl border border-dashed border-[#D7DEE8] bg-[#FBFCFE] p-3.5 transition-colors hover:border-[#FFCC00] hover:bg-[#FFFDF5]">
+                      {profilePhotoPreview ? (
+                        <img
+                          src={profilePhotoPreview}
+                          alt="Photo de profil"
+                          className="h-14 w-14 rounded-full object-cover ring-2 ring-[#FFCC00]"
+                        />
+                      ) : (
+                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white ring-1 ring-[#E4E9F0]">
+                          <Camera className="h-5 w-5 text-[#94A3B8]" />
+                        </span>
+                      )}
+                      <span className="min-w-0">
+                        <span className="block text-[12.5px] font-bold text-[#0B1B2B]">
+                          {profilePhotoPreview ? 'Changer la photo' : 'Ajouter une photo'}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-[#94A3B8]">
+                          JPG uniquement · 1 MB maximum
+                        </span>
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                <AuthButton
+                  variant="driver"
+                  onClick={() => goToStep(2)}
+                  trailingIcon={<ArrowRight className="h-4 w-4" />}
+                >
+                  Continuer
+                </AuthButton>
+              </div>
+            ) : (
+              <div className="mt-5 space-y-4">
+                <div>
+                  <p className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-[#64748B]">
+                    Photo du véhicule *
+                  </p>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg"
+                    onChange={handleVehiclePhotoUpload}
+                    className="hidden"
+                    id="vehicle-photo-upload"
+                  />
+                  <label htmlFor="vehicle-photo-upload" className="cursor-pointer block">
+                    <div
+                      className={`relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-dashed transition-colors ${
+                        vehiclePhotoPreview
+                          ? 'border-[#E4E9F0] bg-[#F6F8FB] hover:border-[#007AFF]'
+                          : 'border-[#FDE68A] bg-[#FFFBEB] hover:border-[#FFCC00]'
+                      }`}
+                      style={{ height: 168 }}
+                    >
+                      {vehiclePhotoPreview ? (
+                        <img
+                          src={vehiclePhotoPreview}
+                          alt="Photo du véhicule"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <>
+                          <SmartCabbLogo className="mb-2 h-16 w-16 opacity-70" plain />
+                          <span className="flex items-center gap-1 text-[11.5px] font-semibold text-[#92400E]">
+                            <Camera className="h-3.5 w-3.5" /> Ajouter une photo (obligatoire)
+                          </span>
+                        </>
+                      )}
+                      {vehiclePhotoPreview && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/35 opacity-0 transition-opacity hover:opacity-100">
+                          <span className="flex items-center gap-1 text-[11.5px] font-bold text-white">
+                            <Camera className="h-4 w-4" /> Changer la photo
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                  <p className="mt-1.5 text-[11px] leading-snug text-[#94A3B8]">
+                    La photo du véhicule (JPG, max 1 MB) est vérifiée par notre équipe avant validation.
+                  </p>
+                </div>
+
+                <AuthField label="Marque et modèle" htmlFor="vehicleSelect">
+                  <Select
+                    value={isOtherMake ? 'Autre' : `${formData.vehicleMake}-${formData.vehicleModel}`}
+                    onValueChange={(value) => {
+                      if (value === 'Autre') {
+                        setIsOtherMake(true);
+                        handleInputChange('vehicleMake', '');
+                        handleInputChange('vehicleModel', '');
+                        handleInputChange('vehicleType', '');
+                      } else {
+                        const selectedVehicle = predefinedVehicles.find((v) => `${v.make}-${v.model}` === value);
+                        if (selectedVehicle) {
+                          setIsOtherMake(false);
+                          handleInputChange('vehicleMake', selectedVehicle.make);
+                          handleInputChange('vehicleModel', selectedVehicle.model);
+                          handleInputChange('vehicleType', selectedVehicle.type);
+                          toast.success(
+                            `Type automatique : ${vehicleTypes.find((t) => t.value === selectedVehicle.type)?.label || 'Type inconnu'}`,
+                          );
+                        }
+                      }
+                    }}
                   >
-                    <SelectTrigger className="mt-1 h-11 bg-white border-yellow-400">
-                      <SelectValue placeholder="Sélectionnez le type" />
+                    <SelectTrigger className="h-12 rounded-2xl border-[#E4E9F0] bg-[#F6F8FB] text-[15px] font-medium">
+                      <SelectValue placeholder="Sélectionnez votre véhicule" />
                     </SelectTrigger>
-                    <SelectContent>
-                      {vehicleTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label} - {type.category}
+                    <SelectContent className="max-h-[300px]">
+                      {predefinedVehicles.map((vehicle) => (
+                        <SelectItem key={`${vehicle.make}-${vehicle.model}`} value={`${vehicle.make}-${vehicle.model}`}>
+                          {vehicle.label}
                         </SelectItem>
                       ))}
+                      <SelectItem value="Autre" className="border-t-2 border-[#FDE68A] bg-[#FFFBEB] font-medium">
+                        🔸 Autre véhicule (saisie manuelle)
+                      </SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              </div>
-            )}
+                </AuthField>
 
-            {!isOtherMake && formData.vehicleType && (
-              <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border-2 border-green-300">
-                <div className="flex items-center space-x-2 mb-3">
-                  <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                    <span className="text-white text-xs">✓</span>
-                  </div>
-                  <p className="text-sm font-medium text-green-900">Type déterminé automatiquement</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Véhicule :</span>
-                    <span className="font-semibold text-green-900">
-                      {formData.vehicleMake} {formData.vehicleModel}
-                    </span>
-                  </div>
-                  {/* 🚦 Plus de choix Clim / Sans Clim : une seule catégorie Standard */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Type :</span>
-                    <span className="font-semibold text-green-900">
-                      {vehicleTypes.find(t => t.value === formData.vehicleType)?.label}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Catégorie :</span>
-                    <span className="font-semibold text-green-900">
-                      {getVehicleCategory(formData.vehicleType)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-green-200">
-                    <span className="text-sm text-gray-600">Tarification :</span>
-                    <span className="text-sm text-green-700 font-medium">
-                      {vehicleTypes.find(t => t.value === formData.vehicleType)?.rates}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+                {isOtherMake && (
+                  <div className="space-y-3 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-[#B45309]" />
+                      <p className="text-[12px] font-semibold text-[#92400E]">Saisie manuelle activée</p>
+                    </div>
 
-            {isOtherMake && formData.vehicleType && (
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Catégorie :</span>
-                    <span className="font-semibold text-blue-900">
-                      {getVehicleCategory(formData.vehicleType)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Tarification :</span>
-                    <span className="text-sm text-blue-700">
-                      {vehicleTypes.find(t => t.value === formData.vehicleType)?.rates}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <AuthField label="Marque *" htmlFor="customMake">
+                        <AuthInput
+                          id="customMake"
+                          placeholder="Ex : Peugeot"
+                          value={formData.vehicleMake}
+                          onChange={(e) => handleInputChange('vehicleMake', e.target.value)}
+                        />
+                      </AuthField>
+                      <AuthField label="Modèle *" htmlFor="customModel">
+                        <AuthInput
+                          id="customModel"
+                          placeholder="Ex : 508"
+                          value={formData.vehicleModel}
+                          onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
+                        />
+                      </AuthField>
+                    </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="vehiclePlate">Plaque d'immatriculation *</Label>
-                <Input
-                  id="vehiclePlate"
-                  placeholder="CD-123-KIN"
-                  value={formData.vehiclePlate}
-                  onChange={(e) => handleInputChange('vehiclePlate', e.target.value)}
-                  className="mt-1 h-11 bg-gray-50 border-gray-200"
-                />
-              </div>
-              <div>
-                <Label htmlFor="vehicleColor">Couleur *</Label>
-                <Select
-                  value={formData.vehicleColor}
-                  onValueChange={(value) => handleInputChange('vehicleColor', value)}
-                >
-                  <SelectTrigger className="mt-1 h-11 bg-gray-50 border-gray-200">
-                    <SelectValue placeholder="Sélectionnez la couleur" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vehicleColors.map((color) => (
-                      <SelectItem key={color.value} value={color.value}>
-                        {color.label}
-                      </SelectItem>
+                    <AuthField label="Type de véhicule *" htmlFor="customType">
+                      <Select
+                        value={formData.vehicleType}
+                        onValueChange={(value) => handleInputChange('vehicleType', value)}
+                      >
+                        <SelectTrigger className="h-12 rounded-2xl border-[#E4E9F0] bg-white text-[15px] font-medium">
+                          <SelectValue placeholder="Sélectionnez le type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vehicleTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label} - {type.category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </AuthField>
+                  </div>
+                )}
+
+                {!isOtherMake && formData.vehicleType && (
+                  <div className="rounded-2xl border border-[#BBF7D0] bg-[#ECFDF3] p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0F9D58] text-[11px] font-bold text-white">
+                        ✓
+                      </span>
+                      <p className="text-[12px] font-bold text-[#166534]">Type déterminé automatiquement</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[11.5px] text-[#64748B]">Véhicule</span>
+                        <span className="text-[12px] font-bold text-[#166534]">
+                          {formData.vehicleMake} {formData.vehicleModel}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[11.5px] text-[#64748B]">Type</span>
+                        <span className="text-[12px] font-bold text-[#166534]">
+                          {vehicleTypes.find((t) => t.value === formData.vehicleType)?.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[11.5px] text-[#64748B]">Catégorie</span>
+                        <span className="text-[12px] font-bold text-[#166534]">
+                          {getVehicleCategory(formData.vehicleType)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3 border-t border-[#BBF7D0] pt-2">
+                        <span className="text-[11.5px] text-[#64748B]">Tarification</span>
+                        <span className="text-[11.5px] font-semibold text-[#15803D]">
+                          {vehicleTypes.find((t) => t.value === formData.vehicleType)?.rates}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isOtherMake && formData.vehicleType && (
+                  <div className="rounded-2xl border border-[#BFDBFE] bg-[#EFF6FF] p-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[11.5px] text-[#64748B]">Catégorie</span>
+                        <span className="text-[12px] font-bold text-[#1E40AF]">
+                          {getVehicleCategory(formData.vehicleType)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[11.5px] text-[#64748B]">Tarification</span>
+                        <span className="text-[11.5px] font-semibold text-[#1E40AF]">
+                          {vehicleTypes.find((t) => t.value === formData.vehicleType)?.rates}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <AuthField label="Plaque" htmlFor="vehiclePlate">
+                    <AuthInput
+                      id="vehiclePlate"
+                      placeholder="CD-123-KIN"
+                      value={formData.vehiclePlate}
+                      onChange={(e) => handleInputChange('vehiclePlate', e.target.value)}
+                      autoCapitalize="characters"
+                    />
+                  </AuthField>
+                  <AuthField label="Couleur" htmlFor="vehicleColor">
+                    <Select
+                      value={formData.vehicleColor}
+                      onValueChange={(value) => handleInputChange('vehicleColor', value)}
+                    >
+                      <SelectTrigger className="h-12 rounded-2xl border-[#E4E9F0] bg-[#F6F8FB] text-[15px] font-medium">
+                        <SelectValue placeholder="Couleur" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vehicleColors.map((color) => (
+                          <SelectItem key={color.value} value={color.value}>
+                            {color.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </AuthField>
+                </div>
+
+                <div className="rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-4">
+                  <div className="mb-3 flex items-start gap-2.5">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#FFCC00]">
+                      <AlertCircle className="h-4 w-4 text-[#001B3D]" />
+                    </span>
+                    <div>
+                      <p className="text-[12.5px] font-bold text-[#92400E]">Documents à déposer au bureau</p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-[#A16207]">
+                        Apportez ces pièces pour la validation finale de votre compte.
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-2">
+                    {physicalDocuments.map((doc, index) => (
+                      <li key={index} className="flex items-start gap-2.5 text-[11.5px] text-[#92400E]">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#FFCC00] text-[10px] font-bold text-[#001B3D]">
+                          {index + 1}
+                        </span>
+                        <span>{doc}</span>
+                      </li>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </ul>
+
+                  <div className="mt-3 rounded-xl bg-white/80 p-3">
+                    <p className="text-[11px] leading-relaxed text-[#92400E]">
+                      <strong>📍 Adresse :</strong> 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa
+                      <br />
+                      <strong>📞 Info :</strong> contactez-nous pour prendre rendez-vous
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-[#E4E9F0] bg-[#FBFCFE] p-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <AuthCheckbox
+                      id="terms"
+                      checked={termsAccepted}
+                      onChange={(checked) => setTermsAccepted(checked)}
+                    />
+                    <label htmlFor="terms" className="text-[11.5px] leading-relaxed text-[#64748B]">
+                      J'accepte les{' '}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowTermsModal(true);
+                        }}
+                        className="inline p-0 align-baseline font-semibold text-[#0063D1] hover:underline" style={{ minHeight: 0 }}
+                      >
+                        conditions d'utilisation
+                      </button>{' '}
+                      et la{' '}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setShowPrivacyModal(true);
+                        }}
+                        className="inline p-0 align-baseline font-semibold text-[#0063D1] hover:underline" style={{ minHeight: 0 }}
+                      >
+                        politique de confidentialité
+                      </button>{' '}
+                      de SmartCabb.
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5 rounded-2xl bg-[#EFF6FF] px-3.5 py-3">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#007AFF]" />
+                  <p className="text-[11.5px] leading-snug text-[#1E40AF]">
+                    Un code SMS à 6 chiffres confirmera votre numéro avant l'envoi du dossier.
+                  </p>
+                </div>
+
+                <AuthButton
+                  variant="driver"
+                  loading={loading}
+                  disabled={!termsAccepted}
+                  onClick={handleSubmit}
+                  trailingIcon={<ArrowRight className="h-4 w-4" />}
+                >
+                  Soumettre ma candidature
+                </AuthButton>
+
+                <div className="text-center">
+                  <p className="text-[12.5px] text-[#64748B]">
+                    Déjà inscrit ?{' '}
+                    <button
+                      onClick={() => {
+                        if (window.location.pathname.includes('/signup')) {
+                          window.history.replaceState({}, '', '/driver');
+                          window.dispatchEvent(new PopStateEvent('popstate'));
+                        }
+                        setCurrentScreen('driver-login');
+                      }}
+                      className="inline p-0 align-baseline font-semibold text-[#0063D1] hover:underline" style={{ minHeight: 0 }}
+                    >
+                      Se connecter
+                    </button>
+                  </p>
+                </div>
               </div>
-            </div>
-          </div>
+            )}
+          </>
+        )}
+      </AuthCard>
 
-          {/* 🚫 SUPPRIMÉ : Section Documents Upload pour économiser de l'espace */}
-          {/* Information sur les documents physiques */}
-          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-5 border-2 border-yellow-300">
-            <div className="flex items-start space-x-3 mb-3">
-              <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-yellow-900 mb-1">Documents requis</h3>
-                <p className="text-sm text-yellow-800">
-                  Apportez ces documents au bureau SmartCabb pour la validation
-                </p>
-              </div>
-            </div>
-            
-            <ul className="space-y-2 ml-13">
-              {physicalDocuments.map((doc, index) => (
-                <li key={index} className="text-sm text-yellow-800 flex items-start space-x-3">
-                  <span className="w-6 h-6 bg-yellow-500 text-white rounded-full flex items-center justify-center text-xs mt-0.5 flex-shrink-0">
-                    {index + 1}
-                  </span>
-                  <span className="pt-0.5">{doc}</span>
-                </li>
-              ))}
-            </ul>
-            
-            <div className="mt-4 p-3 bg-white/70 rounded-lg">
-              <p className="text-xs text-yellow-900">
-                <strong>📍 Adresse :</strong> Bureau SmartCabb, 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa
-                <br />
-                <strong>📞 Info :</strong> Contactez-nous pour prendre rendez-vous
-              </p>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-      )}
-
-      </div>
-
-      {/* Terms and Conditions */}
-      <motion.div
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="px-6"
-      >
-        <div className="flex items-start space-x-2 mb-4">
-          <Checkbox
-            id="terms"
-            checked={termsAccepted}
-            onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
-            className="mt-1"
-          />
-          <label htmlFor="terms" className="text-sm text-gray-600 leading-relaxed">
-            J'accepte les <button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowTermsModal(true);
-              }}
-              className="text-blue-500 hover:underline"
-            >
-              conditions d'utilisation
-            </button> et la <button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                setShowPrivacyModal(true);
-              }}
-              className="text-blue-500 hover:underline"
-            >
-              politique de confidentialité
-            </button> de SmartCabb.
-          </label>
-        </div>
-      </motion.div>
-
-      {/* Actions */}
-      {!showOtp && (
-      <motion.div
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="px-6 space-y-4 pb-safe-page"
-      >
-        <Button
-          onClick={handleSubmit}
-          disabled={loading || !termsAccepted}
-          className="w-full h-12 bg-blue-500 hover:bg-blue-600 text-white rounded-xl disabled:opacity-50"
-        >
-          {loading ? 'Inscription en cours...' : 'Soumettre ma candidature'}
-        </Button>
-        
-        <p className="text-center text-gray-600 text-sm">
-          Déjà inscrit ?{' '}
-          <button 
-            onClick={() => {
-              // ✅ Sortir de l'URL /signup avant de changer d'écran
-              if (window.location.pathname.includes('/signup')) {
-                window.history.replaceState({}, '', '/driver');
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              }
-              setCurrentScreen('driver-login');
-            }}
-            className="text-blue-500 hover:underline"
-          >
-            Se connecter
-          </button>
-        </p>
-      </motion.div>
-      )}
-
-      {/* Terms & Privacy Modals */}
       <UnifiedPolicyModal
         isOpen={showTermsModal}
         onAccept={() => setShowTermsModal(false)}
@@ -858,6 +914,6 @@ export function DriverRegistrationScreen() {
         showCloseButton={true}
         mode="privacy"
       />
-    </motion.div>
+    </AuthShell>
   );
 }

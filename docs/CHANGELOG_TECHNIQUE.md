@@ -42,6 +42,64 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (47) — Refonte premium des écrans de connexion et d'inscription (passager & chauffeur)
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat (UI/UX)
+- **Objectif** : moderniser les 4 écrans d'entrée de l'application — connexion passager, inscription passager, connexion chauffeur, candidature chauffeur — en respectant la charte SmartCabb (bleu `#007AFF`, jaune `#FFCC00`, marine `#003D7A`) et en utilisant le logo en **filigrane**. Aucun changement de logique métier.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/auth/AuthKit.tsx` | **Nouveau** : coquille d'authentification (fond dégradé + halos + trame + filigrane logo), carte, en-têtes, champs, boutons, alertes, indicateur de mot de passe, case à cocher |
+| `components/passenger/LoginScreen.tsx` | Nouvelle interface (panneau de marque + carte), mêmes handlers |
+| `components/passenger/RegisterScreen.tsx` | Nouvelle interface, force du mot de passe, confirmation en direct, panneau légal |
+| `components/driver/DriverLoginScreen.tsx` | Nouvelle interface « espace chauffeur » (CTA jaune), champ téléphone **ou** email |
+| `components/driver/DriverRegistrationScreen.tsx` | Nouvelle interface en **2 étapes** (Identité → Véhicule), mêmes champs et mêmes appels |
+| `components/PhoneInput.tsx` | Prop `variant="auth"` (champ premium) + compteur de chiffres hors préfixe `+243` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+**AuthKit** (`components/auth/AuthKit.tsx`)
+- `AuthShell` : fond `linear-gradient(168deg, #000E1F → #001B3D → #00305E → #004A8F)`, deux halos radiaux (bleu / jaune), trame 64 px, logo en filigrane (`grayscale + invert`, opacité 4–9 %) en deux positions. Sur `lg` : panneau de marque à gauche (logo, accroche, 3 arguments) + carte à droite ; sur mobile : en-tête compact dans la carte.
+- `AuthCard` : rayon 26 px, ombre profonde, liseré dégradé bleu→jaune.
+- `AuthField`, `AuthInput`, `AuthPasswordInput` (œil), `AuthButton` (`primary` bleu / `driver` jaune), `AuthAlert`, `AuthFootnote`, `AuthTextLink`, `AuthBackButton`, `AuthCheckbox`, `PasswordStrength` (4 barres + libellé).
+- Les boutons n'exposent pas la classe `min-height` globale mobile : `minHeight` est forcé en style inline là où 44 px casserait la mise en page (case à cocher, lien « mot de passe oublié », bouton œil, liens légaux).
+
+**Écrans**
+- Connexion passager : « Content de vous revoir », champ téléphone `variant="auth"`, mot de passe + lien de récupération sur la même ligne, bandeau « connexion sécurisée », lien d'inscription, retour à l'accueil masqué en APK (`hide-in-apk`).
+- Inscription passager : nom / téléphone / mot de passe (+ jauge) / confirmation (+ message de correspondance), panneau des conditions avec `AuthCheckbox`, rappel OTP SMS, CTA désactivé tant que les conditions ne sont pas acceptées. L'étape OTP réutilise `PhoneVerificationStep` dans la même carte.
+- Connexion chauffeur : accroche « Roulez avec SmartCabb. », arguments (courses proches, gains, support), CTA **jaune**, encart « Déposez votre candidature ».
+- Candidature chauffeur : assistant en 2 étapes avec barre de progression ; l'étape 1 valide nom/téléphone/mot de passe/photo avant d'autoriser le passage ; l'étape 2 reprend véhicule, photos, documents physiques, adresse officielle, conditions et envoi. `handleSubmit` et `handleOtpVerified` sont inchangés.
+
+**Corrections induites**
+- Double soumission supprimée : les formulaires passent par `onSubmit` ; les `onKeyDown`/`onKeyPress` « Entrée » redondants ont été retirés (connexion passager et chauffeur).
+- Compteur du champ téléphone : `0/10` au lieu de `3/10` (le préfixe `+243` n'est plus compté).
+
+### Impact produit / comportement visible
+- Identité visuelle cohérente sur les 4 écrans, logo en filigrane, hiérarchie typographique nette, champs plus lisibles, CTA jaune réservé aux chauffeurs.
+- Inscription chauffeur guidée en 2 étapes : moins de champs visibles à la fois, validation immédiate des informations personnelles.
+- Jauge de robustesse du mot de passe et contrôle de correspondance en temps réel côté inscription.
+- Aucun changement d'API, de contrat de données ni de règle métier (OTP, validation admin, commissions inchangés).
+
+### Risques & rollback
+- **Risque** : régression purement visuelle sur d'autres écrans utilisant `PhoneInput` — le variant par défaut est conservé à l'identique.
+- **Rollback** : `git revert <hash>` (les anciens écrans sont restaurés tels quels).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit`
+- [x] `npm run build`
+- [x] Connexion passager (mobile) : rendu, compteur `0/10`, œil, alerte, CTA
+- [x] Inscription passager : jauge de mot de passe, correspondance, case à cocher 18×18, CTA activé après acceptation
+- [x] Connexion chauffeur : CTA jaune, encart candidature
+- [x] Candidature chauffeur : étape 1 → étape 2 (validation + photo), documents, conditions
+- [x] Mise en page bureau (`lg`) vérifiée via un iframe 1280 px : panneau de marque + carte
+- [ ] Test sur appareil réel Android (clavier, safe-area)
+
+---
+
 ## 2026-11-25 (46) — Après réinitialisation du mot de passe : redirection vers la bonne page de connexion
 
 - **Commit** : `a6148e2` (branche `main`, poussée sur `origin`)

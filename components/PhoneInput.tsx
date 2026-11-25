@@ -16,6 +16,8 @@ interface PhoneInputProps {
   autoCorrect?: string;
   autoCapitalize?: string;
   spellCheck?: string | boolean;
+  /** `auth` : style premium des écrans de connexion / inscription. */
+  variant?: 'default' | 'auth';
 }
 
 export function PhoneInput({ 
@@ -31,7 +33,8 @@ export function PhoneInput({
   autoComplete,
   autoCorrect,
   autoCapitalize,
-  spellCheck
+  spellCheck,
+  variant = 'default'
 }: PhoneInputProps) {
   const [displayValue, setDisplayValue] = useState('');
   const PREFIX = '+243 ';
@@ -132,31 +135,48 @@ export function PhoneInput({
   };
 
   const getDigitsCount = () => {
-    return displayValue.replace(/\D/g, '').substring(0, 10).length;
+    const digits = displayValue.replace(/\D/g, '');
+    // Le préfixe pays (+243) ne compte pas dans les 9-10 chiffres locaux.
+    const local = digits.startsWith('243') ? digits.slice(3) : digits;
+    return local.substring(0, 10).length;
+  };
+
+  const inputClassName =
+    variant === 'auth'
+      ? `pl-4 pr-16 h-12 w-full rounded-2xl border border-[#E4E9F0] bg-[#F6F8FB] text-[15px] font-medium text-[#0B1B2B] outline-none transition-all duration-200 placeholder:font-normal placeholder:text-[#A3AEBD] focus:border-[#007AFF] focus:bg-white focus:shadow-[0_0_0_4px_rgba(0,122,255,0.13)] disabled:cursor-not-allowed disabled:opacity-60 ${className}`
+      : `pl-4 pr-16 h-12 bg-gray-50 border-0 rounded-xl text-base ${className}`;
+
+  const sharedProps = {
+    id,
+    type: 'tel' as const,
+    placeholder: PREFIX + placeholder,
+    value: displayValue,
+    onChange: handleChange,
+    onKeyDown: handleKeyDown,
+    onFocus: handleFocus,
+    onClick: handleClick,
+    autoComplete,
+    autoCorrect,
+    autoCapitalize,
+    spellCheck,
+    disabled,
+    onKeyPress,
   };
 
   return (
-    <div className="space-y-2">
+    <div className={variant === 'auth' ? '' : 'space-y-2'}>
       {label && <Label htmlFor={id}>{label}</Label>}
       <div className="relative">
-        <Input
-          id={id}
-          type="tel"
-          placeholder={PREFIX + placeholder}
-          value={displayValue}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          onClick={handleClick}
-          className={`pl-4 pr-16 h-12 bg-gray-50 border-0 rounded-xl text-base ${className}`}
-          autoComplete={autoComplete}
-          autoCorrect={autoCorrect}
-          autoCapitalize={autoCapitalize}
-          spellCheck={spellCheck}
-          disabled={disabled}
-          onKeyPress={onKeyPress}
-        />
-        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">
+        {variant === 'auth' ? (
+          <input {...sharedProps} className={inputClassName} />
+        ) : (
+          <Input {...sharedProps} className={inputClassName} />
+        )}
+        <div
+          className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none ${
+            variant === 'auth' ? 'font-semibold text-[#A3AEBD]' : 'text-gray-400'
+          }`}
+        >
           {getDigitsCount()}/10
         </div>
       </div>
