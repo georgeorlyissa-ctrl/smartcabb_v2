@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-25 (42) — Release Android 1.8 (versionCode 11) — correctif natif Capacitor
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `0de41d9` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : chore + security (release)
 - **Objectif** : reconstruire et signer l'AAB avec **Capacitor Android 8.6.2**, qui corrige la vulnérabilité native critique « remote content loaded at the app origin via the internal HTTP proxy path ». L'AAB 1.7 publiée embarque encore la bibliothèque vulnérable.
