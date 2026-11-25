@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-25 (45) — Lien « Réinitialiser le mot de passe » : fin de la redirection vers Figma
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `c9e9e63` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (authentification)
 - **Objectif** : le lien reçu par email (Supabase Auth, type `recovery`) renvoyait vers `https://chief-mess-97839970.figma.site` au lieu de SmartCabb. Cause : la **Site URL** du projet Supabase pointait encore sur une maquette Figma et la liste des URLs de redirection autorisées ne contenait que `smartcabb.com` **sans `www`**, alors que l'application tourne sur `https://www.smartcabb.com`. Supabase remplaçait donc le `redirect_to` demandé par la Site URL.
@@ -89,7 +89,8 @@ Avant : `site_url = https://chief-mess-97839970.figma.site`, `uri_allow_list = h
 - [x] Même test sur l'apex `https://smartcabb.com/auth/reset-password` → OK
 - [x] `redirect_to=https://evil.example/x` → retombe sur `https://www.smartcabb.com` (pas de redirection ouverte)
 - [x] `npx tsc --noEmit`
-- [ ] Parcours complet sur un lien réel généré (formulaire actif, changement de mot de passe)
+- [x] Parcours réel sur lien généré (`admin/generate_link`) : redirection vers `https://www.smartcabb.com/auth/reset-password`, session établie, formulaire actif, aucun message d'erreur
+- [x] Lien expiré (`error_code=otp_expired`) : message « Lien de réinitialisation refusé… » + champs désactivés + lien « Demander un nouveau lien »
 
 ---
 
