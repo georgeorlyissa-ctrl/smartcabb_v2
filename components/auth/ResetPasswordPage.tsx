@@ -18,54 +18,95 @@ export function ResetPasswordPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Vérifier si on a un token d'accès dans l'URL
+    let cancelled = false;
+    let recoveryReady = false;
+
+    const finishChecking = () => {
+      if (!cancelled) setCheckingToken(false);
+    };
+
+    const markRecoverySession = (reason: string) => {
+      if (cancelled || recoveryReady) return;
+      recoveryReady = true;
+      console.log('✅ Session de récupération prête:', reason);
+      setSessionEstablished(true);
+      setError('');
+      finishChecking();
+    };
+
+    const expiredMessage = (detail?: string | null) =>
+      detail
+        ? `Lien de réinitialisation refusé : ${detail}. Demandez un nouveau lien.`
+        : 'Lien de réinitialisation invalide ou expiré. Demandez un nouveau lien.';
+
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const hashError = hashParams.get('error_description') || hashParams.get('error');
     const accessToken = hashParams.get('access_token');
-    const refreshToken = hashParams.get('refresh_token');
-    const type = hashParams.get('type');
+    const refreshToken = hashParams.get('refresh_token') || '';
 
-    console.log('🔐 Reset Password Page - Token:', accessToken ? 'présent' : 'absent');
-    console.log('🔐 Refresh Token:', refreshToken ? 'présent' : 'absent');
-    console.log('🔐 Type:', type);
-    console.log('🔐 Hash complet:', window.location.hash);
-
-    if (!accessToken || type !== 'recovery') {
-      console.error('❌ Token absent ou type incorrect');
-      setError('Lien de réinitialisation invalide ou expiré. Veuillez demander un nouveau lien.');
-      setCheckingToken(false);
+    // 1) Lien déjà utilisé / expiré : Supabase renvoie l'erreur dans le hash.
+    if (hashError) {
+      console.error('❌ Lien de réinitialisation refusé:', hashError);
+      setError(expiredMessage(hashParams.get('error_description') || hashParams.get('error')));
+      finishChecking();
       return;
     }
 
-    // Établir la session avec le token
-    const establishSession = async () => {
-      try {
-        console.log('🔄 Établissement de la session avec le token...');
-        
-        const { data, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || ''
-        });
+    // 2) supabase-js (detectSessionInUrl) peut consommer le hash avant nous :
+    //    on écoute l'événement de récupération, puis on retombe sur getSession().
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+        markRecoverySession(event);
+      }
+    });
 
-        if (sessionError) {
-          console.error('❌ Erreur session:', sessionError);
-          setError('Impossible d\'établir la session. Le lien est peut-être expiré.');
-          setCheckingToken(false);
+    const bootstrap = async () => {
+      try {
+        if (accessToken) {
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (sessionError) {
+            console.error('❌ Erreur session:', sessionError);
+            setError(expiredMessage(sessionError.message));
+            finishChecking();
+            return;
+          }
+          markRecoverySession('jeton du lien');
           return;
         }
 
-        console.log('✅ Session établie:', data);
-        setSessionEstablished(true);
-        setError(''); // ✅ IMPORTANT : Effacer l'erreur
-        setCheckingToken(false);
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          markRecoverySession('session existante');
+          return;
+        }
 
-      } catch (err: any) {
+        // Dernière chance : laisser à onAuthStateChange le temps de se déclencher.
+        setTimeout(async () => {
+          if (cancelled || recoveryReady) return;
+          const { data: retry } = await supabase.auth.getSession();
+          if (retry.session) {
+            markRecoverySession('session différée');
+          } else {
+            setError(expiredMessage());
+            finishChecking();
+          }
+        }, 1500);
+      } catch (err) {
         console.error('❌ Erreur établissement session:', err);
-        setError('Erreur lors de l\'établissement de la session');
-        setCheckingToken(false);
+        setError(expiredMessage());
+        finishChecking();
       }
     };
 
-    establishSession();
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   const handleResetPassword = async (e: React.FormEvent) => {

@@ -42,6 +42,57 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-25 (45) — Lien « Réinitialiser le mot de passe » : fin de la redirection vers Figma
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (authentification)
+- **Objectif** : le lien reçu par email (Supabase Auth, type `recovery`) renvoyait vers `https://chief-mess-97839970.figma.site` au lieu de SmartCabb. Cause : la **Site URL** du projet Supabase pointait encore sur une maquette Figma et la liste des URLs de redirection autorisées ne contenait que `smartcabb.com` **sans `www`**, alors que l'application tourne sur `https://www.smartcabb.com`. Supabase remplaçait donc le `redirect_to` demandé par la Site URL.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/auth/ResetPasswordPage.tsx` | Détection robuste de la session de récupération (hash, session déjà établie, événement `PASSWORD_RECOVERY`, erreur explicite du lien) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Configuration Supabase (management API, hors dépôt)
+
+```json
+{
+  "site_url": "https://www.smartcabb.com",
+  "uri_allow_list": "https://smartcabb.com,https://smartcabb.com/**,https://www.smartcabb.com,https://www.smartcabb.com/**,http://localhost:5173/**,http://localhost:3000/**,http://localhost:4173/**,capacitor://localhost,ionic://localhost"
+}
+```
+
+Avant : `site_url = https://chief-mess-97839970.figma.site`, `uri_allow_list = https://smartcabb.com,https://smartcabb.com/**,https://smartcabb.com/auth/reset-password`.
+
+### Description technique
+- `redirectTo` envoyé par `lib/auth-service.ts` : `${window.location.origin}/auth/reset-password` → désormais accepté (www et apex).
+- `ResetPasswordPage` :
+  1. affiche un message clair si le hash contient `error_code=otp_expired` (lien déjà utilisé/expiré) ;
+  2. établit la session depuis `access_token`/`refresh_token` du hash (`setSession`) ;
+  3. sinon écoute `onAuthStateChange` (`PASSWORD_RECOVERY`, `SIGNED_IN`) — nécessaire car `detectSessionInUrl` de supabase-js consomme le hash avant le rendu du composant ;
+  4. sinon retombe sur `getSession()` (immédiat puis après 1,5 s) avant d'afficher « lien invalide ».
+- Aucun changement du flux d'envoi : `POST /auth/v1/recover` reste appelé par `resetPassword()`.
+
+### Impact produit / comportement visible
+- Le lien de l'email ouvre bien `https://www.smartcabb.com/auth/reset-password` avec le formulaire actif.
+- Une URL de redirection inconnue retombe sur la page d'accueil SmartCabb (plus jamais sur Figma).
+- Les liens expirés affichent un message explicite au lieu d'un formulaire bloqué.
+
+### Risques & rollback
+- **Risque** : la Site URL sert aussi de base aux autres emails Auth (confirmation, magic link) → ils pointent désormais vers SmartCabb, ce qui est le comportement attendu.
+- **Rollback** : reconfigurer `site_url`/`uri_allow_list` via l'API de management ; `git revert <hash>` pour le composant.
+
+### Tests / vérifications
+- [x] Sonde `GET /auth/v1/verify` avec `redirect_to=https://www.smartcabb.com/auth/reset-password` → `303` vers la page SmartCabb (avant : Figma)
+- [x] Même test sur l'apex `https://smartcabb.com/auth/reset-password` → OK
+- [x] `redirect_to=https://evil.example/x` → retombe sur `https://www.smartcabb.com` (pas de redirection ouverte)
+- [x] `npx tsc --noEmit`
+- [ ] Parcours complet sur un lien réel généré (formulaire actif, changement de mot de passe)
+
+---
+
 ## 2026-11-25 (44) — Correctif déploiement Vercel : `vercel.json` corrompu par un BOM UTF-8
 
 - **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
