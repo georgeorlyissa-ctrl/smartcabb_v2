@@ -84,7 +84,7 @@ Assez de détail pour comprendre le code sans le relire.>
 3. **2FA** : `/admin/2fa/verify` crée désormais une session serveur et renvoie son jeton ; l'ancien jeton OTP à usage unique n'autorise plus rien.
 4. **Argent** : `POST /drivers/:id/balance` réservé aux admins ; débit passager et retrait chauffeur réservés au propriétaire/admin ; clôture d'une course impossible si elle n'existe pas (fin de la création de course fantôme).
 5. **Comptes** : purge par email et `fix-all` admin-only ; suppression par téléphone déjà protégée par OTP (entrée 39).
-6. **PII** : `GET /drivers/:id` renvoie un profil minimal au public (nom, photo, véhicule, note) ; le téléphone n'est inclus qu'en cas de course active avec ce chauffeur ; soldes/emails/tokens réservés au propriétaire et aux admins. `GET /drivers`, `/drivers/pending`, `/rides/pending/:driverId`, historiques et gains sont protégés.
+6. **PII** : `GET /drivers/:id` renvoie un profil minimal au public (nom, photo, véhicule, note) ; le téléphone n'est inclus qu'en cas de course active avec ce chauffeur ; soldes/emails/tokens réservés au propriétaire et aux admins. `GET /drivers`, `/drivers/pending`, `/rides/pending/:driverId`, historiques et gains sont protégés. Le lien public de suivi (`GET /rides/:id`) ne renvoie que trajet/statut/position ; `GET /rides/status/:id` exige un participant ou un admin.
 7. **Client** : intercepteur global qui remplace `Authorization: Bearer <anon>` par le JWT de session et ajoute `x-admin-2fa` sur les routes admin. Les visiteurs non connectés conservent la clé anon (routes publiques uniquement).
 8. **Mot de passe admin** : plus aucune valeur en dur. `/admin/reset-admin-account` exige le secret `ADMIN_RESET_PASSWORD` (≥ 12 caractères) et ne renvoie plus d'identifiants.
 
@@ -117,6 +117,8 @@ Assez de détail pour comprendre le code sans le relire.>
 - [x] `POST /rides/create` avec clé anon → **401**
 - [x] `GET /config/get` public → **200**
 - [x] `GET /drivers/:id` public → **200** sans solde/email/téléphone/token
+- [x] `GET /rides/:id` public (lien de suivi) → **200** avec trajet/statut uniquement, sans téléphone ni paiement
+- [x] `GET /rides/status/:id` avec clé anon → **401**
 - [x] `/admin/2fa/send` reste joignable (réponse « Session invalide » avec un faux jeton)
 - [ ] Reconnexion admin réelle + parcours complet du panneau (à faire après rotation du mot de passe)
 

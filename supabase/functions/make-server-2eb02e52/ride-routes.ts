@@ -12,6 +12,7 @@ import {
   rebuildDriverRecord,
 } from "./driver-records.ts";
 import {
+  optionalUser,
   requireAdmin,
   requireAnyOwnerOrAdmin,
   requireOwnerOrAdmin,
@@ -1085,6 +1086,13 @@ app.get("/status/:id", async (c) => {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
 
+    // 🔒 Statut détaillé (téléphones, prix, paiement) : participants ou admin.
+    const statusAuth = await requireAnyOwnerOrAdmin(c, [
+      ride.passengerId || ride.passenger_id,
+      ride.driverId || ride.driver_id,
+    ]);
+    if (!statusAuth.ok) return statusAuth.response;
+
     // ⏱️ Auto-réparation : une recherche sans chauffeur ne doit pas rester
     // bloquée à vie. Le `setTimeout` de matching ne survit pas toujours à
     // l'arrêt de l'instance Edge : on tranche à la lecture.
@@ -1428,7 +1436,7 @@ app.get("/:id", async (c) => {
     if (!isValidUUID(rideId)) {
       return c.json({ success: false, error: "ID course invalide" }, 400);
     }
-    const ride = await kv.get(`ride:${rideId}`);
+    const ride: any = await kv.get(`ride:${rideId}`);
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
@@ -1451,6 +1459,39 @@ app.get("/:id", async (c) => {
       } catch (e) {
         console.error("⚠️ Erreur lecture position chauffeur:", e);
       }
+    }
+
+    // 🔒 Participants (passager/chauffeur) et admins : fiche complète.
+    // Le public (lien de suivi partagé) ne reçoit que les données de trajet,
+    // jamais les téléphones, identifiants, prix ou données de paiement.
+    const viewer = await optionalUser(c);
+    const canSeeFull = !!viewer && (
+      roleOf(viewer) === "admin" ||
+      String(viewer.id) === String(ride.passengerId || ride.passenger_id) ||
+      String(viewer.id) === String(ride.driverId || ride.driver_id)
+    );
+
+    if (!canSeeFull) {
+      return c.json({
+        success: true,
+        ride: {
+          id: ride.id,
+          status: ride.status,
+          pickup: ride.pickup
+            ? { name: ride.pickup.name, address: ride.pickup.address, coordinates: ride.pickup.coordinates }
+            : null,
+          destination: ride.destination
+            ? { name: ride.destination.name, address: ride.destination.address, coordinates: ride.destination.coordinates }
+            : null,
+          vehicleCategory: ride.vehicleCategory,
+          driverName: ride.driverName || null,
+          driverVehicle: ride.driverVehicle || null,
+          driverRating: ride.driverRating || null,
+          driverLocation,
+          createdAt: ride.createdAt || ride.created_at || null,
+          completedAt: ride.completedAt || null,
+        },
+      });
     }
 
     return c.json({ success: true, ride: { ...ride, driverLocation } });
