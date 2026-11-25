@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-25 (46) — Après réinitialisation du mot de passe : redirection vers la bonne page de connexion
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `a6148e2` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (authentification)
 - **Objectif** : après un changement de mot de passe réussi, l'utilisateur était renvoyé vers `/login`, une route **inexistante** (page blanche). Il doit désormais atterrir sur **`/admin`** (écran de connexion administrateur) s'il est admin, sinon sur `/app`.
