@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-25 (43) — Suppression du compte administrateur obsolète `hmapela8@gmail.com`
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `04407bc` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security (opération base de données)
 - **Objectif** : réduire la surface d'attaque du panneau d'administration. Un second compte `admin` (`hmapela8@gmail.com`, créé le 09/10/2026, dernière connexion le 23/10/2026) restait actif sans usage. `admin@smartcabb.com`, demandé par l'exploitant, **n'existait pas** dans `auth.users` (c'est uniquement l'adresse de contact publique).
