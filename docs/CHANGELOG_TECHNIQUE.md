@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-25 (41) — Sécurité P1/P2 : SMS/SOS/OTP, CORS, RLS et dépendances
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `24c0051` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security + fix + docs
 - **Objectif** : fermer les abus restants (SMS, SOS, OTP, paiements), verrouiller la base contre la lecture publique de données personnelles/secrets, restreindre le CORS, durcir les erreurs et réduire les vulnérabilités de dépendances.
@@ -98,7 +98,7 @@ Assez de détail pour comprendre le code sans le relire.>
 ### Risques & rollback
 - **Risque** : un client très ancien qui envoie un SMS à un tiers via l'API sera refusé (attendu).
 - **Risque** : Firebase 13 doit être validé sur appareil réel (push web/natif).
-- **Rollback code** : `git revert <hash>` + redéploiement Edge Function + Vercel.
+- **Rollback code** : `git revert 24c0051` + redéploiement Edge Function + Vercel.
 - **Rollback RLS** : recréer les anciennes policies n'est **pas recommandé** (fuite de données). En cas de blocage admin, utiliser le JWT admin ou le service role.
 
 ### Tests / vérifications
@@ -3889,3 +3889,4 @@ git show <hash> --stat       # détail d'un commit
 ```
 
 Les audits et rapports existants se trouvent dans `docs/` et à la racine du dépôt (`RAPPORT_*.md`, `AUDIT-*.md`, `FIX-*.md`).
+
