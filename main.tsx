@@ -20,6 +20,7 @@ import App from './App';
 import './styles/globals.css';
 import { logStartupDiagnostics, setupErrorInterceptors } from './utils/diagnostics';
 import { installSafeIntersectionObserver } from './lib/safe-intersection-observer';
+import { installApiAuthInterceptor } from './lib/api-auth-interceptor';
 import {
   releaseStaleServiceWorker,
   runStartupCacheCleanup,
@@ -43,6 +44,10 @@ if (typeof window !== 'undefined') {
 // 🛡️ GARDE-FOU IntersectionObserver (bug Google Maps iOS/Safari) + diagnostics
 installSafeIntersectionObserver();
 logStartupDiagnostics();
+
+// 🔐 Chaque appel API porte désormais la session de l'utilisateur connecté
+// (et le jeton 2FA pour les routes admin).
+installApiAuthInterceptor();
 setupErrorInterceptors();
 
 // ✅ PROTECTION SSR: Vérifier que nous sommes côté client

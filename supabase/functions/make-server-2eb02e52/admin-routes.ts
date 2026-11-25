@@ -16,8 +16,29 @@ import {
   sendEmailOTP,
   verifyEmailOTP,
 } from "./admin-2fa-core.ts";
+import { createAdmin2FASession, requireAdmin } from "./auth-guard.ts";
 
 const app = new Hono();
+
+// ─── 🛡️ Middleware d'autorisation ADMIN ─────────────────────────────────────
+// Toutes les routes /admin exigent une session Supabase avec le rôle `admin`
+// ET une session 2FA serveur (sauf les routes qui permettent justement de
+// s'authentifier ou de réinitialiser le compte avec le secret propriétaire).
+const ADMIN_AUTH_FREE = [
+  /\/admin\/2fa\/send$/,
+  /\/admin\/2fa\/verify$/,
+  /\/admin\/reset-admin-account$/,
+];
+
+app.use("*", async (c, next) => {
+  const path = c.req.path || "";
+  if (ADMIN_AUTH_FREE.some((re) => re.test(path))) {
+    return await next();
+  }
+  const auth = await requireAdmin(c);
+  if (!auth.ok) return auth.response;
+  return await next();
+});
 
 // ─── Sécurité : secret de création admin ──────────────────────────────────────
 
@@ -112,11 +133,22 @@ app.post("/reset-admin-account", async (c) => {
       return c.json({ success: false, error: "Code de création admin requis ou invalide" }, 403);
     }
 
-    console.log("🆘 RÉINITIALISATION DU COMPTE ADMIN...");
+    // ⛔ Plus AUCUN mot de passe en dur : il doit venir d'un secret Supabase.
+    // L'ancien mot de passe (« SmartCabb2024! ») était présent dans le dépôt :
+    // il doit être considéré comme compromis et changé immédiatement.
+    const adminPassword = Deno.env.get("ADMIN_RESET_PASSWORD") || "";
+    if (!adminPassword || adminPassword.length < 12) {
+      return c.json({
+        success: false,
+        error: "Réinitialisation désactivée : configurez le secret ADMIN_RESET_PASSWORD (12 caractères minimum).",
+        code: "ADMIN_RESET_NOT_CONFIGURED",
+      }, 503);
+    }
 
-    const adminEmail = "contact@smartcabb.com";
-    const adminPassword = "SmartCabb2024!";
-    const adminPhone = "+243900000000";
+    const adminEmail = Deno.env.get("ADMIN_RESET_EMAIL") || "contact@smartcabb.com";
+    const adminPhone = Deno.env.get("ADMIN_2FA_PHONE") || "";
+
+    console.log("🆘 RÉINITIALISATION DU COMPTE ADMIN...");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") || "",
@@ -134,6 +166,11 @@ app.post("/reset-admin-account", async (c) => {
       await supabase.auth.admin.updateUserById(authUserId, {
         password: adminPassword,
         email_confirm: true,
+        user_metadata: {
+          ...(existingUser.user_metadata || {}),
+          role: "admin",
+          phone: adminPhone || existingUser.user_metadata?.phone || null,
+        },
       });
     } else {
       console.log("➕ Création d'un nouveau compte admin...");
@@ -141,7 +178,7 @@ app.post("/reset-admin-account", async (c) => {
         email: adminEmail,
         password: adminPassword,
         email_confirm: true,
-        user_metadata: { full_name: "Admin SmartCabb", phone: adminPhone, role: "admin" },
+        user_metadata: { full_name: "Admin SmartCabb", phone: adminPhone || null, role: "admin" },
       });
 
       if (error) {
@@ -153,7 +190,7 @@ app.post("/reset-admin-account", async (c) => {
     const adminProfile = {
       id: authUserId,
       email: adminEmail,
-      phone: adminPhone,
+      phone: adminPhone || null,
       full_name: "Admin SmartCabb",
       role: "admin",
       created_at: new Date().toISOString(),
@@ -164,11 +201,11 @@ app.post("/reset-admin-account", async (c) => {
     await kvSet(`profile:${authUserId}`, adminProfile);
     await kvSet(`admin:${authUserId}`, adminProfile);
 
+    // ⛔ Ne JAMAIS renvoyer d'identifiants dans la réponse HTTP.
     return c.json({
       success: true,
-      message: "Compte admin réinitialisé avec succès",
-      credentials: { email: adminEmail, password: adminPassword },
-      admin: adminProfile,
+      message: "Compte admin réinitialisé. Le mot de passe est celui du secret ADMIN_RESET_PASSWORD.",
+      userId: authUserId,
     });
   } catch (error) {
     console.error("❌ Erreur réinitialisation admin:", error);
@@ -262,8 +299,13 @@ app.post("/2fa/verify", async (c) => {
       return c.json({ success: false, error: result.error }, 400);
     }
 
+    // 🔐 Session 2FA SERVEUR (12 h) : c'est ce jeton que le middleware admin
+    // vérifie à chaque requête (header `x-admin-2fa`). L'ancien jeton OTP
+    // (usage unique) n'est plus utilisé pour autoriser les appels.
+    const sessionToken = await createAdmin2FASession(adminUser.id, adminUser.email);
+
     console.log(`✅ [2FA] Connexion admin vérifiée: ${adminUser.email}`);
-    return c.json({ success: true, token: result.token });
+    return c.json({ success: true, token: sessionToken });
   } catch (error) {
     console.error("❌ [2FA/VERIFY] Erreur:", error);
     return c.json({ success: false, error: "Erreur lors de la vérification" }, 500);

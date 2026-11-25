@@ -11,6 +11,13 @@ import {
   rebuildAllDriverRecords,
   rebuildDriverRecord,
 } from "./driver-records.ts";
+import {
+  requireAdmin,
+  requireAnyOwnerOrAdmin,
+  requireOwnerOrAdmin,
+  requireUser,
+  roleOf,
+} from "./auth-guard.ts";
 
 const app = new Hono();
 
@@ -881,6 +888,17 @@ app.post("/create", async (c) => {
   
   try {
     const rideData = await c.req.json();
+    // 🔒 Création de course : session passager réelle. Un utilisateur ne peut
+    // créer une course que pour lui-même (ou un admin pour un autre passager).
+    const createAuth = await requireUser(c);
+    if (!createAuth.ok) return createAuth.response;
+    const requestedPassengerId = rideData.passengerId || rideData.passenger_id;
+    if (roleOf(createAuth.user) !== "admin") {
+      if (requestedPassengerId && String(requestedPassengerId) !== String(createAuth.user.id)) {
+        return c.json({ success: false, error: "Passager non autorisé" }, 403);
+      }
+      rideData.passengerId = createAuth.user.id;
+    }
     console.log("📦 Données reçues:", JSON.stringify(rideData, null, 2));
 
     // 🆔 Idempotence : le client envoie un identifiant de tentative. Un second
@@ -1096,6 +1114,9 @@ app.get("/status/:id", async (c) => {
 // ============================================
 app.post("/heal-stuck-state", async (c) => {
   try {
+    // 🔒 Outil de maintenance : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
     const drivers = await loadDriversLite();
     const activeRideIds = await loadActiveRideIdSet();
 
@@ -1156,6 +1177,10 @@ app.post("/heal-stuck-state", async (c) => {
 // ============================================
 app.get("/debug-drivers", async (c) => {
   try {
+    // 🔒 Diagnostic (noms, soldes, tokens FCM) : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     const allDrivers = await loadDriversLite();
     // Diagnostic fidèle : un verrou obsolète ne doit pas apparaître comme « occupé ».
     await repairStaleLocksInList(allDrivers);
@@ -1441,6 +1466,11 @@ app.get("/:id", async (c) => {
 app.get("/pending/:driverId", async (c) => {
   try {
     const driverId = c.req.param('driverId');
+
+    // 🔒 Notifications de course : seul le conducteur concerné (ou admin).
+    // Sans ce contrôle, n'importe qui pouvait lire nom/téléphone du passager.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
     
     // ✅ FIX PRINCIPAL: Chercher dans driver_notification (clé écrite par notifyDriverAtIndex)
     const notification = await kv.get<any>(`driver_notification:${driverId}`);
@@ -1510,6 +1540,11 @@ app.get("/pending/:driverId", async (c) => {
 app.get("/active/:driverId", async (c) => {
   try {
     const driverId = c.req.param("driverId");
+
+    // 🔒 Course active : conducteur concerné (ou admin).
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const driver = await kv.get<any>(`driver:${driverId}`);
     const activeId = driver?.activeRideId || driver?.active_ride_id
       || driver?.currentRideId || driver?.current_ride_id;
@@ -1536,6 +1571,11 @@ app.get("/active/:driverId", async (c) => {
 app.get("/passenger/:passengerId/active", async (c) => {
   try {
     const passengerId = c.req.param("passengerId");
+
+    // 🔒 Course active du passager : propriétaire (ou admin) uniquement.
+    const auth = await requireOwnerOrAdmin(c, passengerId);
+    if (!auth.ok) return auth.response;
+
     const indexKey = `passenger_active_ride:${passengerId}`;
     const indexed = await kv.get<any>(indexKey);
     const rideId = typeof indexed === "string" ? indexed : indexed?.rideId;
@@ -1834,6 +1874,10 @@ function getCategoryName(category: string): string {
 app.post("/accept", async (c) => {
   try {
     const { rideId, driverId, driverName, driverPhone, driverVehicle, driverRating } = await c.req.json();
+
+    // 🔒 Seul le conducteur lui-même (ou un admin) peut accepter une course.
+    const auth = await requireAnyOwnerOrAdmin(c, [driverId]);
+    if (!auth.ok) return auth.response;
 
     if (!isValidUUID(rideId)) {
       return c.json({ success: false, error: "ID course invalide" }, 400);
@@ -2140,6 +2184,10 @@ app.post("/decline", async (c) => {
   try {
     const { rideId, driverId } = await c.req.json();
 
+    // 🔒 Seul le conducteur concerné (ou un admin) peut refuser.
+    const auth = await requireAnyOwnerOrAdmin(c, [driverId]);
+    if (!auth.ok) return auth.response;
+
     if (!isValidUUID(rideId)) {
       return c.json({ success: false, error: "ID course invalide" }, 400);
     }
@@ -2184,6 +2232,10 @@ app.post("/decline", async (c) => {
 app.post("/arrived", async (c) => {
   try {
     const { rideId, driverId } = await c.req.json();
+
+    // 🔒 Conducteur assigné (ou admin) uniquement.
+    const auth = await requireAnyOwnerOrAdmin(c, [driverId]);
+    if (!auth.ok) return auth.response;
 
     if (!isValidUUID(rideId)) {
       return c.json({ success: false, error: "ID course invalide" }, 400);
@@ -2247,7 +2299,11 @@ const CONFIRMATION_CODE_REQUIRED =
 app.post("/start", async (c) => {
   try {
     const { rideId, driverId, confirmationCode } = await c.req.json();
-    
+
+    // 🔒 Conducteur assigné (ou admin) uniquement.
+    const auth = await requireAnyOwnerOrAdmin(c, [driverId]);
+    if (!auth.ok) return auth.response;
+
     if (!isValidUUID(rideId)) {
       return c.json({ success: false, error: "ID course invalide" }, 400);
     }
@@ -2306,6 +2362,13 @@ app.post("/cancel", async (c) => {
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
+
+    // 🔒 Seuls le passager, le conducteur assigné ou un admin peuvent annuler.
+    const cancelAuth = await requireAnyOwnerOrAdmin(c, [
+      ride.passengerId || ride.passenger_id,
+      ride.driverId || ride.driver_id,
+    ]);
+    if (!cancelAuth.ok) return cancelAuth.response;
     
     // Vérifier que la course n'est pas déjà terminée/annulée
     if (ride.status === 'completed' || ride.status === 'rated') {
@@ -2755,6 +2818,10 @@ async function pushToRidePartiesSafe(ride: any, title: string, body: string, rid
 // ============================================
 app.get("/admin/fraud-signals", async (c) => {
   try {
+    // 🔒 Signaux anti-fraude : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     const rides = await kv.getByPrefix("ride:");
     // Fenêtre 30 jours : le passé lointain (tests) ne doit pas accuser
     const since = Date.now() - 30 * 24 * 3600 * 1000;
@@ -2850,6 +2917,13 @@ app.post("/activate-billing", async (c) => {
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
+
+    // 🔒 Participants de la course (ou admin) uniquement.
+    const billingAuth = await requireAnyOwnerOrAdmin(c, [
+      ride.driverId || ride.driver_id,
+      ride.passengerId || ride.passenger_id,
+    ]);
+    if (!billingAuth.ok) return billingAuth.response;
     
     ride.billingActivated = true;
     ride.billingActivatedAt = new Date().toISOString();
@@ -2880,6 +2954,23 @@ app.post("/:id/update", async (c) => {
     if (!ride) {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
+
+    // 🔒 Participants uniquement, et champs restreints pour un non-admin :
+    // un client ne doit jamais pouvoir réécrire le prix, le statut ou le
+    // conducteur via cette route générique.
+    const updateAuth = await requireAnyOwnerOrAdmin(c, [
+      ride.passengerId || ride.passenger_id,
+      ride.driverId || ride.driver_id,
+    ]);
+    if (!updateAuth.ok) return updateAuth.response;
+
+    if (roleOf(updateAuth.user) !== "admin" && updates && typeof updates === "object") {
+      const ALLOWED = new Set(["billingElapsedTime"]);
+      for (const key of Object.keys(updates)) {
+        if (!ALLOWED.has(key)) delete (updates as any)[key];
+      }
+    }
+
     Object.assign(ride, updates);
     ride.lastUpdate = new Date().toISOString();
     await kv.set(`ride:${rideId}`, ride);
@@ -2907,24 +2998,18 @@ app.post("/complete", async (c) => {
 
     let ride = await kv.get<any>(`ride:${rideId}`);
 
-    // ✅ FIX : si la course n'existe pas (ID généré côté DriverDashBoard), la créer
+    // 🔒 Une course ne peut être clôturée que si elle existe réellement et que
+    // l'appelant est le passager, le conducteur assigné ou un admin.
+    // (L'ancien code créait une course fantôme à la volée : un conducteur
+    // pouvait fabriquer des courses et manipuler ses gains.)
     if (!ride) {
-      console.log(`⚠️ [RIDE-COMPLETE] Course ${rideId} introuvable → création automatique`);
-      ride = {
-        id: rideId,
-        driverId: body.driverId || null,
-        passengerId: body.passengerId || null,
-        status: 'searching',
-        estimatedPrice: actualCost || 0,
-        createdAt: new Date().toISOString(),
-        pickup: body.pickup || null,
-        destination: body.destination || null,
-        distance: body.distance || 0,
-        vehicleType: body.vehicleType || 'smart_standard',
-        passengerName: body.passengerName || '',
-        passengerPhone: body.passengerPhone || '',
-      };
+      return c.json({ success: false, error: "Course introuvable" }, 404);
     }
+    const completeAuth = await requireAnyOwnerOrAdmin(c, [
+      ride.driverId || ride.driver_id || body.driverId,
+      ride.passengerId || ride.passenger_id || body.passengerId,
+    ]);
+    if (!completeAuth.ok) return completeAuth.response;
 
     // ✅ FIX : éviter le double incrément si la course est déjà 'completed'/'rated'
     const alreadyCompleted = ride.status === 'completed' || ride.status === 'rated';
@@ -3124,6 +3209,13 @@ app.post("/:id/complete", async (c) => {
       return c.json({ success: false, error: "Course non trouvée" }, 404);
     }
 
+    // 🔒 Participants de la course (ou admin) uniquement.
+    const completeAuth = await requireAnyOwnerOrAdmin(c, [
+      ride.driverId || ride.driver_id || driverId,
+      ride.passengerId || ride.passenger_id || body.passengerId,
+    ]);
+    if (!completeAuth.ok) return completeAuth.response;
+
     // ✅ FIX : éviter le double incrément si la course est déjà 'completed'/'rated'
     const alreadyCompleted = ride.status === 'completed' || ride.status === 'rated';
     const effectiveDriverId = ride.driverId || driverId;
@@ -3243,6 +3335,10 @@ app.post("/:id/complete", async (c) => {
 app.get("/driver/:driverId/earnings", async (c) => {
   try {
     const driverId = c.req.param('driverId');
+    // 🔒 Gains du conducteur : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const period = c.req.query('period') || 'today';
     
     const allRides = await kv.getByPrefix('ride:');
@@ -3300,6 +3396,10 @@ app.get("/driver/:driverId/earnings", async (c) => {
 app.get("/history/:passengerId", async (c) => {
   try {
     const passengerId = c.req.param('passengerId');
+    // 🔒 Historique passager : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, passengerId);
+    if (!auth.ok) return auth.response;
+
     console.log(`📋 [RIDES/HISTORY-PASSENGER] Chargement pour passager: ${passengerId}`);
 
     const allRides = await kv.getByPrefix('ride:');
@@ -3362,6 +3462,10 @@ app.get("/history/:passengerId", async (c) => {
 app.get("/driver/:driverId/rides", async (c) => {
   try {
     const driverId = c.req.param('driverId');
+    // 🔒 Historique conducteur : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     console.log(`📋 [RIDES/HISTORY-DRIVER] Chargement pour conducteur: ${driverId}`);
 
     const allRides = await kv.getByPrefix('ride:');
@@ -3437,6 +3541,10 @@ app.get("/driver/:driverId/rides", async (c) => {
 app.post("/rate", async (c) => {
   try {
     const { rideId, driverId, passengerId, rating, comment, tags } = await c.req.json();
+
+    // 🔒 Seul le passager de la course (ou un admin) peut noter.
+    const auth = await requireAnyOwnerOrAdmin(c, [passengerId]);
+    if (!auth.ok) return auth.response;
 
     if (!rideId || !driverId || !rating) {
       return c.json({ success: false, error: "rideId, driverId et rating requis" }, 400);
@@ -4088,6 +4196,10 @@ const METER_REASONS = ["panne", "crevaison", "urgence", "convenance", "transfert
 app.post("/:id/meter", async (c) => {
   try {
     const rideId = c.req.param("id");
+    // 🔒 Suspension/reprise du compteur par le support : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     const { action, reason, adminId, adminName } = await c.req.json();
     if (!isValidUUID(rideId)) {
       return c.json({ success: false, error: "ID course invalide" }, 400);
@@ -4174,6 +4286,11 @@ app.post("/:id/transfer/propose", async (c) => {
     if (!ride) {
       return c.json({ success: false, error: "Course introuvable" }, 404);
     }
+
+    // 🔒 Proposer un transfert : conducteur actuel de la course (ou admin).
+    const transferAuth = await requireAnyOwnerOrAdmin(c, [ride.driverId || ride.driver_id]);
+    if (!transferAuth.ok) return transferAuth.response;
+
     if (!["accepted", "enroute", "arrived", "in_progress"].includes(ride.status)) {
       return c.json({ success: false, error: "Course non active" }, 400);
     }
@@ -4262,6 +4379,11 @@ app.post("/:id/transfer/accept", async (c) => {
     if (!isValidUUID(rideId) || !driverId) {
       return c.json({ success: false, error: "Paramètres invalides" }, 400);
     }
+
+    // 🔒 Seul le conducteur destinataire (ou admin) peut accepter le transfert.
+    const transferAuth = await requireAnyOwnerOrAdmin(c, [driverId]);
+    if (!transferAuth.ok) return transferAuth.response;
+
     const ride = await kv.get<any>(`ride:${rideId}`);
     if (!ride?.transferProposal || ride.transferProposal.toDriverId !== driverId) {
       return c.json({ success: false, error: "Aucune proposition pour vous" }, 400);
@@ -4332,6 +4454,11 @@ app.post("/:id/transfer/decline", async (c) => {
     if (!isValidUUID(rideId) || !driverId) {
       return c.json({ success: false, error: "Paramètres invalides" }, 400);
     }
+
+    // 🔒 Seul le conducteur destinataire (ou admin) peut refuser le transfert.
+    const transferAuth = await requireAnyOwnerOrAdmin(c, [driverId]);
+    if (!transferAuth.ok) return transferAuth.response;
+
     const ride = await kv.get<any>(`ride:${rideId}`);
     if (!ride?.transferProposal || ride.transferProposal.toDriverId !== driverId) {
       return c.json({ success: false, error: "Aucune proposition pour vous" }, 400);
@@ -4391,6 +4518,10 @@ app.get("/:id/journal", async (c) => {
 // ============================================
 app.post("/admin-process-one", async (c) => {
   try {
+    // 🔒 Traitement manuel d'une réservation : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     const { scheduledRideId, mode } = await c.req.json();
     if (!scheduledRideId || (mode !== "preassigned" && mode !== "automatch")) {
       return c.json({ success: false, error: "scheduledRideId et mode (preassigned|automatch) requis" }, 400);

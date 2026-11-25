@@ -1,7 +1,15 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireAdmin } from "./auth-guard.ts";
 
 const app = new Hono();
+
+// 🔒 Maintenance sensible (suppression/recréation de comptes Auth) : admin only.
+app.use("*", async (c, next) => {
+  const auth = await requireAdmin(c);
+  if (!auth.ok) return auth.response;
+  return await next();
+});
 
 /**
  * 🔧 ROUTE DE DIAGNOSTIC DES EMAILS MALFORMÉS

@@ -6,6 +6,13 @@
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  driverHasActiveRideWithPassenger,
+  requireAdmin,
+  requireOwnerOrAdmin,
+  requireUser,
+  roleOf,
+} from "./auth-guard.ts";
 
 const app = new Hono();
 
@@ -58,6 +65,10 @@ function hasValidAdminSecret(c: any): boolean {
 // ─── GET / — Tous les passagers ──────────────────────────────────────────────
 app.get("/", async (c) => {
   try {
+    // 🔒 Liste complète des passagers : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     console.log("📋 [PASSENGERS/GET-ALL] Récupération de tous les passagers...");
     const allPassengers = await kvGetByPrefix("passenger:");
     console.log(`✅ [PASSENGERS/GET-ALL] ${allPassengers.length} passager(s)`);
@@ -72,6 +83,19 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
   try {
     const id = c.req.param("id");
+
+    // 🔒 Propriétaire, admin, ou conducteur ayant une course active avec ce passager.
+    const auth = await requireUser(c);
+    if (!auth.ok) return auth.response;
+    const isAdmin = roleOf(auth.user) === "admin";
+    const isOwner = String(auth.user.id) === String(id);
+    if (!isAdmin && !isOwner) {
+      const isDriverWithRide = await driverHasActiveRideWithPassenger(String(auth.user.id), id);
+      if (!isDriverWithRide) {
+        return c.json({ success: false, error: "Accès non autorisé" }, 403);
+      }
+    }
+
     console.log(`👤 [PASSENGERS/GET-ONE] ${id}`);
 
     // Chercher dans passenger: et profile:
@@ -92,6 +116,10 @@ app.get("/:id", async (c) => {
 app.get("/:id/balance", async (c) => {
   try {
     const id = c.req.param("id");
+    // 🔒 Solde du portefeuille : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, id);
+    if (!auth.ok) return auth.response;
+
     console.log(`💰 [PASSENGERS/BALANCE] ${id}`);
 
     let passenger = await kvGet(`passenger:${id}`);
@@ -114,6 +142,10 @@ app.get("/:id/balance", async (c) => {
 app.get("/:id/stats", async (c) => {
   try {
     const id = c.req.param("id");
+    // 🔒 Statistiques personnelles (dépenses, courses) : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, id);
+    if (!auth.ok) return auth.response;
+
     console.log(`📊 [PASSENGERS/STATS] ${id}`);
 
     let passenger = await kvGet(`passenger:${id}`);
@@ -155,6 +187,10 @@ app.get("/:id/stats", async (c) => {
 app.get("/:id/favorites", async (c) => {
   try {
     const id = c.req.param("id");
+    // 🔒 Lieux favoris : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, id);
+    if (!auth.ok) return auth.response;
+
     console.log(`⭐ [PASSENGERS/FAVORITES-GET] ${id}`);
 
     const favorites = await kvGet(`favorites:${id}`) || [];
@@ -169,6 +205,10 @@ app.get("/:id/favorites", async (c) => {
 app.post("/:id/favorites", async (c) => {
   try {
     const id = c.req.param("id");
+    // 🔒 Ajout d'un favori : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, id);
+    if (!auth.ok) return auth.response;
+
     const body = await c.req.json();
     console.log(`➕ [PASSENGERS/FAVORITES-ADD] ${id}:`, body);
 
@@ -198,6 +238,10 @@ app.put("/:id/favorites/:favId", async (c) => {
   try {
     const id = c.req.param("id");
     const favId = c.req.param("favId");
+    // 🔒 Modification d'un favori : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, id);
+    if (!auth.ok) return auth.response;
+
     const updates = await c.req.json();
     console.log(`✏️ [PASSENGERS/FAVORITES-UPDATE] ${id} / ${favId}`);
 
@@ -221,6 +265,10 @@ app.delete("/:id/favorites/:favId", async (c) => {
   try {
     const id = c.req.param("id");
     const favId = c.req.param("favId");
+    // 🔒 Suppression d'un favori : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, id);
+    if (!auth.ok) return auth.response;
+
     console.log(`🗑️ [PASSENGERS/FAVORITES-DEL] ${id} / ${favId}`);
 
     const favorites: any[] = await kvGet(`favorites:${id}`) || [];
@@ -238,7 +286,17 @@ app.delete("/:id/favorites/:favId", async (c) => {
 app.post("/update/:id", async (c) => {
   try {
     const id = c.req.param("id");
+    // 🔒 Modification de profil : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, id);
+    if (!auth.ok) return auth.response;
+
     const updates = await c.req.json();
+    // Un passager ne peut pas modifier lui-même son solde ni son rôle.
+    if (roleOf(auth.user) !== "admin" && updates && typeof updates === "object") {
+      for (const key of ["id", "role", "walletBalance", "balance", "creditBalance", "blocked", "blockedUntil"]) {
+        delete (updates as any)[key];
+      }
+    }
     console.log(`🔄 [PASSENGERS/UPDATE] ${id}:`, Object.keys(updates));
 
     let passenger = await kvGet(`passenger:${id}`);
@@ -315,6 +373,10 @@ app.post("/:id/wallet/recharge", async (c) => {
 app.post("/:id/wallet/debit", async (c) => {
   try {
     const id = c.req.param("id");
+    // 🔒 Débit du portefeuille : propriétaire (paiement d'acompte) ou admin.
+    const auth = await requireOwnerOrAdmin(c, id);
+    if (!auth.ok) return auth.response;
+
     const { amount, reason } = await c.req.json();
 
     if (typeof amount !== "number" || amount <= 0) {

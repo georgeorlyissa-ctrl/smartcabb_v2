@@ -7,6 +7,7 @@
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireAdmin } from "./auth-guard.ts";
 
 const app = new Hono();
 
@@ -149,6 +150,10 @@ app.get("/get", async (c) => {
 // ─── POST /update — Sauvegarder la configuration (admin) ─────────────────────
 app.post("/update", async (c) => {
   try {
+    // 🔒 Réservé aux administrateurs (session + rôle admin + 2FA serveur).
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     const { config } = await c.req.json();
     if (!config || typeof config !== "object") {
       return c.json({ success: false, error: "Payload config invalide" }, 400);

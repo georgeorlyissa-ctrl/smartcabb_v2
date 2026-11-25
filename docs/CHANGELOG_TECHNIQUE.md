@@ -42,6 +42,86 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-25 (40) — Sécurité P0 : authentification des routes admin, argent et comptes
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security + fix
+- **Objectif** : fermer les accès non authentifiés aux fonctions d'administration, aux opérations d'argent, à la suppression de comptes et aux données personnelles, et supprimer le mot de passe admin en dur.
+
+### Diagnostic (avant correctif)
+
+| Faille | Impact |
+|---|---|
+| 39 routes `/admin/*` sur 40 sans contrôle | Prise de contrôle totale : lecture de tous les utilisateurs, suppression de masse, validation/rejet de chauffeurs, réglages financiers |
+| Mot de passe admin `SmartCabb2024!` en dur + renvoyé par `/admin/reset-admin-account` | Accès admin permanent pour quiconque lit le dépôt |
+| `/config/update` ouvert | Modification du taux de change, des commissions, de la maintenance |
+| `POST /drivers/:id/balance` ouvert | Création illimitée de solde chauffeur |
+| `POST /passengers/:id/wallet/debit` ouvert | Vidage du portefeuille d'un passager |
+| `/purge/purge-user-by-email`, `/fix-emails/fix-all` ouverts | Suppression / recréation de n'importe quel compte |
+| `GET /rides/pending/:driverId`, `GET /drivers` ouverts | Fuite de noms, téléphones, soldes, tokens FCM |
+| 2FA admin non vérifiée côté serveur | 2FA contournable avec le seul mot de passe |
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/auth-guard.ts` | **Nouveau** : `requireUser`, `requireAdmin` (rôle + session 2FA serveur), `requireOwnerOrAdmin`, `optionalUser`, sessions 2FA 12 h, cache court des JWT |
+| `supabase/functions/make-server-2eb02e52/admin-routes.ts` | Middleware admin global (allowlist 2FA/reset), session 2FA serveur, mot de passe en dur supprimé, plus d'identifiants dans la réponse |
+| `supabase/functions/make-server-2eb02e52/config-routes.ts` | `POST /config/update` réservé aux admins |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | Soldes, retraits, mise à jour, statut, position, listes et maintenance protégés ; fiche publique assainie |
+| `supabase/functions/make-server-2eb02e52/passenger-routes.ts` | Profil, soldes, favoris, débit et liste protégés ; champs sensibles non modifiables par le client |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Création, acceptation, refus, arrivée, démarrage, annulation, clôture, notation, historique, gains, transferts et outils admin protégés ; fin de la création de course fantôme à la clôture |
+| `supabase/functions/make-server-2eb02e52/purge-user-route.ts`, `fix-emails-routes.ts` | Admin uniquement |
+| `lib/api-auth-interceptor.ts` | **Nouveau** : chaque appel API porte le JWT Supabase de la session + `x-admin-2fa` pour `/admin/*` |
+| `main.tsx` | Installation de l'intercepteur au démarrage |
+| `.gitignore` | `.env` ignoré |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+1. **`auth-guard.ts`** : la clé `anon` est explicitement refusée pour les routes sensibles (`AUTH_REQUIRED`). `requireAdmin` exige un JWT Supabase valide, `role=admin`, **et** un jeton de session 2FA serveur (`x-admin-2fa`) valide 12 h, stocké dans `admin_2fa_session:<userId>`. Lecture de config en fail-closed (2FA exigée si la config est illisible).
+2. **Middleware admin** : toutes les routes `/admin/*` passent par `requireAdmin`, sauf `/admin/2fa/send`, `/admin/2fa/verify` (connexion) et `/admin/reset-admin-account` (secret propriétaire).
+3. **2FA** : `/admin/2fa/verify` crée désormais une session serveur et renvoie son jeton ; l'ancien jeton OTP à usage unique n'autorise plus rien.
+4. **Argent** : `POST /drivers/:id/balance` réservé aux admins ; débit passager et retrait chauffeur réservés au propriétaire/admin ; clôture d'une course impossible si elle n'existe pas (fin de la création de course fantôme).
+5. **Comptes** : purge par email et `fix-all` admin-only ; suppression par téléphone déjà protégée par OTP (entrée 39).
+6. **PII** : `GET /drivers/:id` renvoie un profil minimal au public (nom, photo, véhicule, note) ; le téléphone n'est inclus qu'en cas de course active avec ce chauffeur ; soldes/emails/tokens réservés au propriétaire et aux admins. `GET /drivers`, `/drivers/pending`, `/rides/pending/:driverId`, historiques et gains sont protégés.
+7. **Client** : intercepteur global qui remplace `Authorization: Bearer <anon>` par le JWT de session et ajoute `x-admin-2fa` sur les routes admin. Les visiteurs non connectés conservent la clé anon (routes publiques uniquement).
+8. **Mot de passe admin** : plus aucune valeur en dur. `/admin/reset-admin-account` exige le secret `ADMIN_RESET_PASSWORD` (≥ 12 caractères) et ne renvoie plus d'identifiants.
+
+### Impact produit / comportement visible
+- Les routes publiques (config, carte, profil public minimal, suivi de course par lien) continuent de fonctionner.
+- Toute action sensible exige une session réelle : plus de création de solde, de débit, de suppression de compte ou de réglage financier anonyme.
+- **Panneau admin** : une reconnexion est nécessaire après ce déploiement (nouvelle session 2FA serveur). Les sessions admin antérieures sont refusées (`ADMIN_2FA_REQUIRED`).
+
+### Actions opérateur (importantes)
+1. **Changer le mot de passe admin** (il était dans le dépôt) : Supabase Dashboard → Authentication → utilisateur admin → *Reset password*.
+2. Optionnel : définir le secret `ADMIN_RESET_PASSWORD` pour pouvoir utiliser la route de réinitialisation d'urgence.
+3. Se reconnecter au panneau admin (mot de passe + code 2FA) pour créer la nouvelle session.
+
+### Risques & rollback
+- **Risque** : une session expirée/non 2FA renvoie 401 sur les écrans admin ; une course créée par un client très ancien sans session est refusée.
+- **Rollback** : `git revert <hash>` + redéploiement Edge Function + Vercel.
+- **Aucune migration de données** : uniquement des contrôles d'accès.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors `_headers/Code-component-*.tsx`)
+- [x] `npm run build`
+- [x] Edge Function déployée
+- [x] `GET /admin/stats` avec clé anon → **401** `AUTH_REQUIRED`
+- [x] `POST /config/update` avec clé anon → **401**
+- [x] `POST /drivers/:id/balance` avec clé anon → **401**
+- [x] `POST /passengers/:id/wallet/debit` avec clé anon → **401**
+- [x] `POST /purge/purge-user-by-email` et `POST /fix-emails/fix-all` avec clé anon → **401**
+- [x] `GET /rides/pending/:driverId` avec clé anon → **401**
+- [x] `GET /drivers`, `/drivers/pending`, `/drivers/location/:id` avec clé anon → **401**
+- [x] `POST /rides/create` avec clé anon → **401**
+- [x] `GET /config/get` public → **200**
+- [x] `GET /drivers/:id` public → **200** sans solde/email/téléphone/token
+- [x] `/admin/2fa/send` reste joignable (réponse « Session invalide » avec un faux jeton)
+- [ ] Reconnexion admin réelle + parcours complet du panneau (à faire après rotation du mot de passe)
+
+---
+
 ## 2026-11-25 (39) — Inscription passager : OTP SMS obligatoire avant confirmation du numéro
 
 - **Commit** : `f1f8f44` (branche `main`, poussée sur `origin`)

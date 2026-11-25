@@ -1,5 +1,6 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { requireAdmin } from "./auth-guard.ts";
 
 const app = new Hono();
 
@@ -22,6 +23,10 @@ async function kvDel(key: string): Promise<void> {
 // pour libérer son email et permettre de créer un nouveau compte avec le même email
 app.post("/purge-user-by-email", async (c) => {
   try {
+    // 🔒 Suppression définitive d'un compte : réservée aux administrateurs.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     const { email } = await c.req.json();
     
     if (!email) {

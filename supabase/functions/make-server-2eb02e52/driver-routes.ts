@@ -8,6 +8,14 @@ import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { isOTPRequired, peekOTPToken, verifyOTPToken } from "./otp-core.ts";
 import {
+  optionalUser,
+  passengerHasActiveRideWithDriver,
+  requireAdmin,
+  requireOwnerOrAdmin,
+  requireUser,
+  roleOf,
+} from "./auth-guard.ts";
+import {
   invalidateDriversLiteCache,
   isPlaceholderDriverRecord,
   readDriverLiveLite,
@@ -107,6 +115,10 @@ function normalizePhoneNumber(phone: string | null | undefined): string | null {
 // Appelé par le frontend : GET /drivers
 app.get("/", async (c) => {
   try {
+    // 🔒 Liste complète (soldes, emails, téléphones, tokens) : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     console.log("📋 [DRIVERS/GET-ALL] Récupération de tous les conducteurs...");
     const allDrivers = await kvGetByPrefix("driver:");
     console.log(`✅ [DRIVERS/GET-ALL] ${allDrivers.length} conducteur(s) trouvé(s)`);
@@ -169,6 +181,10 @@ app.post("/migrate-photos", async (c) => {
 // ─── GET /pending — Conducteurs en attente ────────────────────────────────────
 app.get("/pending", async (c) => {
   try {
+    // 🔒 Candidatures (pièces d'identité, téléphones) : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     console.log("📋 [DRIVERS/PENDING] Récupération des conducteurs en attente...");
     const allDrivers = await kvGetByPrefix("driver:");
     const pendingDrivers = allDrivers.filter(
@@ -309,6 +325,10 @@ app.post("/toggle-online-status", async (c) => {
 app.get("/:driverId/balance", async (c) => {
   try {
     const driverId = c.req.param("driverId");
+    // 🔒 Solde = donnée financière privée : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const driver = await kvGet(`driver:${driverId}`);
     if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
 
@@ -347,6 +367,10 @@ app.get("/:driverId/stats", async (c) => {
 app.get("/:driverId/wallets", async (c) => {
   try {
     const driverId = c.req.param("driverId");
+    // 🔒 Soldes détaillés : propriétaire ou admin uniquement.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const driver = await kvGet(`driver:${driverId}`);
     if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
 
@@ -366,6 +390,11 @@ app.get("/:driverId/wallets", async (c) => {
 // ─── POST /:driverId/balance — Ajout/Soustraction de balance (useDriverBalance) ─
 app.post("/:driverId/balance", async (c) => {
   try {
+    // 🔒 Modification manuelle de solde = outil ADMIN uniquement.
+    // Auparavant, n'importe qui pouvait créditer un chauffeur sans limite.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     const driverId = c.req.param("driverId");
     const { operation, amount } = await c.req.json();
 
@@ -490,6 +519,10 @@ app.post("/:driverId/wallet/recharge", async (c) => {
 app.post("/:driverId/wallet/withdraw", async (c) => {
   try {
     const driverId = c.req.param("driverId");
+    // 🔒 Retrait : propriétaire du compte ou admin.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const { amount } = await c.req.json();
 
     console.log(`💸 [DRIVERS/WITHDRAW] ${driverId}: -${amount} CDF`);
@@ -586,6 +619,47 @@ app.get("/:driverId", async (c) => {
       totalRides:  driver.totalRides  || driver.total_rides   || 0,
       total_rides: driver.totalRides  || driver.total_rides   || 0,
     };
+
+    // 🔒 Fiche complète (soldes, email, token FCM…) réservée au propriétaire et
+    // aux admins. Un passager avec une course active reçoit les champs utiles
+    // (nom, téléphone, véhicule) ; le public n'obtient qu'un profil minimal.
+    const caller = await optionalUser(c);
+    const isAdmin = caller ? roleOf(caller) === "admin" : false;
+    const isOwner = caller ? String(caller.id) === String(driverId) : false;
+    if (!isAdmin && !isOwner) {
+      const hasActiveRide = caller
+        ? await passengerHasActiveRideWithDriver(String(caller.id), driverId)
+        : false;
+
+      const publicDriver: Record<string, any> = {
+        id: normalizedDriver.id || driverId,
+        full_name: normalizedDriver.full_name || normalizedDriver.name || null,
+        name: normalizedDriver.name || normalizedDriver.full_name || null,
+        photo: normalizedDriver.photo,
+        photo_url: normalizedDriver.photo_url,
+        vehicle: normalizedDriver.vehicle || null,
+        vehicleMake: normalizedDriver.vehicleMake,
+        vehicleModel: normalizedDriver.vehicleModel,
+        vehiclePlate: normalizedDriver.vehiclePlate,
+        vehicleColor: normalizedDriver.vehicleColor,
+        vehicleType: normalizedDriver.vehicleType,
+        vehicleCategory: normalizedDriver.vehicleCategory,
+        vehicle_category: normalizedDriver.vehicle_category,
+        rating: normalizedDriver.rating ?? 0,
+        totalRides: normalizedDriver.totalRides,
+        status: normalizedDriver.status,
+        isOnline: normalizedDriver.isOnline,
+        is_available: normalizedDriver.is_available,
+      };
+
+      // Téléphone : uniquement pendant une course active avec ce conducteur.
+      if (hasActiveRide) {
+        publicDriver.phone = normalizedDriver.phone || null;
+        publicDriver.currentLocation = normalizedDriver.currentLocation || null;
+      }
+
+      return c.json({ success: true, driver: publicDriver });
+    }
 
     return c.json({ success: true, driver: normalizedDriver });
   } catch (error) {
@@ -804,7 +878,23 @@ app.post("/signup", async (c) => {
 app.post("/:driverId/update", async (c) => {
   try {
     const driverId = c.req.param("driverId");
+    // 🔒 Propriétaire ou admin uniquement.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const updates = await c.req.json();
+    // 🔒 Un conducteur ne peut PAS modifier lui-même son statut d'approbation,
+    // ses soldes, sa note ou ses compteurs : ces champs sont réservés à l'admin.
+    if (roleOf(auth.user) !== "admin" && updates && typeof updates === "object") {
+      const PRIVILEGED_FIELDS = [
+        "id", "role", "status", "isApproved", "is_approved",
+        "balance", "creditBalance", "earningsBalance", "bonusBalance",
+        "rating", "totalRides", "total_rides", "totalRidesCount",
+        "commissionHold", "accountType", "fcmToken", "fcmPlatform",
+        "documentsVerified", "verified",
+      ];
+      for (const key of PRIVILEGED_FIELDS) delete (updates as any)[key];
+    }
     console.log(`🔄 [DRIVERS/UPDATE] ${driverId}:`, updates);
 
     const driver = await kvGet(`driver:${driverId}`);
@@ -869,6 +959,10 @@ app.post("/:driverId/update", async (c) => {
 app.post("/:driverId/status", async (c) => {
   try {
     const driverId = c.req.param("driverId");
+    // 🔒 Statut en ligne/hors ligne : propriétaire ou admin.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const { status, location } = await c.req.json();
 
     if (!status || !["online", "offline"].includes(status)) {
@@ -1040,6 +1134,12 @@ app.post("/delete-user-by-phone", async (c) => {
 app.get("/location/:driverId", async (c) => {
   try {
     const driverId = c.req.param("driverId");
+
+    // 🔒 Position d'un conducteur : réservée aux utilisateurs connectés
+    // (évite le scrapage anonyme des positions en temps réel).
+    const auth = await requireUser(c);
+    if (!auth.ok) return auth.response;
+
     console.log(`📍 [DRIVERS/LOCATION-GET] ${driverId}`);
 
     // Lecture ciblée (position seulement) : cette route est sondée toutes les
@@ -1078,6 +1178,10 @@ app.get("/location/:driverId", async (c) => {
 app.post("/:driverId/location", async (c) => {
   try {
     const driverId = c.req.param("driverId");
+    // 🔒 Seul le conducteur (ou un admin) peut publier SA position.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const body = await c.req.json();
     const lat = body.lat ?? body.latitude;
     const lng = body.lng ?? body.longitude;
@@ -1119,6 +1223,10 @@ app.post("/update-driver-location", async (c) => {
   try {
     const body = await c.req.json();
     const driverId = body.driverId;
+    // 🔒 Seul le conducteur (ou un admin) peut publier sa position.
+    const auth = await requireOwnerOrAdmin(c, driverId);
+    if (!auth.ok) return auth.response;
+
     const lat = body.lat ?? body.latitude;
     const lng = body.lng ?? body.longitude;
 
@@ -1159,6 +1267,10 @@ app.post("/update-driver-location", async (c) => {
 // À appeler UNE SEULE FOIS depuis le diagnostic pour normaliser tous les vieux enregistrements
 app.post("/migrate-status", async (c) => {
   try {
+    // 🔒 Migration de données : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     console.log("🔧 [DRIVERS/MIGRATE] Début migration des statuts...");
     const allDrivers = await kvGetByPrefix("driver:");
     let migrated = 0;
@@ -1228,6 +1340,10 @@ app.post("/migrate-status", async (c) => {
 // À utiliser uniquement lors d'un reset total de la base chauffeurs
 app.post("/reset-fcm-tokens", async (c) => {
   try {
+    // 🔒 Reset global des tokens push : admin uniquement.
+    const auth = await requireAdmin(c);
+    if (!auth.ok) return auth.response;
+
     console.log("🗑️ [DRIVERS/RESET-FCM] Début suppression des tokens FCM orphelins...");
 
     // Supprimer les clés fcm_token:driver:*
