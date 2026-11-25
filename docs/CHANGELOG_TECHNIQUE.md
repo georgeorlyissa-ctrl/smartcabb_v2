@@ -42,6 +42,55 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-25 (43) — Suppression du compte administrateur obsolète `hmapela8@gmail.com`
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security (opération base de données)
+- **Objectif** : réduire la surface d'attaque du panneau d'administration. Un second compte `admin` (`hmapela8@gmail.com`, créé le 09/10/2026, dernière connexion le 23/10/2026) restait actif sans usage. `admin@smartcabb.com`, demandé par l'exploitant, **n'existait pas** dans `auth.users` (c'est uniquement l'adresse de contact publique).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée (aucun fichier de code modifié) |
+
+### Description technique
+
+Opération exécutée sur la base de production (`zaerjqchzqmcxqblkfkg`), en transaction :
+
+```sql
+begin;
+delete from public.kv_store_2eb02e52
+ where key in ('admin:54937b5e-…', 'profile:54937b5e-…');
+delete from auth.identities where user_id = '54937b5e-367e-4a65-8911-1f30966b3371';
+delete from auth.users
+ where id = '54937b5e-367e-4a65-8911-1f30966b3371'
+   and email = 'hmapela8@gmail.com';
+commit;
+```
+
+- Contrôle d'impact préalable : **0 ligne** dans `profiles`, `rides` (passager et chauffeur), `scheduled_rides`, `transactions`, `notifications`, `push_subscriptions`, `emergency_alerts`, `vehicles` et `ride_requests` pour cet identifiant.
+- Aucune contrainte `FOREIGN KEY` ne pointe vers `auth.users` dans ce schéma : le nettoyage des deux clés KV a donc été fait explicitement.
+- Les sessions/refresh tokens Supabase liés au compte sont invalidés par la suppression de `auth.users`.
+
+### Impact produit / comportement visible
+- `hmapela8@gmail.com` ne peut plus se connecter ni accéder au panneau admin.
+- **Un seul administrateur reste actif** : `georgeorlyissa@gmail.com`.
+- Aucune donnée métier (courses, réservations, paiements, profils) n'a été supprimée.
+
+### Risques & rollback
+- **Risque** : perte d'accès admin si l'unique compte restant est bloqué → utiliser `POST /admin/reset-admin-account` avec `ADMIN_RESET_PASSWORD`.
+- **Rollback** : recréer le compte via Supabase Dashboard → Authentication → Add user, puis passer `user_metadata.role = 'admin'`. Les éventuelles données métier devraient être restaurées depuis une sauvegarde (aucune n'était concernée).
+
+### Tests / vérifications
+- [x] Comptage d'impact avant suppression : 0 ligne sur 12 tables
+- [x] `auth.users` : `hmapela8@gmail.com` absent, `georgeorlyissa@gmail.com` présent
+- [x] `select count(*) ... where raw_user_meta_data->>'role' = 'admin'` → **1**
+- [x] `kv_store_2eb02e52` : 0 clé restante pour cet identifiant
+- [x] `npx tsc --noEmit` (aucun code modifié)
+
+---
+
 ## 2026-11-25 (42) — Release Android 1.8 (versionCode 11) — correctif natif Capacitor
 
 - **Commit** : `0de41d9` (branche `main`, poussée sur `origin`)
