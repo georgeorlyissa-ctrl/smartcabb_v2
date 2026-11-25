@@ -42,6 +42,52 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-25 (42) — Release Android 1.8 (versionCode 11) — correctif natif Capacitor
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : chore + security (release)
+- **Objectif** : reconstruire et signer l'AAB avec **Capacitor Android 8.6.2**, qui corrige la vulnérabilité native critique « remote content loaded at the app origin via the internal HTTP proxy path ». L'AAB 1.7 publiée embarque encore la bibliothèque vulnérable.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `android/app/build.gradle` | `versionCode` 10 → **11**, `versionName` 1.7 → **1.8** |
+| `android/` (assets générés) | `npx cap sync android` : assets web + `capacitor.config.json` + plugins à jour (non suivis par git) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Build
+
+```bash
+npx cap sync android
+cd android
+./gradlew.bat bundleRelease
+```
+
+- **Artefact** : `android/app/build/outputs/bundle/release/app-release.aab`
+- **Taille** : 13,58 MB
+- **SHA-256** : `8F099D45A71727EBC023DE45408CD242EA051BF8D4393675AE39D7124C3F2D4D`
+- **Signature** : `android/keystore.properties` (hors dépôt), `signReleaseBundle` OK.
+
+### Impact produit
+- Aucun changement fonctionnel côté web : l'app charge toujours `https://www.smartcabb.com/app/passenger?platform=apk`.
+- Le correctif est **natif** : contenu distant confiné correctement, conformément au correctif Capacitor.
+- Les correctifs de sécurité backend/web (entrées 39 à 41) sont déjà actifs sans AAB.
+
+### Risques & rollback
+- **Risque** : régression native (push, GPS, TTS) après montée Capacitor. À valider sur appareil réel via le canal Internal testing avant promotion.
+- **Rollback** : revenir à l'AAB 1.7 sur le canal de test ; Play Console n'autorise pas un `versionCode` inférieur, il faudrait publier un `versionCode` supérieur.
+
+### Tests / vérifications
+- [x] `npx cap sync android` — 5 plugins détectés, sync OK
+- [x] `./gradlew.bat bundleRelease` — **BUILD SUCCESSFUL**
+- [x] AAB signé généré (13,58 MB)
+- [ ] Installation depuis Internal testing sur appareil réel
+- [ ] Push notification (web + natif), GPS, TTS, ouverture app
+- [ ] Promotion Production + vérification Play Console (trader status / DSA)
+
+---
+
 ## 2026-11-25 (41) — Sécurité P1/P2 : SMS/SOS/OTP, CORS, RLS et dépendances
 
 - **Commit** : `24c0051` (branche `main`, poussée sur `origin`)
