@@ -1,4 +1,4 @@
-﻿# Journal technique des modifications — SmartCabb
+# Journal technique des modifications — SmartCabb
 
 > **But** : garantir la traçabilité de toute modification apportée à l'application et faciliter les interventions ultérieures (debug, rollback, reprise par un autre développeur).
 >
@@ -39,6 +39,41 @@ Assez de détail pour comprendre le code sans le relire.>
 - [ ] <test manuel ou automatique effectué>
 - [ ] Déploiement vérifié (Vercel / Edge Function)
 ```
+
+---
+
+## 2026-11-25 (44) — Correctif déploiement Vercel : `vercel.json` corrompu par un BOM UTF-8
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (déploiement)
+- **Objectif** : tous les déploiements Vercel depuis `55bf7c7` échouaient avec `Error: Couldn't parse JSON file vercel.json`. La production restait figée sur le build de `daf463f` (21 h). Cause : `vercel.json` avait été réécrit via `Set-Content -Encoding UTF8` (Windows PowerShell 5.1) qui ajoute un **BOM** (`EF BB BF`) ; le parseur JSON de Vercel refuse un fichier commençant par un BOM, alors que `ConvertFrom-Json` de PowerShell le tolère — d'où l'absence de détection locale.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `vercel.json` | BOM retiré (premiers octets `EF BB BF` → `7B`) ; contenu et CSP inchangés |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée + BOM retiré |
+
+### Description technique
+- Réécriture du fichier en **UTF-8 sans BOM** (`UTF8Encoding($false)`), puis validation stricte :
+  `node -e "JSON.parse(require('fs').readFileSync('vercel.json','utf8'))"` → OK.
+- Contrôle de tous les fichiers suivis (`.json`, `.ts`, `.tsx`, `.js`, `.html`, `.css`, `.md`) : aucun autre BOM.
+- `npm run build` local : succès (13,93 s), donc l'échec venait bien du chargement de la configuration Vercel et non du build.
+
+### Impact produit / comportement visible
+- Les déploiements repassent au vert et la production reçoit enfin les changements des commits `24c0051` → `609206d` (dépendances, CSP sans `cdn.jsdelivr.net`, docs).
+- Aucune modification fonctionnelle : la CSP et les en-têtes de sécurité restent identiques.
+
+### Risques & rollback
+- **Risque** : nul côté runtime (fichier de configuration uniquement).
+- **Rollback** : `git revert <hash>` — mais réintroduirait le BOM et rebloquerait les déploiements ; à éviter.
+
+### Tests / vérifications
+- [x] `node -e "JSON.parse(...)"` sur `vercel.json` → OK
+- [x] `npx tsc --noEmit` (hors `_headers/Code-component-*.tsx`)
+- [x] `npm run build` → succès
+- [ ] Déploiement Vercel de production vert (à confirmer après le push)
 
 ---
 
