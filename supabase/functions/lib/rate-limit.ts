@@ -104,6 +104,30 @@ async function hit(
   };
 }
 
+/**
+ * Consomme une unité d'un quota distribué (KV), utilisable directement dans
+ * une route sensible : OTP, SMS, SOS, création/annulation de course…
+ * Fail-open si le KV est indisponible (ne bloque jamais l'API).
+ */
+export async function consumeRateLimit(
+  bucket: string,
+  subject: string,
+  max: number,
+  windowMs: number = WINDOW_MS,
+): Promise<{ allowed: boolean; retryAfterSeconds: number }> {
+  if (!(max > 0) || !subject) return { allowed: true, retryAfterSeconds: 0 };
+  try {
+    const { count, resetMs } = await hit(bucket, subject, windowMs);
+    return {
+      allowed: count <= max,
+      retryAfterSeconds: Math.max(1, Math.ceil(resetMs / 1000)),
+    };
+  } catch (e) {
+    console.error(`⚠️ [RATE-LIMIT] KV indisponible pour ${bucket} (fail-open):`, e);
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+}
+
 function buildLimiter(
   bucket: string,
   max: number,

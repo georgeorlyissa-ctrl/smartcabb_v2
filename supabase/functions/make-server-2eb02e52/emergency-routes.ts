@@ -18,6 +18,7 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { set as kvSet } from "./kv-wrapper.ts";
+import { consumeRateLimit } from "../lib/rate-limit.ts";
 import {
   DEFAULT_SOS_NUMBERS,
   readSosSmsConfig,
@@ -74,17 +75,22 @@ async function getSessionUser(token: string): Promise<any | null> {
 }
 
 /**
- * Accepte l'application (anon key) ou une session utilisateur.
- * Retourne l'utilisateur vérifié s'il y en a un.
+ * Exige une session utilisateur RÉELLE (la clé anon est refusée).
+ * Une alerte SOS ne doit jamais pouvoir être déclenchée anonymement.
  */
 async function resolveCaller(
   c: any,
-): Promise<{ ok: true; user: any | null } | { ok: false; response: Response }> {
+): Promise<{ ok: true; user: any } | { ok: false; response: Response }> {
   const token = bearerToken(c);
   if (!token) {
     return { ok: false, response: c.json({ success: false, error: "Authentification requise" }, 401) };
   }
-  if (isAnonKey(token)) return { ok: true, user: null };
+  if (isAnonKey(token)) {
+    return {
+      ok: false,
+      response: c.json({ success: false, error: "Session utilisateur requise (clé publique refusée)" }, 401),
+    };
+  }
 
   const user = await getSessionUser(token);
   if (!user) {
@@ -176,13 +182,17 @@ app.post("/sos", async (c) => {
 
     const body = await c.req.json().catch(() => ({}));
 
-    // Identité : la session vérifiée prime toujours sur le corps de la requête.
-    const userId = String(auth.user?.id || body.userId || "").trim();
+    // Identité : uniquement la session vérifiée (le corps de requête ne peut
+    // plus usurper un autre utilisateur).
+    const userId = String(auth.user.id || "").trim();
     if (!userId) {
       return c.json({ success: false, error: "Utilisateur non identifié" }, 400);
     }
 
-    const role = body.role === "driver" ? "driver" : "passenger";
+    const roleFromAuth = String(
+      auth.user.user_metadata?.role || auth.user.app_metadata?.role || "passenger",
+    );
+    const role = roleFromAuth === "driver" ? "driver" : "passenger";
     const type = ALERT_TYPES.includes(String(body.type)) ? String(body.type) : "security";
 
     const ip = clientIp(c);
@@ -193,6 +203,24 @@ app.post("/sos", async (c) => {
     if (!checkRateLimit(`user:${userId}`, RATE_PER_USER)) {
       console.warn("⚠️ [EMERGENCY/SOS] Limite par utilisateur atteinte:", userId);
       return c.json({ success: false, error: "Trop d'alertes envoyées. Appelez directement les secours." }, 429);
+    }
+
+    // Quotas distribués (KV) : 3 alertes / 10 min / utilisateur et 10 / IP.
+    const userQuota = await consumeRateLimit("sos_user", userId, 3, 10 * 60 * 1000);
+    if (!userQuota.allowed) {
+      return c.json({
+        success: false,
+        error: "Trop d'alertes envoyées. Appelez directement les secours.",
+        retryAfterSeconds: userQuota.retryAfterSeconds,
+      }, 429);
+    }
+    const ipQuota = await consumeRateLimit("sos_ip", ip, 10, 10 * 60 * 1000);
+    if (!ipQuota.allowed) {
+      return c.json({
+        success: false,
+        error: "Trop d'alertes envoyées depuis ce réseau. Appelez directement les secours.",
+        retryAfterSeconds: ipQuota.retryAfterSeconds,
+      }, 429);
     }
 
     const supabase = serviceClient();
@@ -324,7 +352,7 @@ app.post("/:id/cancel", async (c) => {
 
     const id = c.req.param("id");
     const body = await c.req.json().catch(() => ({}));
-    const userId = String(auth.user?.id || body.userId || "").trim();
+    const userId = String(auth.user.id || "").trim();
 
     const supabase = serviceClient();
     const { data: alert, error } = await supabase

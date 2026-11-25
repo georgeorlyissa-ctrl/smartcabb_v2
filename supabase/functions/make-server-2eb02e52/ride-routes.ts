@@ -19,6 +19,7 @@ import {
   requireUser,
   roleOf,
 } from "./auth-guard.ts";
+import { consumeRateLimit } from "../lib/rate-limit.ts";
 
 const app = new Hono();
 
@@ -900,7 +901,22 @@ app.post("/create", async (c) => {
       }
       rideData.passengerId = createAuth.user.id;
     }
-    console.log("📦 Données reçues:", JSON.stringify(rideData, null, 2));
+
+    // 🛡️ Anti-spam : 10 créations de course max / 15 min / utilisateur.
+    const createQuota = await consumeRateLimit(
+      "ride_create_user",
+      String(createAuth.user.id),
+      10,
+      15 * 60 * 1000,
+    );
+    if (!createQuota.allowed) {
+      return c.json({
+        success: false,
+        error: "Trop de demandes de course. Patientez quelques minutes.",
+        retryAfterSeconds: createQuota.retryAfterSeconds,
+      }, 429);
+    }
+    console.log("📦 Données reçues (clés):", Object.keys(rideData || {}).join(", "));
 
     // 🆔 Idempotence : le client envoie un identifiant de tentative. Un second
     // appel (réseau lent, bouton pressé deux fois, réessai automatique) renvoie

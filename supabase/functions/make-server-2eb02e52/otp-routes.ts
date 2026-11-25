@@ -15,6 +15,7 @@ import {
   sendOTPViaSMS,
   verifyOTP,
 } from "./otp-core.ts";
+import { consumeRateLimit } from "../lib/rate-limit.ts";
 
 const app = new Hono();
 
@@ -100,6 +101,32 @@ app.post("/send", async (c) => {
     const normalized = normalizePhoneNumber(phone);
     if (!normalized || !isValidPhoneNumber(normalized)) {
       return c.json({ success: false, error: "Numéro de téléphone invalide. Format attendu : +243XXXXXXXXX" }, 400);
+    }
+
+    // 🛡️ Quotas distribués (KV) : anti SMS-bombing et protection du crédit EJ SMS.
+    const ipQuota = await consumeRateLimit("otp_ip_hour", ip, 20, 3600 * 1000);
+    if (!ipQuota.allowed) {
+      return c.json({
+        success: false,
+        error: "Trop de demandes de code depuis ce réseau. Réessayez plus tard.",
+        retryAfterSeconds: ipQuota.retryAfterSeconds,
+      }, 429);
+    }
+    const phoneHour = await consumeRateLimit("otp_phone_hour", normalized, 5, 3600 * 1000);
+    if (!phoneHour.allowed) {
+      return c.json({
+        success: false,
+        error: "Trop de codes demandés pour ce numéro. Réessayez dans une heure.",
+        retryAfterSeconds: phoneHour.retryAfterSeconds,
+      }, 429);
+    }
+    const phoneDay = await consumeRateLimit("otp_phone_day", normalized, 10, 24 * 3600 * 1000);
+    if (!phoneDay.allowed) {
+      return c.json({
+        success: false,
+        error: "Limite quotidienne de codes atteinte pour ce numéro.",
+        retryAfterSeconds: phoneDay.retryAfterSeconds,
+      }, 429);
     }
 
     const cooldown = await canSendOTP(normalized, purpose as string);

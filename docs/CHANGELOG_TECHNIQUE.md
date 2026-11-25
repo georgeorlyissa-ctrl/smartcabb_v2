@@ -42,6 +42,80 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-25 (41) — Sécurité P1/P2 : SMS/SOS/OTP, CORS, RLS et dépendances
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security + fix + docs
+- **Objectif** : fermer les abus restants (SMS, SOS, OTP, paiements), verrouiller la base contre la lecture publique de données personnelles/secrets, restreindre le CORS, durcir les erreurs et réduire les vulnérabilités de dépendances.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/lib/rate-limit.ts` | Nouveau quota distribué `consumeRateLimit()` (KV) réutilisable par route |
+| `supabase/functions/make-server-2eb02e52/sms-routes.ts` | `/sms/send` : session obligatoire, destinataire = numéro du compte, quotas 20/jour/utilisateur et 8/jour/destinataire |
+| `supabase/functions/make-server-2eb02e52/otp-routes.ts` | Quotas KV : 5/h et 10/jour par numéro, 20/h par IP |
+| `supabase/functions/make-server-2eb02e52/emergency-routes.ts` | SOS : session réelle obligatoire, identité JWT, quotas KV 3/10 min/utilisateur et 10/10 min/IP |
+| `supabase/functions/make-server-2eb02e52/ejpay-routes.ts` | `/collect` et `/status/:orderId` : session + propriétaire de la commande (ou admin) |
+| `supabase/functions/make-server-2eb02e52/ride-routes.ts` | Quota 10 créations / 15 min / passager ; logs sans payload complet |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | Logs de mise à jour sans données sensibles |
+| `supabase/functions/make-server-2eb02e52/index.ts` | CORS restreint aux origines SmartCabb, erreurs génériques avec `requestId` |
+| `vercel.json` | `cdn.jsdelivr.net` retiré de la CSP |
+| `package.json` / `package-lock.json` | `npm audit fix` + Firebase 13.x (0 critique) |
+| `docs/SECURITY.md` | **Nouveau** : modèle de sécurité, contrôles, risques résiduels, procédures |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Modifications en base (RLS)
+
+| Table | Avant | Après |
+|---|---|---|
+| `profiles` | lecture publique (`true`) — emails/téléphones exposés | son profil ou admin |
+| `settings`, `settings_2eb02e52` | lecture publique (colonnes `sms_api_key`, `twilio_auth_token`) | admin uniquement |
+| `sms_logs`, `sms_logs_2eb02e52` | `ALL` public | admin uniquement |
+| `transactions` | `ALL` public | propriétaire ; admin en lecture |
+| `vehicles` | `ALL` public | aucune policy (service role uniquement) |
+| `kv_store_2eb02e52` | RLS + 0 policy | inchangé (refus par défaut) |
+
+`apk` reste public (aucun secret) ; `avatars` et `backups` sont privés (URLs signées).
+
+### Description technique
+
+1. **SMS** : la clé anon ne peut plus envoyer de SMS. L'utilisateur ne peut écrire qu'à son propre numéro (déduit du JWT), avec double quota KV. Les SMS de bienvenue/recharge/profil continuent de fonctionner car ils sont auto-adressés.
+2. **OTP** : les limiteurs en mémoire sont complétés par des quotas KV qui survivent aux redémarrages d'instance.
+3. **SOS** : plus d'alerte anonyme ni d'`userId` fourni dans le corps ; l'identité et le rôle viennent de la session.
+4. **Ejpay** : impossible de créer un paiement pour un autre compte ou de consulter le statut d'une transaction qui n'est pas la sienne.
+5. **CORS** : seules `smartcabb.com`, `*.cd`, localhost de dev, `capacitor://localhost` et les previews Vercel reçoivent `Access-Control-Allow-Origin`. Vérifié : `evil.example` ne reçoit aucun en-tête.
+6. **Erreurs** : le handler global renvoie « Erreur interne du serveur » + `requestId` (détail uniquement dans les logs).
+7. **RLS** : les policies `USING (true)` sur les profils, paramètres, journaux SMS, transactions et véhicules ont été supprimées/remplacées. Vérifié avec la clé anon : `[]` sur toutes ces tables.
+8. **Dépendances** : `npm audit fix` + Firebase 13.4 → 0 critique ; restent 4 alertes « high » transitives `@grpc/grpc-js` (Node/build, pas le bundle navigateur).
+9. **CSP** : plus aucun CDN tiers pour les scripts/styles/polices.
+
+### Impact produit / comportement visible
+- Aucun changement pour l'utilisateur normal : les SMS auto-adressés et les SOS connectés fonctionnent comme avant.
+- Les écrans admin qui lisent directement `settings_2eb02e52` / `sms_logs` / `profiles` nécessitent une session admin (JWT rôle admin) — déjà le cas après connexion.
+- Une requête anonyme ne peut plus lire l'annuaire des utilisateurs ni les secrets de paramètres.
+
+### Risques & rollback
+- **Risque** : un client très ancien qui envoie un SMS à un tiers via l'API sera refusé (attendu).
+- **Risque** : Firebase 13 doit être validé sur appareil réel (push web/natif).
+- **Rollback code** : `git revert <hash>` + redéploiement Edge Function + Vercel.
+- **Rollback RLS** : recréer les anciennes policies n'est **pas recommandé** (fuite de données). En cas de blocage admin, utiliser le JWT admin ou le service role.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors `_headers/Code-component-*.tsx`)
+- [x] `npm run build`
+- [x] Edge Function déployée
+- [x] `POST /sms/send` avec clé anon → **401**
+- [x] `POST /emergency/sos` avec clé anon → **401**
+- [x] `GET /ejpay/status/:id` avec clé anon → **401**
+- [x] `POST /otp/send` avec numéro invalide → **400** (puis quotas sur numéros valides)
+- [x] CORS : `Origin: https://evil.example` → aucun `Access-Control-Allow-Origin` ; `https://www.smartcabb.com` → autorisé
+- [x] REST anon : `profiles`, `settings_2eb02e52`, `transactions`, `sms_logs_2eb02e52`, `kv_store_2eb02e52`, `vehicles` → **`[]`**
+- [x] `npm audit` : 0 critique (contre 3 avant)
+- [ ] Test réel : SMS auto-adressé, SOS connecté, paiement Ejpay, push Firebase 13
+
+---
+
 ## 2026-11-25 (40) — Sécurité P0 : authentification des routes admin, argent et comptes
 
 - **Commit** : `c401d2d` + `d06defa` (branche `main`, poussée sur `origin`)

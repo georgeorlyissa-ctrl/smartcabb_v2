@@ -46,12 +46,34 @@ app.use('*', logger(console.log));
 // ✅ RATE LIMITING GLOBAL — 100 requêtes par 15 min par IP
 app.use('*', rateLimit());
 
-// ✅ FIX CORS — Doit être AVANT toutes les routes
-// Supabase Edge Functions nécessite une gestion explicite du preflight OPTIONS
+// ✅ CORS — seules les origines de l'application sont autorisées.
+// (La clé anon est publique, mais inutile d'ouvrir l'API à tous les sites.)
+const ALLOWED_ORIGINS = new Set([
+  "https://www.smartcabb.com",
+  "https://smartcabb.com",
+  "https://www.smartcabb.cd",
+  "https://smartcabb.cd",
+  "capacitor://localhost",
+  "ionic://localhost",
+  "http://localhost",
+  "https://localhost",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:4173",
+]);
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return true; // clients natifs / curl : pas de CORS
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Previews Vercel du projet (test avant production).
+  if (/^https:\/\/[a-z0-9-]+\.vercel\.app$/i.test(origin)) return true;
+  return false;
+}
+
 app.use('*', cors({
   origin: (origin) => {
-    // Autoriser tous les origines (ajuster si besoin pour plus de sécurité)
-    return origin || '*';
+    if (!origin) return '*';
+    return isAllowedOrigin(origin) ? origin : '';
   },
   allowHeaders: [
     'Content-Type',
@@ -61,6 +83,9 @@ app.use('*', cors({
     'Accept',
     'Origin',
     'X-Requested-With',
+    'x-admin-2fa',
+    'x-admin-secret',
+    'x-cron-secret',
   ],
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   exposeHeaders: ['Content-Length', 'X-Request-Id'],
@@ -72,15 +97,14 @@ app.use('*', cors({
 // Sans ça, Supabase Edge Functions ne renvoie pas HTTP 200 sur OPTIONS
 // ce qui fait échouer le CORS check côté navigateur
 app.options('*', (c) => {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, apikey, Accept, Origin, X-Requested-With',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
+  const origin = c.req.header('origin') || '';
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Client-Info, apikey, Accept, Origin, X-Requested-With, x-admin-2fa, x-admin-secret, x-cron-secret',
+    'Access-Control-Max-Age': '86400',
+  };
+  if (origin && isAllowedOrigin(origin)) headers['Access-Control-Allow-Origin'] = origin;
+  return new Response(null, { status: 204, headers });
 });
 
 // ============================================
@@ -140,12 +164,14 @@ app.notFound((c) => {
   }, 404);
 });
 
-// Error handler global
+// Error handler global — ne divulgue jamais le détail interne au client.
 app.onError((err, c) => {
-  console.error('❌ Erreur serveur:', err);
+  const requestId = crypto.randomUUID();
+  console.error(`❌ [${requestId}] Erreur serveur:`, err);
   return c.json({
     success: false,
-    error: err.message || 'Internal server error'
+    error: 'Erreur interne du serveur',
+    requestId,
   }, 500);
 });
 

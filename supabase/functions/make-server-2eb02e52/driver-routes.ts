@@ -895,7 +895,7 @@ app.post("/:driverId/update", async (c) => {
       ];
       for (const key of PRIVILEGED_FIELDS) delete (updates as any)[key];
     }
-    console.log(`🔄 [DRIVERS/UPDATE] ${driverId}:`, updates);
+    console.log(`🔄 [DRIVERS/UPDATE] ${driverId}:`, Object.keys(updates || {}).join(", "));
 
     const driver = await kvGet(`driver:${driverId}`);
     if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);

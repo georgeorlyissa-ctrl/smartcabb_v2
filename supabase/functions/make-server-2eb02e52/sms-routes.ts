@@ -13,6 +13,7 @@ import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhoneNumber, isValidPhoneNumber } from "./phone-utils.ts";
 import { get as kvGet, set as kvSet, getByPrefix as kvGetByPrefix } from "./kv-wrapper.ts";
+import { consumeRateLimit } from "../lib/rate-limit.ts";
 import {
   ejSmsConfigured,
   ejSmsDiagnostics,
@@ -97,6 +98,38 @@ async function requireAppOrUser(c: any): Promise<{ ok: true; isAdmin: boolean } 
     return { ok: false, response: c.json({ success: false, error: "Session invalide ou expirée" }, 401) };
   }
   return { ok: true, isAdmin: (user.user_metadata?.role || user.app_metadata?.role || "passenger") === "admin" };
+}
+
+/**
+ * Envoi de SMS transactionnel : session utilisateur réelle (la clé anon est
+ * refusée). L'expéditeur ne peut écrire qu'à SON propre numéro, sauf admin.
+ */
+async function requireSmsSender(c: any): Promise<
+  { ok: true; isAdmin: boolean; user: any; phone: string } | { ok: false; response: Response }
+> {
+  const token = bearerToken(c);
+  if (!token) {
+    return { ok: false, response: c.json({ success: false, error: "Authentification requise" }, 401) };
+  }
+  if (isAnonKey(token)) {
+    return {
+      ok: false,
+      response: c.json({ success: false, error: "Session utilisateur requise (clé publique refusée)" }, 401),
+    };
+  }
+  const user = await getSessionUser(token);
+  if (!user) {
+    return { ok: false, response: c.json({ success: false, error: "Session invalide ou expirée" }, 401) };
+  }
+  const isAdmin = (user.user_metadata?.role || user.app_metadata?.role || "passenger") === "admin";
+  const phone = normalizePhoneNumber(String(user.user_metadata?.phone || user.phone || ""));
+  if (!isAdmin && !phone) {
+    return {
+      ok: false,
+      response: c.json({ success: false, error: "Numéro de téléphone non associé au compte" }, 400),
+    };
+  }
+  return { ok: true, isAdmin, user, phone };
 }
 
 // ─── Limitation de débit (anti-abus des crédits SMS) ─────────────────────────
@@ -190,7 +223,7 @@ app.get("/config", async (c) => {
 
 app.post("/send", async (c) => {
   try {
-    const auth = await requireAppOrUser(c);
+    const auth = await requireSmsSender(c);
     if (!auth.ok) return auth.response;
 
     const body = await c.req.json().catch(() => ({}));
@@ -204,6 +237,18 @@ app.post("/send", async (c) => {
     const normalized = normalizePhoneNumber(destination);
     if (!normalized || !isValidPhoneNumber(normalized)) {
       return c.json({ success: false, error: "Numéro de téléphone invalide. Format attendu : +243XXXXXXXXX" }, 400);
+    }
+
+    // 🔒 Un utilisateur ne peut s'envoyer un SMS qu'à lui-même. Cela bloque
+    // totalement l'usage de l'API comme passerelle de spam (avant : n'importe
+    // qui avec la clé anon pouvait vider le crédit EJ SMS).
+    if (!auth.isAdmin && normalized !== auth.phone) {
+      console.warn(`⛔ [SMS/SEND] Destinataire refusé pour ${auth.user.id}: ${normalized}`);
+      return c.json({
+        success: false,
+        error: "Vous ne pouvez envoyer un SMS qu'à votre propre numéro.",
+        code: "SMS_RECIPIENT_FORBIDDEN",
+      }, 403);
     }
 
     // Anti-abus : borne la taille du message et le nombre d'envois.
@@ -225,6 +270,24 @@ app.post("/send", async (c) => {
     if (!checkRateLimit(`dest:${normalized}`, RATE_PER_DESTINATION)) {
       console.warn("⚠️ [SMS/SEND] Limite par destinataire atteinte:", normalized);
       return c.json({ success: false, error: "Trop de SMS envoyés à ce numéro, réessayez plus tard" }, 429);
+    }
+
+    // Quotas distribués (KV) : survivent aux redémarrages d'instance.
+    const userQuota = await consumeRateLimit("sms_user_day", String(auth.user.id), 20, 24 * 3600 * 1000);
+    if (!userQuota.allowed) {
+      return c.json({
+        success: false,
+        error: "Quota quotidien de SMS atteint.",
+        retryAfterSeconds: userQuota.retryAfterSeconds,
+      }, 429);
+    }
+    const destQuota = await consumeRateLimit("sms_dest_day", normalized, 8, 24 * 3600 * 1000);
+    if (!destQuota.allowed) {
+      return c.json({
+        success: false,
+        error: "Ce numéro a déjà reçu beaucoup de SMS aujourd'hui.",
+        retryAfterSeconds: destQuota.retryAfterSeconds,
+      }, 429);
     }
 
     const stored = await kvGet<any>(CONFIG_KEY);

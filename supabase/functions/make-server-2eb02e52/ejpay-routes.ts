@@ -28,6 +28,7 @@ import {
   set as kvSet,
 } from "./kv-wrapper.ts";
 import { sendFCMNotification } from "./firebase-admin.ts";
+import { requireUser, roleOf } from "./auth-guard.ts";
 import {
   EJPAY_OPERATORS,
   ejpayCollect,
@@ -429,6 +430,10 @@ app.get("/health", async (c) => {
 
 app.post("/collect", async (c) => {
   try {
+    // 🔒 Session utilisateur réelle : on ne crée un paiement que pour soi-même.
+    const auth = await requireUser(c);
+    if (!auth.ok) return auth.response;
+
     if (!(await ejpayEnabled())) {
       return c.json({
         success: false,
@@ -441,6 +446,16 @@ app.post("/collect", async (c) => {
     const kind: EjpayKind = ["wallet_topup", "driver_wallet_topup", "ride_payment", "deposit", "other"].includes(body.kind)
       ? body.kind
       : "wallet_topup";
+
+    // 🔒 Un utilisateur ne peut payer que pour lui-même (sauf admin).
+    if (roleOf(auth.user) !== "admin") {
+      const ownerId = body.passengerId || body.userId || body.driverId || null;
+      if (ownerId && String(ownerId) !== String(auth.user.id)) {
+        return c.json({ success: false, error: "Paiement non autorisé pour ce compte" }, 403);
+      }
+      if (kind === "driver_wallet_topup") body.driverId = auth.user.id;
+      else body.passengerId = auth.user.id;
+    }
 
     const amount = Math.round(Number(body.amount) * 100) / 100;
     const currency = normalizeCurrency(body.currency);
@@ -630,9 +645,20 @@ export async function reconcileOrder(
 
 app.get("/status/:orderId", async (c) => {
   try {
+    // 🔒 Statut d'un paiement : propriétaire de la commande ou admin.
+    const auth = await requireUser(c);
+    if (!auth.ok) return auth.response;
+
     const orderId = c.req.param("orderId");
     const order = await getOrder(orderId);
     if (!order) return c.json({ success: false, error: "Transaction introuvable" }, 404);
+
+    if (roleOf(auth.user) !== "admin") {
+      const ownerIds = [order.passengerId, order.driverId].filter(Boolean).map(String);
+      if (!ownerIds.includes(String(auth.user.id))) {
+        return c.json({ success: false, error: "Transaction non autorisée" }, 403);
+      }
+    }
 
     const wantsRefresh = c.req.query("refresh") === "1";
     const ageMs = Date.now() - new Date(order.updatedAt).getTime();
