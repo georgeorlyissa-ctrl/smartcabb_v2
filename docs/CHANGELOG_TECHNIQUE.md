@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-25 (40) — Sécurité P0 : authentification des routes admin, argent et comptes
 
-- **Commit** : `c401d2d` (branche `main`, poussée sur `origin`)
+- **Commit** : `c401d2d` + `d06defa` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security + fix
 - **Objectif** : fermer les accès non authentifiés aux fonctions d'administration, aux opérations d'argent, à la suppression de comptes et aux données personnelles, et supprimer le mot de passe admin en dur.
@@ -100,7 +100,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ### Risques & rollback
 - **Risque** : une session expirée/non 2FA renvoie 401 sur les écrans admin ; une course créée par un client très ancien sans session est refusée.
-- **Rollback** : `git revert c401d2d` + redéploiement Edge Function + Vercel.
+- **Rollback** : `git revert d06defa c401d2d` + redéploiement Edge Function + Vercel.
 - **Aucune migration de données** : uniquement des contrôles d'accès.
 
 ### Tests / vérifications
