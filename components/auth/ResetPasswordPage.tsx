@@ -15,7 +15,11 @@ export function ResetPasswordPage() {
   const [error, setError] = useState('');
   const [sessionEstablished, setSessionEstablished] = useState(false);
   const [checkingToken, setCheckingToken] = useState(true);
+  const [accountRole, setAccountRole] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  /** Destination après réinitialisation : admin → panneau admin, sinon app passager. */
+  const isAdminAccount = accountRole === 'admin';
 
   useEffect(() => {
     let cancelled = false;
@@ -25,10 +29,12 @@ export function ResetPasswordPage() {
       if (!cancelled) setCheckingToken(false);
     };
 
-    const markRecoverySession = (reason: string) => {
+    const markRecoverySession = (reason: string, user?: any) => {
       if (cancelled || recoveryReady) return;
       recoveryReady = true;
-      console.log('✅ Session de récupération prête:', reason);
+      const role = user?.user_metadata?.role || user?.app_metadata?.role || null;
+      console.log('✅ Session de récupération prête:', reason, '| rôle:', role);
+      if (role) setAccountRole(String(role));
       setSessionEstablished(true);
       setError('');
       finishChecking();
@@ -56,14 +62,14 @@ export function ResetPasswordPage() {
     //    on écoute l'événement de récupération, puis on retombe sur getSession().
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-        markRecoverySession(event);
+        markRecoverySession(event, session?.user);
       }
     });
 
     const bootstrap = async () => {
       try {
         if (accessToken) {
-          const { error: sessionError } = await supabase.auth.setSession({
+          const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken,
           });
@@ -73,13 +79,13 @@ export function ResetPasswordPage() {
             finishChecking();
             return;
           }
-          markRecoverySession('jeton du lien');
+          markRecoverySession('jeton du lien', sessionData?.user);
           return;
         }
 
         const { data } = await supabase.auth.getSession();
         if (data.session) {
-          markRecoverySession('session existante');
+          markRecoverySession('session existante', data.session.user);
           return;
         }
 
@@ -88,7 +94,7 @@ export function ResetPasswordPage() {
           if (cancelled || recoveryReady) return;
           const { data: retry } = await supabase.auth.getSession();
           if (retry.session) {
-            markRecoverySession('session différée');
+            markRecoverySession('session différée', retry.session.user);
           } else {
             setError(expiredMessage());
             finishChecking();
@@ -143,15 +149,43 @@ export function ResetPasswordPage() {
         throw error;
       }
 
-      console.log('✅ Mot de passe mis à jour:', data);
-      
+      const role =
+        (data as any)?.user?.user_metadata?.role ||
+        (data as any)?.user?.app_metadata?.role ||
+        accountRole ||
+        null;
+      const isAdmin = role === 'admin';
+
       setSuccess(true);
       toast.success('Mot de passe réinitialisé avec succès !');
 
-      // Rediriger vers la page de connexion après 3 secondes
+      // 🔒 On ferme la session de récupération : l'utilisateur doit se
+      // reconnecter proprement avec son nouveau mot de passe.
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        /* la déconnexion ne doit jamais bloquer la redirection */
+      }
+
+      const target = isAdmin ? '/admin' : '/app';
+      console.log(`↪️ Redirection post-réinitialisation vers ${target} (rôle: ${role || 'inconnu'})`);
+
+      // Rechargement complet pour repartir d'un état propre.
       setTimeout(() => {
-        navigate('/login');
-      }, 3000);
+        if (isAdmin) {
+          try {
+            [
+              'smartcab_is_admin',
+              'smartcab_current_admin',
+              'smartcab_current_screen',
+              'smartcab_current_view',
+            ].forEach((key) => localStorage.removeItem(key));
+          } catch {
+            /* ignore */
+          }
+        }
+        window.location.replace(target);
+      }, 2500);
 
     } catch (error: any) {
       console.error('❌ Erreur réinitialisation:', error);
@@ -188,7 +222,9 @@ export function ResetPasswordPage() {
               Votre mot de passe a été mis à jour avec succès.
             </p>
             <p className="text-sm text-gray-500">
-              Redirection vers la page de connexion...
+              {isAdminAccount
+                ? 'Redirection vers la page de connexion administrateur...'
+                : 'Redirection vers la page de connexion...'}
             </p>
           </div>
         </motion.div>
@@ -238,7 +274,9 @@ export function ResetPasswordPage() {
                 <Button
                   variant="link"
                   className="text-red-600 p-0 h-auto mt-2"
-                  onClick={() => navigate('/forgot-password')}
+                  onClick={() =>
+                    navigate(isAdminAccount ? '/admin/forgot-password' : '/auth/forgot-password')
+                  }
                 >
                   Demander un nouveau lien
                 </Button>

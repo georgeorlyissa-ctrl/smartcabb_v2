@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-25 (46) — Après réinitialisation : redirection vers la connexion admin
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (parcours admin)
+- **Objectif** : après avoir défini un nouveau mot de passe, l'admin était envoyé vers `/login` — une route **inexistante** dans l'application (page blanche). Il doit atterrir sur l'écran de connexion du panneau d'administration.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/auth/ResetPasswordPage.tsx` | Rôle du compte détecté à l'établissement de la session ; déconnexion de la session de récupération ; redirection `/admin` (admin) ou `/app` (autres) ; lien « Demander un nouveau lien » corrigé |
+| `App.tsx` | Routes de compatibilité `/login` → `/app` et `/forgot-password` → `/auth/forgot-password` (plus de page blanche) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- `markRecoverySession(reason, user)` mémorise `user_metadata.role` (ou `app_metadata.role`) dans `accountRole`.
+- Après `updateUser({ password })`, le rôle est relu depuis la réponse (repli sur `accountRole`).
+- `supabase.auth.signOut({ scope: 'local' })` : la session ouverte par le lien email est fermée, l'utilisateur se reconnecte avec son nouveau mot de passe.
+- Redirection par `window.location.replace(...)` (rechargement complet, pas de navigation SPA) :
+  - admin → `/admin` (l'écran `admin-login` s'affiche) ;
+  - autres rôles → `/app`.
+- Juste avant la redirection admin, purge des clés `smartcab_is_admin`, `smartcab_current_admin`, `smartcab_current_screen`, `smartcab_current_view` pour qu'un état admin périmé ne rouvre pas le dashboard. Le nettoyage est fait **dans** le `setTimeout` afin qu'aucun re-render ne réécrive ces clés entre-temps.
+- Le libellé de l'écran de succès indique « page de connexion administrateur » pour un admin.
+
+### Impact produit / comportement visible
+- Un admin qui réinitialise son mot de passe arrive sur la page de connexion de l'administration, avec un message d'information avant redirection (2,5 s).
+- Un passager/driver arrive sur `/app`.
+- Les anciens liens `/login` et `/forgot-password` ne produisent plus de page blanche.
+
+### Risques & rollback
+- **Risque** : si `user_metadata.role` est absent, l'utilisateur est traité comme non-admin et part sur `/app` (il peut revenir sur `/admin` manuellement).
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit`
+- [x] `npm run build`
+- [ ] `/admin` sans session → écran de connexion admin
+- [ ] Lien de récupération réel → rôle `admin` détecté, redirection `/admin`
+- [ ] `/login` → `/app` (plus de page blanche)
+
+---
+
 ## 2026-11-25 (45) — Lien « Réinitialiser le mot de passe » : fin de la redirection vers Figma
 
 - **Commit** : `c9e9e63` (branche `main`, poussée sur `origin`)
