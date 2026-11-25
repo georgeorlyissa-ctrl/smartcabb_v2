@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (47) — Refonte premium des écrans de connexion et d'inscription (passager & chauffeur)
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `ceee7c0` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat (UI/UX)
 - **Objectif** : moderniser les 4 écrans d'entrée de l'application — connexion passager, inscription passager, connexion chauffeur, candidature chauffeur — en respectant la charte SmartCabb (bleu `#007AFF`, jaune `#FFCC00`, marine `#003D7A`) et en utilisant le logo en **filigrane**. Aucun changement de logique métier.
