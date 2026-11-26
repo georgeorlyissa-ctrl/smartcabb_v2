@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (59) — Assets Play Store : icône 512×512 et bannière 1024×500
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `1a6014f` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : chore (visuels) + docs
 - **Objectif** : fournir une icône et une bannière à jour pour la fiche Play Store (les visuels actuels datent de l'ancienne interface).
