@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (49) — Navigation : fin de l'ancien écran d'accueil, cadrage des écrans d'auth, connexion chauffeur simplifiée
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `c0c719a` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (navigation + UI)
 - **Objectif** : trois corrections signalées en production :
