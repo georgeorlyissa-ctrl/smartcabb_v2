@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (63) — Suppression de l'ancien écran d'accueil chauffeur (« SmartCabb Driver »)
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `b83d4d9` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (navigation)
 - **Objectif** : depuis le site, un clic sur « Devenir chauffeur » pouvait encore afficher l'ancien écran « SmartCabb Driver — Gagnez de l'argent en conduisant » (boutons *Devenir conducteur* / *Se connecter*). Cet écran est retiré : c'est désormais la nouvelle connexion chauffeur.
