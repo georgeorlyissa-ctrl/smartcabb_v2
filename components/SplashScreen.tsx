@@ -19,7 +19,7 @@ function warmRouteModule(): Promise<unknown> {
   const path = typeof window === 'undefined' ? '' : window.location.pathname;
   const load = () => {
     if (path === '/app' || path === '/app/') {
-      return import('./LandingScreen');
+      return import('../pages/PassengerApp');
     }
     if (path.startsWith('/app/driver') || path.startsWith('/driver/')) {
       return import('../pages/DriverApp');

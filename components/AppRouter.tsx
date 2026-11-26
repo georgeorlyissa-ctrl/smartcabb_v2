@@ -4,7 +4,6 @@ import { DeferredLoading } from './DeferredLoading';
 import { SplashScreen } from './SplashScreen';
 
 // Applications principales — chargées à la demande pendant le splash (démarrage fluide)
-const LandingScreen = lazy(() => import('./LandingScreen').then(m => ({ default: m.LandingScreen })));
 const PassengerApp = lazy(() => import('../pages/PassengerApp').then(m => ({ default: m.PassengerApp })));
 const DriverApp = lazy(() => import('../pages/DriverApp').then(m => ({ default: m.DriverApp })));
 const AdminApp = lazy(() => import('../pages/AdminApp').then(m => ({ default: m.AdminApp })));

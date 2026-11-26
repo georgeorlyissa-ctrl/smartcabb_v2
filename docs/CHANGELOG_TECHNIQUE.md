@@ -42,6 +42,46 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (52) — Suppression définitive de l'ancien écran d'accueil passager (double connexion)
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (navigation)
+- **Objectif** : l'ancien écran turquoise « Bienvenue ! » (S'inscrire / Connexion) pouvait encore s'afficher sur `/app/passenger?screen=map` selon l'état mémorisé (`currentScreen = 'landing'` ou valeur inconnue). Il est maintenant **impossible à rendre** : tout état résiduel aboutit à la nouvelle connexion.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/PassengerApp.tsx` | `case 'landing'` **et** `default` renvoient `LoginScreen` ; import de `LandingScreen` supprimé |
+| `components/AppRouter.tsx` | Import lazy de `LandingScreen` supprimé (route déjà redirigée) |
+| `components/SplashScreen.tsx` | Préchargement de `/app` → `PassengerApp` (au lieu de `LandingScreen`) |
+| `components/passenger/LoginScreen.tsx` | « Retour à l'accueil » ne passe plus par l'écran `landing` interne, il quitte vers `/` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- `screenToShow` vaut `'landing'` quand `currentScreen` est vide : ce cas rend désormais `<LoginScreen />` (dans un `ErrorBoundary`), au lieu de l'ancien écran.
+- Toute valeur d'écran non reconnue tombe dans `default` → `<LoginScreen />`. Un état hérité (`landing`, `passenger-home`, écran supprimé…) ne peut donc plus afficher autre chose que la connexion.
+- `LandingScreen` n'est plus importé nulle part (`grep` : 0 référence hors de son propre fichier) — le composant reste dans le dépôt mais est inerte.
+- Le préchargement au démarrage suit la nouvelle route (`PassengerApp`).
+
+### Impact produit / comportement visible
+- Un seul écran de connexion côté passager, quel que soit le lien d'entrée (`/app/passenger`, `?screen=map`, `/login`, `/app`, `/app/landing`).
+- Le bouton « Retour à l'accueil » ramène au site public.
+
+### Risques & rollback
+- **Risque** : un parcours s'appuyant encore sur `setCurrentScreen('landing')` affichera la connexion au lieu de l'ancien accueil — comportement souhaité.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit`
+- [x] `npm run build`
+- [x] `/app/passenger` avec `currentScreen = 'landing'` → connexion, **aucun** « Bienvenue ! »
+- [x] `/app/passenger?screen=map` avec `currentScreen = 'passenger-home'` → connexion (URL nettoyée)
+- [x] `/app` → `/app/passenger` → connexion
+- [x] Production vérifiée après déploiement : `?screen=map` → connexion
+
+---
+
 ## 2026-11-26 (51) — « Devenir chauffeur » pointe vers `/app/driver` (connexion), plus vers `/signup`
 
 - **Commit** : `ca77189` (branche `main`, poussée sur `origin`)

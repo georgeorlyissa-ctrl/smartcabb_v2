@@ -8,7 +8,6 @@ import { useNavigate, useLocation, Routes, Route } from '../lib/simple-router';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { RLSBlockingScreen } from '../components/RLSBlockingScreen';
 import { LoadingScreen } from '../components/LoadingScreen';
-import { LandingScreen } from '../components/LandingScreen';
 import { UserSelectionScreen } from '../components/UserSelectionScreen';
 import { WelcomeBackScreen } from '../components/WelcomeBackScreen';
 import { LoginScreen } from '../components/passenger/LoginScreen';
@@ -66,7 +65,11 @@ function PassengerAppContent() {
     console.log('📺 PassengerApp - screenToShow calculé:', screenToShow, '| currentUser:', user?.name || 'aucun');
     switch(screenToShow) {
       case 'landing':
-        return <LandingScreen />;
+        return (
+          <ErrorBoundary>
+            <LoginScreen />
+          </ErrorBoundary>
+        );
       case 'user-selection':
         return <UserSelectionScreen />;
       case 'welcome-back':
@@ -301,7 +304,11 @@ function PassengerAppContent() {
           </ErrorBoundary>
         );
       default:
-        return <LandingScreen />;
+        return (
+          <ErrorBoundary>
+            <LoginScreen />
+          </ErrorBoundary>
+        );
     }
   }, [screenToShow, user?.name, user?.email, state.currentRide, state.pickup, state.destination, setCurrentScreen]);
 

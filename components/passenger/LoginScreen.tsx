@@ -468,7 +468,6 @@ export function LoginScreen() {
               label="Retour à l'accueil"
               onClick={() => {
                 setCurrentView(null);
-                setCurrentScreen('landing');
                 navigate('/');
               }}
             />
