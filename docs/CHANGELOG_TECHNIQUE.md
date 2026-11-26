@@ -102,9 +102,23 @@ Assez de détail pour comprendre le code sans le relire.>
 - [x] Fonction Edge redéployée
 - [x] `GET /backups/health` → `status: ok`, `encryption.backupsEncrypted: false`, rétention 90 j
 - [x] `POST /backups/restore-test` → `passed: true`, 8 contrôles OK, `auditWritten: true`
-- [ ] CI : premier passage du workflow après push (à surveiller dans l'onglet Actions)
-- [ ] CodeQL : corriger les alertes éventuelles du premier scan
+- [x] **CI verte** (`55250a4`) : installation, build, audit (0 critique), scan de secrets
+- [x] **CodeQL vert** (`55250a4`)
+- [ ] CodeQL : corriger les alertes éventuelles des prochains scans
 - [ ] Décision d'activation du chiffrement des backups + stockage de la clé
+
+### Constat important (dette de types)
+
+Le premier passage de la CI a révélé que `tsc --noEmit` remonte **~2 345 erreurs de types
+pré-existantes** (variables non utilisées, propriétés inconnues, imports manquants…).
+Le build Vite n'effectue pas de type-check, donc l'application fonctionne, mais la dette
+est réelle. Décisions prises :
+
+- `_headers/Code-component-*.tsx` (fichiers générés, inutilisés) sont exclus du `tsconfig` ;
+- la vérification des types est **informative** dans la CI (rapport publié, non bloquant)
+  en attendant un nettoyage progressif.
+
+À planifier : réduire cette dette par lots (fichiers les plus critiques d'abord).
 
 ---
 
