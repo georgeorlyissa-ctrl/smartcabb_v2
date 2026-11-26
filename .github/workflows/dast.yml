@@ -20,7 +20,7 @@ jobs:
       # Scan passif (baseline) : aucune attaque intrusive, uniquement les
       # en-têtes, la configuration TLS et les problèmes évidents.
       - name: ZAP Baseline
-        uses: zaproxy/action-baseline@v0.14.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
           target: 'https://www.smartcabb.com'
           fail_action: false
