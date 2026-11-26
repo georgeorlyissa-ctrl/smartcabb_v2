@@ -1,13 +1,23 @@
 import { useState } from 'react';
-import { motion } from '../lib/motion'; // ✅ FIX: Import local au lieu de motion/react
-import { Button } from './ui/button';
-import { EmailPhoneInput } from './EmailPhoneInput';
-import { ArrowLeft, Mail, CheckCircle, Phone } from '../lib/icons'; // ✅ FIX: Import local au lieu de lucide-react
 import { toast } from '../lib/toast';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import { useAppState } from '../hooks/useAppState';
 import { sendOTPCode } from '../lib/otp-service';
 import { resetPassword } from '../lib/auth-service';
+import { Mail, CheckCircle, ShieldCheck, Smartphone, Clock, ArrowRight } from '../lib/icons';
+import {
+  AuthShell,
+  AuthCard,
+  AuthCardBrand,
+  AuthEyebrow,
+  AuthHeading,
+  AuthField,
+  AuthInput,
+  AuthButton,
+  AuthAlert,
+  AuthBackButton,
+  AuthTextLink,
+} from './auth/AuthKit';
 
 interface ForgotPasswordScreenProps {
   onBack: () => void;
@@ -134,180 +144,155 @@ export function ForgotPasswordScreen({ onBack, userType = 'passenger' }: ForgotP
       setLoading(false);
     }
   };
+  const isDriver = userType === 'driver';
+  const isAdmin = userType === 'admin';
 
-  // Couleurs selon le type d'utilisateur
-  const colors = {
-    passenger: {
-      gradient: 'from-green-50 to-emerald-50',
-      button: 'bg-green-500 hover:bg-green-600',
-      icon: 'bg-green-500',
-      text: 'text-green-600'
-    },
-    driver: {
-      gradient: 'from-blue-50 to-indigo-50',
-      button: 'bg-blue-500 hover:bg-blue-600',
-      icon: 'bg-blue-500',
-      text: 'text-blue-600'
-    },
-    admin: {
-      gradient: 'from-purple-50 to-indigo-50',
-      button: 'bg-purple-500 hover:bg-purple-600',
-      icon: 'bg-purple-500',
-      text: 'text-purple-600'
-    }
-  };
+  const headline = isDriver
+    ? 'Reprenez la route rapidement.'
+    : isAdmin
+      ? 'Accès administrateur sécurisé.'
+      : "Retrouvez l'accès à votre compte.";
 
-  const theme = colors[userType];
+  const subline = isDriver
+    ? 'Récupérez votre accès chauffeur en quelques secondes, sans passer par le support.'
+    : isAdmin
+      ? 'Réinitialisez votre mot de passe par email, puis reconnectez-vous avec la double vérification.'
+      : 'Un code par SMS ou un lien par email : reprenez la main sur votre compte en quelques secondes.';
+
+  const eyebrow = isAdmin ? 'Administration' : isDriver ? 'Espace chauffeur' : 'Récupération';
 
   if (emailSent) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className={`min-h-screen bg-gradient-to-br ${theme.gradient} flex flex-col`}
+      <AuthShell
+        audience={userType}
+        headline={headline}
+        subline={subline}
+        highlights={[
+          {
+            icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+            title: 'Lien à usage unique',
+            text: 'Le lien expire automatiquement après utilisation.',
+          },
+          {
+            icon: <Clock className="h-[18px] w-[18px]" />,
+            title: 'Valable 10 minutes',
+            text: 'Demandez un nouveau lien si le délai est dépassé.',
+          },
+        ]}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="w-10 h-10"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-xl">Mot de passe oublié</h1>
-          <div className="w-10" />
-        </div>
+        <AuthCard>
+          <AuthCardBrand audience={userType} />
 
-        {/* Success Message */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', delay: 0.2 }}
-            className={`w-20 h-20 ${theme.icon} rounded-full flex items-center justify-center mb-6`}
-          >
-            <CheckCircle className="w-10 h-10 text-white" />
-          </motion.div>
-
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="text-center"
-          >
-            <h2 className="text-2xl mb-4">Email envoyé !</h2>
-            <p className="text-gray-600 mb-6">
-              Un email de réinitialisation a été envoyé à votre adresse email.
+          <div className="flex flex-col items-center py-2 text-center">
+            <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#ECFDF3]">
+              <CheckCircle className="h-8 w-8 text-[#0F9D58]" />
+            </span>
+            <p className="text-[22px] font-black leading-tight tracking-tight text-[#0B1B2B]">
+              Email envoyé
             </p>
-            <p className="text-sm text-gray-500 mb-8">
-              Vérifiez votre boîte de réception et suivez les instructions pour réinitialiser votre mot de passe.
+            <p className="mt-2 text-[12.5px] leading-relaxed text-[#64748B]">
+              Un lien de réinitialisation vient d'être envoyé. Ouvrez-le sur cet appareil pour
+              choisir un nouveau mot de passe.
             </p>
-            
-            <div className={`${theme.text} bg-white p-4 rounded-xl mb-8`}>
-              <p className="text-sm">
-                💡 <strong>Astuce :</strong> Si vous ne voyez pas l'email, vérifiez votre dossier spam.
-              </p>
-            </div>
+          </div>
 
-            <Button
-              onClick={onBack}
-              variant="outline"
-              className="w-full"
-            >
-              Retour à la connexion
-            </Button>
-          </motion.div>
-        </div>
-      </motion.div>
+          <div className="mt-5">
+            <AuthAlert tone="info" title="Rien reçu ?">
+              Vérifiez votre dossier spam, puis attendez quelques minutes avant de redemander un
+              lien.
+            </AuthAlert>
+          </div>
+
+          <div className="mt-5">
+            <AuthButton variant={isDriver ? 'driver' : isAdmin ? 'admin' : 'primary'} onClick={onBack}>Retour à la connexion</AuthButton>
+          </div>
+        </AuthCard>
+      </AuthShell>
     );
   }
 
   return (
-    <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: -300, opacity: 0 }}
-      transition={{ type: 'spring', damping: 25 }}
-      className={`min-h-screen bg-gradient-to-br ${theme.gradient} flex flex-col`}
+    <AuthShell
+      audience={userType}
+      headline={headline}
+      subline={subline}
+      highlights={[
+        {
+          icon: <Smartphone className="h-[18px] w-[18px]" />,
+          title: 'Code par SMS',
+          text: 'Entrez votre numéro : un code à 6 chiffres vous est envoyé.',
+        },
+        {
+          icon: <Mail className="h-[18px] w-[18px]" />,
+          title: 'Lien par email',
+          text: 'Entrez votre adresse : un lien sécurisé arrive dans votre boîte.',
+        },
+        {
+          icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+          title: 'Compte protégé',
+          text: 'Aucun mot de passe n’est envoyé par message.',
+        },
+      ]}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          className="w-10 h-10"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
-        <h1 className="text-xl">Mot de passe oublié</h1>
-        <div className="w-10" />
-      </div>
+      <AuthCard>
+        <AuthCardBrand audience={userType} />
 
-      {/* Form */}
-      <div className="flex-1 px-6 py-8">
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-center mb-8"
-        >
-          <div className={`w-16 h-16 ${theme.icon} rounded-full flex items-center justify-center mx-auto mb-4`}>
-            <Mail className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-2xl mb-4">Récupération du compte</h2>
-          <p className="text-gray-600">
-            Entrez votre numéro de téléphone pour recevoir un code de réinitialisation.
-          </p>
-        </motion.div>
+        <div className="mb-4">
+          <AuthBackButton label="Retour à la connexion" onClick={onBack} />
+        </div>
 
-        <motion.div
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-6"
-        >
-          <EmailPhoneInput
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            label="Numéro de téléphone"
-            placeholder="0812345678"
-            required
-          />
+        <AuthEyebrow audience={userType}>{eyebrow}</AuthEyebrow>
+        <AuthHeading
+          title="Mot de passe oublié"
+          subtitle="Indiquez votre numéro de téléphone ou votre adresse email."
+        />
 
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-sm text-blue-800">
-              <strong>Note :</strong> Un SMS avec un code de vérification sera envoyé à votre numéro (délai : 5-60 secondes).
+        <div className="mt-5 space-y-4">
+          <AuthField
+            label="Téléphone ou email"
+            htmlFor="recovery-identifier"
+            hint="Exemple : 0812345678 ou nom@exemple.com"
+          >
+            <AuthInput
+              id="recovery-identifier"
+              type="text"
+              placeholder="0812345678"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              disabled={loading}
+              autoComplete="username"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              icon={<Mail className="h-[18px] w-[18px]" />}
+            />
+          </AuthField>
+
+          <div className="flex items-start gap-2.5 rounded-2xl bg-[#EFF6FF] px-3.5 py-3">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#007AFF]" />
+            <p className="text-[11.5px] leading-snug text-[#1E40AF]">
+              Un SMS (code à 6 chiffres) ou un email (lien sécurisé) sera envoyé. Délai habituel :
+              5 à 60 secondes.
             </p>
           </div>
-        </motion.div>
-      </div>
 
-      {/* Actions */}
-      <motion.div
-        initial={{ y: 50, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="px-6 pb-8 space-y-4"
-      >
-        <Button
-          onClick={handleResetPassword}
-          disabled={loading || !identifier}
-          className={`w-full h-14 ${theme.button} text-white rounded-xl`}
-        >
-          {loading ? 'Envoi en cours...' : 'Envoyer le lien de réinitialisation'}
-        </Button>
+          <AuthButton
+            variant={isDriver ? 'driver' : isAdmin ? 'admin' : 'primary'}
+            onClick={handleResetPassword}
+            loading={loading}
+            disabled={loading || !identifier}
+            trailingIcon={<ArrowRight className="h-4 w-4" />}
+          >
+            Envoyer le code de réinitialisation
+          </AuthButton>
+        </div>
 
-        <Button
-          onClick={onBack}
-          variant="ghost"
-          className="w-full"
-        >
-          Annuler
-        </Button>
-      </motion.div>
-    </motion.div>
+        <div className="mt-5 text-center">
+          <AuthTextLink onClick={onBack} disabled={loading}>
+            Annuler
+          </AuthTextLink>
+        </div>
+      </AuthCard>
+    </AuthShell>
   );
 }

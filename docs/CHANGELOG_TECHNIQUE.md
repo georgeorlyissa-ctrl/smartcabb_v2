@@ -42,6 +42,58 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (48) — Kit d'authentification étendu : mot de passe oublié, OTP et administration
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat (UI/UX) + fix
+- **Objectif** : appliquer le kit `AuthKit` (créé à l'entrée 47) aux écrans restants — mot de passe oublié passager/chauffeur, page publique `/auth/forgot-password`, étape OTP par SMS, connexion administrateur (avec 2FA) et mot de passe oublié administrateur.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/auth/AuthKit.tsx` | Audience `admin` (accents marine/glacier) et variante de bouton `admin` (`#003D7A`) |
+| `components/PhoneVerificationStep.tsx` | Refonte complète (icône, alerte, champ OTP 56 px, bouton du kit, renvoi) + prop `variant` |
+| `components/ForgotPasswordScreen.tsx` | Refonte (passager / chauffeur / admin) ; CTA jaune pour les chauffeurs |
+| `components/auth/ForgotPasswordPage.tsx` | Refonte de la route publique `/auth/forgot-password` |
+| `components/admin/AdminLoginScreen.tsx` | Refonte de la connexion admin **et** de l'étape 2FA (thème marine) |
+| `components/admin/AdminForgotPasswordScreen.tsx` | Refonte (email + écran de confirmation) |
+| `components/passenger/RegisterScreen.tsx`, `components/driver/DriverRegistrationScreen.tsx` | Passage à `variant` pour l'étape OTP (suppression de `accentClass`) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+- **AuthKit** : `AuthAudience` accepte désormais `'admin'`. Le panneau de marque, l'eyebrow, le badge et le halo s'adaptent (accent glacier `#7CC4FF`, eyebrow marine). `AuthButton` gagne `variant="admin"` (fond `#003D7A`, hover `#00294F`).
+- **PhoneVerificationStep** : même logique (envoi auto au montage, cooldown 60 s, 6 chiffres, `onVerified(token)`), nouvelle présentation. `accentClass` est remplacé par `variant: 'primary' | 'driver' | 'admin'` ; les deux appelants ont été mis à jour.
+- **ForgotPasswordScreen** : logique intacte (détection téléphone/email, `check-phone-exists`, `sendOTPCode` puis écran OTP selon `userType`, `resetPassword` par email). Interface unifiée ; le bouton principal prend la couleur de l'espace (bleu / jaune / marine).
+- **ForgotPasswordPage** : conserve la redirection `#access_token&type=recovery` vers `/auth/reset-password` et l'appel `supabase.auth.resetPasswordForEmail` (avec `redirectTo`).
+- **AdminLoginScreen** : mêmes appels (`authService.signIn`, `fetchGlobalConfig`, `sendAdmin2FA`, `verifyAdmin2FA`, `completeAdminLogin`). Les deux écrans (mot de passe puis code email) sont rendus dans la coquille admin.
+- **Correctif** : le bouton « Renvoyer le code » de la 2FA appelait `handleSend2FA` directement ; l'événement React était alors interprété comme le jeton (`token || accessToken`). Il est maintenant appelé via `() => handleSend2FA()`.
+- Les `onKeyDown` « Entrée » redondants ont été retirés là où le formulaire gère déjà la soumission (admin, admin forgot).
+
+### Impact produit / comportement visible
+- Parcours de récupération et de vérification cohérents avec la connexion/inscription : même fond, même carte, logo en filigrane.
+- Espace administrateur visuellement distinct (marine + glacier), sans introduire de nouvelle couleur hors charte.
+- Champ OTP plus lisible (56 px, chiffres espacés), erreurs affichées dans une alerte dédiée.
+- Aucun changement d'API ni de règle de sécurité (2FA serveur 12 h, OTP 6 chiffres, rate limits inchangés).
+
+### Risques & rollback
+- **Risque** : régression visuelle sur un écran non vérifié (ex. `ResetPasswordOTPScreen`, hors périmètre).
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit`
+- [x] `npm run build`
+- [x] `/admin` : CTA `rgb(0, 61, 122)`, champs 48 px, carte 26 px, filigrane présent, console sans erreur
+- [x] `/admin/forgot-password` : formulaire + retour, CTA marine
+- [x] Mot de passe oublié passager : CTA bleu, lien retour, encart SMS
+- [x] Mot de passe oublié chauffeur : CTA `rgb(255, 204, 0)` (jaune), badge « CHAUFFEUR »
+- [x] `/auth/forgot-password` : formulaire email, CTA bleu, console sans erreur
+- [x] Étape OTP : champ `#otp-code` rendu à 56 px (test avec numéro invalide, aucun SMS réel envoyé)
+- [ ] Vérification visuelle sur appareil réel (clavier numérique, safe-area)
+
+---
+
 ## 2026-11-26 (47) — Refonte premium des écrans de connexion et d'inscription (passager & chauffeur)
 
 - **Commit** : `ceee7c0` (branche `main`, poussée sur `origin`)

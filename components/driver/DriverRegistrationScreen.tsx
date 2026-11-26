@@ -432,7 +432,7 @@ export function DriverRegistrationScreen() {
                 onVerified={handleOtpVerified}
                 onBack={() => setShowOtp(false)}
                 title="Code de vérification"
-                accentClass="bg-[#FFCC00] hover:bg-[#FFD633] text-[#001B3D]"
+                variant="driver"
               />
             </div>
           </>

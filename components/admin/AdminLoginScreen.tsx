@@ -1,6 +1,3 @@
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { useState, useEffect } from 'react';
 import { useAppState } from '../../hooks/useAppState';
 import { useNavigate } from '../../lib/simple-router';
@@ -9,6 +6,20 @@ import { projectId, publicAnonKey } from '../../utils/supabase/info';
 import * as authService from '../../lib/auth-service'; // ✅ Import de toutes les exports nommées
 import { sendAdmin2FA, verifyAdmin2FA } from '../../lib/admin-2fa-service';
 import { fetchGlobalConfig } from '../../lib/config-sync';
+import { Mail, Lock, ArrowRight, ShieldCheck, Clock } from '../../lib/icons';
+import {
+  AuthShell,
+  AuthCard,
+  AuthCardBrand,
+  AuthEyebrow,
+  AuthHeading,
+  AuthField,
+  AuthInput,
+  AuthPasswordInput,
+  AuthButton,
+  AuthBackButton,
+  AuthTextLink,
+} from '../auth/AuthKit';
 
 // Icônes inline (évite import lib/icons qui n'existe plus)
 const ArrowLeftIcon = ({ className }: { className?: string }) => (
@@ -253,238 +264,209 @@ export function AdminLoginScreen() {
 
   if (twoFaStep === 'verify') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-          {/* Header */}
-          <div className="text-center mb-8 relative">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleCancel2FA}
-              className="absolute -top-2 -left-2 w-10 h-10"
-            >
-              <ArrowLeftIcon className="w-5 h-5" />
-            </Button>
-            
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShieldIcon className="w-8 h-8 text-purple-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Vérification en 2 étapes</h1>
-            <p className="text-gray-600">Un code de sécurité a été envoyé par email</p>
+      <AuthShell
+        audience="admin"
+        headline="Sécurité renforcée."
+        subline="Chaque connexion administrateur est confirmée par email, puis vérifiée côté serveur pendant 12 heures."
+        highlights={[
+          {
+            icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+            title: 'Double vérification',
+            text: 'Mot de passe + code email à chaque nouvelle session.',
+          },
+          {
+            icon: <Clock className="h-[18px] w-[18px]" />,
+            title: 'Code temporaire',
+            text: 'Le code expire après 10 minutes et ne sert qu’une fois.',
+          },
+        ]}
+      >
+        <AuthCard>
+          <AuthCardBrand audience="admin" />
+
+          <div className="mb-4">
+            <AuthBackButton label="Annuler la connexion" onClick={handleCancel2FA} />
           </div>
 
-          <div className="space-y-6">
-            <div>
-              <Label htmlFor="otp">Code de sécurité</Label>
-              <div className="mt-2">
-                <Input
-                  id="otp"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="123456"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="px-4 h-12 text-center text-2xl tracking-widest"
-                  disabled={loading}
-                  maxLength={6}
-                  autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && handleVerify2FA()}
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Code valide pendant 10 minutes. Vérifiez votre boîte email (et les spams).
-              </p>
-            </div>
+          <AuthEyebrow audience="admin">Vérification</AuthEyebrow>
+          <AuthHeading
+            title="Code de sécurité"
+            subtitle="Un code à 6 chiffres a été envoyé à votre adresse email."
+          />
 
-            <Button
-              onClick={handleVerify2FA}
-              disabled={loading || otpCode.length !== 6}
-              className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-lg"
+          <form
+            className="mt-5 space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleVerify2FA();
+            }}
+          >
+            <AuthField
+              label="Code de sécurité"
+              htmlFor="otp"
+              hint="Valable 10 minutes. Pensez à vérifier les spams."
             >
-              {loading ? 'Vérification...' : 'Valider et se connecter'}
-            </Button>
+              <AuthInput
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                placeholder="••••••"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                disabled={loading}
+                maxLength={6}
+                autoFocus
+                autoComplete="one-time-code"
+                style={{ height: 56, fontSize: 24, letterSpacing: '0.38em', textAlign: 'center', fontWeight: 700 }}
+              />
+            </AuthField>
 
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={handleSend2FA}
-                disabled={loading || !canResend}
-                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
-              >
-                {canResend ? 'Renvoyer le code' : `Renvoyer dans ${resendCountdown}s`}
-              </button>
-            </div>
+            <AuthButton
+              variant="admin"
+              type="submit"
+              loading={loading}
+              disabled={otpCode.length !== 6}
+              trailingIcon={<ArrowRight className="h-4 w-4" />}
+            >
+              Valider et se connecter
+            </AuthButton>
+          </form>
+
+          <div className="mt-5 text-center">
+            <AuthTextLink onClick={() => handleSend2FA()} disabled={loading || !canResend}>
+              {canResend ? 'Renvoyer le code' : `Renvoyer dans ${resendCountdown}s`}
+            </AuthTextLink>
           </div>
-        </div>
-      </div>
+        </AuthCard>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 flex items-center justify-center p-4">
-      <div 
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8"
-      >
-        {/* Header */}
-        <div className="text-center mb-8 relative">
-          <Button
-            variant="ghost"
-            size="icon"
+    <AuthShell
+      audience="admin"
+      headline="Pilotez SmartCabb en toute sécurité."
+      subline="Tableau de bord, chauffeurs, paiements et alertes SOS : un accès unique, protégé par double vérification."
+      highlights={[
+        {
+          icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+          title: 'Double vérification',
+          text: 'Mot de passe + code email, session serveur de 12 h.',
+        },
+        {
+          icon: <Clock className="h-[18px] w-[18px]" />,
+          title: 'Déconnexion automatique',
+          text: 'La session se ferme après 30 minutes d’inactivité.',
+        },
+        {
+          icon: <Mail className="h-[18px] w-[18px]" />,
+          title: 'Accès tracé',
+          text: 'Les connexions et actions sensibles sont journalisées.',
+        },
+      ]}
+    >
+      <AuthCard>
+        <AuthCardBrand audience="admin" />
+
+        <AuthEyebrow audience="admin">Administration</AuthEyebrow>
+        <AuthHeading
+          title="Connexion administrateur"
+          subtitle="Identifiez-vous pour accéder au tableau de bord SmartCabb."
+        />
+
+        <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+          <AuthField label="Email administrateur" htmlFor="admin-email">
+            <AuthInput
+              id="admin-email"
+              type="email"
+              placeholder="admin@smartcabb.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              autoComplete="username"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              icon={<Mail className="h-[18px] w-[18px]" />}
+            />
+          </AuthField>
+
+          <AuthField
+            label="Mot de passe"
+            htmlFor="admin-password"
+            action={
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate('/admin/forgot-password');
+                }}
+                disabled={loading}
+                style={{ minHeight: 0 }}
+                className="inline p-0 align-baseline text-[11px] font-bold text-[#0063D1] transition-colors hover:text-[#004A9E] hover:underline disabled:opacity-50"
+              >
+                Mot de passe oublié ?
+              </button>
+            }
+          >
+            <AuthPasswordInput
+              id="admin-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              autoComplete="current-password"
+              icon={<Lock className="h-[18px] w-[18px]" />}
+            />
+          </AuthField>
+
+          <AuthButton
+            variant="admin"
+            type="submit"
+            loading={loading}
+            trailingIcon={<ArrowRight className="h-4 w-4" />}
+          >
+            Se connecter
+          </AuthButton>
+        </form>
+
+        <div className="mt-5 flex items-start gap-2.5 rounded-2xl bg-[#F1F5F9] px-3.5 py-3">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#003D7A]" />
+          <p className="text-[11.5px] leading-snug text-[#475569]">
+            Un code de vérification sera envoyé à votre adresse email après la saisie du mot de
+            passe.
+          </p>
+        </div>
+
+        <div className="mt-5 text-center">
+          <p className="text-[12.5px] text-[#64748B]">
+            Pas de compte administrateur ?{' '}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/admin/signup');
+              }}
+              disabled={loading}
+              style={{ minHeight: 0 }}
+              className="inline p-0 align-baseline font-semibold text-[#0063D1] hover:underline disabled:opacity-50"
+            >
+              Créer un compte
+            </button>
+          </p>
+        </div>
+
+        <div className="mt-4 flex justify-center hide-in-apk">
+          <AuthBackButton
+            label="Retour au site"
             onClick={() => {
               setIsAdmin(false);
               setCurrentView('passenger');
               setCurrentScreen('landing');
               navigate('/');
             }}
-            className="absolute -top-2 -left-2 w-10 h-10"
-          >
-            <ArrowLeftIcon className="w-5 h-5" />
-          </Button>
-          
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShieldIcon className="w-8 h-8 text-purple-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Administration</h1>
-          <p className="text-gray-600">SmartCabb Dashboard</p>
+          />
         </div>
-
-        {/* Form */}
-        <div className="space-y-6">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <div className="mt-2">
-              <Input
-                id="admin-email"
-                type="email"
-                placeholder="admin@smartcabb.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="px-4 h-12 text-base"
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                disabled={loading}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="password">Mot de passe</Label>
-            <div className="relative mt-2">
-              <Input
-                id="admin-password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="px-4 pr-12 h-12 text-base"
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                disabled={loading}
-                autoComplete="new-password"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 z-10"
-              >
-                {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          <Button
-            onClick={handleLogin}
-            disabled={loading}
-            className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-lg"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Connexion...</span>
-              </div>
-            ) : (
-              'Se connecter'
-            )}
-          </Button>
-
-          <div className="text-center">
-            <button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                console.log('🔗 ========================================');
-                console.log('🔗 CLIC SUR MOT DE PASSE OUBLIÉ');
-                console.log('🔗 Button type:', e.currentTarget.type);
-                console.log('🔗 Button disabled:', e.currentTarget.disabled);
-                console.log('🔗 Loading state:', loading);
-                console.log('🔗 Navigate function exists:', typeof navigate === 'function');
-                console.log('🔗 Appel de navigate(\'/admin/forgot-password\')...');
-                
-                try {
-                  navigate('/admin/forgot-password');
-                  console.log('✅ Navigate appelé avec succès');
-                  console.log('🔗 URL actuelle:', window.location.pathname);
-                } catch (error) {
-                  console.error('❌ Erreur lors de navigate:', error);
-                }
-                
-                console.log('🔗 ========================================');
-              }}
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium transition-colors"
-              disabled={loading}
-            >
-              Mot de passe oublié ?
-            </button>
-          </div>
-
-          <div className="text-center">
-            <p className="text-gray-600">
-              Pas de compte admin ?{' '}
-              <button 
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  
-                  console.log('🔗 ========================================');
-                  console.log('🔗 CLIC SUR CRÉER UN COMPTE');
-                  console.log('🔗 Button type:', e.currentTarget.type);
-                  console.log('🔗 Button disabled:', e.currentTarget.disabled);
-                  console.log('🔗 Loading state:', loading);
-                  console.log('🔗 Navigate function exists:', typeof navigate === 'function');
-                  console.log('🔗 Appel de navigate(\'/admin/signup\')...');
-                  
-                  try {
-                    navigate('/admin/signup');
-                    console.log('✅ Navigate appelé avec succès');
-                    console.log('🔗 URL actuelle:', window.location.pathname);
-                    
-                    // Double vérification après un délai
-                    setTimeout(() => {
-                      console.log('🔗 URL après 100ms:', window.location.pathname);
-                    }, 100);
-                  } catch (error) {
-                    console.error('❌ Erreur lors de navigate:', error);
-                  }
-                  
-                  console.log('🔗 ========================================');
-                }}
-                className="text-purple-600 hover:text-purple-700 font-semibold"
-                disabled={loading}
-              >
-                Créer un compte
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+      </AuthCard>
+    </AuthShell>
   );
 }

@@ -244,7 +244,7 @@ export function RegisterScreen() {
                 onVerified={handleOtpVerified}
                 onBack={() => setShowOtp(false)}
                 title="Code de vérification"
-                accentClass="bg-[#007AFF] hover:bg-[#0069DB]"
+                variant="primary"
               />
             </div>
           </>

@@ -1,32 +1,21 @@
 import { useState } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 import { toast } from '../../lib/toast';
 import { useNavigate } from '../../lib/simple-router';
 import { resetPassword } from '../../lib/auth-service';
-
-// Icônes inline
-const ArrowLeftIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="m12 19-7-7 7-7" />
-    <path d="M19 12H5" />
-  </svg>
-);
-
-const MailIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <rect width="20" height="16" x="2" y="4" rx="2" />
-    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-  </svg>
-);
-
-const CheckCircleIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-    <polyline points="22 4 12 14.01 9 11.01" />
-  </svg>
-);
+import { Mail, CheckCircle, ArrowRight, ShieldCheck, Clock } from '../../lib/icons';
+import {
+  AuthShell,
+  AuthCard,
+  AuthCardBrand,
+  AuthEyebrow,
+  AuthHeading,
+  AuthField,
+  AuthInput,
+  AuthButton,
+  AuthAlert,
+  AuthBackButton,
+  AuthTextLink,
+} from '../auth/AuthKit';
 
 export function AdminForgotPasswordScreen() {
   const navigate = useNavigate();
@@ -74,116 +63,125 @@ export function AdminForgotPasswordScreen() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircleIcon className="w-8 h-8 text-green-600" />
-          </div>
-          
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Email envoyé !
-          </h1>
-          
-          <p className="text-gray-600 mb-6">
-            Nous avons envoyé un lien de réinitialisation à <strong>{email}</strong>
-          </p>
-          
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-left">
-            <p className="text-sm text-blue-800">
-              <strong>Prochaines étapes :</strong>
+      <AuthShell
+        audience="admin"
+        headline="Accès administrateur sécurisé."
+        subline="La réinitialisation du mot de passe passe par votre adresse email, puis par la double vérification."
+        highlights={[
+          {
+            icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+            title: 'Lien à usage unique',
+            text: 'Le lien expire après utilisation ou au bout de 24 heures.',
+          },
+          {
+            icon: <Clock className="h-[18px] w-[18px]" />,
+            title: 'Session courte',
+            text: 'La double vérification reste valable 12 heures.',
+          },
+        ]}
+      >
+        <AuthCard>
+          <AuthCardBrand audience="admin" />
+
+          <div className="flex flex-col items-center py-2 text-center">
+            <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#ECFDF3]">
+              <CheckCircle className="h-8 w-8 text-[#0F9D58]" />
+            </span>
+            <p className="text-[22px] font-black leading-tight tracking-tight text-[#0B1B2B]">
+              Email envoyé
             </p>
-            <ol className="text-sm text-blue-700 mt-2 space-y-1 list-decimal list-inside">
-              <li>Vérifiez votre boîte email</li>
-              <li>Cliquez sur le lien de réinitialisation</li>
-              <li>Définissez un nouveau mot de passe</li>
-            </ol>
+            <p className="mt-2 text-[12.5px] leading-relaxed text-[#64748B]">
+              Un lien de réinitialisation a été envoyé à <strong className="text-[#0B1B2B]">{email}</strong>.
+            </p>
           </div>
 
-          <p className="text-xs text-gray-500 mb-6">
-            Vous n'avez pas reçu l'email ? Vérifiez vos spams ou réessayez dans quelques minutes.
-          </p>
+          <div className="mt-5">
+            <AuthAlert tone="info" title="Prochaines étapes">
+              <span className="block">1. Vérifiez votre boîte email (et les spams).</span>
+              <span className="block">2. Ouvrez le lien de réinitialisation.</span>
+              <span className="block">3. Choisissez un nouveau mot de passe.</span>
+            </AuthAlert>
+          </div>
 
-          <Button
-            onClick={() => navigate('/admin/login')}
-            className="w-full bg-purple-600 hover:bg-purple-700"
-          >
-            Retour à la connexion
-          </Button>
-        </div>
-      </div>
+          <div className="mt-5">
+            <AuthButton variant="admin" onClick={() => navigate('/admin/login')}>
+              Retour à la connexion
+            </AuthButton>
+          </div>
+        </AuthCard>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-800 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        {/* Header */}
-        <div className="text-center mb-8 relative">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/admin/login')}
-            className="absolute -top-2 -left-2 w-10 h-10"
-          >
-            <ArrowLeftIcon className="w-5 h-5" />
-          </Button>
-          
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MailIcon className="w-8 h-8 text-purple-600" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Mot de passe oublié ?
-          </h1>
-          <p className="text-gray-600">
-            Entrez votre email pour réinitialiser votre mot de passe
-          </p>
+    <AuthShell
+      audience="admin"
+      headline="Accès administrateur sécurisé."
+      subline="Indiquez l'adresse email du compte administrateur pour recevoir un lien de réinitialisation."
+      highlights={[
+        {
+          icon: <ShieldCheck className="h-[18px] w-[18px]" />,
+          title: 'Vérification par email',
+          text: 'Seul le propriétaire de la boîte peut ouvrir le lien.',
+        },
+        {
+          icon: <Clock className="h-[18px] w-[18px]" />,
+          title: 'Double vérification',
+          text: 'Un code email sera demandé à la prochaine connexion.',
+        },
+      ]}
+    >
+      <AuthCard>
+        <AuthCardBrand audience="admin" />
+
+        <div className="mb-4">
+          <AuthBackButton label="Retour à la connexion" onClick={() => navigate('/admin/login')} />
         </div>
 
-        {/* Form */}
-        <div className="space-y-6">
-          <div>
-            <Label htmlFor="email">Email administrateur</Label>
-            <div className="mt-2">
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@smartcabb.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="px-4 h-12 text-base"
-                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                disabled={loading}
-                autoFocus
-              />
-            </div>
-          </div>
+        <AuthEyebrow audience="admin">Administration</AuthEyebrow>
+        <AuthHeading
+          title="Mot de passe oublié"
+          subtitle="Nous vous enverrons un lien sécurisé pour définir un nouveau mot de passe."
+        />
 
-          <Button
-            onClick={handleSubmit}
-            disabled={loading || !email}
-            className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-lg"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center gap-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Envoi...</span>
-              </div>
-            ) : (
-              'Envoyer le lien de réinitialisation'
-            )}
-          </Button>
-
-          <div className="text-center">
-            <button
-              onClick={() => navigate('/admin/login')}
-              className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+        <form
+          className="mt-5 space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+        >
+          <AuthField label="Email administrateur" htmlFor="email">
+            <AuthInput
+              id="email"
+              type="email"
+              placeholder="admin@smartcabb.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-            >
-              ← Retour à la connexion
-            </button>
-          </div>
+              autoComplete="username"
+              autoFocus
+              icon={<Mail className="h-[18px] w-[18px]" />}
+            />
+          </AuthField>
+
+          <AuthButton
+            variant="admin"
+            type="submit"
+            loading={loading}
+            disabled={loading || !email}
+            trailingIcon={<ArrowRight className="h-4 w-4" />}
+          >
+            Envoyer le lien de réinitialisation
+          </AuthButton>
+        </form>
+
+        <div className="mt-5 text-center">
+          <AuthTextLink onClick={() => navigate('/admin/login')} disabled={loading}>
+            Annuler
+          </AuthTextLink>
         </div>
-      </div>
-    </div>
+      </AuthCard>
+    </AuthShell>
   );
 }

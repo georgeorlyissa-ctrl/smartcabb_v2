@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
 import { sendOTPCode, verifyOTPCode } from '../lib/otp-service';
+import { AuthButton, AuthAlert, AuthInput, AUTH_COLORS } from './auth/AuthKit';
+import { ShieldCheck } from '../lib/icons';
 
 /**
  * 🔐 ÉTAPE DE VÉRIFICATION DU NUMÉRO PAR OTP
@@ -14,14 +14,14 @@ export function PhoneVerificationStep({
   onVerified,
   onBack,
   title = 'Vérification du numéro',
-  accentClass = 'bg-green-500 hover:bg-green-600',
+  variant = 'primary',
 }: {
   phone: string;
   purpose?: 'registration' | 'reset-password' | 'login';
   onVerified: (token: string) => void;
   onBack?: () => void;
   title?: string;
-  accentClass?: string;
+  variant?: 'primary' | 'driver' | 'admin';
 }) {
   const [code, setCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -37,28 +37,6 @@ export function PhoneVerificationStep({
     }
   }, []);
 
-  const handleSend = useCallback(async () => {
-    if (sending) return;
-    setErrorMsg('');
-    setSending(true);
-
-    const result = await sendOTPCode(phone, purpose);
-
-    setSending(false);
-
-    if (!result.success) {
-      if (result.retryAfterSeconds) {
-        setCountdown(result.retryAfterSeconds);
-        startCountdown(result.retryAfterSeconds);
-      }
-      setErrorMsg(result.error || 'Erreur lors de l\'envoi du code');
-      return;
-    }
-
-    setCountdown(60);
-    startCountdown(60);
-  }, [phone, purpose, sending]);
-
   const startCountdown = (seconds: number) => {
     stopCountdown();
     setCountdown(seconds);
@@ -72,6 +50,26 @@ export function PhoneVerificationStep({
       });
     }, 1000);
   };
+
+  const handleSend = useCallback(async () => {
+    if (sending) return;
+    setErrorMsg('');
+    setSending(true);
+
+    const result = await sendOTPCode(phone, purpose);
+
+    setSending(false);
+
+    if (!result.success) {
+      if (result.retryAfterSeconds) {
+        startCountdown(result.retryAfterSeconds);
+      }
+      setErrorMsg(result.error || "Erreur lors de l'envoi du code");
+      return;
+    }
+
+    startCountdown(60);
+  }, [phone, purpose, sending]);
 
   useEffect(() => {
     handleSend();
@@ -102,76 +100,88 @@ export function PhoneVerificationStep({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-blue-50 flex items-center justify-center">
-          <svg className="w-7 h-7 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-        </div>
-        <h2 className="text-lg font-medium">{title}</h2>
-        <p className="text-sm text-gray-600 mt-2">
-          Un code à 6 chiffres a été envoyé <span className="font-semibold">par SMS</span> au{' '}
-          <span className="font-semibold">{phone}</span>
+    <div className="space-y-5">
+      <div className="flex flex-col items-center text-center">
+        <span
+          className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl"
+          style={{
+            background:
+              variant === 'driver' ? 'rgba(255,204,0,0.18)' : 'rgba(0,122,255,0.10)',
+          }}
+        >
+          <ShieldCheck
+            className="h-7 w-7"
+            style={{ color: variant === 'driver' ? '#B45309' : AUTH_COLORS.blue }}
+          />
+        </span>
+        <p className="text-[15px] font-black text-[#0B1B2B]">{title}</p>
+        <p className="mt-1 text-[12px] leading-relaxed text-[#64748B]">
+          Un code à 6 chiffres a été envoyé par SMS au{' '}
+          <span className="font-semibold text-[#0B1B2B]">{phone}</span>
         </p>
       </div>
 
-      {errorMsg && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-          <p className="text-red-800 font-medium text-sm">{errorMsg}</p>
-        </div>
-      )}
+      {errorMsg && <AuthAlert tone="error">{errorMsg}</AuthAlert>}
 
       <div>
-        <label className="text-sm font-medium text-gray-700">Code de vérification</label>
-        <Input
+        <label
+          htmlFor="otp-code"
+          className="mb-1.5 block text-[10.5px] font-bold uppercase leading-none tracking-[0.12em] text-[#64748B]"
+        >
+          Code de vérification
+        </label>
+        <AuthInput
+          id="otp-code"
           type="text"
           inputMode="numeric"
+          autoComplete="one-time-code"
           maxLength={6}
           placeholder="••••••"
           value={code}
+          autoFocus
           onChange={(e) => {
-            setCode(e.target.value.replace(/\D/g, ''));
+            setCode(e.target.value.replace(/\D/g, '').slice(0, 6));
             setErrorMsg('');
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleVerify();
           }}
-          className="mt-2 px-4 h-14 bg-gray-50 border-0 rounded-xl text-center text-2xl font-mono tracking-[0.5em]"
-          autoComplete="one-time-code"
-          autoFocus
+          style={{ height: 56, fontSize: 24, letterSpacing: '0.38em', textAlign: 'center', fontWeight: 700 }}
         />
-        <p className="text-xs text-gray-500 mt-2 text-center">
+        <p className="mt-2 text-center text-[10.5px] text-[#94A3B8]">
           Le code expire dans 10 minutes. Ne le partagez jamais.
         </p>
       </div>
 
-      <Button
+      <AuthButton
+        variant={variant}
         onClick={handleVerify}
+        loading={verifying}
         disabled={verifying || sending || code.length !== 6}
-        className={`w-full h-12 text-white rounded-xl disabled:opacity-50 ${accentClass}`}
       >
-        {verifying ? 'Vérification...' : 'Vérifier mon numéro'}
-      </Button>
+        Vérifier mon numéro
+      </AuthButton>
 
-      <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center justify-between gap-3 text-[11.5px]">
         {countdown > 0 ? (
-          <span className="text-gray-500">Renvoyer le code dans {countdown}s</span>
+          <span className="text-[#94A3B8]">Renvoyer le code dans {countdown}s</span>
         ) : (
           <button
             type="button"
             onClick={handleSend}
             disabled={sending}
-            className="text-blue-500 hover:underline disabled:opacity-50"
+            style={{ minHeight: 0 }}
+            className="inline p-0 align-baseline font-semibold text-[#0063D1] hover:underline disabled:opacity-50"
           >
-            {sending ? 'Envoi...' : 'Renvoyer le code'}
+            {sending ? 'Envoi…' : 'Renvoyer le code'}
           </button>
         )}
         {onBack && (
           <button
             type="button"
             onClick={onBack}
-            className="text-gray-500 hover:underline"
+            style={{ minHeight: 0 }}
+            className="inline p-0 align-baseline font-medium text-[#64748B] hover:text-[#0B1B2B] hover:underline"
           >
             Modifier le numéro
           </button>

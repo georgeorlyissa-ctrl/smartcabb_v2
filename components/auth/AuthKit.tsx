@@ -18,7 +18,7 @@ import { SmartCabbLogo } from '../SmartCabbLogo';
 import { BRAND_LOGO_URL } from '../../lib/brand-config';
 import { Eye, EyeOff, Loader2 } from '../../lib/icons';
 
-export type AuthAudience = 'passenger' | 'driver';
+export type AuthAudience = 'passenger' | 'driver' | 'admin';
 
 export const AUTH_COLORS = {
   navy: '#001B3D',
@@ -84,7 +84,9 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   const isDriver = audience === 'driver';
-  const accent = isDriver ? AUTH_COLORS.yellow : AUTH_COLORS.blue;
+  const isAdmin = audience === 'admin';
+  const accent = isDriver ? AUTH_COLORS.yellow : isAdmin ? '#7CC4FF' : AUTH_COLORS.blue;
+  const glowStrong = isDriver ? 0.30 : isAdmin ? 0.14 : 0.18;
 
   return (
     <div
@@ -106,7 +108,7 @@ export function AuthShell({
         aria-hidden="true"
         className="pointer-events-none absolute -bottom-56 -left-44 h-[560px] w-[560px] rounded-full"
         style={{
-          background: `radial-gradient(circle, rgba(255,204,0,${isDriver ? 0.30 : 0.18}) 0%, rgba(255,204,0,0) 70%)`,
+          background: `radial-gradient(circle, rgba(255,204,0,${glowStrong}) 0%, rgba(255,204,0,0) 70%)`,
         }}
       />
 
@@ -159,8 +161,12 @@ export function AuthShell({
                     <span
                       className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-white/12"
                       style={{
-                        background: isDriver ? 'rgba(255,204,0,0.16)' : 'rgba(0,122,255,0.22)',
-                        color: isDriver ? AUTH_COLORS.yellow : '#7CC4FF',
+                        background: isDriver
+                          ? 'rgba(255,204,0,0.16)'
+                          : isAdmin
+                            ? 'rgba(124,196,255,0.16)'
+                            : 'rgba(0,122,255,0.22)',
+                        color: isDriver ? AUTH_COLORS.yellow : isAdmin ? '#7CC4FF' : '#7CC4FF',
                       }}
                     >
                       {item.icon}
@@ -217,6 +223,8 @@ export function AuthCard({
 /** En-tête de marque compact (mobile & tablette). */
 export function AuthCardBrand({ audience }: { audience: AuthAudience }) {
   const isDriver = audience === 'driver';
+  const isAdmin = audience === 'admin';
+  const label = isDriver ? 'Chauffeur' : isAdmin ? 'Admin' : 'Passager';
   return (
     <div className="mb-6 flex items-center justify-between gap-3 lg:hidden">
       <div className="flex items-center gap-2.5">
@@ -233,11 +241,15 @@ export function AuthCardBrand({ audience }: { audience: AuthAudience }) {
       <span
         className="rounded-full px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.14em]"
         style={{
-          background: isDriver ? 'rgba(255,204,0,0.18)' : 'rgba(0,122,255,0.10)',
+          background: isDriver
+            ? 'rgba(255,204,0,0.18)'
+            : isAdmin
+              ? 'rgba(0,61,122,0.08)'
+              : 'rgba(0,122,255,0.10)',
           color: isDriver ? '#7A5B00' : '#0063D1',
         }}
       >
-        {isDriver ? 'Chauffeur' : 'Passager'}
+        {label}
       </span>
     </div>
   );
@@ -251,17 +263,22 @@ export function AuthEyebrow({
   children: React.ReactNode;
 }) {
   const isDriver = audience === 'driver';
+  const isAdmin = audience === 'admin';
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.16em]"
       style={{
-        background: isDriver ? 'rgba(255,204,0,0.16)' : 'rgba(0,122,255,0.09)',
-        color: isDriver ? '#7A5B00' : '#0063D1',
+        background: isDriver
+          ? 'rgba(255,204,0,0.16)'
+          : isAdmin
+            ? 'rgba(0,61,122,0.08)'
+            : 'rgba(0,122,255,0.09)',
+        color: isDriver ? '#7A5B00' : isAdmin ? '#003D7A' : '#0063D1',
       }}
     >
       <span
         className="h-1.5 w-1.5 rounded-full"
-        style={{ background: isDriver ? AUTH_COLORS.yellow : AUTH_COLORS.blue }}
+        style={{ background: isDriver ? AUTH_COLORS.yellow : isAdmin ? '#003D7A' : AUTH_COLORS.blue }}
       />
       {children}
     </span>
@@ -407,13 +424,15 @@ export function AuthButton({
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
   loading?: boolean;
-  variant?: 'primary' | 'driver';
+  variant?: 'primary' | 'driver' | 'admin';
   trailingIcon?: React.ReactNode;
 }) {
   const styles =
     variant === 'driver'
       ? 'bg-[#FFCC00] text-[#001B3D] shadow-[0_14px_30px_-14px_rgba(255,204,0,0.9)] hover:bg-[#FFD633]'
-      : 'bg-[#007AFF] text-white shadow-[0_14px_30px_-14px_rgba(0,122,255,0.95)] hover:bg-[#0069DB]';
+      : variant === 'admin'
+        ? 'bg-[#003D7A] text-white shadow-[0_14px_30px_-14px_rgba(0,61,122,0.9)] hover:bg-[#00294F]'
+        : 'bg-[#007AFF] text-white shadow-[0_14px_30px_-14px_rgba(0,122,255,0.95)] hover:bg-[#0069DB]';
 
   return (
     <button
