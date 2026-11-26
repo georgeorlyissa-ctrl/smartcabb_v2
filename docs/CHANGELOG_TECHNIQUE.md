@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (58) — OWASP / check-list sécurité : CI, SAST, DAST, photos, chiffrement des backups
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `0b40f01` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security (industrialisation)
 - **Objectif** : traiter la check-list sécurité point par point. Ajout de la CI/CD sécurisée, de l'analyse statique et dynamique, de la validation serveur des photos et de la capacité de chiffrement des sauvegardes.
