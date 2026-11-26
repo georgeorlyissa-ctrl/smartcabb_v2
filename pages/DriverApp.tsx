@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { Routes, Route, useLocation } from '../lib/simple-router';
 import { DriverWelcomeScreen } from '../components/driver/DriverWelcomeScreen';
 import { DriverLoginScreen } from '../components/driver/DriverLoginScreen';
@@ -36,6 +37,9 @@ function DriverAppContent() {
 
   const location = useLocation();
 
+  // 🔒 Ne convertir « inscription mémorisée » → connexion qu'au premier passage
+  const bootCheckedRef = useRef(false);
+
   // ✅ Gestion de la vue et du screen driver
   useEffect(() => {
     console.log('🚗 DriverApp - Démarrage avec currentScreen:', currentScreen);
@@ -49,6 +53,24 @@ function DriverAppContent() {
 
     // ✅ FIX : Détecter /signup dans l'URL → aller directement au formulaire d'inscription
     const isSignupUrl = location.pathname.includes('/signup');
+
+    const isLoginUrl = location.pathname.includes('/login');
+
+    // URL explicite /login : on affiche toujours la connexion chauffeur
+    if (isLoginUrl && currentScreen !== 'driver-login') {
+      setCurrentScreen('driver-login');
+      return;
+    }
+
+    // Au premier chargement de /driver (sans /signup), on ne rouvre jamais le
+    // formulaire d'inscription mémorisé : l'entrée par défaut est la connexion.
+    if (!bootCheckedRef.current) {
+      bootCheckedRef.current = true;
+      if (!isSignupUrl && !isLoginUrl && currentScreen === 'driver-registration' && !state.currentDriver) {
+        setCurrentScreen('driver-login');
+        return;
+      }
+    }
     if (isSignupUrl && currentScreen !== 'driver-registration') {
       console.log('✅ URL /signup détectée → driver-registration');
       setCurrentScreen('driver-registration');

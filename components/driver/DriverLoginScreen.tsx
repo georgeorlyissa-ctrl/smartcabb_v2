@@ -337,7 +337,12 @@ export function DriverLoginScreen() {
           </p>
           <button
             type="button"
-            onClick={() => setCurrentScreen('driver-registration')}
+            onClick={() => {
+              try {
+                window.history.replaceState({}, '', '/app/driver/signup');
+              } catch {}
+              setCurrentScreen('driver-registration');
+            }}
             disabled={loading}
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[#FFCC00] bg-white px-3 py-2.5 text-[12.5px] font-bold text-[#001B3D] transition-colors hover:bg-[#FFFDF5] disabled:opacity-50"
           >

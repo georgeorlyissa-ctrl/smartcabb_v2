@@ -228,7 +228,10 @@ export function DriversLandingPage() {
         title={t('drivers.title')}
         subtitle={t('drivers.subtitle')}
       >
-        <Link to="/app/driver/signup" className="btn-primary btn-glow">{t('drivers.signup')}</Link>
+        <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
+          <Link to="/app/driver/signup" className="btn-primary btn-glow">{t('drivers.signup')}</Link>
+          <Link to="/app/driver/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 26px', borderRadius: '999px', border: '2px solid rgba(255,255,255,0.7)', color: 'white', fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,0.12)' }}>{language === 'fr' ? 'Déjà chauffeur ? Se connecter' : 'Already a driver? Sign in'}</Link>
+        </div>
       </PageHero>
 
       {/* ✅ NOUVEAU : COMBIEN POUVEZ-VOUS GAGNER (style Yango) */}
@@ -397,6 +400,7 @@ export function DriversLandingPage() {
 
           <div className={`reveal d5 ${stepsInView ? 'in' : ''}`} style={{ textAlign: 'center', marginTop: '48px' }}>
             <Link to="/app/driver/signup" className="btn-primary">{t('drivers.signup')}</Link>
+            <div><Link to="/app/driver/login" style={{ display: 'inline-block', marginTop: '14px', color: '#007AFF', fontWeight: 700, textDecoration: 'none' }}>{language === 'fr' ? 'Déjà chauffeur ? Se connecter' : 'Already a driver? Sign in'}</Link></div>
           </div>
         </div>
       </section>

@@ -42,6 +42,51 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (50) — Accès direct à la connexion chauffeur (site + `/driver/login`)
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (navigation)
+- **Objectif** : la connexion chauffeur n'était accessible par aucun lien depuis le site, et un écran `driver-registration` mémorisé dans `localStorage` restait affiché indéfiniment — d'où l'impression que « ça passe toujours par le formulaire d'inscription ».
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/DriverApp.tsx` | `useRef` + `bootCheckedRef` : conversion « inscription mémorisée → connexion » une seule fois au chargement ; URL `/login` force la connexion |
+| `components/driver/DriverLoginScreen.tsx` | Le bouton « Déposer ma candidature » met l'URL à jour (`/app/driver/signup`, `replaceState`) |
+| `pages/DriversLandingPage.tsx` | Liens **« Déjà chauffeur ? Se connecter »** dans le hero et sous le bloc « étapes » |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+- **URL explicite** : `DriverApp` lit `location.pathname` ; si le chemin contient `/login`, l'écran `driver-login` est forcé. La page est donc accessible via :
+  - `https://www.smartcabb.com/driver` (entrée par défaut)
+  - `https://www.smartcabb.com/app/driver`
+  - `https://www.smartcabb.com/app/driver/login` (lien explicite)
+  - et l'URL historique `https://www.smartcabb.com/driver/login`
+- **Fin du blocage** : auparavant, si `currentScreen === 'driver-registration'` était mémorisé, l'effet `if (currentScreen.startsWith('driver-')) return;` conservait cet écran pour toujours. Désormais, au **premier passage** de l'effet (`bootCheckedRef`), un `/driver` sans `/signup` et sans chauffeur connecté bascule sur `driver-login`. Le garde `useRef` évite de casser le bouton « Déposer ma candidature » (qui, lui, doit ouvrir le formulaire dans la même session).
+- Le bouton de candidature écrit `/app/driver/signup` dans l'historique : un rechargement de page rouvre bien l'inscription, et l'URL peut être partagée.
+- Le formulaire reste accessible par les CTA « S'inscrire » du site (`/app/driver/signup`), inchangés.
+
+### Impact produit / comportement visible
+- Un chauffeur déjà inscrit trouve un accès direct à la connexion depuis la page « Devenir chauffeur » (deux liens) et peut utiliser `/driver` sans repasser par l'inscription.
+- Un nouveau chauffeur garde le parcours d'inscription via les boutons « S'inscrire » ou « Déposer ma candidature ».
+
+### Risques & rollback
+- **Risque** : un chauffeur en cours d'inscription qui recharge `/driver` (sans `/signup`) revient à la connexion — mais l'URL est mise à jour au clic, donc le cas est couvert.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit`
+- [x] `npm run build`
+- [x] `/driver` avec `currentScreen = 'driver-registration'` mémorisé → **Connexion chauffeur**
+- [x] `/app/driver/login` avec le même stockage → **Connexion chauffeur**
+- [x] `/app/driver/signup` → formulaire d'inscription (« Vos informations »)
+- [x] Clic « Déposer ma candidature » → formulaire affiché et URL `/app/driver/signup`
+- [x] `/drivers` : 6 liens chauffeur dont **2 vers `/app/driver/login`**
+
+---
+
 ## 2026-11-26 (49) — Navigation : fin de l'ancien écran d'accueil, cadrage des écrans d'auth, connexion chauffeur simplifiée
 
 - **Commit** : `c0c719a` (branche `main`, poussée sur `origin`)
