@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (54) — Recherche globale dans le panneau admin (Ctrl+K) + « Sauvegardes » introuvable
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `4bac565` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat (ergonomie admin)
 - **Objectif** : l'écran de sauvegarde existait mais n'était pas trouvable dans le panneau (action « Backup & Recovery » noyée dans les actions rapides). Ajout d'une **recherche globale** : on tape « sauvegarde » et on arrive directement sur l'écran.
