@@ -1533,7 +1533,7 @@ export function DriverDashboardNew() {
                       localStorage.removeItem('smartcabb_token');
                       sessionStorage.clear();
                       setCurrentDriver(null);
-                      setCurrentScreen('driver-welcome');
+                      setCurrentScreen('driver-login');
                       toast.success('Déconnexion réussie');
                     }
                   }}

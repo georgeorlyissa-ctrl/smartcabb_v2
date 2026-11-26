@@ -128,7 +128,7 @@ function DriverAppContent() {
         currentScreen.startsWith('passenger-')) {
       // ✅ FIX : Ne pas écraser si on est en train d'aller vers l'inscription
       if (!isSignupUrl) {
-        setCurrentScreen('driver-welcome');
+        setCurrentScreen('driver-login');
       }
     }
   }, [location.pathname, currentScreen, state.currentView, state.currentDriver?.id, state.currentDriver?.status]); // ✅ Dépendances minimales et stables
@@ -224,7 +224,7 @@ function DriverAppContent() {
       {showRLSModal && <RLSFixModal />}
 
       <div className="min-h-screen bg-gray-50">
-        <div className="min-h-screen max-w-2xl mx-auto bg-white shadow-sm">
+        <div className={`min-h-screen mx-auto bg-white shadow-sm ${['driver-login', 'driver-registration'].includes(currentScreen) ? 'max-w-none' : 'max-w-2xl'}`}>
           {currentScreen === 'driver-welcome' && <DriverWelcomeScreen />}
           {currentScreen === 'driver-login' && <DriverLoginScreen />}
           {currentScreen === 'driver-registration' && <DriverRegistrationScreen />}

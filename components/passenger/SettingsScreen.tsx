@@ -114,7 +114,7 @@ export function SettingsScreen() {
 
   const handleLogout = () => {
     setCurrentUser(null);
-    setCurrentScreen('landing');
+    setCurrentScreen('login');
     toast.success('Déconnexion réussie 👋');
   };
 

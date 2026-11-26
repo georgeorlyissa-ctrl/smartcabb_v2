@@ -324,7 +324,7 @@ export function DriverSettingsScreen() {
             </button>
           </a>
           <button type="button"
-            onClick={() => { setCurrentDriver(null); setCurrentScreen('landing'); }}
+            onClick={() => { setCurrentDriver(null); setCurrentScreen('driver-login'); }}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-red-100 bg-red-50 hover:bg-red-100 transition-colors text-left">
             <LogOut className="w-5 h-5 text-red-500" />
             <span className="text-sm font-semibold text-red-600">Se déconnecter</span>

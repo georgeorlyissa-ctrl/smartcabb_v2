@@ -42,6 +42,62 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (49) — Navigation : fin de l'ancien écran d'accueil, cadrage des écrans d'auth, connexion chauffeur simplifiée
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (navigation + UI)
+- **Objectif** : trois corrections signalées en production :
+  1. après déconnexion (et depuis les boutons « Commander » du site), le passager retombait sur l'ancien écran d'accueil turquoise au lieu de la nouvelle connexion ;
+  2. le cadrage des écrans d'authentification chauffeur était cassé (carte coupée à droite) ;
+  3. la connexion chauffeur demandait « téléphone ou email » et le lien vers le formulaire de candidature était peu visible.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/PassengerApp.tsx` | Écran par défaut = `login` ; `landing` d'un visiteur non connecté → `login` ; largeur pleine pour les écrans d'auth |
+| `pages/DriverApp.tsx` | Entrée par défaut = `driver-login` ; largeur pleine pour connexion / candidature |
+| `components/AppRouter.tsx` | `/app`, `/app/landing` et `/app/*` → `/app/passenger` (l'ancien écran n'est plus servi) |
+| `components/passenger/ProfileScreen.tsx` | Déconnexion → écran `login` |
+| `components/passenger/SettingsScreen.tsx` | Déconnexion → écran `login` |
+| `components/driver/DriverSettingsScreen.tsx` | Déconnexion → `driver-login` |
+| `components/driver/DriverDashboardNew.tsx` | Déconnexion → `driver-login` |
+| `components/driver/DriverLoginScreen.tsx` | Champ téléphone seul (`PhoneInput`), bouton « Déposer ma candidature » visible, retour au site |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+**Cause du cadrage cassé.** `DriverApp` enveloppait tous ses écrans dans `<div className="min-h-screen max-w-2xl mx-auto">` (672 px) et `PassengerApp` dans `max-w-2xl md:max-w-4xl` (672/896 px). Le kit d'authentification est conçu pour occuper la largeur (panneau de marque 46 % + carte 460 px + gouttière 64 px ≈ 1 050 px) : dans un conteneur de 672 px, la carte débordait et `overflow-hidden` de la coquille la coupait à droite. Les deux conteneurs passent maintenant en `max-w-none` **uniquement** pour les écrans d'authentification (`login`, `register`, `forgot-password`, `driver-login`, `driver-registration`) ; les autres écrans conservent leur largeur.
+
+**Ancien écran d'accueil.** `LandingScreen` (fond turquoise/vert, boutons « S'inscrire » / « Connexion ») n'est plus atteignable :
+- `PassengerApp` initialise sur `login` quand `currentScreen` est vide, et convertit `landing` en `login` si aucun passager n'est connecté ;
+- les deux boutons de déconnexion passager pointent vers `login` ;
+- `AppRouter` redirige `/app`, `/app/landing` et `/app/*` vers `/app/passenger`.
+
+Ainsi, un clic sur « Commander une course / Commander maintenant » depuis le site (qui pointe vers `/app/passenger`, éventuellement avec `?screen=map`) affiche la connexion ; `sc_pending_screen` est conservé et la course reprend après connexion.
+
+**Connexion chauffeur.** Le champ libre « téléphone ou email » est remplacé par `PhoneInput variant="auth"` (numéro congolais, compteur 0/10). L'encart « Pas encore chauffeur ? » devient un vrai bouton **« Déposer ma candidature »** qui ouvre `driver-registration`. Le retour quitte l'application vers le site public (`/`). `DriverApp` démarre désormais sur `driver-login` (au lieu de `driver-welcome`), et les deux déconnexions chauffeur y ramènent aussi.
+
+### Impact produit / comportement visible
+- Plus d'écran turquoise « Bienvenue ! » : déconnexion et liens « Commander » aboutissent sur la nouvelle connexion.
+- Écrans chauffeur correctement centrés, carte entièrement visible sur ordinateur.
+- Deux champs seulement côté chauffeur, et un accès évident au formulaire d'inscription.
+
+### Risques & rollback
+- **Risque** : `DriverWelcomeScreen` et `LandingScreen` ne sont plus affichés (fichiers conservés, aucune suppression). Si un parcours métier en dépendait encore, il faut rétablir la redirection.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit`
+- [x] `npm run build`
+- [x] `/app` → `/app/passenger` → « Content de vous revoir » (login)
+- [x] `/driver` (session vide) → « Connexion chauffeur », 2 champs (`+243…`, mot de passe), bouton « Déposer ma candidature »
+- [x] Carte d'auth à 1 280 px : bord droit 1 113 px (plus de découpe), `scrollWidth = 1 280`
+- [x] Candidature chauffeur : même cadrage, aucun débordement horizontal
+- [ ] Déconnexion réelle passager/chauffeur sur appareil (nécessite un compte)
+
+---
+
 ## 2026-11-26 (48) — Kit d'authentification étendu : mot de passe oublié, OTP et administration
 
 - **Commit** : `c5b2458` (branche `main`, poussée sur `origin`)

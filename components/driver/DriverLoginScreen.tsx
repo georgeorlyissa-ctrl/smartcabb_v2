@@ -20,9 +20,12 @@ import { useAppState } from '../../hooks/useAppState';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { PhoneInput } from '../PhoneInput';
+import { useNavigate } from '../../lib/simple-router';
 
 export function DriverLoginScreen() {
   const { setCurrentScreen, setCurrentDriver } = useAppState();
+  const navigate = useNavigate();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -280,22 +283,16 @@ export function DriverLoginScreen() {
           }}
         >
           <AuthField
-            label="Téléphone ou email"
+            label="Numéro de téléphone"
             htmlFor="driver-identifier"
-            hint="Utilisez le numéro renseigné lors de votre inscription."
+            hint="Le numéro renseigné lors de votre inscription."
           >
-            <AuthInput
+            <PhoneInput
               id="driver-identifier"
-              type="text"
-              placeholder="+243 81 234 5678"
+              variant="auth"
               value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              onChange={(value) => setIdentifier(value)}
               disabled={loading}
-              autoComplete="username"
-              autoCorrect="off"
-              autoCapitalize="off"
-              spellCheck={false}
-              icon={<Smartphone className="h-[18px] w-[18px]" />}
             />
           </AuthField>
 
@@ -333,24 +330,29 @@ export function DriverLoginScreen() {
           </AuthButton>
         </form>
 
-        <div className="mt-5 flex items-start gap-2.5 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] px-3.5 py-3">
-          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[#B45309]" />
-          <p className="text-[11.5px] leading-snug text-[#92400E]">
-            Nouveau chauffeur ?{' '}
-            <button
-              type="button"
-              onClick={() => setCurrentScreen('driver-registration')}
-              disabled={loading}
-              className="font-bold underline underline-offset-2 hover:no-underline disabled:opacity-50"
-            >
-              Déposez votre candidature
-            </button>{' '}
-            — validation sous 48 h.
+        <div className="mt-5 rounded-2xl border border-[#FDE68A] bg-[#FFFBEB] p-3.5">
+          <p className="text-[12px] font-bold text-[#92400E]">Pas encore chauffeur SmartCabb ?</p>
+          <p className="mt-1 text-[11.5px] leading-snug text-[#A16207]">
+            Créez votre dossier en 2 minutes. Validation sous 48 h.
           </p>
+          <button
+            type="button"
+            onClick={() => setCurrentScreen('driver-registration')}
+            disabled={loading}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-[#FFCC00] bg-white px-3 py-2.5 text-[12.5px] font-bold text-[#001B3D] transition-colors hover:bg-[#FFFDF5] disabled:opacity-50"
+          >
+            Déposer ma candidature
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
 
         <div className="mt-4 flex justify-center hide-in-apk">
-          <AuthBackButton label="Retour" onClick={() => setCurrentScreen('driver-welcome')} />
+          <AuthBackButton
+            label="Retour au site"
+            onClick={() => {
+              navigate('/');
+            }}
+          />
         </div>
       </AuthCard>
     </AuthShell>

@@ -246,7 +246,7 @@ export function ProfileScreen() {
     console.log('🚪 Déconnexion du passager');
     setCurrentUser(null);
     // Pas besoin de changer currentView, juste l'écran
-    setCurrentScreen('landing');
+    setCurrentScreen('login');
   };
 
   const getPaymentMethodIcon = (method?: string) => {

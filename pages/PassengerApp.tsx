@@ -355,6 +355,10 @@ function PassengerAppContent() {
       console.log('🔄 Passager connecté après refresh, redirection vers map');
       newScreen = 'map';
       shouldUpdate = true;
+    } else if (currentScreen === 'landing' && !state.currentUser) {
+      newView = 'passenger';
+      newScreen = 'login';
+      shouldUpdate = true;
     } else if (currentScreen && currentScreen !== '') {
       console.log('✅ Écran restauré depuis localStorage:', currentScreen);
       if (shouldUpdate && newView) setCurrentView(newView);
@@ -362,7 +366,7 @@ function PassengerAppContent() {
     } else if (!currentScreen || currentScreen === '') {
       console.log('🔄 Initialisation vers landing depuis PassengerApp');
       newView = 'passenger';
-      newScreen = 'landing';
+      newScreen = 'login';
       shouldUpdate = true;
     } else if (currentScreen === 'user-selection' && user) {
       console.log('✅ Utilisateur déjà connecté, redirection vers map');
@@ -557,7 +561,7 @@ function PassengerAppContent() {
       {showRLSModal && <RLSFixModal />}
 
       <div className="min-h-screen bg-gray-50">
-        <div className="min-h-screen max-w-2xl md:max-w-4xl mx-auto bg-white shadow-sm">
+        <div className={`min-h-screen mx-auto bg-white shadow-sm ${['login', 'register', 'forgot-password'].includes(screenToShow) ? 'max-w-none' : 'max-w-2xl md:max-w-4xl'}`}>
           <div className="transition-opacity duration-300" style={{ willChange: 'opacity' }}>
             {screenComponent}
           </div>

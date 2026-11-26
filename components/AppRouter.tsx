@@ -30,7 +30,7 @@ export function AppRouter() {
     // Si l'utilisateur arrive sur /app sans sous-route, le rediriger vers la landing
     if (currentPath === '/app' || currentPath === '/app/') {
       console.log('🔀 AppRouter: Redirection /app → /app/landing');
-      navigate('/app/landing', { replace: true });
+      navigate('/app/passenger', { replace: true });
     }
   }, []); // Dépendances vides pour n'exécuter qu'une fois
 
@@ -43,7 +43,7 @@ export function AppRouter() {
     <Suspense fallback={<DeferredLoading />}>
       <Routes>
         {/* Landing Page - Sélection du type d'utilisateur */}
-        <Route path="/app/landing" element={<LandingScreen />} />
+        <Route path="/app/landing" element={<Navigate to="/app/passenger" replace />} />
         
         {/* Application Passager */}
         <Route path="/app/passenger/*" element={<PassengerApp />} />
@@ -55,7 +55,7 @@ export function AppRouter() {
         <Route path="/app/admin/*" element={<AdminApp />} />
         
         {/* Redirection par défaut */}
-        <Route path="/app/*" element={<Navigate to="/app/landing" replace />} />
+        <Route path="/app/*" element={<Navigate to="/app/passenger" replace />} />
       </Routes>
     </Suspense>
   );
