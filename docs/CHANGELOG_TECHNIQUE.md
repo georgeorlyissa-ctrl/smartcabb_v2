@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (48) — Kit d'authentification étendu : mot de passe oublié, OTP et administration
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `c5b2458` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat (UI/UX) + fix
 - **Objectif** : appliquer le kit `AuthKit` (créé à l'entrée 47) aux écrans restants — mot de passe oublié passager/chauffeur, page publique `/auth/forgot-password`, étape OTP par SMS, connexion administrateur (avec 2FA) et mot de passe oublié administrateur.
