@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (57) — AAB 1.9 (versionCode 12) + politique de mot de passe renforcée
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `9279bb7` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security + chore (release)
 - **Objectif** : embarquer le durcissement natif Android dans une AAB publiable, et relever la politique de mot de passe côté Supabase Auth (8 caractères + majuscule/minuscule/chiffre + réauthentification).
