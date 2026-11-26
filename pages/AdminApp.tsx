@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, Routes, Route } from '../lib/simple-router';
 import { useAppState } from '../hooks/useAppState';
 import { AlertCircle } from '../lib/icons';
+import { AdminCommandPalette } from '../components/admin/AdminCommandPalette';
 import { AdminDiagnostic } from '../components/admin/AdminDiagnostic';
 import { AdminSessionTimeout } from '../components/admin/AdminSessionTimeout';
 import { UsersManagementScreen } from '../components/UsersManagementScreen';
@@ -53,6 +54,25 @@ function AdminAppContent() {
   const { currentScreen } = state;
   const initialized = useRef(false);
   const location = useLocation();
+
+  // 🔎 Recherche globale (Ctrl/⌘+K ou événement `admin:open-search`)
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    const onOpenSearch = () => setSearchOpen(true);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('admin:open-search', onOpenSearch as EventListener);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('admin:open-search', onOpenSearch as EventListener);
+    };
+  }, []);
   
   // Définir l'écran par défaut quand on arrive sur /admin
   useEffect(() => {
@@ -172,6 +192,34 @@ function AdminAppContent() {
       
       {/* RLS Fix Modal (non-blocking) */}
       {showRLSModal && <RLSFixModal />}
+
+      {/* 🔎 Recherche globale du panneau admin (Ctrl/⌘+K) */}
+      {screenToShow !== 'admin-login' && screenToShow !== 'admin-register' && (
+        <>
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            title="Rechercher un écran (Ctrl+K)"
+            aria-label="Rechercher un écran administrateur"
+            className="fixed bottom-5 right-5 z-[70] flex items-center gap-2 rounded-full bg-[#001B3D] px-4 py-3 text-white shadow-[0_18px_40px_-15px_rgba(0,27,61,0.8)] transition-transform hover:scale-105 active:scale-95"
+          >
+            <span className="text-base leading-none">🔎</span>
+            <span className="hidden text-sm font-semibold sm:inline">Rechercher</span>
+            <span className="hidden rounded border border-white/25 px-1.5 py-0.5 text-[10px] text-white/70 sm:inline">
+              Ctrl K
+            </span>
+          </button>
+
+          <AdminCommandPalette
+            open={searchOpen}
+            onClose={() => setSearchOpen(false)}
+            onSelect={(screenId) => {
+              setSearchOpen(false);
+              setCurrentScreen(screenId);
+            }}
+          />
+        </>
+      )}
 
       {/* Main Admin App Screens */}
       <div className="h-screen w-screen overflow-auto">

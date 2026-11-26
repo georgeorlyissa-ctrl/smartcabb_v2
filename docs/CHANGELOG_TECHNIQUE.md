@@ -42,6 +42,48 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (54) — Recherche globale dans le panneau admin (Ctrl+K) + « Sauvegardes » introuvable
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat (ergonomie admin)
+- **Objectif** : l'écran de sauvegarde existait mais n'était pas trouvable dans le panneau (action « Backup & Recovery » noyée dans les actions rapides). Ajout d'une **recherche globale** : on tape « sauvegarde » et on arrive directement sur l'écran.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/admin/AdminCommandPalette.tsx` | **Nouveau** : palette de recherche (registre de 34 écrans, filtrage sans accents, navigation clavier) |
+| `pages/AdminApp.tsx` | Montage de la palette + bouton flottant « 🔎 Rechercher » + raccourci **Ctrl/⌘ + K** |
+| `components/admin/AdminDashboard.tsx` | Barre de recherche sous l'en-tête + renommage « Backup & Recovery » → **« Sauvegardes »** |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+- **Registre** (`ADMIN_SCREENS`) : 34 écrans avec identifiant, libellé FR, description et mots-clés (synonymes inclus : `sauvegarde`, `backup`, `restauration`, `restore`, `santé`, `chauffeur`, `conducteur`, `paiement`, `mobile money`, `réservation`, `T-15`, `SOS`…).
+- **Filtrage** : normalisation NFD (accents ignorés) + score (libellé exact > préfixe > inclusion > mot-clé > description). « sauvegarde » ne renvoie qu'un résultat : **Sauvegardes & restauration**.
+- **Navigation clavier** : ↑ ↓, Entrée pour ouvrir, Échap pour fermer ; clic sur le fond pour fermer ; focus automatique sur le champ.
+- **Points d'entrée** : barre de recherche visible sur le tableau de bord, bouton flottant en bas à droite sur tous les écrans admin, raccourci `Ctrl+K` / `⌘+K`.
+- La palette est masquée sur les écrans de connexion/inscription admin.
+
+### Impact produit / comportement visible
+- Taper « sauvegarde » mène en un clic à l'écran **Sauvegardes**, dont la carte **Santé du système** (dernier backup, test de restauration, alertes) est en haut.
+- Recherche utilisable pour tous les écrans : chauffeurs, clients, paiements, réservations, SOS, paramètres, audit…
+- Renommage de l'action rapide en « Sauvegardes » (terme utilisé par l'exploitant).
+
+### Risques & rollback
+- **Risque** : aucun impact sur les données ; composant purement client.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` + `npm run build`
+- [x] Barre de recherche visible sur le tableau de bord
+- [x] Bouton flottant présent sur les écrans admin (masqué sur login/register)
+- [x] Ouverture de la palette, saisie « sauvegarde » → **1 résultat** : « Sauvegardes & restauration »
+- [x] Clic / Entrée → navigation vers l'écran Sauvegardes, carte « Santé du système » affichée
+- [ ] Vérification visuelle après connexion admin réelle (2FA)
+
+---
+
 ## 2026-11-26 (53) — Santé système : test de restauration, alertes email et fiche incident
 
 - **Commit** : `df6662e` (branche `main`, poussée sur `origin`)

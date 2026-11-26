@@ -1071,7 +1071,7 @@ export function AdminDashboard() {
     },
     {
       id: 'action-backup',
-      title: 'Backup & Recovery',
+      title: 'Sauvegardes',
       description: 'Sauvegarde et récupération des données',
       icon: Database,
       action: () => setCurrentScreen('backup-and-recovery'),
@@ -1213,6 +1213,25 @@ export function AdminDashboard() {
               </Button>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Recherche globale (ouvre la palette Ctrl+K) */}
+      <div className="border-b bg-white">
+        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('admin:open-search'))}
+            className="flex w-full items-center gap-2.5 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-left transition-colors hover:border-blue-300 hover:bg-white"
+          >
+            <Search className="h-4 w-4 shrink-0 text-gray-400" />
+            <span className="flex-1 truncate text-sm text-gray-500">
+              Rechercher un écran (ex. « sauvegarde », « chauffeur », « paiement »)…
+            </span>
+            <span className="hidden shrink-0 rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 sm:inline">
+              Ctrl K
+            </span>
+          </button>
         </div>
       </div>
 
