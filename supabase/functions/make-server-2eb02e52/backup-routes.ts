@@ -30,6 +30,14 @@
 
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  getAlertRecipient,
+  getAlertsState,
+  isSmtpConfigured,
+  maskEmail,
+  resolveAlertRecipient,
+  sendOpsAlert,
+} from "./ops-alerts.ts";
 
 const app = new Hono();
 
@@ -39,6 +47,8 @@ const BACKUP_BUCKET = "backups";
 const BACKUP_PREFIX = "smartcabb-backup-";
 const PAGE_SIZE = 1000;
 const SIGNED_URL_TTL = 600; // 10 minutes
+const HEALTH_BACKUP_KEY = "system_health:last_backup";
+const HEALTH_RESTORE_KEY = "system_health:last_restore_test";
 
 function sbAdmin() {
   return createClient(
@@ -74,6 +84,26 @@ async function hasValidAdminJwt(c: any): Promise<boolean> {
 async function isAuthorized(c: any): Promise<boolean> {
   if (hasValidCronSecret(c)) return true;
   return await hasValidAdminJwt(c);
+}
+
+// ─── État de santé (KV) ─────────────────────────────────────────────────────
+
+async function kvGetState<T>(key: string): Promise<T | null> {
+  try {
+    const { data, error } = await sbAdmin().from(KV_TABLE).select("value").eq("key", key).maybeSingle();
+    if (error) return null;
+    return (data?.value ?? null) as T | null;
+  } catch {
+    return null;
+  }
+}
+
+async function kvSetState(key: string, value: unknown): Promise<void> {
+  try {
+    await sbAdmin().from(KV_TABLE).upsert({ key, value });
+  } catch (e) {
+    console.error("⚠️ [BACKUPS] Écriture état santé impossible:", e instanceof Error ? e.message : e);
+  }
 }
 
 // ─── Helpers de lecture paginée ──────────────────────────────────────────────
@@ -313,6 +343,16 @@ app.post("/run", async (c) => {
       `${avatars.length} photo(s) — en ${Date.now() - startedAt} ms`,
     );
 
+    // 📈 État de santé : le panneau admin et GET /health lisent cette entrée.
+    await kvSetState(HEALTH_BACKUP_KEY, {
+      name,
+      createdAt: now.toISOString(),
+      size: gz.length,
+      sizeLabel: formatSize(gz.length),
+      counts: payload.meta.counts,
+      durationMs: Date.now() - startedAt,
+    });
+
     return c.json({
       success: true,
       backup: {
@@ -329,9 +369,15 @@ app.post("/run", async (c) => {
     });
   } catch (error) {
     console.error("❌ [BACKUPS/RUN]", error);
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    void sendOpsAlert("backup_failed", "Échec de la sauvegarde SmartCabb", [
+      "La sauvegarde automatique n'a pas pu être créée.",
+      `Erreur : ${message}`,
+      "Vérifiez le stockage Supabase (bucket backups) et les secrets CRON_SECRET.",
+    ]);
     return c.json({
       success: false,
-      error: error instanceof Error ? error.message : "Erreur serveur",
+      error: message,
     }, 500);
   }
 });
@@ -460,6 +506,250 @@ app.delete("/:name", async (c) => {
       error: error instanceof Error ? error.message : "Erreur serveur",
     }, 500);
   }
+});
+
+// ─── GET /health — état du système (admin) ──────────────────────────────────
+
+app.get("/health", async (c) => {
+  if (!(await hasValidAdminJwt(c))) {
+    return c.json({ success: false, error: "Session administrateur requise" }, 401);
+  }
+  try {
+    const supabase = sbAdmin();
+
+    const storedBackup = await kvGetState<any>(HEALTH_BACKUP_KEY);
+
+    let lastBackup = storedBackup;
+    if (!lastBackup) {
+      const { data: files } = await supabase.storage
+        .from(BACKUP_BUCKET)
+        .list("", { limit: 1000, sortBy: { column: "name", order: "desc" } });
+      const latest = (files || [])
+        .filter((f: any) => String(f.name).startsWith(BACKUP_PREFIX))
+        .sort((a: any, b: any) => String(b.name).localeCompare(String(a.name)))[0];
+      if (latest) {
+        lastBackup = {
+          name: latest.name,
+          createdAt: latest.created_at || latest.updated_at || null,
+          size: Number(latest.metadata?.size) || 0,
+          sizeLabel: formatSize(Number(latest.metadata?.size) || 0),
+        };
+      }
+    }
+
+    const backupAgeHours = lastBackup?.createdAt
+      ? (Date.now() - new Date(lastBackup.createdAt).getTime()) / 3_600_000
+      : null;
+
+    const restoreTest = await kvGetState<any>(HEALTH_RESTORE_KEY);
+    const restoreAgeDays = restoreTest?.at
+      ? (Date.now() - new Date(restoreTest.at).getTime()) / 86_400_000
+      : null;
+
+    const [kvCount, ridesCount, sosCount] = await Promise.all([
+      supabase.from(KV_TABLE).select("*", { count: "exact", head: true }),
+      supabase.from("scheduled_rides").select("*", { count: "exact", head: true }),
+      supabase.from("emergency_alerts").select("*", { count: "exact", head: true }),
+    ]);
+
+    const problems: string[] = [];
+    let critical = false;
+
+    if (!lastBackup) {
+      problems.push("Aucune sauvegarde disponible");
+      critical = true;
+    } else if (backupAgeHours !== null && backupAgeHours > 26) {
+      problems.push(`Dernière sauvegarde il y a ${Math.round(backupAgeHours)} h`);
+      if (backupAgeHours > 48) critical = true;
+    }
+
+    if (!restoreTest) {
+      problems.push("Aucun test de restauration enregistré");
+    } else if (!restoreTest.passed) {
+      problems.push("Le dernier test de restauration a échoué");
+      critical = true;
+    } else if (restoreAgeDays !== null && restoreAgeDays > 30) {
+      problems.push("Test de restauration vieux de plus de 30 jours");
+    }
+
+    return c.json({
+      success: true,
+      status: critical ? "critical" : problems.length > 0 ? "warning" : "ok",
+      problems,
+      lastBackup: lastBackup
+        ? { ...lastBackup, ageHours: backupAgeHours === null ? null : Math.round(backupAgeHours * 10) / 10 }
+        : null,
+      lastRestoreTest: restoreTest,
+      live: {
+        kvRows: kvCount.count ?? null,
+        scheduledRides: ridesCount.count ?? null,
+        emergencyAlerts: sosCount.count ?? null,
+      },
+      alerts: {
+        smtpConfigured: isSmtpConfigured(),
+        recipient: maskEmail(await resolveAlertRecipient()),
+        state: await getAlertsState(),
+      },
+      checkedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("❌ [BACKUPS/HEALTH]", error);
+    return c.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Erreur serveur",
+    }, 500);
+  }
+});
+
+// ─── POST /restore-test — restauration à blanc (admin) ──────────────────────
+//
+// Ne touche JAMAIS aux données de production : on télécharge le dernier
+// backup, on le décompresse, on vérifie sa structure et ses compteurs, puis
+// on compare avec la base en direct. Le rapport est conservé dans le KV.
+
+app.post("/restore-test", async (c) => {
+  if (!(await hasValidAdminJwt(c))) {
+    return c.json({ success: false, error: "Session administrateur requise" }, 401);
+  }
+
+  const startedAt = Date.now();
+  const checks: { name: string; ok: boolean; detail?: string }[] = [];
+
+  try {
+    const supabase = sbAdmin();
+    const { data: files, error: listError } = await supabase.storage
+      .from(BACKUP_BUCKET)
+      .list("", { limit: 1000 });
+    if (listError) throw new Error(listError.message);
+
+    const names = (files || [])
+      .filter((f: any) => String(f.name).startsWith(BACKUP_PREFIX))
+      .map((f: any) => String(f.name))
+      .sort();
+    const name = names[names.length - 1];
+    if (!name) throw new Error("Aucun backup disponible pour le test");
+
+    const { data: blob, error: downloadError } = await supabase.storage
+      .from(BACKUP_BUCKET)
+      .download(name);
+    if (downloadError || !blob) throw new Error(downloadError?.message || "Téléchargement impossible");
+
+    checks.push({ name: "Téléchargement du fichier", ok: true, detail: formatSize(blob.size) });
+
+    let payload: any = null;
+    try {
+      const stream = blob.stream().pipeThrough(new DecompressionStream("gzip"));
+      payload = await new Response(stream).json();
+      checks.push({ name: "Décompression gzip et lecture JSON", ok: true });
+    } catch (e) {
+      checks.push({
+        name: "Décompression gzip et lecture JSON",
+        ok: false,
+        detail: e instanceof Error ? e.message : "illisible",
+      });
+    }
+
+    if (payload) {
+      const meta = payload.meta || {};
+      const data = payload.data || {};
+
+      checks.push({
+        name: "Format de sauvegarde",
+        ok: meta.formatVersion === 1,
+        detail: `version ${meta.formatVersion ?? "?"}`,
+      });
+
+      const kvRows = Array.isArray(data[KV_TABLE]) ? data[KV_TABLE] : null;
+      checks.push({
+        name: "Données métier (KV)",
+        ok: Boolean(kvRows && kvRows.length > 0),
+        detail: kvRows ? `${kvRows.length} ligne(s)` : "absentes",
+      });
+
+      checks.push({
+        name: "Compteurs cohérents",
+        ok: Boolean(kvRows && meta.counts && meta.counts[KV_TABLE] === kvRows.length),
+        detail: `${meta.counts?.[KV_TABLE] ?? "?"} annoncé(s)`,
+      });
+
+      const scheduled = Array.isArray(data.scheduled_rides) ? data.scheduled_rides.length : -1;
+      checks.push({
+        name: "Réservations",
+        ok: scheduled >= 0,
+        detail: `${scheduled} ligne(s)`,
+      });
+
+      const users = Array.isArray(data.auth_users) ? data.auth_users.length : -1;
+      checks.push({
+        name: "Comptes utilisateurs",
+        ok: users > 0,
+        detail: `${users} compte(s)`,
+      });
+
+      const { count: liveKv } = await supabase
+        .from(KV_TABLE)
+        .select("*", { count: "exact", head: true });
+      const backupKv = kvRows?.length ?? 0;
+      checks.push({
+        name: "Écart avec la base en direct",
+        ok: backupKv > 0 && backupKv >= Math.floor((liveKv ?? 0) * 0.5),
+        detail: `backup ${backupKv} / base ${liveKv ?? "?"}`,
+      });
+    }
+
+    const passed = checks.length > 0 && checks.every((ch) => ch.ok);
+    const report = {
+      at: new Date().toISOString(),
+      backupName: name,
+      passed,
+      checks,
+      durationMs: Date.now() - startedAt,
+    };
+
+    await kvSetState(HEALTH_RESTORE_KEY, report);
+
+    if (!passed) {
+      void sendOpsAlert("restore_failed", "Test de restauration en échec", [
+        `Sauvegarde testée : ${name}`,
+        ...checks.filter((ch) => !ch.ok).map((ch) => `${ch.name} — ${ch.detail || "échec"}`),
+      ]);
+    }
+
+    return c.json({ success: true, report });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Erreur serveur";
+    console.error("❌ [BACKUPS/RESTORE-TEST]", error);
+
+    const report = {
+      at: new Date().toISOString(),
+      backupName: null,
+      passed: false,
+      checks: [...checks, { name: "Exécution du test", ok: false, detail: message }],
+      durationMs: Date.now() - startedAt,
+    };
+    await kvSetState(HEALTH_RESTORE_KEY, report);
+    void sendOpsAlert("restore_failed", "Test de restauration impossible", [message]);
+
+    return c.json({ success: false, error: message, report }, 500);
+  }
+});
+
+// ─── POST /alerts/test — envoi d'une alerte de test (admin) ────────────────
+
+app.post("/alerts/test", async (c) => {
+  if (!(await hasValidAdminJwt(c))) {
+    return c.json({ success: false, error: "Session administrateur requise" }, 401);
+  }
+  const result = await sendOpsAlert(
+    "test",
+    "Test d'alerte depuis le panneau admin",
+    [
+      "Si vous recevez ce message, les alertes opérationnelles fonctionnent.",
+      "Elles préviennent aussi en cas d'échec de sauvegarde, d'erreur 5xx ou de test de restauration raté.",
+    ],
+    { force: true, throttleMs: 0 },
+  );
+  return c.json({ success: true, ...result });
 });
 
 export default app;

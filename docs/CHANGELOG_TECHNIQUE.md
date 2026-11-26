@@ -42,6 +42,66 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (53) — Santé système : test de restauration, alertes email et fiche incident
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat (exploitation / sécurité)
+- **Objectif** : combler les trois trous restants côté exploitation — sauvegardes jamais testées, pannes silencieuses, aucune procédure d'incident — et les rendre visibles dans le panneau admin.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/ops-alerts.ts` | **Nouveau** : envoi d'alertes email (SMTP), anti-spam 15 min, état dans le KV, résolution du destinataire |
+| `supabase/functions/make-server-2eb02e52/backup-routes.ts` | `GET /health`, `POST /restore-test`, `POST /alerts/test`, mémorisation du dernier backup, alerte en cas d'échec |
+| `supabase/functions/make-server-2eb02e52/index.ts` | `onError` envoie une alerte email (throttle 15 min) en plus de la réponse générique |
+| `components/admin/BackupAndRecoveryScreen.tsx` | Carte **« Santé du système »** : dernier backup, test de restauration, alertes, boutons de test |
+| `docs/security/INCIDENT_CARD.md` | **Nouveau** : fiche incident d'une page |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+**Alertes (`ops-alerts.ts`)**
+- Destinataire : `ADMIN_ALERT_EMAIL`, sinon `ADMIN_2FA_EMAIL`, sinon **le premier compte Supabase au rôle `admin`** (aucun secret obligatoire).
+- `sendOpsAlert(kind, subject, lines, { throttleMs, force })` : jamais bloquant (toutes les erreurs sont avalées), anti-spam par type (15 min par défaut), état conservé dans `system_health:alerts` (`lastSentAt`, `lastKind`, `lastError`, `sentCount`).
+- Types : `backup_failed`, `server_error`, `restore_failed`, `test`.
+
+**Sauvegardes (`backup-routes.ts`)**
+- `POST /run` écrit `system_health:last_backup` (nom, date, taille, compteurs, durée) et envoie une alerte si la sauvegarde échoue.
+- `GET /health` (admin) : dernier backup + âge, dernier test de restauration, état des alertes, compteurs en direct (KV, réservations, SOS). Statut `ok` / `warning` / `critical` avec liste des problèmes (backup > 26 h, aucun test, test en échec > 30 j…).
+- `POST /restore-test` (admin) : **restauration à blanc** — télécharge le dernier backup, décompresse (gzip), valide le JSON, vérifie la version de format, la présence des données, la cohérence des compteurs et l'écart avec la base en direct. **N'écrit jamais** dans les tables métier ; le rapport est stocké dans `system_health:last_restore_test` et une alerte part en cas d'échec.
+- `POST /alerts/test` (admin) : envoie une alerte immédiate (sans anti-spam) pour valider la configuration SMTP.
+
+**Erreurs 5xx (`index.ts`)**
+- `app.onError` déclenche `sendOpsAlert('server_error', …)` (route, message, référence de requête) via `executionCtx.waitUntil` pour ne pas retarder la réponse.
+
+**Panneau admin**
+- Nouvelle carte en tête de « Sauvegardes » : badge de statut, âge du dernier backup, résultat du dernier test de restauration (avec le détail des contrôles en échec), état des alertes email, boutons « Tester la restauration » et « Envoyer une alerte de test ».
+
+### Impact produit / comportement visible
+- L'administrateur voit en un écran si les sauvegardes sont fraîches, si elles sont réellement restaurables et si les alertes partent.
+- En cas d'échec de sauvegarde, d'erreur 5xx ou de test raté, un email arrive automatiquement (max 1/15 min par type).
+- Aucun changement pour les passagers et chauffeurs.
+
+### Risques & rollback
+- **Risque** : emails d'alerte trop fréquents → anti-spam 15 min par type ; le test manuel est marqué `force`.
+- **Risque** : `restore-test` télécharge ~8,6 Mo et dure ~0,5 à 2 s (pas d'impact).
+- **Rollback** : `git revert <hash>` + redéploiement de la fonction.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` + `npm run build`
+- [x] Fonction déployée
+- [x] `GET /backups/health` → `status: "ok"`, backup vieux de 0,9 h, `recipient: g****@gmail.com`, compteurs `2208 KV / 48 réservations / 6 SOS`
+- [x] `POST /backups/restore-test` → **passed: true**, 8 contrôles OK, 8,58 Mo, 2 208 lignes, 42 comptes, 440-2 089 ms
+- [x] `POST /backups/alerts/test` → **sent: true** vers `georgeorlyissa@gmail.com`
+- [x] Test de restauration enregistré : le statut global passe de `warning` à `ok`
+- [ ] Carte « Santé du système » vérifiée visuellement après connexion admin (2FA)
+
+### Secret optionnel
+`ADMIN_ALERT_EMAIL` (sinon repli automatique sur le compte admin). Rien à configurer pour que ça fonctionne.
+
+---
+
 ## 2026-11-26 (52) — Suppression définitive de l'ancien écran d'accueil passager (double connexion)
 
 - **Commit** : `69a5080` (branche `main`, poussée sur `origin`)

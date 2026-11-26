@@ -11,6 +11,7 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { rateLimit } from "../lib/rate-limit.ts";
+import { sendOpsAlert } from "./ops-alerts.ts";
 
 // Import des routes
 import rideRoutes from "./ride-routes.ts";
@@ -168,6 +169,26 @@ app.notFound((c) => {
 app.onError((err, c) => {
   const requestId = crypto.randomUUID();
   console.error(`❌ [${requestId}] Erreur serveur:`, err);
+
+  // 🚨 Alerte email (anti-spam 15 min) — ne bloque jamais la réponse.
+  const alertPromise = sendOpsAlert(
+    'server_error',
+    'Erreur serveur 5xx',
+    [
+      `Route : ${c.req.method} ${c.req.path}`,
+      `Message : ${err instanceof Error ? err.message : String(err)}`,
+      `Référence : ${requestId}`,
+    ],
+    { throttleMs: 15 * 60 * 1000 },
+  ).catch(() => undefined);
+
+  try {
+    const ctx = (c as any).executionCtx;
+    if (ctx?.waitUntil) ctx.waitUntil(alertPromise);
+  } catch {
+    // pas de contexte d'exécution : l'alerte part en tâche de fond
+  }
+
   return c.json({
     success: false,
     error: 'Erreur interne du serveur',

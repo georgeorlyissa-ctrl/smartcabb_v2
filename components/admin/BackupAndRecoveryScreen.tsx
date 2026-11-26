@@ -47,6 +47,78 @@ export function BackupAndRecoveryScreen() {
   const [creating, setCreating] = useState(false);
   const [busyName, setBusyName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [health, setHealth] = useState<any | null>(null);
+  const [loadingHealth, setLoadingHealth] = useState(false);
+  const [testingRestore, setTestingRestore] = useState(false);
+  const [sendingTestAlert, setSendingTestAlert] = useState(false);
+
+  const loadHealth = useCallback(async () => {
+    setLoadingHealth(true);
+    try {
+      const resp = await fetch(`${API}/backups/health`, { headers: await authHeaders() });
+      const j = await resp.json();
+      if (resp.ok && j.success) setHealth(j);
+    } catch {
+      // silencieux : la carte affiche « inconnu »
+    } finally {
+      setLoadingHealth(false);
+    }
+  }, []);
+
+  const runRestoreTest = async () => {
+    setTestingRestore(true);
+    const toastId = toast.loading('Test de restauration en cours…');
+    try {
+      const resp = await fetch(`${API}/backups/restore-test`, {
+        method: 'POST',
+        headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Test impossible');
+      const report = j.report;
+      if (report?.passed) {
+        toast.success('Restauration vérifiée : sauvegarde lisible et cohérente', { id: toastId });
+      } else {
+        toast.error('Test de restauration en échec — voir le détail', { id: toastId });
+      }
+      await loadHealth();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Test impossible', { id: toastId });
+      await loadHealth();
+    } finally {
+      setTestingRestore(false);
+    }
+  };
+
+  const sendTestAlert = async () => {
+    setSendingTestAlert(true);
+    const toastId = toast.loading("Envoi de l'alerte de test…");
+    try {
+      const resp = await fetch(`${API}/backups/alerts/test`, {
+        method: 'POST',
+        headers: { ...(await authHeaders()), 'Content-Type': 'application/json' },
+      });
+      const j = await resp.json();
+      if (!resp.ok || !j.success) throw new Error(j.error || 'Envoi impossible');
+      if (j.sent) {
+        toast.success(`Alerte envoyée à ${j.recipient || 'l’administrateur'}`, { id: toastId });
+      } else {
+        toast.error(
+          j.reason === 'smtp_not_configured'
+            ? 'SMTP non configuré (SMTP_USER / SMTP_PASSWORD)'
+            : j.reason === 'no_recipient'
+              ? 'Aucun destinataire (ADMIN_ALERT_EMAIL)'
+              : `Alerte non envoyée : ${j.reason || 'raison inconnue'}`,
+          { id: toastId },
+        );
+      }
+      await loadHealth();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Envoi impossible', { id: toastId });
+    } finally {
+      setSendingTestAlert(false);
+    }
+  };
 
   const loadBackups = useCallback(async () => {
     setLoading(true);
@@ -67,7 +139,8 @@ export function BackupAndRecoveryScreen() {
 
   useEffect(() => {
     loadBackups();
-  }, [loadBackups]);
+    loadHealth();
+  }, [loadBackups, loadHealth]);
 
   const createBackup = async () => {
     setCreating(true);
@@ -84,6 +157,7 @@ export function BackupAndRecoveryScreen() {
         { id: toastId },
       );
       await loadBackups();
+      await loadHealth();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Erreur de sauvegarde';
       toast.error(msg, { id: toastId });
@@ -194,6 +268,192 @@ export function BackupAndRecoveryScreen() {
       </div>
 
       <div className="p-6 space-y-6">
+        {/* Santé du système */}
+        <Card className="p-6">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                  health?.status === 'critical'
+                    ? 'bg-red-100'
+                    : health?.status === 'warning'
+                      ? 'bg-amber-100'
+                      : health?.status === 'ok'
+                        ? 'bg-green-100'
+                        : 'bg-gray-100'
+                }`}
+              >
+                <Shield
+                  className={`w-6 h-6 ${
+                    health?.status === 'critical'
+                      ? 'text-red-600'
+                      : health?.status === 'warning'
+                        ? 'text-amber-600'
+                        : health?.status === 'ok'
+                          ? 'text-green-600'
+                          : 'text-gray-500'
+                  }`}
+                />
+              </div>
+              <div>
+                <h3 className="font-semibold">Santé du système</h3>
+                <p className="text-xs text-gray-500">
+                  Sauvegardes, test de restauration et alertes
+                </p>
+              </div>
+            </div>
+            <Badge
+              className={
+                health?.status === 'critical'
+                  ? 'bg-red-100 text-red-800'
+                  : health?.status === 'warning'
+                    ? 'bg-amber-100 text-amber-800'
+                    : health?.status === 'ok'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-700'
+              }
+            >
+              {health?.status === 'critical'
+                ? 'Action requise'
+                : health?.status === 'warning'
+                  ? 'À surveiller'
+                  : health?.status === 'ok'
+                    ? 'Opérationnel'
+                    : loadingHealth
+                      ? 'Vérification…'
+                      : 'Inconnu'}
+            </Badge>
+          </div>
+
+          {/* Dernière sauvegarde */}
+          <div className="flex items-start justify-between gap-4 py-3 border-b">
+            <div className="flex items-start gap-3 min-w-0">
+              <Archive className="w-4 h-4 mt-0.5 text-blue-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Dernière sauvegarde</p>
+                <p className="text-xs text-gray-600 truncate">
+                  {health?.lastBackup
+                    ? `${new Date(health.lastBackup.createdAt).toLocaleString('fr-FR')} · il y a ${health.lastBackup.ageHours} h · ${health.lastBackup.sizeLabel || ''}`
+                    : loadingHealth
+                      ? 'Chargement…'
+                      : 'Aucune sauvegarde trouvée'}
+                </p>
+              </div>
+            </div>
+            {health?.lastBackup && health.lastBackup.ageHours > 26 ? (
+              <Badge className="bg-amber-100 text-amber-800 shrink-0">En retard</Badge>
+            ) : health?.lastBackup ? (
+              <Badge className="bg-green-100 text-green-800 shrink-0">À jour</Badge>
+            ) : null}
+          </div>
+
+          {/* Test de restauration */}
+          <div className="py-3 border-b">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <CheckCircle
+                  className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                    health?.lastRestoreTest?.passed ? 'text-green-600' : 'text-gray-400'
+                  }`}
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Test de restauration</p>
+                  <p className="text-xs text-gray-600">
+                    {health?.lastRestoreTest
+                      ? `${new Date(health.lastRestoreTest.at).toLocaleString('fr-FR')} · ${
+                          health.lastRestoreTest.passed ? 'réussi' : 'échec'
+                        } · ${health.lastRestoreTest.checks?.length || 0} contrôle(s)`
+                      : 'Jamais testé — lancez le test ci-dessous'}
+                  </p>
+                </div>
+              </div>
+              {health?.lastRestoreTest && (
+                <Badge
+                  className={
+                    health.lastRestoreTest.passed
+                      ? 'bg-green-100 text-green-800 shrink-0'
+                      : 'bg-red-100 text-red-800 shrink-0'
+                  }
+                >
+                  {health.lastRestoreTest.passed ? 'OK' : 'Échec'}
+                </Badge>
+              )}
+            </div>
+
+            {health?.lastRestoreTest?.checks?.some((ch: any) => !ch.ok) && (
+              <div className="mt-2 ml-7 p-2 rounded-lg bg-red-50 border border-red-200">
+                {health.lastRestoreTest.checks
+                  .filter((ch: any) => !ch.ok)
+                  .map((ch: any) => (
+                    <p key={ch.name} className="text-xs text-red-700">
+                      • {ch.name} — {ch.detail || 'échec'}
+                    </p>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          {/* Alertes */}
+          <div className="py-3">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3 min-w-0">
+                <AlertTriangle
+                  className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
+                    health?.alerts?.smtpConfigured ? 'text-green-600' : 'text-amber-500'
+                  }`}
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">Alertes email</p>
+                  <p className="text-xs text-gray-600">
+                    {health?.alerts?.smtpConfigured
+                      ? `Activées vers ${health.alerts.recipient || 'administrateur'}${
+                          health.alerts.state?.lastSentAt
+                            ? ` · dernier envoi ${new Date(health.alerts.state.lastSentAt).toLocaleString('fr-FR')}`
+                            : ''
+                        }`
+                      : 'SMTP non configuré (SMTP_USER / SMTP_PASSWORD)'}
+                  </p>
+                  {health?.alerts?.state?.lastError && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Dernière erreur : {health.alerts.state.lastError}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {health?.problems?.length > 0 && (
+            <div className="mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              {health.problems.map((p: string) => (
+                <p key={p} className="text-xs text-amber-800">
+                  • {p}
+                </p>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
+            <Button
+              onClick={runRestoreTest}
+              disabled={testingRestore || loading}
+              className="h-11 bg-blue-600 hover:bg-blue-700"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${testingRestore ? 'animate-spin' : ''}`} />
+              {testingRestore ? 'Test en cours…' : 'Tester la restauration'}
+            </Button>
+            <Button
+              onClick={sendTestAlert}
+              disabled={sendingTestAlert}
+              variant="outline"
+              className="h-11"
+            >
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              {sendingTestAlert ? 'Envoi…' : 'Envoyer une alerte de test'}
+            </Button>
+          </div>
+        </Card>
+
         {/* Statut automatique */}
         <Card className="p-6">
           <div className="flex items-start space-x-3">
@@ -236,7 +496,10 @@ export function BackupAndRecoveryScreen() {
               )}
             </Button>
             <Button
-              onClick={() => loadBackups()}
+              onClick={() => {
+                loadBackups();
+                loadHealth();
+              }}
               disabled={loading}
               variant="outline"
               className="h-12"
