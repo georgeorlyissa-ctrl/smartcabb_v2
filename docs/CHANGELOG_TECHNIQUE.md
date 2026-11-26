@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (50) — Accès direct à la connexion chauffeur (site + `/driver/login`)
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `5e2bff9` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (navigation)
 - **Objectif** : la connexion chauffeur n'était accessible par aucun lien depuis le site, et un écran `driver-registration` mémorisé dans `localStorage` restait affiché indéfiniment — d'où l'impression que « ça passe toujours par le formulaire d'inscription ».
