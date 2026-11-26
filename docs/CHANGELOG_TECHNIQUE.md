@@ -42,6 +42,44 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (51) — « Devenir chauffeur » pointe vers `/app/driver` (connexion), plus vers `/signup`
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (navigation)
+- **Objectif** : le CTA « Devenir chauffeur » (et « Devenir partenaire ») ouvrait directement le formulaire d'inscription. Il doit désormais ouvrir la page d'entrée chauffeur `https://www.smartcabb.com/app/driver`, d'où le bouton « Déposer ma candidature » mène à l'inscription.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/LandingPage.tsx` | 2 CTA chauffeur : `/app/driver/signup` → `/app/driver` |
+| `pages/DriversLandingPage.tsx` | 4 CTA : `/app/driver/signup` → `/app/driver` ; liens redondants « Déjà chauffeur ? Se connecter » retirés |
+| `components/LandingScreen.tsx` | Lien chauffeur aligné (écran conservé, plus affiché) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Les liens de la page d'accueil (« Devenir chauffeur », « Devenir partenaire ») et des CTA de `/drivers` ciblent maintenant `/app/driver`.
+- `DriverApp` affiche la **connexion chauffeur** sur ce chemin (voir entrée 50) ; le bouton « Déposer ma candidature » ouvre le formulaire et met l'URL à jour vers `/app/driver/signup`.
+- Le lien de navigation « Conducteurs » (`nav.drivers`) continue de pointer vers la page marketing `/drivers` — il reste utile pour le référencement.
+- Aucun autre lien `/app/driver/signup` ne subsiste côté site (vérifié : `driver/signup` n'apparaît plus que dans le bouton interne de candidature et un écran de diagnostic).
+
+### Impact produit / comportement visible
+- Un clic sur « Devenir chauffeur » depuis le site arrive sur la connexion chauffeur (numéro + mot de passe), avec l'accès visible à la candidature.
+- Plus de formulaire d'inscription imposé à l'arrivée.
+
+### Risques & rollback
+- **Risque** : un utilisateur qui voulait s'inscrire doit désormais cliquer sur « Déposer ma candidature » (un clic de plus, volontaire).
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit`
+- [x] `npm run build`
+- [x] `/drivers` : 4 liens chauffeur, tous vers `/app/driver`
+- [x] `/` : « Become a Driver » et « Become a Partner » → `/app/driver`
+- [x] Aucun lien `/app/driver/signup` restant côté site
+
+---
+
 ## 2026-11-26 (50) — Accès direct à la connexion chauffeur (site + `/driver/login`)
 
 - **Commit** : `5e2bff9` (branche `main`, poussée sur `origin`)

@@ -31,7 +31,7 @@ export function LandingScreen() {
 
   const handleBecomeDriver = () => {
     console.log('🚗 Navigation vers inscription conducteur');
-    navigate('/app/driver/signup');
+    navigate('/app/driver');
   };
 
   return (

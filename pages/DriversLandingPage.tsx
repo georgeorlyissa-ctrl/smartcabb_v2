@@ -228,10 +228,7 @@ export function DriversLandingPage() {
         title={t('drivers.title')}
         subtitle={t('drivers.subtitle')}
       >
-        <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
-          <Link to="/app/driver/signup" className="btn-primary btn-glow">{t('drivers.signup')}</Link>
-          <Link to="/app/driver/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 26px', borderRadius: '999px', border: '2px solid rgba(255,255,255,0.7)', color: 'white', fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,0.12)' }}>{language === 'fr' ? 'Déjà chauffeur ? Se connecter' : 'Already a driver? Sign in'}</Link>
-        </div>
+        <Link to="/app/driver" className="btn-primary btn-glow">{t('drivers.signup')}</Link>
       </PageHero>
 
       {/* ✅ NOUVEAU : COMBIEN POUVEZ-VOUS GAGNER (style Yango) */}
@@ -331,7 +328,7 @@ export function DriversLandingPage() {
                 {language === 'fr' ? 'Pourquoi conduire avec SmartCabb' : 'Why drive with SmartCabb'}
               </p>
               <div className={`reveal-left d3 ${benefitsInView ? 'in' : ''}`}>
-                <Link to="/app/driver/signup" className="btn-primary">{t('drivers.signup')}</Link>
+                <Link to="/app/driver" className="btn-primary">{t('drivers.signup')}</Link>
               </div>
             </div>
 
@@ -399,8 +396,7 @@ export function DriversLandingPage() {
           </div>
 
           <div className={`reveal d5 ${stepsInView ? 'in' : ''}`} style={{ textAlign: 'center', marginTop: '48px' }}>
-            <Link to="/app/driver/signup" className="btn-primary">{t('drivers.signup')}</Link>
-            <div><Link to="/app/driver/login" style={{ display: 'inline-block', marginTop: '14px', color: '#007AFF', fontWeight: 700, textDecoration: 'none' }}>{language === 'fr' ? 'Déjà chauffeur ? Se connecter' : 'Already a driver? Sign in'}</Link></div>
+            <Link to="/app/driver" className="btn-primary">{t('drivers.signup')}</Link>
           </div>
         </div>
       </section>
@@ -417,7 +413,7 @@ export function DriversLandingPage() {
                 ? 'Rejoignez des centaines de chauffeurs qui gagnent déjà avec SmartCabb'
                 : 'Join hundreds of drivers already earning with SmartCabb'}
             </p>
-            <Link to="/app/driver/signup" className = "inline-block px-8 py-4 bg-white text-cyan-600 font-bold rounded-full hover:shadow-2xl hover:scale-105 transition-all text-lg"style={{
+            <Link to="/app/driver" className = "inline-block px-8 py-4 bg-white text-cyan-600 font-bold rounded-full hover:shadow-2xl hover:scale-105 transition-all text-lg"style={{
               display: 'inline-flex', padding: '16px 40px',
               background: 'white', color: '#ecf3f5', fontWeight: '800',
               fontSize: '16px', borderRadius: '8px', textDecoration: 'none',

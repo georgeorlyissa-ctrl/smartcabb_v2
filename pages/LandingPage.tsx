@@ -675,7 +675,7 @@ export function LandingPage() {
               <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.9" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path strokeLinecap="round" d="M8 3v4M16 3v4M3 10h18M8 15h3"/></svg>
               {language === 'fr' ? 'Réserver votre chauffeur' : 'Book your driver'}
             </Link>
-            <Link to="/app/driver/signup" className="sc-hero-btn sc-hero-btn-ghost">
+            <Link to="/app/driver" className="sc-hero-btn sc-hero-btn-ghost">
               {t('hero.becomeDriver')}
             </Link>
           </motion.div>
@@ -1028,7 +1028,7 @@ export function LandingPage() {
           {/* ✅ Boutons CTA final — avec Play Store */}
           <div className={`reveal d4 ${ctaInView ? 'in' : ''}`} style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '44px' }}>
             <Link to="/app/passenger" className="btn-primary cta-glow">{t('cta.startNow')}</Link>
-            <Link to="/app/driver/signup" className="btn-secondary">{t('cta.becomePartner')}</Link>
+            <Link to="/app/driver" className="btn-secondary">{t('cta.becomePartner')}</Link>
             {/* Play Store dans CTA */}
             <a
               href="https://play.google.com/store/apps/details?id=com.smartcabb.app"
