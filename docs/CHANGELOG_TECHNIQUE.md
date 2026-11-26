@@ -42,6 +42,45 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (59) — Assets Play Store : icône 512×512 et bannière 1024×500
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : chore (visuels) + docs
+- **Objectif** : fournir une icône et une bannière à jour pour la fiche Play Store (les visuels actuels datent de l'ancienne interface).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `scripts/generate-play-assets.cjs` | **Nouveau** : génération reproductible des visuels (sharp + SVG, logo et charte) |
+| `docs/play-store/icon-512.png` | **Nouveau** : icône 512×512 (tuile blanche sur dégradé marine/bleu) |
+| `docs/play-store/feature-graphic-1024x500.png` | **Nouveau** : bannière avec accroche, arguments et motif d'itinéraire |
+| `docs/play-store/README.md` | **Nouveau** : specs, liste des 8 captures à faire, textes suggérés |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Rendu via `sharp` (déjà présent) à partir d'un SVG : dégradé `#000E1F → #003D7A → #004A8F`,
+  halos bleu/jaune, trame, logo JPEG embarqué en base64.
+- Icône : tuile blanche arrondie (340 px, rayon 80) contenant le logo en `slice`, ombre portée.
+- Bannière : wordmark « Smart**Cabb** » (Cabb en jaune), accroche « Votre chauffeur privé à **Kinshasa** »,
+  ligne d'arguments, adresse officielle, motif d'itinéraire (départ jaune → arrivée bleue), liseré bleu→jaune.
+- Contraintes Play respectées : icône 512×512 opaque < 1 Mo ; bannière 1024×500 < 15 Mo.
+
+### Impact produit / comportement visible
+- Fiche Play Store cohérente avec la nouvelle identité (bleu/jaune/marine, logo blanc).
+- Aucun impact sur l'application elle-même (assets documentaires, non inclus dans le bundle web).
+
+### Risques & rollback
+- **Risque** : aucun (fichiers hors build).
+- **Rollback** : supprimer `docs/play-store/` et `scripts/generate-play-assets.cjs`.
+
+### Tests / vérifications
+- [x] Génération : icône 512×512 (~185 Ko), bannière 1024×500 (~205 Ko)
+- [x] Rendu contrôlé visuellement (logo lisible, textes nets, pas de débordement)
+- [ ] Upload dans Play Console (action exploitant)
+
+---
+
 ## 2026-11-26 (58) — OWASP / check-list sécurité : CI, SAST, DAST, photos, chiffrement des backups
 
 - **Commit** : `0b40f01` (branche `main`, poussée sur `origin`)
