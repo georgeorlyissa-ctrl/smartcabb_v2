@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (52) — Suppression définitive de l'ancien écran d'accueil passager (double connexion)
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `69a5080` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (navigation)
 - **Objectif** : l'ancien écran turquoise « Bienvenue ! » (S'inscrire / Connexion) pouvait encore s'afficher sur `/app/passenger?screen=map` selon l'état mémorisé (`currentScreen = 'landing'` ou valeur inconnue). Il est maintenant **impossible à rendre** : tout état résiduel aboutit à la nouvelle connexion.
