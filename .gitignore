@@ -51,3 +51,6 @@ FCM_FIXED_COMPLETE.md
 
 # Logs locaux de test
 preview.log
+
+# Captures brutes pour le Play Store (non versionnées)
+docs/play-store/screenshots-raw/

@@ -42,6 +42,41 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (60) — Guide Data safety (Play Console) et assets Play Store complétés
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : docs
+- **Objectif** : fournir les réponses exactes du formulaire **Sécurité des données** de Google Play, cohérentes avec le code (Firebase Analytics, localisation sans arrière-plan, sélecteur de contacts) et avec la politique de confidentialité.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `docs/play-store/DATA_SAFETY.md` | **Nouveau** : tableau des données collectées/partagées, finalités, cas « non collecté », points de rejet |
+| `docs/play-store/README.md` | Rappel du parcours Play Console |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Vérification dans le code avant rédaction : `firebase/analytics` initialisé → déclaration
+  « Interactions dans l'app » + « Identifiants d'appareil » ; `@capacitor/contacts` utilisé
+  **uniquement** via `pickContact()` (pas de lecture du répertoire) ; manifeste Android sans
+  `ACCESS_BACKGROUND_LOCATION`.
+- Aucune donnée de paiement stockée (Mobile Money traité par Ejpay) → « Informations de paiement : non »,
+  « Historique d'achats : oui ».
+
+### Impact produit / comportement visible
+- Aucun impact sur l'application ; document de saisie pour l'exploitant.
+
+### Risques & rollback
+- **Risque** : une déclaration inexacte peut faire rejeter la fiche. Le document décrit l'état réel du code.
+- **Rollback** : supprimer le document.
+
+### Tests / vérifications
+- [x] Recherche `firebase/analytics`, `pickContact`, permissions du manifeste
+- [x] Cohérence avec `docs/security/CHECKLIST_AUDIT.md` et la politique de confidentialité
+
+---
+
 ## 2026-11-26 (59) — Assets Play Store : icône 512×512 et bannière 1024×500
 
 - **Commit** : `1a6014f` (branche `main`, poussée sur `origin`)
