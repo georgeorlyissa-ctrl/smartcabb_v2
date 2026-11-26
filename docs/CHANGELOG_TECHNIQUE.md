@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (62) — Connexion : flèche retour au site + centrage vertical mobile
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `bf0f543` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (UI mobile)
 - **Objectif** : depuis l'application Android, la carte de connexion n'était pas centrée verticalement (collée en haut) et il n'existait aucun moyen de revenir au site — le lien existant était masqué par `hide-in-apk`.
