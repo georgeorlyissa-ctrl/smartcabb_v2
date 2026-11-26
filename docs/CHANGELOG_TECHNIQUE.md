@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (53) — Santé système : test de restauration, alertes email et fiche incident
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `df6662e` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat (exploitation / sécurité)
 - **Objectif** : combler les trois trous restants côté exploitation — sauvegardes jamais testées, pannes silencieuses, aucune procédure d'incident — et les rendre visibles dans le panneau admin.
