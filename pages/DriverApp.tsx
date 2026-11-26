@@ -1,6 +1,5 @@
 import { useRef } from 'react';
 import { Routes, Route, useLocation } from '../lib/simple-router';
-import { DriverWelcomeScreen } from '../components/driver/DriverWelcomeScreen';
 import { DriverLoginScreen } from '../components/driver/DriverLoginScreen';
 import { DriverRegistrationScreen } from '../components/driver/DriverRegistrationScreen';
 import { DriverDashboardNew } from '../components/driver/DriverDashboardNew';
@@ -66,7 +65,12 @@ function DriverAppContent() {
     // formulaire d'inscription mémorisé : l'entrée par défaut est la connexion.
     if (!bootCheckedRef.current) {
       bootCheckedRef.current = true;
-      if (!isSignupUrl && !isLoginUrl && currentScreen === 'driver-registration' && !state.currentDriver) {
+      if (
+        !isSignupUrl &&
+        !isLoginUrl &&
+        (currentScreen === 'driver-registration' || currentScreen === 'driver-welcome') &&
+        !state.currentDriver
+      ) {
         setCurrentScreen('driver-login');
         return;
       }
@@ -247,7 +251,7 @@ function DriverAppContent() {
 
       <div className="min-h-screen bg-gray-50">
         <div className={`min-h-screen mx-auto bg-white shadow-sm ${['driver-login', 'driver-registration'].includes(currentScreen) ? 'max-w-none' : 'max-w-2xl'}`}>
-          {currentScreen === 'driver-welcome' && <DriverWelcomeScreen />}
+          {currentScreen === 'driver-welcome' && <DriverLoginScreen />}
           {currentScreen === 'driver-login' && <DriverLoginScreen />}
           {currentScreen === 'driver-registration' && <DriverRegistrationScreen />}
           {currentScreen === 'driver-dashboard' && <DriverDashboardNew />}
@@ -294,13 +298,13 @@ function DriverAppContent() {
               onBack={() => setCurrentScreen('driver-dashboard')}
             />
           )}
-          {!currentScreen && <DriverWelcomeScreen />}
+          {!currentScreen && <DriverLoginScreen />}
           {currentScreen && !currentScreen.startsWith('driver-') &&
            currentScreen !== 'welcome-back' &&
            currentScreen !== 'welcome-back-driver' &&
            currentScreen !== 'forgot-password-driver' &&
            currentScreen !== 'reset-password-otp-driver' && (
-            <DriverWelcomeScreen />
+            <DriverLoginScreen />
           )}
         </div>
       </div>

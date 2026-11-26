@@ -42,6 +42,43 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (63) — Suppression de l'ancien écran d'accueil chauffeur (« SmartCabb Driver »)
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (navigation)
+- **Objectif** : depuis le site, un clic sur « Devenir chauffeur » pouvait encore afficher l'ancien écran « SmartCabb Driver — Gagnez de l'argent en conduisant » (boutons *Devenir conducteur* / *Se connecter*). Cet écran est retiré : c'est désormais la nouvelle connexion chauffeur.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/DriverApp.tsx` | Les 3 rendus de `DriverWelcomeScreen` utilisent `DriverLoginScreen` ; import supprimé ; le garde de démarrage convertit aussi `driver-welcome` en `driver-login` |
+| `components/driver/DriverWelcomeScreen.tsx` | **Supprimé** (plus référencé) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- L'écran `driver-welcome` était **mémorisé** dans `localStorage` : au retour depuis le site, `DriverApp` le restaurait
+  (`currentScreen.startsWith('driver-')` → `return`). Le garde `bootCheckedRef` ne convertissait que
+  `driver-registration` ; il traite maintenant aussi `driver-welcome`.
+- Même si l'état `driver-welcome` revenait (navigation SPA sans rechargement), le rendu affiche la **connexion**
+  (les trois branches de rendu ont été remplacées), donc l'ancien écran ne peut plus apparaître.
+- Le fichier `DriverWelcomeScreen.tsx` est supprimé (git history conservée).
+
+### Impact produit / comportement visible
+- « Devenir chauffeur » → `/app/driver` → **nouvelle connexion chauffeur**, avec « Déposer ma candidature ».
+- Plus aucun écran intermédiaire « SmartCabb Driver ».
+
+### Risques & rollback
+- **Risque** : un ancien parcours reposant sur l'écran d'accueil chauffeur affiche désormais la connexion (souhaité).
+- **Rollback** : `git revert <hash>` (le composant est restaurable depuis l'historique).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` (hors dette pré-existante) + `npm run build`
+- [x] `localStorage.currentScreen = 'driver-welcome'` → **Connexion chauffeur**, texte « Gagnez de l'argent » absent
+- [x] Aucune référence restante à `DriverWelcomeScreen`
+
+---
+
 ## 2026-11-26 (62) — Connexion : flèche retour au site + centrage vertical mobile
 
 - **Commit** : `bf0f543` (branche `main`, poussée sur `origin`)
