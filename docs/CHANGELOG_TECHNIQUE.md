@@ -42,6 +42,76 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (55) — CIS 8.1 : journal d'audit réellement alimenté + état des lieux IG1
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat (sécurité / exploitation)
+- **Objectif** : la table `audit_logs` existait mais **aucune action n'y était écrite** (0 ligne) ; l'écran « Journal d'audit » était donc vide. Ajout d'une journalisation serveur des actions sensibles, d'une purge à 90 jours et d'un état des lieux CIS IG1.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `supabase/functions/make-server-2eb02e52/audit-log.ts` | **Nouveau** : `writeAuditLog()` + `purgeAuditLogs()` (rétention 90 j, validation IP, repli si FK) |
+| `supabase/functions/make-server-2eb02e52/backup-routes.ts` | Audit de `backup.run`, `backup.restore_test`, `alerts.test` + purge des logs anciens |
+| `supabase/functions/make-server-2eb02e52/config-routes.ts` | Audit de `config.update` (clés modifiées, taux, commissions) |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | Audit de `driver.balance` (opération, montant, avant/après) |
+| `docs/security/LOG_POLICY.md` | **Nouveau** : politique de journalisation + routine de revue mensuelle |
+| `docs/security/CIS_IG1_CHECKLIST.md` | **Nouveau** : état des 18 contrôles CIS v8.1 au niveau IG1 |
+| `docs/security/ASSET_INVENTORY.md` | **Nouveau** : actifs, comptes, données sensibles |
+| `docs/security/SUBPROCESSORS.md` | **Nouveau** : sous-traitants, données, localisation, responsabilités |
+| `docs/security/ACCESS_REVIEW.md` | **Nouveau** : revue trimestrielle des accès + procédures |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Modifications en base (SQL appliqué)
+
+```sql
+-- un utilisateur ne peut journaliser que ses propres actions
+drop policy "System can insert audit logs" on public.audit_logs;      -- insert sans with_check
+create policy "audit_logs_insert_own" on public.audit_logs
+  for insert to authenticated with check (user_id = auth.uid());
+
+-- lecture admin basée sur le rôle JWT (les profils admin n'ont pas toujours is_admin)
+create policy "audit_logs_admin_select" on public.audit_logs for select to authenticated
+  using (jwt role admin OR profiles.is_admin);
+
+-- actions système (cron) sans utilisateur
+alter table public.audit_logs alter column user_id drop not null;
+```
+
+### Description technique
+
+- `writeAuditLog()` n'échoue jamais côté route : erreurs avalées et journalisées.
+  Si l'insertion est refusée par la clé étrangère `audit_logs.user_id → profiles`
+  (cas actuel : la table `profiles` est vide), l'entrée est rejouée avec `user_id = null`
+  (action système) au lieu d'être perdue.
+- `purgeAuditLogs()` supprime les entrées de plus de **90 jours** (`AUDIT_LOG_RETENTION_DAYS`),
+  exécutée à chaque sauvegarde quotidienne.
+- L'IP est validée (IPv4/IPv6) avant insertion dans la colonne `inet`.
+- Aucune PII dans `details` : identifiants, quantités, résultats uniquement.
+
+### Impact produit / comportement visible
+- Le panneau admin → **Journal d'audit** affiche désormais les actions réelles
+  (sauvegardes, tests de restauration, configuration, soldes chauffeurs, alertes).
+- Conservation automatique sur 90 jours, avec une procédure de revue mensuelle documentée.
+
+### Risques & rollback
+- **Risque** : la table `profiles` étant vide, les entrées admin sont enregistrées en
+  « système » (`user_id` null) — la traçabilité de l'action est conservée, l'auteur est
+  dans `details`/logs. À corriger en créant les profils admin si l'on veut l'auteur en base.
+- **Rollback** : `git revert <hash>` + redéploiement de la fonction ; les policies peuvent
+  être restaurées par SQL.
+
+### Tests / vérifications
+- [x] `POST /backups/restore-test` → `passed: true`, **`auditWritten: true`**
+- [x] Ligne créée dans `audit_logs` : `action = backup.restore_test`
+- [x] Insertion directe avec `user_id = null` → `201`
+- [x] Purge branchée sur la sauvegarde quotidienne (rétention 90 j)
+- [x] Policies RLS appliquées (insertion limitée à son propre `user_id`)
+- [ ] Revue de l'écran Journal d'audit après connexion admin réelle (2FA)
+
+---
+
 ## 2026-11-26 (54) — Recherche globale dans le panneau admin (Ctrl+K) + « Sauvegardes » introuvable
 
 - **Commit** : `4bac565` (branche `main`, poussée sur `origin`)

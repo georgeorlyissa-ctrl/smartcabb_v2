@@ -38,6 +38,7 @@ import {
   resolveAlertRecipient,
   sendOpsAlert,
 } from "./ops-alerts.ts";
+import { purgeAuditLogs, writeAuditLog } from "./audit-log.ts";
 
 const app = new Hono();
 
@@ -84,6 +85,28 @@ async function hasValidAdminJwt(c: any): Promise<boolean> {
 async function isAuthorized(c: any): Promise<boolean> {
   if (hasValidCronSecret(c)) return true;
   return await hasValidAdminJwt(c);
+}
+
+/** Utilisateur admin derrière la requête (pour le journal d'audit). */
+async function getAdminUser(c: any): Promise<{ id: string; email: string | null } | null> {
+  const header = c.req.header("Authorization") || c.req.header("authorization") || "";
+  const match = /^Bearer\s+(.+)$/i.exec(String(header).trim());
+  if (!match) return null;
+  try {
+    const { data } = await sbAdmin().auth.getUser(match[1].trim());
+    if (!data?.user) return null;
+    return { id: data.user.id, email: data.user.email ?? null };
+  } catch {
+    return null;
+  }
+}
+
+function auditContext(c: any) {
+  const forwarded = c.req.header("x-forwarded-for") || "";
+  return {
+    ip: forwarded.split(",")[0]?.trim() || c.req.header("x-real-ip") || null,
+    userAgent: c.req.header("user-agent") || null,
+  };
 }
 
 // ─── État de santé (KV) ─────────────────────────────────────────────────────
@@ -351,6 +374,24 @@ app.post("/run", async (c) => {
       sizeLabel: formatSize(gz.length),
       counts: payload.meta.counts,
       durationMs: Date.now() - startedAt,
+    });
+
+    // 🧾 Journal d'audit + purge de rétention (90 j par défaut).
+    const admin = await getAdminUser(c);
+    const purged = await purgeAuditLogs();
+    await writeAuditLog({
+      action: "backup.run",
+      entityType: "backup",
+      entityId: name,
+      userId: admin?.id ?? null,
+      ...auditContext(c),
+      details: {
+        size: gz.length,
+        counts: payload.meta.counts,
+        durationMs: Date.now() - startedAt,
+        triggeredBy: admin ? "admin" : "cron",
+        auditLogsPurged: purged,
+      },
     });
 
     return c.json({
@@ -708,6 +749,18 @@ app.post("/restore-test", async (c) => {
 
     await kvSetState(HEALTH_RESTORE_KEY, report);
 
+    const audit = await writeAuditLog({
+      action: "backup.restore_test",
+      entityType: "backup",
+      entityId: name,
+      userId: (await getAdminUser(c))?.id ?? null,
+      ...auditContext(c),
+      details: {
+        passed,
+        failedChecks: checks.filter((ch) => !ch.ok).map((ch) => ch.name),
+        durationMs: report.durationMs,
+      },
+    });
     if (!passed) {
       void sendOpsAlert("restore_failed", "Test de restauration en échec", [
         `Sauvegarde testée : ${name}`,
@@ -715,7 +768,7 @@ app.post("/restore-test", async (c) => {
       ]);
     }
 
-    return c.json({ success: true, report });
+    return c.json({ success: true, report, auditWritten: audit.ok, auditError: audit.error ?? null });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erreur serveur";
     console.error("❌ [BACKUPS/RESTORE-TEST]", error);
@@ -749,6 +802,15 @@ app.post("/alerts/test", async (c) => {
     ],
     { force: true, throttleMs: 0 },
   );
+
+  await writeAuditLog({
+    action: "alerts.test",
+    entityType: "alert",
+    userId: (await getAdminUser(c))?.id ?? null,
+    ...auditContext(c),
+    details: { sent: result.sent, reason: result.reason ?? null },
+  });
+
   return c.json({ success: true, ...result });
 });
 

@@ -8,6 +8,7 @@
 import { Hono } from "npm:hono";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { requireAdmin } from "./auth-guard.ts";
+import { writeAuditLog } from "./audit-log.ts";
 
 const app = new Hono();
 
@@ -249,6 +250,21 @@ app.post("/update", async (c) => {
     });
 
     console.log(`✅ [CONFIG/UPDATE] Configuration v${merged.configVersion} sauvegardée`);
+
+    await writeAuditLog({
+      action: "config.update",
+      entityType: "config",
+      entityId: String(merged.configVersion),
+      userId: auth.user?.id ?? null,
+      details: {
+        changedKeys,
+        configVersion: merged.configVersion,
+        exchangeRate: merged.exchangeRate,
+        commissionRate: merged.commissionRate,
+        reservationCommissionRate: merged.reservationCommissionRate,
+      },
+    });
+
     return c.json({ success: true, config: merged });
   } catch (error) {
     console.error("❌ [CONFIG/UPDATE] Erreur:", error);

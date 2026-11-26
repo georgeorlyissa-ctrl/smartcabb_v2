@@ -15,6 +15,7 @@ import {
   requireUser,
   roleOf,
 } from "./auth-guard.ts";
+import { writeAuditLog } from "./audit-log.ts";
 import {
   invalidateDriversLiteCache,
   isPlaceholderDriverRecord,
@@ -425,6 +426,20 @@ app.post("/:driverId/balance", async (c) => {
     await kvSet(`driver:${driverId}`, updatedDriver);
 
     console.log(`💰 [DRIVERS/BALANCE-POST] ${driverId}: ${currentBalance} → ${newBalance} (${operation} ${amount})`);
+
+    await writeAuditLog({
+      action: "driver.balance",
+      entityType: "driver",
+      entityId: driverId,
+      userId: auth.user?.id ?? null,
+      details: {
+        operation,
+        amount,
+        previousBalance: currentBalance,
+        newBalance,
+      },
+    });
+
     return c.json({ success: true, balance: newBalance, driverId });
   } catch (error) {
     console.error("❌ [DRIVERS/BALANCE-POST] Erreur:", error);
