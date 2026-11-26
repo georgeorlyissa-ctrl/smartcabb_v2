@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (60) — Guide Data safety (Play Console) et assets Play Store complétés
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `8188cb4` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : docs
 - **Objectif** : fournir les réponses exactes du formulaire **Sécurité des données** de Google Play, cohérentes avec le code (Firebase Analytics, localisation sans arrière-plan, sélecteur de contacts) et avec la politique de confidentialité.
