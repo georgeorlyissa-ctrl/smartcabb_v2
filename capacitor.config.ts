@@ -7,7 +7,8 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://www.smartcabb.com/app/passenger?platform=apk',
     androidScheme: 'https',
-    cleartext: true,
+    // Sécurité : l'app ne charge que du HTTPS (aucune ressource en clair).
+    cleartext: false,
   },
   android: {
     buildOptions: {

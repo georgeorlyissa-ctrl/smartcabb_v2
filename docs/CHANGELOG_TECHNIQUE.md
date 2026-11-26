@@ -42,6 +42,71 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (56) — Fiche profil admin, durcissement PostgreSQL et Android (CIS Benchmarks)
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security (durcissement)
+- **Objectif** : attribuer les actions d'audit au véritable auteur, fermer l'exécution anonyme des fonctions PostgreSQL, et durcir l'application Android (sauvegarde, trafic en clair).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| Base Supabase (`profiles`) | fiche admin créée (`is_admin = true`) → `audit_logs.user_id` renseigné |
+| Base Supabase (fonctions) | `revoke execute … from public, anon` sur toutes les fonctions `public` ; grants limités |
+| `android/app/src/main/AndroidManifest.xml` | `allowBackup="false"`, `usesCleartextTraffic="false"` |
+| `capacitor.config.ts` | `server.cleartext: false` |
+| `docs/security/HARDENING_CHECKLIST.md` | **Nouveau** : état des lieux CIS Benchmarks (PostgreSQL, Android, HTTP, comptes) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+**1. Fiche profil administrateur**
+```sql
+insert into public.profiles (id, email, full_name, role, is_admin)
+values ('7e09cc2a-…', 'georgeorlyissa@gmail.com', 'Orly_Smartcabb_Admin', 'admin', true)
+on conflict (id) do update set role = 'admin', is_admin = true;
+```
+La clé étrangère `audit_logs.user_id → profiles(id)` est désormais satisfaite : les entrées
+d'audit portent l'auteur réel (`georgeorlyissa@gmail.com`) au lieu de `user_id = null`
+(« système »). Vérifié : `backup.restore_test` → `user_id` renseigné, auteur visible.
+
+**2. Durcissement PostgreSQL (CIS PostgreSQL Benchmark)**
+- `revoke execute on function … from public, anon` sur les **46** fonctions du schéma `public` (21 `SECURITY DEFINER`).
+- `grant execute … to service_role` (le serveur garde tout).
+- Réouverture limitée à l'application cliente : `mark_notification_as_read(uuid)`,
+  `approve_postpaid_request(uuid,uuid,integer,text)`, `reject_postpaid_request(uuid,uuid,text)`.
+- `create_postpaid_request` et `record_postpaid_payment` restent fermées aux comptes clients.
+- Vérifié : appel `rpc/mark_notification_as_read` et `rpc/create_postpaid_request` avec la clé `anon`
+  → **401 `permission denied for function`**.
+
+**3. Durcissement Android**
+- `android:allowBackup="false"` : empêche l'extraction du `localStorage` de la WebView
+  (jeton Supabase) par sauvegarde ADB / transfert d'appareil.
+- `android:usesCleartextTraffic="false"` + `cleartext: false` : aucun HTTP en clair.
+- ⚠️ **Ces deux réglages natifs ne prennent effet qu'à la prochaine AAB** (versionCode 12).
+
+### Impact produit / comportement visible
+- Journal d'audit : l'auteur des actions est désormais identifié.
+- Aucun changement pour les passagers/chauffeurs (les RPC utilisées par l'app restent autorisées).
+- Android : plus de sauvegarde automatique des données de l'app (choix de sécurité assumé).
+
+### Risques & rollback
+- **Risque** : une RPC non recensée appelée par un client authentifié renverrait `401`.
+  Les 3 RPC utilisées ont été identifiées par recherche dans le code (`supabase.rpc(`).
+- **Risque** : `allowBackup=false` empêche la restauration automatique des données de l'app
+  lors d'un changement de téléphone (les données restent côté serveur).
+- **Rollback** : `grant execute … to anon, public` par fonction ; `git revert` pour Android.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` + `npm run build`
+- [x] `POST /backups/restore-test` → `auditWritten: true`, ligne avec `user_id = 7e09cc2a…` et auteur `georgeorlyissa@gmail.com`
+- [x] `rpc/mark_notification_as_read` avec clé `anon` → **401 permission denied**
+- [x] `rpc/create_postpaid_request` avec clé `anon` → **401 permission denied**
+- [ ] AAB versionCode 12 pour embarquer le durcissement natif (à construire)
+
+---
+
 ## 2026-11-26 (55) — CIS 8.1 : journal d'audit réellement alimenté + état des lieux IG1
 
 - **Commit** : `9ecd95d` (branche `main`, poussée sur `origin`)
