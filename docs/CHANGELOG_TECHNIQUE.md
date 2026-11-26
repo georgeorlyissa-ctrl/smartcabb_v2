@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (56) — Fiche profil admin, durcissement PostgreSQL et Android (CIS Benchmarks)
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `482a9ab` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : security (durcissement)
 - **Objectif** : attribuer les actions d'audit au véritable auteur, fermer l'exécution anonyme des fonctions PostgreSQL, et durcir l'application Android (sauvegarde, trafic en clair).
