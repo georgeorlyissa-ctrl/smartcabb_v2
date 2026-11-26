@@ -65,18 +65,77 @@ interface DecodedPhoto {
   ext: string;
 }
 
-/** `data:image/jpeg;base64,....` → octets. `null` si ce n'est pas une image. */
+/** Taille maximale d'une photo (Mo) — surchargeable via PHOTO_MAX_MB. */
+export function photoMaxBytes(): number {
+  const mb = Math.max(1, Number(Deno.env.get("PHOTO_MAX_MB") || "2"));
+  return mb * 1024 * 1024;
+}
+
+const DATA_URL_PREFIX = /^data:(image\/[a-z0-9.+-]+);base64,/i;
+
+/**
+ * Contrôle AVANT tout décodage : format, type autorisé et poids approximatif.
+ * Évite qu'un client envoie une image énorme (mémoire + stockage + coût).
+ */
+export function inspectPhotoDataUrl(
+  value: unknown,
+): { ok: true } | { ok: false; error: string; code?: string } {
+  if (value === null || value === undefined || value === "") return { ok: true };
+  if (typeof value !== "string") return { ok: true }; // URL/objet déjà stocké : inchangé
+
+  const trimmed = value.trim();
+  if (isHttpUrl(trimmed)) return { ok: true };
+
+  const match = DATA_URL_PREFIX.exec(trimmed);
+  if (!match) {
+    return { ok: false, error: "Format de photo invalide (image base64 attendue)" };
+  }
+
+  const contentType = match[1].toLowerCase();
+  if (!EXT_BY_MIME[contentType]) {
+    return { ok: false, error: "Type d'image non autorisé (JPEG, PNG ou WebP)" };
+  }
+
+  const maxBytes = photoMaxBytes();
+  const approxBytes = Math.floor((trimmed.length - match[0].length) * 0.75);
+  if (approxBytes > maxBytes) {
+    return {
+      ok: false,
+      code: "PHOTO_TOO_LARGE",
+      error: `Photo trop lourde (${Math.round(maxBytes / 1024 / 1024)} Mo maximum)`,
+    };
+  }
+
+  return { ok: true };
+}
+
+/** `data:image/jpeg;base64,....` → octets. `null` si ce n'est pas une image valide. */
 function decodeDataUrl(value: unknown): DecodedPhoto | null {
   if (typeof value !== "string") return null;
-  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/is.exec(value.trim());
+  const trimmed = value.trim();
+  const match = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/is.exec(trimmed);
   if (!match) return null;
 
   const contentType = match[1].toLowerCase();
+  if (!EXT_BY_MIME[contentType]) return null;
+
   const base64 = match[2].replace(/\s+/g, "");
+  const approxBytes = Math.floor((base64.length * 3) / 4);
+  if (approxBytes > photoMaxBytes()) return null;
+
   try {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+    // Contrôle des octets d'en-tête (défense en profondeur contre le MIME mensonger).
+    const isJpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+    const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+    const isWebp =
+      bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50;
+    if (!isJpeg && !isPng && !isWebp) return null;
+
     return { bytes, contentType, ext: EXT_BY_MIME[contentType] || "jpg" };
   } catch {
     return null;

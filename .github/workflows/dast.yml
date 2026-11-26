@@ -1,0 +1,28 @@
+name: DAST (OWASP ZAP baseline)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * 1' # chaque lundi 04:00 UTC
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  zap-baseline:
+    name: Scan passif du site public
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      # Scan passif (baseline) : aucune attaque intrusive, uniquement les
+      # en-têtes, la configuration TLS et les problèmes évidents.
+      - name: ZAP Baseline
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: 'https://www.smartcabb.com'
+          fail_action: false
+          allow_issue_writing: true
+          artifact_name: 'zap-baseline-report'

@@ -39,6 +39,7 @@ import {
   sendOpsAlert,
 } from "./ops-alerts.ts";
 import { purgeAuditLogs, writeAuditLog } from "./audit-log.ts";
+import { decryptBackup, encryptBackup, isEncryptedBackup, isEncryptionEnabled } from "./backup-crypto.ts";
 
 const app = new Hono();
 
@@ -336,9 +337,14 @@ app.post("/run", async (c) => {
     };
 
     const gz = await gzipJson(payload);
+    // 🔐 Chiffrement optionnel (BACKUP_ENCRYPTION_KEY) : le fichier stocké ne
+    // contient aucune donnée lisible si la clé est configurée.
+    const stored = await encryptBackup(gz);
+    const encrypted = isEncryptionEnabled();
+    const finalName = encrypted ? `${name.replace(/\.json\.gz$/, ".json.gz.enc")}` : name;
     const { error: uploadError } = await supabase.storage
       .from(BACKUP_BUCKET)
-      .upload(name, gz, { contentType: "application/gzip", upsert: false });
+      .upload(finalName, stored, { contentType: "application/gzip", upsert: false });
     if (uploadError) throw new Error(`Upload: ${uploadError.message}`);
 
     // Rétention : suppression des backups trop anciens.
@@ -360,7 +366,7 @@ app.post("/run", async (c) => {
     }
 
     console.log(
-      `✅ [BACKUPS] ${name} — ${formatSize(gz.length)} — ` +
+      `✅ [BACKUPS] ${finalName} — ${formatSize(stored.length)}${encrypted ? " (chiffré)" : ""} — ` +
       `${kvRows.length} KV, ${scheduledRides.length} réservations, ` +
       `${emergencyAlerts.length} SOS, ${users.length} comptes, ` +
       `${avatars.length} photo(s) — en ${Date.now() - startedAt} ms`,
@@ -368,10 +374,11 @@ app.post("/run", async (c) => {
 
     // 📈 État de santé : le panneau admin et GET /health lisent cette entrée.
     await kvSetState(HEALTH_BACKUP_KEY, {
-      name,
+      name: finalName,
       createdAt: now.toISOString(),
-      size: gz.length,
-      sizeLabel: formatSize(gz.length),
+      size: stored.length,
+      sizeLabel: formatSize(stored.length),
+      encrypted,
       counts: payload.meta.counts,
       durationMs: Date.now() - startedAt,
     });
@@ -382,11 +389,12 @@ app.post("/run", async (c) => {
     await writeAuditLog({
       action: "backup.run",
       entityType: "backup",
-      entityId: name,
+      entityId: finalName,
       userId: admin?.id ?? null,
       ...auditContext(c),
       details: {
-        size: gz.length,
+        size: stored.length,
+        encrypted,
         counts: payload.meta.counts,
         durationMs: Date.now() - startedAt,
         triggeredBy: admin ? "admin" : "cron",
@@ -397,9 +405,10 @@ app.post("/run", async (c) => {
     return c.json({
       success: true,
       backup: {
-        name,
-        size: gz.length,
-        sizeLabel: formatSize(gz.length),
+        name: finalName,
+        size: stored.length,
+        sizeLabel: formatSize(stored.length),
+        encrypted,
         createdAt: now.toISOString(),
         counts: payload.meta.counts,
         avatarBytes,
@@ -631,6 +640,10 @@ app.get("/health", async (c) => {
         recipient: maskEmail(await resolveAlertRecipient()),
         state: await getAlertsState(),
       },
+      encryption: {
+        backupsEncrypted: isEncryptionEnabled(),
+        auditLogsRetentionDays: Math.max(7, Number(Deno.env.get("AUDIT_LOG_RETENTION_DAYS") || "90")),
+      },
       checkedAt: new Date().toISOString(),
     });
   } catch (error) {
@@ -679,9 +692,23 @@ app.post("/restore-test", async (c) => {
 
     let payload: any = null;
     try {
-      const stream = blob.stream().pipeThrough(new DecompressionStream("gzip"));
-      payload = await new Response(stream).json();
-      checks.push({ name: "Décompression gzip et lecture JSON", ok: true });
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const encryptedFile = isEncryptedBackup(bytes);
+      const plain = await decryptBackup(bytes);
+      if (!plain) {
+        checks.push({
+          name: "Déchiffrement",
+          ok: false,
+          detail: "Backup chiffré : BACKUP_ENCRYPTION_KEY absente ou invalide",
+        });
+      } else {
+        if (encryptedFile) {
+          checks.push({ name: "Déchiffrement", ok: true, detail: "AES-256-GCM" });
+        }
+        const stream = new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"));
+        payload = await new Response(stream).json();
+        checks.push({ name: "Décompression gzip et lecture JSON", ok: true });
+      }
     } catch (e) {
       checks.push({
         name: "Décompression gzip et lecture JSON",

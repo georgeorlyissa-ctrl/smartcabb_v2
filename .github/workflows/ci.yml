@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Types, build, dépendances et secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installation
+        run: npm ci
+
+      - name: Vérification des types
+        run: npx tsc --noEmit
+
+      - name: Build de production
+        run: npm run build
+
+      - name: Audit des dépendances (rapport)
+        run: npm audit --omit=dev || true
+
+      - name: Audit des dépendances (échec sur critique)
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Recherche de secrets dans le dépôt
+        run: |
+          set -e
+          PATTERNS='(sbp_[A-Za-z0-9]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|sk_live_[A-Za-z0-9]{20,}|xox[baprs]-[A-Za-z0-9-]{10,})'
+          if git grep -nIE "$PATTERNS" -- . ':!node_modules' ':!*.lock' ':!docs/**'; then
+            echo "::error::Secret potentiel détecté dans le dépôt."
+            exit 1
+          fi
+          echo "Aucun secret évident détecté."
+
+      - name: Vérifier que .env n'est pas suivi
+        run: |
+          if git ls-files --error-unmatch .env 2>/dev/null; then
+            echo "::error::Le fichier .env est suivi par Git."
+            exit 1
+          fi
+          echo ".env n'est pas suivi."

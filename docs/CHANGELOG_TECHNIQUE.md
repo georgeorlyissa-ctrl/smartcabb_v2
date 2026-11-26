@@ -42,6 +42,72 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (58) — OWASP / check-list sécurité : CI, SAST, DAST, photos, chiffrement des backups
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security (industrialisation)
+- **Objectif** : traiter la check-list sécurité point par point. Ajout de la CI/CD sécurisée, de l'analyse statique et dynamique, de la validation serveur des photos et de la capacité de chiffrement des sauvegardes.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `.github/workflows/ci.yml` | **Nouveau** : types, build, audit dépendances (échec sur critique), scan de secrets, `.env` non suivi |
+| `.github/workflows/codeql.yml` | **Nouveau** : SAST CodeQL (push, PR, hebdomadaire) |
+| `.github/workflows/dast.yml` | **Nouveau** : DAST OWASP ZAP baseline hebdomadaire sur le site public |
+| `.github/dependabot.yml` | **Nouveau** : mises à jour npm + GitHub Actions |
+| `supabase/functions/make-server-2eb02e52/photo-storage.ts` | `inspectPhotoDataUrl()` (taille 2 Mo, MIME autorisés) + contrôle des octets d'en-tête JPEG/PNG/WebP |
+| `supabase/functions/make-server-2eb02e52/driver-routes.ts` | Rejet 400 des photos invalides/trop lourdes (inscription + mise à jour) ; mot de passe 8 caractères |
+| `supabase/functions/make-server-2eb02e52/backup-crypto.ts` | **Nouveau** : chiffrement AES-256-GCM des backups (optionnel via `BACKUP_ENCRYPTION_KEY`) |
+| `supabase/functions/make-server-2eb02e52/backup-routes.ts` | Chiffrement à l'écriture, déchiffrement au test de restauration, état exposé dans `/health` |
+| `docs/security/CHECKLIST_AUDIT.md` | **Nouveau** : 26 points de la check-list avec état et reste à faire |
+| `docs/security/OWASP_MAPPING.md` | **Nouveau** : ASVS 4.0.3, API Top 10 2023, MASVS 2023 |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+
+**CI/CD (CIS 18, OWASP V14)**
+- CI à chaque push/PR : `npm ci`, `tsc --noEmit`, `npm run build`, `npm audit` (échec sur critique),
+  `git grep` des motifs de secrets (`sbp_`, clés privées, AWS, Stripe, Slack), contrôle que `.env` n'est pas suivi.
+- CodeQL en `security-and-quality` (JavaScript/TypeScript) sur push, PR et chaque lundi.
+- ZAP baseline hebdomadaire (passif) sur `https://www.smartcabb.com`, rapport en artefact.
+
+**Photos (OWASP V12 / API4)**
+- `inspectPhotoDataUrl()` : data URL obligatoire (ou URL déjà stockée), MIME limité à JPEG/PNG/WebP,
+  poids ≤ `PHOTO_MAX_MB` (2 Mo par défaut), calcul du poids **avant** décodage.
+- `decodeDataUrl()` vérifie en plus la signature binaire (JPEG `FF D8 FF`, PNG, WebP) : un fichier
+  HTML renommé en `.jpg` est refusé.
+- L'inscription et la mise à jour chauffeur renvoient `400 PHOTO_TOO_LARGE` / `PHOTO_INVALID`
+  au lieu de stocker un base64 géant dans le KV.
+
+**Chiffrement des backups (OWASP V6 / V8)**
+- Format `SCBAK1 | IV 12 | ciphertext AES-GCM`, clé 32 octets base64 via `BACKUP_ENCRYPTION_KEY`.
+- Sans la variable : comportement inchangé (aucun risque de régression).
+- Le test de restauration détecte le format, déchiffre et signale clairement une clé absente.
+- ⚠️ La clé doit être conservée **hors de Supabase** (gestionnaire de mots de passe + copie hors site) :
+  sans elle, les backups chiffrés sont définitivement illisibles.
+
+### Impact produit / comportement visible
+- Les uploads de photos abusifs sont refusés côté serveur (message clair).
+- Aucun changement pour les utilisateurs légitimes (photos ≤ 2 Mo, JPEG/PNG/WebP).
+- Les backups restent en clair tant que `BACKUP_ENCRYPTION_KEY` n'est pas défini.
+
+### Risques & rollback
+- **Risque** : une photo légitime > 2 Mo est refusée (l'app limite déjà à 1 Mo).
+- **Risque** : activer le chiffrement sans conserver la clé rend les backups inutilisables.
+- **Rollback** : `git revert <hash>` + redéploiement ; les workflows peuvent être désactivés dans l'onglet Actions.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` + `npm run build`
+- [x] Fonction Edge redéployée
+- [x] `GET /backups/health` → `status: ok`, `encryption.backupsEncrypted: false`, rétention 90 j
+- [x] `POST /backups/restore-test` → `passed: true`, 8 contrôles OK, `auditWritten: true`
+- [ ] CI : premier passage du workflow après push (à surveiller dans l'onglet Actions)
+- [ ] CodeQL : corriger les alertes éventuelles du premier scan
+- [ ] Décision d'activation du chiffrement des backups + stockage de la clé
+
+---
+
 ## 2026-11-26 (57) — AAB 1.9 (versionCode 12) + politique de mot de passe renforcée
 
 - **Commit** : `9279bb7` (branche `main`, poussée sur `origin`)

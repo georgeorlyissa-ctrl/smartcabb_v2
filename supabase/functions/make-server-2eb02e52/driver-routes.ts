@@ -27,6 +27,7 @@ import {
   migrateProfilePhotos,
   refreshPhotoUrls,
   setBucketPrivate,
+  inspectPhotoDataUrl,
   storePhotoDataUrl,
 } from "./photo-storage.ts";
 
@@ -699,11 +700,25 @@ app.post("/signup", async (c) => {
     if (!full_name || !phone || !password) {
       return c.json({ success: false, error: "Nom, téléphone et mot de passe requis" }, 400);
     }
-    if (password.length < 6) {
-      return c.json({ success: false, error: "Le mot de passe doit contenir au moins 6 caractères" }, 400);
+    if (password.length < 8) {
+      return c.json({ success: false, error: "Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)" }, 400);
     }
     if (!vehicleMake || !vehicleModel || !vehiclePlate || !vehicleColor || !vehicleCategory) {
       return c.json({ success: false, error: "Toutes les informations du véhicule sont requises" }, 400);
+    }
+
+    // 🛡️ Photos : format, type et poids contrôlés AVANT tout décodage/stokage.
+    for (const [label, value] of [
+      ["Photo de profil", profilePhoto],
+      ["Photo du véhicule", vehiclePhoto],
+    ] as const) {
+      const photoCheck = inspectPhotoDataUrl(value);
+      if (!photoCheck.ok) {
+        return c.json(
+          { success: false, error: `${label} : ${photoCheck.error}`, code: photoCheck.code || "PHOTO_INVALID" },
+          400,
+        );
+      }
     }
 
     // 🚗 Photo du véhicule obligatoire (à partir du formulaire v2).
@@ -911,6 +926,20 @@ app.post("/:driverId/update", async (c) => {
       for (const key of PRIVILEGED_FIELDS) delete (updates as any)[key];
     }
     console.log(`🔄 [DRIVERS/UPDATE] ${driverId}:`, Object.keys(updates || {}).join(", "));
+
+    // 🛡️ Photos : contrôle taille/type avant tout téléversement.
+    for (const [label, value] of [
+      ["Photo de profil", updates.profile_photo ?? updates.photo ?? updates.photo_url],
+      ["Photo de véhicule", updates.vehicle_photo ?? updates.vehiclePhoto],
+    ] as const) {
+      const photoCheck = inspectPhotoDataUrl(value);
+      if (!photoCheck.ok) {
+        return c.json(
+          { success: false, error: `${label} : ${photoCheck.error}`, code: photoCheck.code || "PHOTO_INVALID" },
+          400,
+        );
+      }
+    }
 
     const driver = await kvGet(`driver:${driverId}`);
     if (!driver) return c.json({ success: false, error: "Conducteur non trouvé" }, 404);
