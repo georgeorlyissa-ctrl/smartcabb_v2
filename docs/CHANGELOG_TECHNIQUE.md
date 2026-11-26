@@ -42,6 +42,40 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (61) — Textes de fiche Play Store FR/EN structurés
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : docs
+- **Objectif** : fournir des textes de fiche prêts à coller (nom, description courte, description complète) en **français** et en **anglais**, structurés et conformes aux limites Play, pour remplacer la description anglaise compacte actuelle.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `docs/play-store/STORE_LISTING.md` | **Nouveau** : textes FR/EN + emplacements de saisie + vérifications |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Nom : `SmartCabb — Chauffeur Kinshasa` (30 car., limite atteinte) et `SmartCabb — Ride in Kinshasa` (28 car.).
+- Descriptions courtes : 69 car. (FR) et 67 car. (EN), sous la limite de 80.
+- Descriptions complètes structurées en sections (Pourquoi / Services / Devenir chauffeur / Contact) au lieu
+  d'un bloc de puces collées — meilleure lisibilité mobile et meilleure conversion.
+- Aucune promesse chiffrée (tarif exact, délai garanti) pour rester conforme.
+
+### Impact produit / comportement visible
+- Fiche Play lisible en français (marché principal) et en anglais.
+- Aucun impact sur l'application.
+
+### Risques & rollback
+- **Risque** : aucune modification de code ; les textes sont copiés manuellement dans la console.
+- **Rollback** : restaurer les anciens textes dans la console.
+
+### Tests / vérifications
+- [x] Longueurs vérifiées par script (nom ≤ 30, courte ≤ 80)
+- [ ] Saisie dans Play Console (Default = EN, Translations = FR) — action exploitant
+
+---
+
 ## 2026-11-26 (60) — Guide Data safety (Play Console) et assets Play Store complétés
 
 - **Commit** : `8188cb4` (branche `main`, poussée sur `origin`)
