@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (61) — Textes de fiche Play Store FR/EN structurés
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `541d99b` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : docs
 - **Objectif** : fournir des textes de fiche prêts à coller (nom, description courte, description complète) en **français** et en **anglais**, structurés et conformes aux limites Play, pour remplacer la description anglaise compacte actuelle.
