@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (55) — CIS 8.1 : journal d'audit réellement alimenté + état des lieux IG1
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `9ecd95d` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat (sécurité / exploitation)
 - **Objectif** : la table `audit_logs` existait mais **aucune action n'y était écrite** (0 ligne) ; l'écran « Journal d'audit » était donc vide. Ajout d'une journalisation serveur des actions sensibles, d'une purge à 90 jours et d'un état des lieux CIS IG1.
