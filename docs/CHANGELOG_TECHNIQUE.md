@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-26 (51) — « Devenir chauffeur » pointe vers `/app/driver` (connexion), plus vers `/signup`
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `ca77189` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (navigation)
 - **Objectif** : le CTA « Devenir chauffeur » (et « Devenir partenaire ») ouvrait directement le formulaire d'inscription. Il doit désormais ouvrir la page d'entrée chauffeur `https://www.smartcabb.com/app/driver`, d'où le bouton « Déposer ma candidature » mène à l'inscription.
