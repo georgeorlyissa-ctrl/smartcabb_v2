@@ -89,8 +89,8 @@ export function RegisterScreen() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setErrorMsg('Le mot de passe doit contenir au moins 6 caractères');
+    if (formData.password.length < 8) {
+      setErrorMsg('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
       return;
     }
 

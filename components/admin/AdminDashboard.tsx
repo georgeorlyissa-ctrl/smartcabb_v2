@@ -1653,7 +1653,7 @@ export function AdminDashboard() {
                   className="pl-10"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-1">Minimum 6 caractères</p>
+              <p className="text-xs text-gray-500 mt-1">8 caractères minimum</p>
             </div>
 
             <div className="flex space-x-3 mt-6">

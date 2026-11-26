@@ -42,6 +42,60 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (57) — AAB 1.9 (versionCode 12) + politique de mot de passe renforcée
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : security + chore (release)
+- **Objectif** : embarquer le durcissement natif Android dans une AAB publiable, et relever la politique de mot de passe côté Supabase Auth (8 caractères + majuscule/minuscule/chiffre + réauthentification).
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `android/app/build.gradle` | `versionCode` 11 → **12**, `versionName` 1.8 → **1.9** |
+| `android/` (générés) | `npx cap sync android` : `capacitor.config.json` avec `cleartext: false` |
+| `components/auth/AuthKit.tsx` | jauge de mot de passe alignée sur 8/12 caractères + libellé |
+| `components/passenger/RegisterScreen.tsx`, `components/driver/DriverRegistrationScreen.tsx` | validation 8 caractères + message explicite |
+| `components/auth/ResetPasswordPage.tsx`, `ResetPasswordByPhonePage.tsx`, `CreateAuthFromProfilePage.tsx`, `components/ResetPasswordOTPScreen.tsx` | validation et indicateurs à 8 caractères |
+| `components/admin/AdminRegisterScreen.tsx`, `QuickAdminSignup.tsx`, `AdminDashboard.tsx`, `AdminLoginDiagnostic.tsx` | messages « 8 caractères minimum » |
+| `lib/auth-service.ts`, `lib/auth-service-driver-signup.ts` | garde-fou 8 caractères côté service |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Configuration Supabase Auth (management API)
+
+| Réglage | Avant | Après |
+|---|---|---|
+| `password_min_length` | 6 | **8** |
+| `password_required_characters` | *(aucun)* | **minuscule + majuscule + chiffre** |
+| `security_update_password_require_reauthentication` | `false` | **`true`** |
+
+Les comptes existants ne sont pas invalidés : la politique s'applique au prochain changement de mot de passe.
+
+### Build Android
+
+- `npx cap sync android` + `./gradlew.bat bundleRelease` → **BUILD SUCCESSFUL**
+- Manifeste fusionné vérifié : `versionCode="12"`, `versionName="1.9"`, `allowBackup="false"`, `usesCleartextTraffic="false"`
+- Artefact : `smartcabb-1.9.aab` — **13,59 Mo** — SHA-256 `771A5644481B2EBF403323B9F0DA0516AE69C67B1907E0E9ABB7E480DDE4F57D`
+
+### Impact produit / comportement visible
+- Les nouveaux comptes (passagers, chauffeurs, admins) doivent choisir un mot de passe de **8 caractères minimum** avec majuscule, minuscule et chiffre.
+- L'application Android 1.9 n'autorise plus la sauvegarde ADB de ses données ni le trafic HTTP en clair.
+
+### Risques & rollback
+- **Risque** : un utilisateur qui choisit un mot de passe de 6-7 caractères reçoit désormais un message d'erreur explicite côté app (avant l'appel serveur).
+- **Risque** : sur un ancien APK (< 1.9), l'app continue de fonctionner ; le durcissement natif n'est actif qu'à partir de 1.9.
+- **Rollback** : Play Console n'accepte pas de `versionCode` inférieur → publier un 13 si nécessaire ; côté Auth, `PATCH /config/auth` pour revenir à 6.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` + `npm run build`
+- [x] `./gradlew.bat bundleRelease` → BUILD SUCCESSFUL (3 min 20)
+- [x] Manifeste fusionné : `allowBackup="false"`, `usesCleartextTraffic="false"`, `versionCode 12`
+- [x] `GET /config/auth` : `password_min_length = 8`, classes de caractères appliquées, réauth activée
+- [ ] Upload de l'AAB 1.9 dans Play Console (test interne → production)
+- [ ] Test réel d'inscription avec mot de passe faible (doit être refusé avec message clair)
+
+---
+
 ## 2026-11-26 (56) — Fiche profil admin, durcissement PostgreSQL et Android (CIS Benchmarks)
 
 - **Commit** : `482a9ab` (branche `main`, poussée sur `origin`)

@@ -117,8 +117,8 @@ export function ResetPasswordPage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+    if (newPassword.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
       return;
     }
 
@@ -285,7 +285,7 @@ export function ResetPasswordPage() {
                 </svg>
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Min. 6 caractères"
+                  placeholder="8 caractères min."
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -352,9 +352,9 @@ export function ResetPasswordPage() {
             {newPassword && (
               <div className="space-y-2">
                 <div className="flex items-center space-x-2 text-sm">
-                  <div className={`w-2 h-2 rounded-full ${newPassword.length >= 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  <span className={newPassword.length >= 6 ? 'text-green-600' : 'text-gray-500'}>
-                    Au moins 6 caractères
+                  <div className={`w-2 h-2 rounded-full ${newPassword.length >= 8 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className={newPassword.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                    8 caractères, avec majuscule, minuscule et chiffre
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 text-sm">

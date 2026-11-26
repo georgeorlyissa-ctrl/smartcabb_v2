@@ -123,8 +123,8 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+    if (newPassword.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
       console.log('❌ Mot de passe trop court');
       return;
     }
@@ -450,7 +450,7 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
             <div className="relative">
               <Input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Min. 6 caractères"
+                placeholder="8 caractères min."
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="pr-10 h-12"
@@ -490,9 +490,9 @@ export function ResetPasswordOTPScreen({ onBack, userType = 'passenger', onSucce
           {newPassword && (
             <div className="space-y-2">
               <div className="flex items-center space-x-2 text-sm">
-                <div className={`w-2 h-2 rounded-full ${newPassword.length >= 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                <span className={newPassword.length >= 6 ? 'text-green-600' : 'text-gray-500'}>
-                  Au moins 6 caractères
+                <div className={`w-2 h-2 rounded-full ${newPassword.length >= 8 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <span className={newPassword.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                  8 caractères, avec majuscule, minuscule et chiffre
                 </span>
               </div>
               <div className="flex items-center space-x-2 text-sm">

@@ -373,8 +373,8 @@ export function DriverRegistrationScreen() {
         toast.error('Le numéro de téléphone doit contenir 9 ou 10 chiffres');
         return;
       }
-      if (formData.password.length < 6) {
-        toast.error('Le mot de passe doit contenir au moins 6 caractères');
+      if (formData.password.length < 8) {
+        toast.error('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
         return;
       }
       if (formData.password !== formData.confirmPassword) {

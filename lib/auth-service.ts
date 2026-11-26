@@ -382,10 +382,10 @@ export async function signUp(userData: SignUpData): Promise<AuthResult> {
     const { email, phone, password, fullName, role, otpToken } = userData;
     
     // Validation basique
-    if (!password || password.length < 6) {
+    if (!password || password.length < 8) {
       return {
         success: false,
-        error: 'Le mot de passe doit contenir au moins 6 caractères'
+        error: 'Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)'
       };
     }
     
@@ -686,10 +686,10 @@ export async function createAdmin(adminData: CreateAdminData): Promise<AuthResul
       };
     }
     
-    if (!password || password.length < 6) {
+    if (!password || password.length < 8) {
       return {
         success: false,
-        error: 'Le mot de passe doit contenir au moins 6 caractères'
+        error: 'Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)'
       };
     }
     

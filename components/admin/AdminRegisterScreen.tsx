@@ -96,8 +96,8 @@ export function AdminRegisterScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+    if (password.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
       return;
     }
 
@@ -234,7 +234,7 @@ export function AdminRegisterScreen() {
                 {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
               </button>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Au moins 6 caractères</p>
+            <p className="text-xs text-gray-500 mt-1">8 caractères, avec majuscule, minuscule et chiffre</p>
           </div>
 
           {/* Confirm Password */}

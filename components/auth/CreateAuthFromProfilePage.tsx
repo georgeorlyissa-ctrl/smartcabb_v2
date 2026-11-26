@@ -54,8 +54,8 @@ export function CreateAuthFromProfilePage() {
       return;
     }
 
-    if (password.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+    if (password.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
       return;
     }
 
@@ -213,7 +213,7 @@ export function CreateAuthFromProfilePage() {
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   type="password"
-                  placeholder="Min. 6 caractères"
+                  placeholder="8 caractères min."
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
@@ -242,9 +242,9 @@ export function CreateAuthFromProfilePage() {
             {password && (
               <div className="space-y-2 text-sm">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-2 h-2 rounded-full ${password.length >= 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                  <span className={password.length >= 6 ? 'text-green-600' : 'text-gray-500'}>
-                    Au moins 6 caractères
+                  <div className={`w-2 h-2 rounded-full ${password.length >= 8 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className={password.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                    8 caractères, avec majuscule, minuscule et chiffre
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">

@@ -176,8 +176,8 @@ export function ResetPasswordByPhonePage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+    if (newPassword.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
       return;
     }
 
@@ -437,7 +437,7 @@ export function ResetPasswordByPhonePage() {
                   <LockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Min. 6 caractères"
+                    placeholder="8 caractères min."
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     className="pl-10 pr-10"
@@ -480,9 +480,9 @@ export function ResetPasswordByPhonePage() {
               {newPassword && (
                 <div className="space-y-2">
                   <div className="flex items-center space-x-2 text-sm">
-                    <div className={`w-2 h-2 rounded-full ${newPassword.length >= 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                    <span className={newPassword.length >= 6 ? 'text-green-600' : 'text-gray-500'}>
-                      Au moins 6 caractères
+                    <div className={`w-2 h-2 rounded-full ${newPassword.length >= 8 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                    <span className={newPassword.length >= 8 ? 'text-green-600' : 'text-gray-500'}>
+                      8 caractères, avec majuscule, minuscule et chiffre
                     </span>
                   </div>
                   <div className="flex items-center space-x-2 text-sm">

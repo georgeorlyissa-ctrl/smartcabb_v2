@@ -38,8 +38,8 @@ export function QuickAdminSignup() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+    if (formData.password.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
       return;
     }
 
@@ -138,7 +138,7 @@ export function QuickAdminSignup() {
               disabled={loading}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Minimum 6 caractères
+              8 caractères minimum
             </p>
           </div>
 

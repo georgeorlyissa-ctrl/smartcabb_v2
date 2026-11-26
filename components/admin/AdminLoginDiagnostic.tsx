@@ -54,8 +54,8 @@ export function AdminLoginDiagnostic() {
       return;
     }
 
-    if (password.length < 6) {
-      alert('Le mot de passe doit contenir au moins 6 caractères');
+    if (password.length < 8) {
+      alert('Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre)');
       return;
     }
 
@@ -140,7 +140,7 @@ export function AdminLoginDiagnostic() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Minimum 6 caractères"
+                placeholder="8 caractères minimum"
               />
             </div>
 

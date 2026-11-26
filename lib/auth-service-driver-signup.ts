@@ -36,10 +36,10 @@ export async function signUpDriver(driverData: {
     console.log('📝 Inscription conducteur via serveur:', fullName, 'téléphone:', phone);
     
     // Validation du mot de passe
-    if (!password || password.length < 6) {
+    if (!password || password.length < 8) {
       return {
         success: false,
-        error: 'Le mot de passe doit contenir au moins 6 caractères.'
+        error: 'Le mot de passe doit contenir au moins 8 caractères (majuscule, minuscule et chiffre).'
       };
     }
     

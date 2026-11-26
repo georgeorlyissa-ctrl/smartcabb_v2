@@ -570,8 +570,8 @@ export function AuthAlert({
 export function passwordScore(password: string): number {
   if (!password) return 0;
   let score = 0;
-  if (password.length >= 6) score += 1;
-  if (password.length >= 10) score += 1;
+  if (password.length >= 8) score += 1;
+  if (password.length >= 12) score += 1;
   if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
   if (/[0-9]/.test(password)) score += 1;
   if (/[^A-Za-z0-9]/.test(password)) score += 1;
@@ -595,7 +595,7 @@ export function PasswordStrength({ password }: { password: string }) {
         ))}
       </div>
       <div className="mt-1.5 flex items-center justify-between">
-        <span className="text-[10.5px] text-[#94A3B8]">6 caractères minimum</span>
+        <span className="text-[10.5px] text-[#94A3B8]">8 caractères : majuscule, minuscule et chiffre</span>
         {score > 0 && (
           <span className="text-[10.5px] font-bold" style={{ color: colors[score] }}>
             {labels[score]}
