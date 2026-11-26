@@ -351,7 +351,7 @@ export function DriverLoginScreen() {
           </button>
         </div>
 
-        <div className="mt-4 flex justify-center hide-in-apk">
+        <div className="mt-4 flex justify-center">
           <AuthBackButton
             label="Retour au site"
             onClick={() => {

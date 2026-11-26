@@ -133,7 +133,7 @@ export function AuthShell({
         opacity={0.04}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1140px] flex-col gap-8 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:gap-16 lg:py-12">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1140px] flex-col justify-center gap-8 px-4 py-6 sm:px-6 lg:flex-row lg:items-center lg:justify-start lg:gap-16 lg:py-12">
         {/* Panneau de marque — desktop */}
         <aside className="hidden lg:flex lg:w-[46%] lg:flex-col lg:justify-between lg:self-stretch lg:py-8">
           <div>

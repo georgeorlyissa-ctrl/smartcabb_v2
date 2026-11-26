@@ -42,6 +42,47 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-26 (62) — Connexion : flèche retour au site + centrage vertical mobile
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (UI mobile)
+- **Objectif** : depuis l'application Android, la carte de connexion n'était pas centrée verticalement (collée en haut) et il n'existait aucun moyen de revenir au site — le lien existant était masqué par `hide-in-apk`.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/auth/AuthKit.tsx` | Conteneur en `justify-center` sur mobile (`lg:justify-start` conservé sur desktop) |
+| `components/passenger/LoginScreen.tsx` | Bouton **« ← Retour au site »** en haut de la carte (visible partout) ; ancien lien du bas supprimé |
+| `components/driver/DriverLoginScreen.tsx` | « Retour au site » rendu visible aussi dans l'APK (retrait de `hide-in-apk`) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- `AuthShell` : `flex-col justify-center` sur mobile. Le conteneur garde `min-h-screen`, donc il grandit
+  si le contenu dépasse (les formulaires longs restent défilables : `body.scrollHeight` 1031 px pour 844 px
+  de viewport sur l'inscription).
+- Le bouton retour utilise `navigate('/')` + `setCurrentView(null)` : il quitte l'espace passager vers le site
+  public (`smartcabb.com`), y compris dans la WebView de l'APK.
+- Hauteur du bouton 44 px (cible tactile), libellé « Retour au site » + `aria-label`.
+
+### Impact produit / comportement visible
+- Carte de connexion **centrée** sur tous les téléphones (mesuré : 96 px au-dessus / 96 px en dessous sur 390×844).
+- Un utilisateur de l'APK peut revenir au site en un clic.
+- Écrans longs (inscription, candidature) inchangés : défilement normal.
+
+### Risques & rollback
+- **Risque** : aucun (mise en page) ; le desktop conserve son alignement (`lg:justify-start`).
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` + `npm run build`
+- [x] Vue mobile 390×844 : connexion centrée (haut 96 px / bas 96 px)
+- [x] Inscription : `cardTop = 24 px`, page défilable (`bodyScroll 1031 > 844`)
+- [x] Bouton « Retour au site » présent, 44 px, `aria-label` correct
+- [ ] Vérification sur appareil réel (APK 1.9)
+
+---
+
 ## 2026-11-26 (61) — Textes de fiche Play Store FR/EN structurés
 
 - **Commit** : `541d99b` (branche `main`, poussée sur `origin`)

@@ -378,6 +378,21 @@ export function LoginScreen() {
         ]}
       >
         <AuthCard>
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={() => {
+                setCurrentView(null);
+                navigate('/');
+              }}
+              aria-label="Retour au site SmartCabb"
+              className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#E4E9F0] bg-white px-3 text-[12px] font-semibold text-[#64748B] transition-colors hover:border-[#CBD5E1] hover:text-[#0B1B2B]"
+            >
+              <span className="text-[15px] leading-none">←</span>
+              Retour au site
+            </button>
+          </div>
+
           <AuthCardBrand audience="passenger" />
 
           <AuthEyebrow audience="passenger">Espace passager</AuthEyebrow>
@@ -460,16 +475,6 @@ export function LoginScreen() {
               actionLabel="Créer un compte"
               onAction={() => setCurrentScreen('register')}
               disabled={loading}
-            />
-          </div>
-
-          <div className="mt-4 flex justify-center hide-in-apk">
-            <AuthBackButton
-              label="Retour à l'accueil"
-              onClick={() => {
-                setCurrentView(null);
-                navigate('/');
-              }}
             />
           </div>
         </AuthCard>
