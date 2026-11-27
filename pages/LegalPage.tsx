@@ -10,83 +10,75 @@ export function LegalPage() {
   const sections = language === 'fr' ? [
     {
       title: '1. Éditeur du site',
-      content: 'Le site smartcabb.com est édité par SmartCabb SARL, société de droit congolais au capital de 10.000.000 FC, immatriculée au Registre du Commerce et du Crédit Mobilier de Kinshasa (RCCM).'
+      content: 'Le site smartcabb.com est édité par SmartCabb.'
     },
     {
       title: '2. Siège social',
-      content: 'SmartCabb SARL\n63, Avenue Colonel MONDJIBA\nC/ Ngaliema\nKinshasa, République Démocratique du Congo\n\nTéléphone : +243 960 624 008\nEmail : contact@smartcabb.com'
+      content: 'SmartCabb\n63, Avenue Colonel MONDJIBA\nC/ Ngaliema\nKinshasa, République Démocratique du Congo\n\nTéléphone : +243 960 624 008\nEmail : contact@smartcabb.com'
     },
     {
-      title: '3. Directeur de publication',
-      content: 'Le directeur de la publication est le représentant légal de SmartCabb SARL.'
-    },
-    {
-      title: '4. Hébergement',
+      title: '3. Hébergement',
       content: 'Le site smartcabb.com est hébergé par :\n\nVercel Inc.\n440 N Barranca Ave #4133\nCovina, CA 91723\nÉtats-Unis\n\nLa base de données est hébergée par Supabase Inc.'
     },
     {
-      title: '5. Propriété intellectuelle',
-      content: 'L\'ensemble du contenu du site smartcabb.com (textes, images, vidéos, logos, marques) est la propriété exclusive de SmartCabb SARL et est protégé par les lois congolaises et internationales sur la propriété intellectuelle. Toute reproduction, même partielle, est strictement interdite sans autorisation préalable.'
+      title: '4. Propriété intellectuelle',
+      content: 'L\'ensemble du contenu du site smartcabb.com (textes, images, vidéos, logos, marques) est la propriété exclusive de SmartCabb et est protégé par les lois congolaises et internationales sur la propriété intellectuelle. Toute reproduction, même partielle, est strictement interdite sans autorisation préalable.'
     },
     {
-      title: '6. Données personnelles',
-      content: 'Les données personnelles collectées sur le site sont traitées conformément à notre Politique de Confidentialité. Pour toute question relative au traitement de vos données, contactez privacy@smartcabb.com.'
+      title: '5. Données personnelles',
+      content: 'Les données personnelles collectées sur le site sont traitées conformément à notre Politique de Confidentialité. Pour toute question relative au traitement de vos données, contactez admin@smartcabb.com.'
     },
     {
-      title: '7. Cookies',
+      title: '6. Cookies',
       content: 'Le site utilise des cookies pour améliorer l\'expérience utilisateur et analyser le trafic. Vous pouvez paramétrer votre navigateur pour refuser les cookies, mais certaines fonctionnalités du site pourraient ne plus être disponibles.'
     },
     {
-      title: '8. Limitation de responsabilité',
+      title: '7. Limitation de responsabilité',
       content: 'SmartCabb s\'efforce d\'assurer l\'exactitude des informations diffusées sur le site mais ne peut garantir l\'absence d\'erreurs. SmartCabb ne saurait être tenu responsable des dommages directs ou indirects résultant de l\'utilisation du site.'
     },
     {
-      title: '9. Liens hypertextes',
+      title: '8. Liens hypertextes',
       content: 'Le site peut contenir des liens vers d\'autres sites. SmartCabb n\'exerce aucun contrôle sur ces sites et décline toute responsabilité quant à leur contenu.'
     },
     {
-      title: '10. Droit applicable',
+      title: '9. Droit applicable',
       content: 'Les présentes mentions légales sont régies par le droit congolais. Tout litige sera de la compétence exclusive des tribunaux de Kinshasa.'
     }
   ] : [
     {
       title: '1. Site Publisher',
-      content: 'The smartcabb.com website is published by SmartCabb SARL, a company under Congolese law with capital of 10,000,000 FC, registered in the Trade and Movable Credit Register of Kinshasa (RCCM).'
+      content: 'The smartcabb.com website is published by SmartCabb.'
     },
     {
       title: '2. Registered Office',
-      content: 'SmartCabb SARL\n63, Avenue Colonel MONDJIBA\nC/ Ngaliema\nKinshasa, Democratic Republic of Congo\n\nPhone: +243 960 624 008\nEmail: contact@smartcabb.com'
+      content: 'SmartCabb\n63, Avenue Colonel MONDJIBA\nC/ Ngaliema\nKinshasa, Democratic Republic of Congo\n\nPhone: +243 960 624 008\nEmail: contact@smartcabb.com'
     },
     {
-      title: '3. Publication Director',
-      content: 'The publication director is the legal representative of SmartCabb SARL.'
-    },
-    {
-      title: '4. Hosting',
+      title: '3. Hosting',
       content: 'The smartcabb.com website is hosted by:\n\nVercel Inc.\n440 N Barranca Ave #4133\nCovina, CA 91723\nUnited States\n\nThe database is hosted by Supabase Inc.'
     },
     {
-      title: '5. Intellectual Property',
-      content: 'All content on the smartcabb.com website (texts, images, videos, logos, trademarks) is the exclusive property of SmartCabb SARL and is protected by Congolese and international intellectual property laws. Any reproduction, even partial, is strictly prohibited without prior authorization.'
+      title: '4. Intellectual Property',
+      content: 'All content on the smartcabb.com website (texts, images, videos, logos, trademarks) is the exclusive property of SmartCabb and is protected by Congolese and international intellectual property laws. Any reproduction, even partial, is strictly prohibited without prior authorization.'
     },
     {
-      title: '6. Personal Data',
-      content: 'Personal data collected on the site is processed in accordance with our Privacy Policy. For any questions regarding the processing of your data, contact privacy@smartcabb.com.'
+      title: '5. Personal Data',
+      content: 'Personal data collected on the site is processed in accordance with our Privacy Policy. For any questions regarding the processing of your data, contact admin@smartcabb.com.'
     },
     {
-      title: '7. Cookies',
+      title: '6. Cookies',
       content: 'The site uses cookies to improve user experience and analyze traffic. You can configure your browser to refuse cookies, but some site features may no longer be available.'
     },
     {
-      title: '8. Limitation of Liability',
+      title: '7. Limitation of Liability',
       content: 'SmartCabb strives to ensure the accuracy of information published on the site but cannot guarantee the absence of errors. SmartCabb cannot be held responsible for direct or indirect damages resulting from the use of the site.'
     },
     {
-      title: '9. Hyperlinks',
+      title: '8. Hyperlinks',
       content: 'The site may contain links to other sites. SmartCabb exercises no control over these sites and disclaims all responsibility for their content.'
     },
     {
-      title: '10. Applicable Law',
+      title: '9. Applicable Law',
       content: 'These legal notices are governed by Congolese law. Any dispute will be under the exclusive jurisdiction of the courts of Kinshasa.'
     }
   ];

@@ -13,7 +13,7 @@ export const PrivacyPolicy = memo(function PrivacyPolicy() {
         <section>
           <h2 className="text-base font-bold text-gray-900 mb-2">1. Introduction</h2>
           <p className="text-sm text-gray-700 leading-relaxed">
-            La présente Politique de Confidentialité décrit la manière dont SmartCabb SARL ("nous", "notre" ou "l'entreprise") collecte, utilise, protège et partage les informations personnelles de ses utilisateurs (passagers) et de ses chauffeurs partenaires ("vous") via son application mobile et son site web.
+            La présente Politique de Confidentialité décrit la manière dont SmartCabb ("nous", "notre" ou "l'entreprise") collecte, utilise, protège et partage les informations personnelles de ses utilisateurs (passagers) et de ses chauffeurs partenaires ("vous") via son application mobile et son site web.
           </p>
           <p className="text-sm text-gray-700 leading-relaxed mt-2">
             SmartCabb s'engage à protéger la confidentialité, l'intégrité et la sécurité de vos données personnelles conformément aux lois en vigueur en République Démocratique du Congo (RDC).
@@ -134,16 +134,16 @@ export const PrivacyPolicy = memo(function PrivacyPolicy() {
           <h2 className="text-base font-bold text-gray-900 mb-2">9. Contactez-nous</h2>
           <p className="text-sm text-gray-700 mb-2">Pour toute question ou préoccupation relative à cette Politique de Confidentialité ou au traitement de vos données, veuillez contacter notre Responsable de la Protection des Données :</p>
           <div className="bg-gray-50 rounded-lg p-4 space-y-1 text-sm text-gray-700">
-            <p className="font-semibold">SmartCabb SARL</p>
+            <p className="font-semibold">SmartCabb</p>
             <p>À l'attention de : Le Responsable de la Protection des Données (RPD)</p>
-            <p>Adresse e-mail : <a href="mailto:privacy@smartcabb.com" className="text-blue-600 underline">privacy@smartcabb.com</a></p>
+            <p>Adresse e-mail : <a href="mailto:admin@smartcabb.com" className="text-blue-600 underline">admin@smartcabb.com</a></p>
             <p>Adresse du Siège Social : 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, RDC</p>
             <p>Téléphone : +243 960 624 008</p>
           </div>
         </section>
 
         <section className="border-t pt-4 mt-2">
-          <p className="text-xs text-gray-500 text-center">En utilisant SmartCabb, vous acceptez cette Politique de Confidentialité.<br />© 2026 SmartCabb SARL - Tous droits réservés</p>
+          <p className="text-xs text-gray-500 text-center">En utilisant SmartCabb, vous acceptez cette Politique de Confidentialité.<br />© 2026 SmartCabb - Tous droits réservés</p>
         </section>
       </div>
     </ScrollArea>

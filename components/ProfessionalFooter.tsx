@@ -26,7 +26,7 @@ export function ProfessionalFooter() {
 
             {/* NAP (Name / Address / Phone) — cohérence locale pour Google */}
             <address className="not-italic text-sm text-gray-400 space-y-1 mb-6">
-              <p className="font-semibold text-gray-200">SmartCabb SARL</p>
+              <p className="font-semibold text-gray-200">SmartCabb</p>
               <p>63, Avenue Colonel MONDJIBA, C/ Ngaliema</p>
               <p>Kinshasa, République Démocratique du Congo</p>
               <p>

@@ -234,7 +234,7 @@ export const TermsOfService = memo(function TermsOfService() {
           <h2 className="text-lg mb-3">6. Propriété Intellectuelle</h2>
           <p className="text-sm text-gray-700 leading-relaxed">
             L'ensemble du contenu de l'application SmartCabb, y compris les textes, graphiques, logos, 
-            et logiciels, est la propriété exclusive de SmartCabb SARL et est protégé par les lois sur 
+            et logiciels, est la propriété exclusive de SmartCabb et est protégé par les lois sur 
             la propriété intellectuelle de la République Démocratique du Congo et les conventions internationales.
           </p>
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mt-3">
@@ -300,8 +300,7 @@ export const TermsOfService = memo(function TermsOfService() {
               ces Conditions Générales d'Utilisation dans leur intégralité.
             </p>
             <p className="text-xs text-gray-500 text-center">
-              © 2026 SmartCabb SARL - Tous droits réservés<br/>
-              Entreprise enregistrée en République Démocratique du Congo
+              © 2026 SmartCabb - Tous droits réservés
             </p>
           </div>
         </section>

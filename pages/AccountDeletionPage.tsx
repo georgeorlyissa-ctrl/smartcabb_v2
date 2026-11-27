@@ -13,8 +13,8 @@ export function AccountDeletionPage() {
       emoji: '📧',
       title: isFr ? 'Étape 1 : Envoyez votre demande' : 'Step 1: Send your request',
       detail: isFr
-        ? 'Envoyez un email depuis l\'adresse associée à votre compte SmartCabb à privacy@smartcabb.com avec l\'objet "SUPPRESSION COMPTE". Indiquez votre numéro de téléphone et votre nom complet.'
-        : 'Send an email from the address linked to your SmartCabb account to privacy@smartcabb.com with subject "ACCOUNT DELETION". Include your phone number and full name.'
+        ? 'Envoyez un email depuis l\'adresse associée à votre compte SmartCabb à admin@smartcabb.com avec l\'objet "SUPPRESSION COMPTE". Indiquez votre numéro de téléphone et votre nom complet.'
+        : 'Send an email from the address linked to your SmartCabb account to admin@smartcabb.com with subject "ACCOUNT DELETION". Include your phone number and full name.'
     },
     {
       emoji: '✅',
@@ -200,10 +200,10 @@ export function AccountDeletionPage() {
                       : 'For any questions regarding data deletion, contact our team:'}
                   </p>
                   <a
-                    href="mailto:privacy@smartcabb.com"
+                    href="mailto:admin@smartcabb.com"
                     className="text-blue-600 font-semibold hover:text-blue-700 transition-colors text-lg"
                   >
-                    privacy@smartcabb.com
+                    admin@smartcabb.com
                   </a>
                 </div>
               </div>

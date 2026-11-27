@@ -42,6 +42,60 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-27 (65) — Retrait de « SARL » et des mentions d'entreprise non vérifiées
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (contenu légal / conformité Play Store)
+- **Objectif** : SmartCabb n'a pas d'entité « SARL ». Toutes les mentions `SmartCabb SARL`, le capital social, le numéro RCCM, le directeur de publication et la mention « Entreprise enregistrée en RDC » sont retirés des pages publiques.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/LegalPage.tsx` | Section « Directeur de publication » supprimée, sections renumérotées, éditeur = `SmartCabb`, capital/RCCM retirés |
+| `pages/TermsPage.tsx` | Bloc de contact : `SmartCabb` (sans SARL) |
+| `pages/PrivacyPage.tsx` | Bloc d'identité : `SmartCabb` (sans SARL) |
+| `pages/AccountDeletionPage.tsx` | Email de demande de suppression : `admin@smartcabb.com` |
+| `components/shared/PrivacyPolicy.tsx` | `SmartCabb` (3 occurrences), email de contact `admin@smartcabb.com` |
+| `components/shared/TermsOfService.tsx` | `SmartCabb` (2 occurrences), mention « Entreprise enregistrée » retirée |
+| `components/ProfessionalFooter.tsx` | Bloc NAP : `SmartCabb` (sans SARL) |
+| `index.html` | JSON-LD `legalName` = `SmartCabb` |
+| `vite.config.ts` | Contenu SEO statique : `SmartCabb` (sans SARL) |
+| `website/mentions-legales.html` | Forme juridique, capital, directeur et mention d'enregistrement supprimés ; copyright `SmartCabb` |
+| `website/cgu.html` | Copyright `SmartCabb` |
+| `website/politique-confidentialite.html` | Copyright `SmartCabb` |
+| `docs/DSA_TRADER_STATUS.md` | Nom légal : `SmartCabb`, ne pas indiquer « SARL » |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Suppression de la section 3 « Directeur de publication » des mentions légales FR/EN ; les sections suivantes sont renumérotées de 3 à 9.
+- Section 1 : « Le site smartcabb.com est édité par SmartCabb. » (plus de société, capital ni RCCM).
+- Section 2 : en-tête `SmartCabb` au lieu de `SmartCabb SARL` ; adresse, téléphone et email inchangés.
+- Toutes les occurrences publiques de `SmartCabb SARL` remplacées par `SmartCabb`, y compris le JSON-LD (`legalName`) et le bloc SEO caché injecté par `vite.config.ts` (lu par Google/Bing).
+- Page statique `website/mentions-legales.html` : suppression des lignes « Forme juridique », « Capital social », « Directeur de publication » et de la mention « Entreprise enregistrée en République Démocratique du Congo » (FR et EN), ainsi que leurs clés i18n devenues inutiles.
+- Email de confidentialité : `privacy@smartcabb.com` remplacé par `admin@smartcabb.com` sur toutes les pages publiques (politique de confidentialité, mentions légales, suppression de compte), soit 14 occurrences.
+- Aucune donnée métier, aucun secret, aucun endpoint modifié.
+
+### Impact produit / comportement visible
+- Les pages `/legal`, `/terms`, `/privacy`, le footer et les pages statiques affichent uniquement `SmartCabb`.
+- Plus aucune référence à une SARL, à un capital, à un RCCM ou à un directeur de publication.
+- Le nom affiché dans les résultats Google (contenu SEO) est également nettoyé.
+
+### Risques & rollback
+- **Risque** : si une entité légale est enregistrée plus tard, il faudra réintroduire les mentions exactes (raison sociale, RCCM, capital, représentant légal).
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune erreur sur les fichiers modifiés
+- [x] `npm run build` — OK
+- [x] `/legal`, `/terms`, `/privacy` (FR) : `SARL`, `capital`, `RCCM`, `directeur de publication`, `entreprise enregistrée` absents ; adresse et téléphone présents
+- [x] Email de contact : `admin@smartcabb.com` présent, `privacy@smartcabb.com` absent des pages publiques
+- [x] Aucune occurrence publique de `SmartCabb SARL` (hors historique du journal et fournisseur EJ SMS/EJSARL)
+- [ ] Vérification live après déploiement Vercel
+- [ ] Mise à jour du nom « trader » dans Play Console (action utilisateur)
+
+---
+
 ## 2026-11-27 (64) — Cohérence légale : SmartCabb SARL, adresse, téléphone et emails officiels
 
 - **Commit** : `81b1a27` (branche `main`, poussée sur `origin`)

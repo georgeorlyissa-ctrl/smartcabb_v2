@@ -39,7 +39,7 @@ volume de transactions, organisation en entreprise, statut juridique).
 
 | Élément | Valeur à utiliser |
 |---|---|
-| Nom légal | Nom de la société (ou nom du propriétaire si compte individuel) |
+| Nom légal | `SmartCabb` (nom commercial) ou nom du propriétaire si compte individuel — **ne pas indiquer « SARL »** |
 | E-mail professionnel | `support@smartcabb.com` (pas un Gmail personnel) |
 | Téléphone professionnel | `0960624008` (ligne support) |
 | Adresse postale | Adresse **professionnelle réelle** à Kinshasa (bureau, pas le domicile) |

@@ -142,7 +142,7 @@ function seoPrerender() {
 
       <section>
         <h2>Siège de SmartCabb à Kinshasa</h2>
-        <p>SmartCabb SARL — 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, République Démocratique du Congo.</p>
+        <p>SmartCabb — 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, République Démocratique du Congo.</p>
         <p>Téléphone : <a href="tel:+243960624008">+243 960 624 008</a> — Email : <a href="mailto:contact@smartcabb.com">contact@smartcabb.com</a></p>
       </section>
 

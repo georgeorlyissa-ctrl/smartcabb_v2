@@ -14,10 +14,10 @@ export function PrivacyPage() {
     { title: '4. Partage des données', content: "Vos données personnelles ne sont jamais vendues à des tiers. Nous partageons uniquement les informations nécessaires avec nos chauffeurs partenaires pour réaliser la course (prénom, numéro de téléphone, position de départ et d'arrivée)." },
     { title: '5. Sécurité des données', content: "SmartCabb met en œuvre des mesures de sécurité techniques et organisationnelles pour protéger vos données contre tout accès non autorisé, perte ou altération. Nos serveurs sont sécurisés et les données sensibles sont chiffrées." },
     { title: '6. Conservation des données', content: 'Nous conservons vos données personnelles aussi longtemps que nécessaire pour fournir nos services et respecter nos obligations légales. Vous pouvez demander la suppression de vos données à tout moment.' },
-    { title: '7. Vos droits', content: "Conformément à la législation en vigueur, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition au traitement de vos données personnelles. Pour exercer ces droits, contactez privacy@smartcabb.com." },
+    { title: '7. Vos droits', content: "Conformément à la législation en vigueur, vous disposez d'un droit d'accès, de rectification, de suppression et d'opposition au traitement de vos données personnelles. Pour exercer ces droits, contactez admin@smartcabb.com." },
     { title: '8. Cookies', content: "Notre site web et notre application utilisent des cookies pour améliorer votre expérience utilisateur. Vous pouvez gérer vos préférences de cookies dans les paramètres de votre navigateur." },
     { title: '9. Modifications de la politique', content: "SmartCabb se réserve le droit de modifier cette politique de confidentialité. Les utilisateurs seront informés de tout changement important par email ou notification dans l'application." },
-    { title: '10. Contact', content: 'Pour toute question concernant cette politique de confidentialité ou le traitement de vos données, contactez notre délégué à la protection des données : privacy@smartcabb.com' },
+    { title: '10. Contact', content: 'Pour toute question concernant cette politique de confidentialité ou le traitement de vos données, contactez notre délégué à la protection des données : admin@smartcabb.com' },
   ] : [
     { title: '1. Data Collection', content: 'SmartCabb collects personal data necessary for service operation: name, phone number, email address, GPS location, ride history. This data is essential to ensure service security and quality.' },
     { title: '2. Data Use', content: 'Your data is used to: facilitate bookings, improve our service, ensure user security, process payments, and communicate with you about your account and our services.' },
@@ -25,10 +25,10 @@ export function PrivacyPage() {
     { title: '4. Data Sharing', content: 'Your personal data is never sold to third parties. We only share necessary information with our partner drivers to complete the ride (first name, phone number, pickup and drop-off location).' },
     { title: '5. Data Security', content: 'SmartCabb implements technical and organizational security measures to protect your data from unauthorized access, loss or alteration. Our servers are secure and sensitive data is encrypted.' },
     { title: '6. Data Retention', content: 'We retain your personal data as long as necessary to provide our services and comply with our legal obligations. You can request deletion of your data at any time.' },
-    { title: '7. Your Rights', content: 'In accordance with applicable law, you have the right to access, rectify, delete and object to the processing of your personal data. To exercise these rights, contact privacy@smartcabb.com.' },
+    { title: '7. Your Rights', content: 'In accordance with applicable law, you have the right to access, rectify, delete and object to the processing of your personal data. To exercise these rights, contact admin@smartcabb.com.' },
     { title: '8. Cookies', content: 'Our website and app use cookies to improve your user experience. You can manage your cookie preferences in your browser settings.' },
     { title: '9. Policy Changes', content: 'SmartCabb reserves the right to modify this privacy policy. Users will be informed of any significant changes by email or app notification.' },
-    { title: '10. Contact', content: 'For any questions about this privacy policy or the processing of your data, contact our data protection officer: privacy@smartcabb.com' },
+    { title: '10. Contact', content: 'For any questions about this privacy policy or the processing of your data, contact our data protection officer: admin@smartcabb.com' },
   ];
 
   return (
@@ -103,13 +103,13 @@ export function PrivacyPage() {
 
           {/* Identité légale du responsable de traitement */}
           <address style={{ marginTop: '24px', padding: '20px 24px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px', fontStyle: 'normal', fontSize: '14px', color: '#374151', lineHeight: '1.7' }}>
-            <p style={{ fontWeight: 700, color: '#111827' }}>SmartCabb SARL</p>
+            <p style={{ fontWeight: 700, color: '#111827' }}>SmartCabb</p>
             <p>63, Avenue Colonel MONDJIBA, C/ Ngaliema</p>
             <p>Kinshasa, République Démocratique du Congo</p>
             <p>
               {language === 'fr' ? 'Téléphone' : 'Phone'} : +243 960 624 008 · +243 814 018 048
             </p>
-            <p>Email : privacy@smartcabb.com</p>
+            <p>Email : admin@smartcabb.com</p>
           </address>
         </div>
       </section>
