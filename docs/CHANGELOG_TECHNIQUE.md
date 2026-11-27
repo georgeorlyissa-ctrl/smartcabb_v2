@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-27 (64) — Cohérence légale : SmartCabb SARL, adresse, téléphone et emails officiels
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `81b1a27` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (contenu légal / conformité Play Store)
 - **Objectif** : les pages légales présentaient des incohérences pouvant bloquer la vérification Play Console : raison sociale `SMART CAB SARL`, emails sur le domaine `smartcabb.cd` (sans messagerie), adresse de contact au domaine `smartcab.com` (faute de frappe), numéro RCCM fictif `XX-X-XXXXX`, capital social différent selon les pages et copyrights en 2025.
