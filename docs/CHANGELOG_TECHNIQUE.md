@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-27 (66) — Suppression des badges d'en-tête des pages légales
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `7788296` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (UI)
 - **Objectif** : retirer les pastilles colorées affichées au-dessus des titres « Mentions légales » et « Conditions d'utilisation ».
