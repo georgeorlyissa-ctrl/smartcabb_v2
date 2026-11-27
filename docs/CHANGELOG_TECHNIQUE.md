@@ -42,6 +42,39 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-27 (66) — Suppression des badges d'en-tête des pages légales
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (UI)
+- **Objectif** : retirer les pastilles colorées affichées au-dessus des titres « Mentions légales » et « Conditions d'utilisation ».
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/LegalPage.tsx` | Pastille `⚖️ Mentions légales` supprimée |
+| `pages/TermsPage.tsx` | Pastille `📄 Conditions d'utilisation` supprimée |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Suppression du `<div className="inline-block px-4 py-2 bg-cyan-100 rounded-full …">` dans le hero des deux pages.
+- Le titre `<h1>` et le sous-titre restent inchangés ; aucune autre règle de style n'est modifiée.
+
+### Impact produit / comportement visible
+- Les pages `/legal` et `/terms` commencent directement par leur titre, sans badge.
+
+### Risques & rollback
+- **Risque** : aucun (suppression d'un élément décoratif).
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune erreur sur les fichiers modifiés
+- [x] `npm run build` — OK
+- [x] `/legal` et `/terms` : plus de pastille, titres et contenu intacts
+- [ ] Vérification live après déploiement
+
+---
+
 ## 2026-11-27 (65) — Retrait de « SARL » et des mentions d'entreprise non vérifiées
 
 - **Commit** : `1b8dcb9` (branche `main`, poussée sur `origin`)

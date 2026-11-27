@@ -110,9 +110,6 @@ export function TermsPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className="inline-block px-4 py-2 bg-cyan-100 rounded-full text-cyan-700 font-semibold text-sm mb-6">
-              📄 {t('legal.terms')}
-            </div>
             <h1 className="text-6xl font-black mb-6">
               {t('legal.terms')}
             </h1>
