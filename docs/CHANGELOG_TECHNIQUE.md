@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-27 (65) — Retrait de « SARL » et des mentions d'entreprise non vérifiées
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `1b8dcb9` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : fix (contenu légal / conformité Play Store)
 - **Objectif** : SmartCabb n'a pas d'entité « SARL ». Toutes les mentions `SmartCabb SARL`, le capital social, le numéro RCCM, le directeur de publication et la mention « Entreprise enregistrée en RDC » sont retirés des pages publiques.
