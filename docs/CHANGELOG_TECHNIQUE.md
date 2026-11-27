@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-27 (67) — Réservation : contact WhatsApp + champs date/heure guidés
 
-- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Commit** : `2a055ec` (branche `main`, poussée sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : feat (UX réservation)
 - **Objectif** : permettre de joindre un conseiller par WhatsApp depuis la page « Réserver », et rendre évidents les champs **Date** et **Heure** sur mobile, où le sélecteur natif apparaissait comme une zone vide.
