@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { Plus, Calendar, Trash2, ArrowLeft, ChevronRight } from '../../lib/icons';
+import { Plus, Calendar, Clock, Trash2, ArrowLeft, ChevronRight, ChevronDown } from '../../lib/icons';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -54,6 +54,19 @@ interface ScheduledRidesProps {
   className?: string;
 }
 
+/** Affiche une date ISO (AAAA-MM-JJ) en français lisible. */
+function formatScheduledDate(value: string) {
+  if (!value) return '';
+  const d = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
 export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   const { state, setCurrentScreen } = useAppState();
   const [scheduledRides, setScheduledRides] = useState<ScheduledRide[]>([]);
@@ -61,6 +74,8 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [detailsRide, setDetailsRide] = useState<ScheduledRide | null>(null);
   const [driverInfo, setDriverInfo] = useState<any | null>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
 
   // Fiche sécurité du chauffeur quand la réservation est acceptée
   useEffect(() => {
@@ -821,27 +836,97 @@ export function ScheduledRides({ className = "" }: ScheduledRidesProps) {
 
             {/* Date */}
             <div>
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                min={new Date().toISOString().split('T')[0]}
-                value={newRide.scheduled_date}
-                onChange={(e) => setNewRide({ ...newRide, scheduled_date: e.target.value })}
-                className="mt-1"
-              />
+              <Label htmlFor="date" className="mb-2 block">Date</Label>
+              <div className="relative">
+                <div
+                  className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3.5 transition-all cursor-pointer ${
+                    newRide.scheduled_date
+                      ? 'border-secondary bg-secondary/5'
+                      : 'border-dashed border-secondary/70 bg-secondary/5 hover:border-secondary'
+                  }`}
+                >
+                  <Calendar className="shrink-0 text-secondary" size={22} />
+                  <div className="min-w-0 flex-1">
+                    {newRide.scheduled_date ? (
+                      <p className="truncate text-sm font-bold capitalize text-foreground">
+                        {formatScheduledDate(newRide.scheduled_date)}
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-bold text-secondary">Choisir une date</p>
+                        <span className="animate-pulse rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                          👆 Appuyez ici
+                        </span>
+                      </div>
+                    )}
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {newRide.scheduled_date ? 'Appuyez pour modifier' : 'Le calendrier s’ouvre au toucher'}
+                    </p>
+                  </div>
+                  <ChevronDown className="shrink-0 text-muted-foreground" size={18} />
+                </div>
+                <input
+                  ref={dateInputRef}
+                  id="date"
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={newRide.scheduled_date}
+                  onChange={(e) => setNewRide({ ...newRide, scheduled_date: e.target.value })}
+                  aria-label="Choisir la date de la réservation"
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  onClick={(e) => {
+                    try {
+                      (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+                    } catch {}
+                  }}
+                />
+              </div>
             </div>
 
             {/* Heure */}
             <div>
-              <Label htmlFor="time">Heure</Label>
-              <Input
-                id="time"
-                type="time"
-                value={newRide.scheduled_time}
-                onChange={(e) => setNewRide({ ...newRide, scheduled_time: e.target.value })}
-                className="mt-1"
-              />
+              <Label htmlFor="time" className="mb-2 block">Heure</Label>
+              <div className="relative">
+                <div
+                  className={`flex items-center gap-3 rounded-xl border-2 px-4 py-3.5 transition-all cursor-pointer ${
+                    newRide.scheduled_time
+                      ? 'border-secondary bg-secondary/5'
+                      : 'border-dashed border-secondary/70 bg-secondary/5 hover:border-secondary'
+                  }`}
+                >
+                  <Clock className="shrink-0 text-secondary" size={22} />
+                  <div className="min-w-0 flex-1">
+                    {newRide.scheduled_time ? (
+                      <p className="text-sm font-bold text-foreground">{newRide.scheduled_time}</p>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-bold text-secondary">Choisir une heure</p>
+                        <span className="animate-pulse rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                          👆 Appuyez ici
+                        </span>
+                      </div>
+                    )}
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      {newRide.scheduled_time ? 'Appuyez pour modifier' : 'Le sélecteur d’heure s’ouvre au toucher'}
+                    </p>
+                  </div>
+                  <ChevronDown className="shrink-0 text-muted-foreground" size={18} />
+                </div>
+                <input
+                  ref={timeInputRef}
+                  id="time"
+                  type="time"
+                  value={newRide.scheduled_time}
+                  onChange={(e) => setNewRide({ ...newRide, scheduled_time: e.target.value })}
+                  aria-label="Choisir l’heure de la réservation"
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  onClick={(e) => {
+                    try {
+                      (e.currentTarget as HTMLInputElement & { showPicker?: () => void }).showPicker?.();
+                    } catch {}
+                  }}
+                />
+              </div>
             </div>
 
             {/* Catégorie */}

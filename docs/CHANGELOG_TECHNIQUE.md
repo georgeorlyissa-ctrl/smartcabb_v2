@@ -42,6 +42,44 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-27 (67) — Réservation : contact WhatsApp + champs date/heure guidés
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat (UX réservation)
+- **Objectif** : permettre de joindre un conseiller par WhatsApp depuis la page « Réserver », et rendre évidents les champs **Date** et **Heure** sur mobile, où le sélecteur natif apparaissait comme une zone vide.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/BookDriverPage.tsx` | Bouton WhatsApp à côté de « Parler à un conseiller » |
+| `components/passenger/ScheduledRides.tsx` | Champs date/heure remplacés par des zones tactiles explicites |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **WhatsApp** : nouveau lien `https://wa.me/243960624008?text=…` (message prérempli FR/EN), ouvert dans un nouvel onglet, style vert `#25D366`, icône SVG officielle. Le bouton téléphone existant est conservé.
+- **Date / Heure** : l'`<Input type="date|time">` natif est remplacé par un conteneur visuel (icône calendrier/horloge, libellé « Choisir une date/heure », badge pulsant « 👆 Appuyez ici », chevron). Un `<input>` natif transparent recouvre exactement la zone (`absolute inset-0`, `opacity: 0`) et `showPicker()` est appelé au clic pour ouvrir le sélecteur sur les navigateurs compatibles.
+- Une fois la valeur choisie, la zone affiche la date en toutes lettres (`formatScheduledDate`, `fr-FR`) ou l'heure, avec le texte « Appuyez pour modifier ».
+- Aucun changement de validation, de payload ou de tarification.
+
+### Impact produit / comportement visible
+- Sur Android, l'utilisateur voit immédiatement où toucher pour la date et l'heure ; plus de zone blanche ambiguë.
+- Le passager peut contacter un conseiller par téléphone **ou** WhatsApp depuis `/reserver`.
+
+### Risques & rollback
+- **Risque** : `showPicker()` n'existe pas sur certains anciens WebView ; dans ce cas le clic sur l'input natif ouvre quand même le sélecteur standard.
+- **Rollback** : `git revert <hash>`.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur sur les fichiers modifiés (dette pré-existante inchangée)
+- [x] `npm run build` — OK
+- [x] Vue mobile 390 px : overlay input identique à la zone visible (343 × 68 px), badge dans les limites, aucun débordement
+- [x] `/reserver` : liens `tel:+243960624008` et `wa.me/243960624008` valides, message prérempli FR/EN
+- [x] Routes de test temporaires supprimées avant commit
+- [ ] Vérification sur téléphone réel (sélecteur natif Android)
+
+---
+
 ## 2026-11-27 (66) — Suppression des badges d'en-tête des pages légales
 
 - **Commit** : `7788296` (branche `main`, poussée sur `origin`)
