@@ -53,7 +53,7 @@ export function PrivacyPage() {
               {t('legal.privacy')}
             </h1>
             <p style={{ fontSize: '15px', color: '#9ca3af' }}>
-              {t('legal.lastUpdate')} : {language === 'fr' ? '2 février 2026' : 'February 2, 2026'}
+              {t('legal.lastUpdate')} : {language === 'fr' ? '27 novembre 2026' : 'November 27, 2026'}
             </p>
           </motion.div>
         </div>
@@ -100,6 +100,17 @@ export function PrivacyPage() {
                 : "SmartCabb is committed to respecting the confidentiality of your data and using it only to improve your experience."}
             </p>
           </div>
+
+          {/* Identité légale du responsable de traitement */}
+          <address style={{ marginTop: '24px', padding: '20px 24px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px', fontStyle: 'normal', fontSize: '14px', color: '#374151', lineHeight: '1.7' }}>
+            <p style={{ fontWeight: 700, color: '#111827' }}>SmartCabb SARL</p>
+            <p>63, Avenue Colonel MONDJIBA, C/ Ngaliema</p>
+            <p>Kinshasa, République Démocratique du Congo</p>
+            <p>
+              {language === 'fr' ? 'Téléphone' : 'Phone'} : +243 960 624 008 · +243 814 018 048
+            </p>
+            <p>Email : privacy@smartcabb.com</p>
+          </address>
         </div>
       </section>
 

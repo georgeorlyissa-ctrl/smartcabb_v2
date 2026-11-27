@@ -59,11 +59,11 @@ export function SupportScreen() {
       icon: Mail,
       title: 'Email',
       description: 'Support par email',
-      value: 'support@smartcabb.cd',
+      value: 'support@smartcabb.com',
       action: 'Envoyer un email',
       available: 'Réponse sous 24h',
       color: 'bg-blue-500',
-      link: 'mailto:support@smartcabb.cd'
+      link: 'mailto:support@smartcabb.com'
     }
   ];
 

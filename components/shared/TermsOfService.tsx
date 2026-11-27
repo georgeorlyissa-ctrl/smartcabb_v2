@@ -13,7 +13,7 @@ export const TermsOfService = memo(function TermsOfService() {
           <h1 className="text-2xl mb-2">Conditions Générales d'Utilisation</h1>
           <p className="text-sm text-gray-600">des Services SmartCabb</p>
           <p className="text-xs text-gray-500 mt-2">République Démocratique du Congo</p>
-          <p className="text-xs text-gray-400 mt-1">Dernière mise à jour : 24 octobre 2025</p>
+          <p className="text-xs text-gray-400 mt-1">Dernière mise à jour : 27 novembre 2026</p>
         </div>
 
         <section>
@@ -285,7 +285,7 @@ export const TermsOfService = memo(function TermsOfService() {
               Pour toute question concernant ces CGU, veuillez nous contacter :
             </p>
             <div className="space-y-2 text-sm text-gray-700">
-              <p><strong>📧 Email :</strong> support@smartcabb.cd</p>
+              <p><strong>📧 Email :</strong> support@smartcabb.com</p>
               <p><strong>📞 Téléphone :</strong> +243 960 624 008 ou +243 814 018 048</p>
               <p><strong>📍 Adresse :</strong> 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, République Démocratique du Congo</p>
               <p><strong>🕐 Support :</strong> Disponible 24h/24, 7j/7</p>

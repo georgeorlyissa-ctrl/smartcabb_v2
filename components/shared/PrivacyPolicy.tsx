@@ -6,17 +6,17 @@ export const PrivacyPolicy = memo(function PrivacyPolicy() {
     <ScrollArea className="h-[400px] w-full">
       <div className="space-y-6 p-6 pr-4">
         <div className="text-center mb-6">
-          <h1 className="text-xl font-bold text-gray-900">Politique de Confidentialité de SMART CAB</h1>
-          <p className="text-xs text-gray-500 mt-2">Dernière mise à jour : 24 octobre 2025</p>
+          <h1 className="text-xl font-bold text-gray-900">Politique de Confidentialité de SmartCabb</h1>
+          <p className="text-xs text-gray-500 mt-2">Dernière mise à jour : 27 novembre 2026</p>
         </div>
 
         <section>
           <h2 className="text-base font-bold text-gray-900 mb-2">1. Introduction</h2>
           <p className="text-sm text-gray-700 leading-relaxed">
-            La présente Politique de Confidentialité décrit la manière dont SMART CAB SARL ("nous", "notre" ou "l'entreprise") collecte, utilise, protège et partage les informations personnelles de ses utilisateurs (passagers) et de ses chauffeurs partenaires ("vous") via son application mobile et son site web.
+            La présente Politique de Confidentialité décrit la manière dont SmartCabb SARL ("nous", "notre" ou "l'entreprise") collecte, utilise, protège et partage les informations personnelles de ses utilisateurs (passagers) et de ses chauffeurs partenaires ("vous") via son application mobile et son site web.
           </p>
           <p className="text-sm text-gray-700 leading-relaxed mt-2">
-            SMART CAB s'engage à protéger la confidentialité, l'intégrité et la sécurité de vos données personnelles conformément aux lois en vigueur en République Démocratique du Congo (RDC).
+            SmartCabb s'engage à protéger la confidentialité, l'intégrité et la sécurité de vos données personnelles conformément aux lois en vigueur en République Démocratique du Congo (RDC).
           </p>
         </section>
 
@@ -112,7 +112,7 @@ export const PrivacyPolicy = memo(function PrivacyPolicy() {
         <section>
           <h2 className="text-base font-bold text-gray-900 mb-2">6. Sécurité des Données</h2>
           <p className="text-sm text-gray-700 leading-relaxed">
-            SMART CAB met en œuvre des mesures de sécurité techniques et organisationnelles appropriées, y compris le chiffrement des données en transit (TLS/SSL) et sur nos serveurs, l'authentification forte et des contrôles d'accès stricts, afin de protéger vos données contre l'accès, la modification, la divulgation ou la destruction non autorisés.
+            SmartCabb met en œuvre des mesures de sécurité techniques et organisationnelles appropriées, y compris le chiffrement des données en transit (TLS/SSL) et sur nos serveurs, l'authentification forte et des contrôles d'accès stricts, afin de protéger vos données contre l'accès, la modification, la divulgation ou la destruction non autorisés.
           </p>
         </section>
 
@@ -134,10 +134,11 @@ export const PrivacyPolicy = memo(function PrivacyPolicy() {
           <h2 className="text-base font-bold text-gray-900 mb-2">9. Contactez-nous</h2>
           <p className="text-sm text-gray-700 mb-2">Pour toute question ou préoccupation relative à cette Politique de Confidentialité ou au traitement de vos données, veuillez contacter notre Responsable de la Protection des Données :</p>
           <div className="bg-gray-50 rounded-lg p-4 space-y-1 text-sm text-gray-700">
-            <p className="font-semibold">SMART CAB SARL</p>
+            <p className="font-semibold">SmartCabb SARL</p>
             <p>À l'attention de : Le Responsable de la Protection des Données (RPD)</p>
-            <p>Adresse e-mail : <a href="mailto:rssi@smartcab.com" className="text-blue-600 underline">rssi@smartcab.com</a></p>
+            <p>Adresse e-mail : <a href="mailto:privacy@smartcabb.com" className="text-blue-600 underline">privacy@smartcabb.com</a></p>
             <p>Adresse du Siège Social : 63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, RDC</p>
+            <p>Téléphone : +243 960 624 008</p>
           </div>
         </section>
 

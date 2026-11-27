@@ -117,7 +117,7 @@ export function TermsPage() {
               {t('legal.terms')}
             </h1>
             <p className="text-lg text-gray-600">
-              {t('legal.lastUpdate')} : {language === 'fr' ? '2 février 2026' : 'February 2, 2026'}
+              {t('legal.lastUpdate')} : {language === 'fr' ? '27 novembre 2026' : 'November 27, 2026'}
             </p>
           </motion.div>
         </div>
@@ -156,6 +156,12 @@ export function TermsPage() {
                   ? 'Contactez-nous à support@smartcabb.com pour toute question concernant ces conditions.'
                   : 'Contact us at support@smartcabb.com for any questions about these terms.'}
               </p>
+              <address className="not-italic mt-4 pt-4 border-t border-cyan-200 text-xs text-gray-600 space-y-1">
+                <p className="font-semibold text-gray-800">SmartCabb SARL</p>
+                <p>63, Avenue Colonel MONDJIBA, C/ Ngaliema</p>
+                <p>Kinshasa, République Démocratique du Congo</p>
+                <p>Téléphone : +243 960 624 008 · +243 814 018 048</p>
+              </address>
             </div>
           </div>
         </div>

@@ -42,6 +42,56 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-27 (64) — Cohérence légale : SmartCabb SARL, adresse, téléphone et emails officiels
+
+- **Commit** : `<hash>` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (contenu légal / conformité Play Store)
+- **Objectif** : les pages légales présentaient des incohérences pouvant bloquer la vérification Play Console : raison sociale `SMART CAB SARL`, emails sur le domaine `smartcabb.cd` (sans messagerie), adresse de contact au domaine `smartcab.com` (faute de frappe), numéro RCCM fictif `XX-X-XXXXX`, capital social différent selon les pages et copyrights en 2025.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/LegalPage.tsx` | RCCM fictif retiré, adresse unifiée (`C/ Ngaliema`), email/telephone officiels |
+| `pages/TermsPage.tsx` | Date de mise à jour 27/11/2026, bloc d'identité légale (raison sociale, adresse, téléphones) |
+| `pages/PrivacyPage.tsx` | Date 27/11/2026, bloc d'identité légale du responsable de traitement |
+| `components/shared/PrivacyPolicy.tsx` | `SMART CAB` → `SmartCabb`, `rssi@smartcab.com` → `privacy@smartcabb.com`, téléphone, date |
+| `components/shared/TermsOfService.tsx` | `support@smartcabb.cd` → `support@smartcabb.com`, date |
+| `components/passenger/SupportScreen.tsx` | Email de support `@smartcabb.cd` → `@smartcabb.com` |
+| `website/mentions-legales.html` | Email `.cd` → `.com`, capital aligné 10.000.000 FC, hébergement Vercel + Supabase, date et copyright 2026 |
+| `website/cgu.html` | Email `.cd` → `.com`, date et copyright 2026 |
+| `website/politique-confidentialite.html` | Email `.cd` → `.com`, adresse postale ajoutée, date et copyright 2026 |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Domaine email** : `smartcabb.cd` n'a **aucun enregistrement MX** (vérifié par DNS) : tous les messages envoyés à `contact@`, `support@` ou `privacy@smartcabb.cd` étaient perdus. Les pages utilisent désormais `smartcabb.com`, seul domaine avec messagerie (PrivateEmail) et déjà utilisé par `ContactPage`, `ChatWidget` et le compte admin.
+- **Raison sociale** : uniformisation sur `SmartCabb SARL` (forme exacte du RCCM / footer / JSON-LD). Le titre de la politique de confidentialité et trois paragraphes disaient encore `SMART CAB`.
+- **Adresse** : `63, Avenue Colonel MONDJIBA, C/ Ngaliema, Kinshasa, République Démocratique du Congo` partout, y compris dans les pages statiques `website/`.
+- **Téléphone** : `+243 960 624 008` (principal) et `+243 814 018 048` (secondaire) sur les pages qui listent déjà les deux ; le footer et le JSON-LD conservent le numéro principal.
+- **RCCM** : le numéro `CD/KIN/RCCM/XX-X-XXXXX` était un gabarit non renseigné : supprimé pour ne pas publier une donnée fausse. La mention « immatriculée au Registre du Commerce et du Crédit Mobilier de Kinshasa (RCCM) » est conservée.
+- **Capital social** : la page statique indiquait `50.000.000 CDF`, la page React `10.000.000 FC` → alignement sur `10.000.000 FC`.
+- **Dates** : toutes les pages légales passent au `27 novembre 2026` ; copyrights `© 2025` → `© 2026`.
+
+### Impact produit / comportement visible
+- Play Console peut ouvrir `/terms`, `/privacy` et `/legal` : la raison sociale, l'adresse et le téléphone y sont identiques et le footer NAP est cohérent.
+- Les emails de support (`support@`, `privacy@`, `legal@`, `contact@`) pointent tous vers une boîte réellement configurée.
+- Plus aucune mention de `SMART CAB` ni de numéro RCCM fictif sur le site public.
+
+### Risques & rollback
+- **Risque** : si le capital réel de la SARL est `50.000.000 CDF` (et non `10.000.000 FC`), la valeur affichée est erronée — à confirmer avec l'extrait RCCM.
+- **Risque** : le directeur de publication nommé sur la page statique (`Jean-Claude Mbuyi`) n'a pas été modifié ; à confirmer également.
+- **Rollback** : `git revert <hash>` (aucune donnée ni secret touché).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune erreur sur les fichiers modifiés
+- [x] `npm run build` — OK
+- [x] `/legal`, `/terms`, `/privacy` (FR et EN) : `SmartCabb SARL`, `MONDJIBA`, `+243 960 624 008` présents ; aucun `@smartcabb.cd`, `SMART CAB`, `XX-X-XXXXX` ni `2025`
+- [x] DNS : `smartcabb.com` a des MX, `smartcabb.cd` n'en a aucun
+- [x] Dates affichées : « 27 novembre 2026 » / « November 27, 2026 »
+- [ ] Confirmation par l'utilisateur du capital social, du RCCM et du directeur de publication exacts
+
+---
+
 ## 2026-11-26 (63) — Suppression de l'ancien écran d'accueil chauffeur (« SmartCabb Driver »)
 
 - **Commit** : `b83d4d9` (branche `main`, poussée sur `origin`)

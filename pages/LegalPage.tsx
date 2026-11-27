@@ -10,11 +10,11 @@ export function LegalPage() {
   const sections = language === 'fr' ? [
     {
       title: '1. Éditeur du site',
-      content: 'Le site smartcabb.com est édité par SmartCabb SARL, société de droit congolais au capital de 10.000.000 FC, immatriculée au Registre du Commerce et du Crédit Mobilier de Kinshasa sous le numéro RCCM CD/KIN/RCCM/XX-X-XXXXX.'
+      content: 'Le site smartcabb.com est édité par SmartCabb SARL, société de droit congolais au capital de 10.000.000 FC, immatriculée au Registre du Commerce et du Crédit Mobilier de Kinshasa (RCCM).'
     },
     {
       title: '2. Siège social',
-      content: 'SmartCabb SARL\n63, Avenue Colonel MONDJIBA\nCommune de Ngaliema\nKinshasa, République Démocratique du Congo\n\nTéléphone : +243 960 624 008\nEmail : contact@smartcabb.com'
+      content: 'SmartCabb SARL\n63, Avenue Colonel MONDJIBA\nC/ Ngaliema\nKinshasa, République Démocratique du Congo\n\nTéléphone : +243 960 624 008\nEmail : contact@smartcabb.com'
     },
     {
       title: '3. Directeur de publication',
@@ -51,11 +51,11 @@ export function LegalPage() {
   ] : [
     {
       title: '1. Site Publisher',
-      content: 'The smartcabb.com website is published by SmartCabb SARL, a company under Congolese law with capital of 10,000,000 FC, registered in the Trade and Movable Credit Register of Kinshasa under number RCCM CD/KIN/RCCM/XX-X-XXXXX.'
+      content: 'The smartcabb.com website is published by SmartCabb SARL, a company under Congolese law with capital of 10,000,000 FC, registered in the Trade and Movable Credit Register of Kinshasa (RCCM).'
     },
     {
       title: '2. Registered Office',
-      content: 'SmartCabb SARL\n63, Avenue Colonel MONDJIBA\nNgaliema\nKinshasa, Democratic Republic of Congo\n\nPhone: +243 960 624 008\nEmail: contact@smartcabb.com'
+      content: 'SmartCabb SARL\n63, Avenue Colonel MONDJIBA\nC/ Ngaliema\nKinshasa, Democratic Republic of Congo\n\nPhone: +243 960 624 008\nEmail: contact@smartcabb.com'
     },
     {
       title: '3. Publication Director',
