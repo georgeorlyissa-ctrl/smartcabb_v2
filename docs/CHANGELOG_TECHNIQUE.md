@@ -42,6 +42,43 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-28 (70) — Admin : conducteurs et clients de nouveau chargés (2FA hors `/admin/`)
+
+- **Commit** : `f89ed68` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : fix (admin / sécurité)
+- **Objectif** : les écrans « Conducteurs » et « Gestion des clients » affichaient **0** alors que « Gestion des utilisateurs » montrait 46 comptes (26 passagers, 19 conducteurs, 1 admin). Rétablir le chargement des listes.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `lib/api-auth-interceptor.ts` | Envoi de `x-admin-2fa` à toutes les routes de l'API, plus seulement à `/admin/` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Depuis le durcissement sécurité, `GET /drivers` et `GET /passengers` appellent `requireAdmin()` : session Supabase valide + rôle admin + **session 2FA serveur** (`x-admin-2fa`).
+- L'intercepteur frontend n'ajoutait l'en-tête `x-admin-2fa` que si l'URL contenait `/admin/`. Or ces deux routes sont montées hors de ce préfixe (`/make-server-2eb02e52/drivers` et `/passengers`).
+- Résultat : le backend répondait `401 ADMIN_2FA_REQUIRED`; `fetchDriversFromKV()` / `fetchPassengersFromKV()` renvoyaient `[]` sans remonter l'erreur → écrans à 0. L'écran utilisateurs continuait de fonctionner car `/admin/users/all` est sous `/admin/`.
+- Correctif : l'intercepteur ajoute désormais `x-admin-2fa` à **tous** les appels vers notre Edge Function dès que le jeton admin existe. Le backend l'ignore sur les routes publiques et le CORS autorise déjà cet en-tête. Les routes admin hors `/admin/` sont couvertes, y compris les futures.
+
+### Impact produit / comportement visible
+- Les listes Conducteurs et Clients se rechargent avec leurs données (véhicules, soldes, courses, notes, gains).
+- Le bouton « Actualiser » et le rafraîchissement automatique (60 s) fonctionnent à nouveau.
+- Aucun changement pour les passagers non connectés : sans jeton 2FA, l'en-tête n'est pas ajouté.
+
+### Risques & rollback
+- **Risque** : envoi d'un en-tête supplémentaire aux routes publiques de notre propre backend ; il est ignoré et le CORS l'autorise déjà.
+- **Rollback** : `git revert f89ed68`. Les écrans repasseront à 0 (symptôme initial).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur
+- [x] `npm run build` — OK
+- [x] Vérification du code : `x-admin-2fa` ajouté après remplacement du jeton `Authorization`
+- [x] CORS backend : `x-admin-2fa` déjà dans `allowHeaders`
+- [ ] Contrôle visuel admin après déploiement (listes > 0, ouverture fiche conducteur)
+
+---
+
 ## 2026-11-28 (69) — CTA final : message unique et badges App Store / Google Play
 
 - **Commit** : `60d9afa` (branche `main`, poussée sur `origin`)
