@@ -1022,49 +1022,18 @@ export function LandingPage() {
         <div style={{ position: 'absolute', top: '40%', left: '40%', width: '200px', height: '200px', borderRadius: '50%', background: 'rgba(255,255,255,0.03)', pointerEvents: 'none' }} />
 
         <div className="max-w-4xl mx-auto px-6" style={{ textAlign: 'center', position: 'relative' }}>
-          <h2 className={`reveal d2 ${ctaInView ? 'in' : ''}`} style={{ fontSize: 'clamp(36px,5vw,52px)', fontWeight: '900', color: 'white', marginBottom: '20px', lineHeight: '1.12', letterSpacing: '-0.02em' }}>{t('cta.title')}</h2>
-          <p className={`reveal d3 ${ctaInView ? 'in' : ''}`} style={{ fontSize: '18px', color: 'rgba(255,255,255,0.78)', marginBottom: '44px', lineHeight: '1.7', maxWidth: '520px', margin: '0 auto 44px' }}>{t('cta.subtitle')}</p>
+          <h2 className={`reveal d2 ${ctaInView ? 'in' : ''}`} style={{ fontSize: 'clamp(36px,5vw,52px)', fontWeight: '900', color: 'white', marginBottom: '20px', lineHeight: '1.12', letterSpacing: '-0.02em' }}>
+            {language === 'fr' ? 'Prêt à voyager avec SmartCabb ?' : 'Ready to travel with SmartCabb?'}
+          </h2>
+          <p className={`reveal d3 ${ctaInView ? 'in' : ''}`} style={{ fontSize: '18px', color: 'rgba(255,255,255,0.78)', lineHeight: '1.7', maxWidth: '560px', margin: '0 auto 40px' }}>
+            {language === 'fr'
+              ? "Téléchargez l'application maintenant et profitez de votre premier tour."
+              : 'Download the app now and enjoy your first ride.'}
+          </p>
 
-          {/* ✅ Boutons CTA final — avec Play Store */}
-          <div className={`reveal d4 ${ctaInView ? 'in' : ''}`} style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '44px' }}>
-            <Link to="/app/passenger" className="btn-primary cta-glow">{t('cta.startNow')}</Link>
-            <Link to="/app/driver" className="btn-secondary">{t('cta.becomePartner')}</Link>
-            {/* Play Store dans CTA */}
-            <a
-              href="https://play.google.com/store/apps/details?id=com.smartcabb.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'inline-flex', alignItems: 'center', gap: '10px',
-                padding: '15px 24px', background: 'rgba(255,255,255,0.12)',
-                color: 'white', borderRadius: '10px', textDecoration: 'none',
-                border: '2px solid rgba(255,255,255,0.35)', transition: 'all 0.25s', cursor: 'pointer', flexShrink: 0,
-              }}
-              onMouseOver={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.2)'; el.style.transform = 'translateY(-2px)'; }}
-              onMouseOut={e => { const el = e.currentTarget as HTMLElement; el.style.background = 'rgba(255,255,255,0.12)'; el.style.transform = 'translateY(0)'; }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M3.18 23.63c.37.2.8.22 1.19.07l12.5-7.22-2.8-2.8-10.89 9.95z" fill="white" opacity="0.9"/>
-                <path d="M20.52 10.3L17.4 8.5l-3.12 3.12 3.12 3.12 3.14-1.81a1.63 1.63 0 000-2.63z" fill="white" opacity="0.9"/>
-                <path d="M3.18.37a1.63 1.63 0 00-.18.74v21.78c0 .26.06.5.18.74l.1.09 12.2-12.2v-.25L3.28.28l-.1.09z" fill="white" opacity="0.9"/>
-                <path d="M14.37 11.62L3.18 23.63c.37.2.8.22 1.19.07l12.5-7.22-2.5-2.86z" fill="white" opacity="0.9"/>
-              </svg>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '10px', opacity: 0.7, lineHeight: 1 }}>{language === 'fr' ? 'Télécharger sur' : 'Download on'}</div>
-                <div style={{ fontSize: '14px', fontWeight: '700', lineHeight: 1.3 }}>Google Play</div>
-              </div>
-            </a>
-          </div>
-
-          <div className={`reveal d5 ${ctaInView ? 'in' : ''}`} style={{ display: 'flex', justifyContent: 'center', gap: '14px', flexWrap: 'wrap' }}>
-            {[{ label: t('cta.availableOn'), val: t('cta.iosAndroid') }, { label: t('cta.payment'), val: t('cta.cashMobile') }].map((b, i) => (
-              <div key={i} style={{ padding: '14px 24px', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', transition: 'background 0.2s' }}
-                onMouseOver={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.16)'; }}
-                onMouseOut={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; }}>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>{b.label}</div>
-                <div style={{ fontSize: '14px', fontWeight: '700', color: 'white' }}>{b.val}</div>
-              </div>
-            ))}
+          <div className={`reveal d4 ${ctaInView ? 'in' : ''}`} style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <PlayStoreBadge lang={language} />
+            <AppStoreBadge lang={language} />
           </div>
         </div>
       </section>

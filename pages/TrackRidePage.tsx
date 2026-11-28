@@ -93,7 +93,7 @@ export function TrackRidePage() {
   if (!rideId || error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-2xl shadow p-8 max-w-sm w-full text-center">
+        <div data-reveal data-reveal-delay="0.05s" className="bg-white rounded-2xl shadow p-8 max-w-sm w-full text-center">
           <p className="text-4xl mb-3">🗺️</p>
           <h1 className="text-lg font-bold text-gray-900 mb-2">Suivi indisponible</h1>
           <p className="text-sm text-gray-500 mb-5">Ce lien de suivi ne correspond à aucune course. Il a peut-être expiré.</p>
@@ -119,7 +119,7 @@ export function TrackRidePage() {
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-white relative overflow-hidden">
       {/* Header */}
-      <div className="relative z-20 px-4 pt-4 pb-2 bg-white">
+      <div data-reveal data-reveal-delay="0.05s" className="relative z-20 px-4 pt-4 pb-2 bg-white">
         <p className="text-center font-bold text-gray-900">SmartCabb — Suivi de course</p>
         {ride && (
           <p className="text-center text-xs text-gray-500 mt-1">{statusText(ride.status)}</p>
@@ -144,7 +144,7 @@ export function TrackRidePage() {
       </div>
 
       {/* Fiche course */}
-      <div className="relative z-20 bg-white rounded-t-3xl shadow-2xl px-5 pt-3 pb-safe -mt-4">
+      <div data-reveal data-reveal-delay="0.15s" className="relative z-20 bg-white rounded-t-3xl shadow-2xl px-5 pt-3 pb-safe -mt-4">
         {ride ? (
           <div className="py-3 space-y-2">
             {driverName && (

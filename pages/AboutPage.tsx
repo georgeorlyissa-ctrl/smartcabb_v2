@@ -145,6 +145,8 @@ export function AboutPage() {
 
             {/* Mission */}
             <motion.div
+              data-reveal
+              data-reveal-delay="0.05s"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -172,6 +174,8 @@ export function AboutPage() {
 
             {/* Vision */}
             <motion.div
+              data-reveal
+              data-reveal-delay="0.15s"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -202,6 +206,8 @@ export function AboutPage() {
 
           {/* Image illustrative */}
           <motion.div
+            data-reveal
+            data-reveal-delay="0.1s"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
@@ -237,7 +243,7 @@ export function AboutPage() {
       <section className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
 
-          <div className="text-center mb-16">
+          <div data-reveal data-reveal-delay="0.05s" className="text-center mb-16">
             <h2 className="text-5xl font-black mb-4">{t('about.values')}</h2>
             <p className="text-xl text-gray-600">
               {language === 'fr'
@@ -250,6 +256,8 @@ export function AboutPage() {
             {values.map((value, index) => (
               <motion.div
                 key={index}
+                data-reveal
+                data-reveal-delay={`${index * 0.12}s`}
                 className="value-card bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 text-center group"
                 initial={{ opacity: 0, y: 80, scale: 0.8 }}
                 whileInView={{ opacity: 1, y: 0, scale: 1 }}
@@ -322,6 +330,8 @@ export function AboutPage() {
             ].map((stat, index) => (
               <motion.div
                 key={index}
+                data-reveal
+                data-reveal-delay={`${index * 0.1}s`}
                 initial={{ opacity: 0, scale: 0.5 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}

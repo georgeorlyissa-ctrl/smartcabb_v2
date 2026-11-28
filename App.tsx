@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PWAInstallPrompt, OnlineStatusIndicator } from './components/PWAInstallPrompt';
 import { ExchangeRateSync } from './components/ExchangeRateSync';
 import { PageTransition } from './components/PageTransition';
+import { ScrollReveal } from './components/public/ScrollReveal';
 import { SeoHead } from './components/SeoHead';
 import { AppProvider } from './hooks/useAppState';
 import { BackendSyncProvider } from './components/BackendSyncProvider';
@@ -430,6 +431,7 @@ function App() {
               <ExchangeRateSync />
               <MaintenanceBanner />
               <PageTransition />
+              <ScrollReveal />
 
               <Suspense fallback={<SuspenseFallback />}>
                 <Routes>
@@ -489,7 +491,7 @@ function App() {
                   <Route path="/index.html" element={<Navigate to="/" replace />} />
 
                   {/* 404 explicite noindex — ne plus renvoyer la homepage en déguisé */}
-                  <Route path="*" element={<NotFoundPage />} />
+                  <Route path="/*" element={<NotFoundPage />} />
                 </Routes>
               </Suspense>
             </div>

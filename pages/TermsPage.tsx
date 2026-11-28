@@ -128,6 +128,8 @@ export function TermsPage() {
               {sections.map((section, index) => (
                 <motion.div
                   key={index}
+                  data-reveal
+                  data-reveal-delay={`${index * 0.06}s`}
                   className="pb-8 border-b border-gray-200 last:border-0"
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -144,7 +146,7 @@ export function TermsPage() {
               ))}
             </div>
 
-            <div className="mt-12 p-6 bg-cyan-50 rounded-xl border-2 border-cyan-100">
+            <div data-reveal data-reveal-delay="0.1s" className="mt-12 p-6 bg-cyan-50 rounded-xl border-2 border-cyan-100">
               <p className="text-sm text-gray-700">
                 <strong className="text-cyan-600">
                   {language === 'fr' ? 'Questions ?' : 'Questions?'}

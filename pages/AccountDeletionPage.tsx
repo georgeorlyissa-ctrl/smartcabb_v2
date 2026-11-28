@@ -71,7 +71,7 @@ export function AccountDeletionPage() {
 
       <main className="pt-32 pb-20 px-6">
         <div className="max-w-4xl mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <motion.div data-reveal data-reveal-delay="0.05s" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <div className="text-center mb-12">
               <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -90,7 +90,7 @@ export function AccountDeletionPage() {
           </motion.div>
 
           <div className="space-y-12">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}>
+            <motion.div data-reveal data-reveal-delay="0.1s" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}>
               <h2 className="text-2xl font-bold text-[#222222] mb-8 flex items-center gap-3">
                 <span className="w-1 h-8 bg-blue-500 rounded-full inline-block"></span>
                 {isFr ? 'Procédure de suppression' : 'Deletion Procedure'}
@@ -99,6 +99,8 @@ export function AccountDeletionPage() {
                 {steps.map((step, i) => (
                   <motion.div
                     key={i}
+                    data-reveal
+                    data-reveal-delay={`${0.15 + i * 0.08}s`}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.15 + i * 0.1, duration: 0.4 }}
@@ -117,6 +119,8 @@ export function AccountDeletionPage() {
             </motion.div>
 
             <motion.div
+              data-reveal
+              data-reveal-delay="0.15s"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
@@ -144,6 +148,8 @@ export function AccountDeletionPage() {
             </motion.div>
 
             <motion.div
+              data-reveal
+              data-reveal-delay="0.2s"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
@@ -179,6 +185,8 @@ export function AccountDeletionPage() {
             </motion.div>
 
             <motion.div
+              data-reveal
+              data-reveal-delay="0.25s"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, duration: 0.5 }}

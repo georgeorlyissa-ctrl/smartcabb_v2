@@ -65,6 +65,8 @@ export function PrivacyPage() {
 
           {/* Intro */}
           <motion.div
+            data-reveal
+            data-reveal-delay="0.05s"
             style={{ padding: '24px 28px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', marginBottom: '48px' }}
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <p style={{ fontSize: '15px', color: '#0369a1', lineHeight: '1.7' }}>
@@ -78,6 +80,8 @@ export function PrivacyPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
             {sections.map((section, index) => (
               <motion.div key={index}
+                data-reveal
+                data-reveal-delay={`${index * 0.05}s`}
                 style={{ padding: '32px 0', borderBottom: index < sections.length - 1 ? '1px solid #f3f4f6' : 'none' }}
                 initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.04 }} viewport={{ once: true }}>
@@ -92,7 +96,7 @@ export function PrivacyPage() {
           </div>
 
           {/* Footer note */}
-          <div style={{ marginTop: '48px', padding: '20px 24px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
+          <div data-reveal data-reveal-delay="0.1s" style={{ marginTop: '48px', padding: '20px 24px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
             <p style={{ fontSize: '14px', color: '#166534', lineHeight: '1.6' }}>
               <strong>{language === 'fr' ? 'Vos données sont protégées. ' : 'Your data is protected. '}</strong>
               {language === 'fr'
@@ -102,7 +106,7 @@ export function PrivacyPage() {
           </div>
 
           {/* Identité légale du responsable de traitement */}
-          <address style={{ marginTop: '24px', padding: '20px 24px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px', fontStyle: 'normal', fontSize: '14px', color: '#374151', lineHeight: '1.7' }}>
+          <address data-reveal data-reveal-delay="0.15s" style={{ marginTop: '24px', padding: '20px 24px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '12px', fontStyle: 'normal', fontSize: '14px', color: '#374151', lineHeight: '1.7' }}>
             <p style={{ fontWeight: 700, color: '#111827' }}>SmartCabb</p>
             <p>63, Avenue Colonel MONDJIBA, C/ Ngaliema</p>
             <p>Kinshasa, République Démocratique du Congo</p>

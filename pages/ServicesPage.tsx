@@ -272,7 +272,7 @@ export function ServicesPage() {
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
             {steps.map((s, i) => (
-              <div key={i} style={{ background: '#fff', borderRadius: '18px', padding: '28px', border: '1px solid #e8eef4' }}>
+              <div key={i} data-reveal data-reveal-delay={`${i * 0.1}s`} style={{ background: '#fff', borderRadius: '18px', padding: '28px', border: '1px solid #e8eef4' }}>
                 <div style={{ fontSize: '15px', fontWeight: '900', color: BLUE, marginBottom: '10px' }}>{s.n}</div>
                 <h3 style={{ fontSize: '18px', fontWeight: '800', color: NAVY, marginBottom: '8px' }}>{s.t}</h3>
                 <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.65' }}>{s.d}</p>
@@ -296,7 +296,7 @@ export function ServicesPage() {
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
             {reservations.map((r, i) => (
-              <div key={i} style={{ background: '#fff', borderRadius: '18px', padding: '30px' }}>
+              <div key={i} data-reveal data-reveal-delay={`${i * 0.1}s`} style={{ background: '#fff', borderRadius: '18px', padding: '30px' }}>
                 <div style={{ fontSize: '30px', marginBottom: '12px' }}>{r.icon}</div>
                 <h3 style={{ fontSize: '18px', fontWeight: '800', color: NAVY, marginBottom: '12px' }}>{r.title}</h3>
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px 0' }}>

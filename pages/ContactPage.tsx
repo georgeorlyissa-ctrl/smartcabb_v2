@@ -81,15 +81,11 @@ export function ContactPage() {
           <div className="grid lg:grid-cols-2 gap-12">
 
             {/* Contact Info */}
-            <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-            >
+            <div data-reveal data-reveal-delay="0.05s">
               <h2 className="text-4xl font-black mb-8">{t('contact.title')}</h2>
 
               <div className="space-y-6 mb-12">
-                <div className="flex items-start gap-4 p-6 bg-white rounded-2xl shadow-lg">
+                <div data-reveal data-reveal-delay="0.12s" className="flex items-start gap-4 p-6 bg-white rounded-2xl shadow-lg">
                   <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center text-white text-xl flex-shrink-0">
                     📍
                   </div>
@@ -99,7 +95,7 @@ export function ContactPage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-6 bg-white rounded-2xl shadow-lg">
+                <div data-reveal data-reveal-delay="0.2s" className="flex items-start gap-4 p-6 bg-white rounded-2xl shadow-lg">
                   <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center text-white text-xl flex-shrink-0">
                     📞
                   </div>
@@ -109,7 +105,7 @@ export function ContactPage() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-4 p-6 bg-white rounded-2xl shadow-lg">
+                <div data-reveal data-reveal-delay="0.28s" className="flex items-start gap-4 p-6 bg-white rounded-2xl shadow-lg">
                   <div className="w-12 h-12 bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-full flex items-center justify-center text-white text-xl flex-shrink-0">
                     📧
                   </div>
@@ -119,14 +115,10 @@ export function ContactPage() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* Contact Form */}
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-            >
+            <div data-reveal data-reveal-delay="0.15s">
               <div className="p-8 bg-white rounded-3xl shadow-2xl border border-gray-100">
                 <h2 className="text-3xl font-black mb-6">{t('contact.message')}</h2>
 
@@ -200,7 +192,7 @@ export function ContactPage() {
                   )}
                 </form>
               </div>
-            </motion.div>
+            </div>
 
           </div>
         </div>
