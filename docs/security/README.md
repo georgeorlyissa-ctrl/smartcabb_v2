@@ -27,6 +27,7 @@
 | QUA-CHQ-001 | [../quality/CHARTE_QUALITE_SERVICE.md](../quality/CHARTE_QUALITE_SERVICE.md) | Charte Qualité de Service alignée ISO 9001 | Projet à approuver |
 | SEC-GAP-001 | [CONFORMITE_REUNION_24NOV2026.md](./CONFORMITE_REUNION_24NOV2026.md) | Synthèse « déjà fait / reste à faire » | Tableau de bord |
 | SEC-REG-001 | [REGISTRE_APPROBATIONS.md](./REGISTRE_APPROBATIONS.md) | Suivi des approbations et versions | Registre |
+| SEC-DOC-001 | [EXPORT_PDF.md](./EXPORT_PDF.md) | Comment exporter les documents en PDF | Mode d'emploi |
 
 ## 3. Preuves et documents d'appui déjà en place
 

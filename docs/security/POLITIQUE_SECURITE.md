@@ -78,8 +78,7 @@ La politique s'applique à :
 - Les comptes sont **nominatifs** ; aucun compte partagé.
 - La **2FA** est obligatoire pour les comptes d'administration :
   - applicatif SmartCabb : 2FA email + session serveur 12 h ;
-  - Vercel, GitHub, Play Console : 2FA activée ;
-  - Supabase : **à finaliser**.
+  - Supabase, Vercel, GitHub, Play Console : 2FA activée.
 - Les mots de passe font au moins **12 caractères** pour les comptes admin et
   sont uniques.
 - Les accès sont revus **chaque trimestre** (`ACCESS_REVIEW.md`) et à chaque

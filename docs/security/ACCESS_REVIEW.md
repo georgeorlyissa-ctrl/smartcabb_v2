@@ -18,7 +18,7 @@
 
 | Plateforme | Personnes ayant accès | MFA | À vérifier |
 |---|---|---|---|
-| Supabase (projet `zaerjqchzqmcxqblkfkg`) | propriétaire du projet | ⬜ à activer | membres de l'organisation, clés API |
+| Supabase (projet `zaerjqchzqmcxqblkfkg`) | propriétaire du projet | ✅ | membres de l'organisation, clés API |
 | Vercel (projet `smartcabb-v2`) | propriétaire du projet | ✅ | membres de l'équipe, tokens |
 | GitHub (`smartcabb_v2`) | propriétaire du dépôt | ✅ | collaborateurs, clés de déploiement |
 | Google Play Console | propriétaire du compte | ✅ | utilisateurs, clés d'upload |
@@ -50,6 +50,6 @@
 ## 6. Points de vigilance
 
 - **Un seul admin** = disponibilité menacée : prévoir la procédure de secours (documentée).
-- Les comptes Supabase/Vercel/Play **doivent** avoir la 2FA : à activer manuellement.
+- Les comptes Supabase, Vercel, GitHub et Play sont protégés par **2FA** ; vérifier à chaque revue.
 - Aucun mot de passe ne doit être stocké dans le dépôt ni dans un fichier partagé
   (utiliser un gestionnaire de mots de passe).

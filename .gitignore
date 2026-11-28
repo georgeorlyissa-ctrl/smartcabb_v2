@@ -54,3 +54,6 @@ preview.log
 
 # Captures brutes pour le Play Store (non versionnées)
 docs/play-store/screenshots-raw/
+
+# Exports PDF/HTML des documents (générés localement, non versionnés)
+docs/exports/

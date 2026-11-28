@@ -42,6 +42,53 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-28 (72) — Export PDF des documents + 2FA Supabase confirmée
+
+- **Commit** : `<à compléter>` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : docs / outillage
+- **Objectif** : permettre l'export PDF des politiques et procédures pour signature et archivage, et mettre à jour l'état de la 2FA après activation sur Supabase.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `scripts/export-docs-pdf.mjs` | **Nouveau** : conversion Markdown → HTML stylé → PDF via Chrome/Edge headless, sans dépendance npm |
+| `docs/security/EXPORT_PDF.md` | **Nouveau** : mode d'emploi, options, signature et dépannage |
+| `docs/security/README.md` | Ajout du mode d'emploi PDF à l'index |
+| `.gitignore` | Ignore `docs/exports/` (PDF/HTML générés localement) |
+| `docs/security/ACCESS_REVIEW.md` | 2FA Supabase, Vercel, GitHub et Play Console : ✅ |
+| `docs/security/ASSET_INVENTORY.md` | MFA des comptes plateformes : ✅ |
+| `docs/security/POLITIQUE_SECURITE.md` | Règle 2FA mise à jour (Supabase inclus) |
+| `docs/security/HARDENING_CHECKLIST.md` | 2FA Supabase ✅ ; action restante retirée |
+| `docs/security/CIS_NIVEAUX_1_2.md` | 2FA plateformes ✅ ; feuille de route mise à jour |
+| `docs/security/CONFORMITE_REUNION_24NOV2026.md` | Action 2FA Supabase clôturée |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Script PDF** : parseur Markdown minimal (titres, tableaux, listes multi-lignes, citations, code, cases à cocher, liens), CSS A4 professionnel, puis impression via `chrome --headless --print-to-pdf`. Détection automatique de Chrome/Edge, profil temporaire, sortie dans `docs/exports/pdf/`.
+- Aucun package ajouté : le script utilise uniquement `node:fs`, `node:path`, `node:os`, `node:child_process` et `node:url`.
+- **2FA** : Supabase est désormais protégé ; les quatre plateformes d'administration (Supabase, Vercel, GitHub, Play Console) sont à jour dans les documents.
+- Les PDF générés ne sont pas versionnés (`.gitignore`), seules les sources Markdown le sont.
+
+### Impact produit / comportement visible
+- La direction peut exporter chaque document en PDF A4, le signer et l'archiver hors dépôt.
+- Les documents reflètent l'état réel de la 2FA : plus aucune action « activer Supabase » en attente.
+
+### Risques & rollback
+- **Risque** : Chrome/Edge absent sur un poste → le script affiche une erreur et la méthode alternative (`EXPORT_PDF.md`) prend le relais.
+- **Risque** : un PDF généré peut contenir une version non approuvée ; vérifier la mention « Projet » avant diffusion.
+- **Rollback** : supprimer le script et `EXPORT_PDF.md`, ou `git revert <hash>` ; aucune modification runtime.
+
+### Tests / vérifications
+- [x] 22 PDF générés (documents sécurité, qualité, `SECURITY.md`, `BACKUPS.md`) sans échec
+- [x] Contrôle visuel d'une page (titres, tableaux, listes, citations) via capture Chrome
+- [x] Nombres de pages cohérents (2 à 7 pages selon le document)
+- [x] Liens Markdown vérifiés (0 cassé)
+- [x] `npx tsc --noEmit` non impacté (outillage docs uniquement)
+- [ ] Signature des PDF par la direction
+
+---
+
 ## 2026-11-28 (71) — Conformité réunion 24/11/2026 : politique, crise, ISO, CIS, incidents, qualité
 
 - **Commit** : `14cba02` (branche `main`, poussé sur `origin`)
@@ -77,7 +124,7 @@ Assez de détail pour comprendre le code sans le relire.>
 ### Impact produit / comportement visible
 - La direction dispose d'un dossier complet pour la descente sur le terrain et pour un futur audit.
 - Les équipes disposent de procédures claires : qui décide en cas de crise, comment signaler un incident, comment vérifier un chauffeur/véhicule, quels engagements qualité tenir.
-- Les écarts restants sont visibles et priorisés (signatures, exercice de crise, formation, pentest, DPA, 2FA Supabase, PITR).
+- Les écarts restants sont visibles et priorisés (signatures, exercice de crise, formation, pentest, DPA, restriction Google Maps, PITR).
 
 ### Risques & rollback
 - **Risque** : documents non approuvés = pas de valeur opposable ; les cibles RTO/RPO/SLA sont des objectifs internes à valider.

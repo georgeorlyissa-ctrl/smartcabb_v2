@@ -21,10 +21,10 @@
 | Accès | Détenteur | MFA | Notes |
 |---|---|---|---|
 | Compte admin SmartCabb | `georgeorlyissa@gmail.com` | ✅ 2FA email + session 12 h | **unique** administrateur |
-| Organisation Supabase | propriétaire du projet | à activer côté Supabase | — |
-| Équipe Vercel | propriétaire du projet | à activer côté Vercel | — |
-| Play Console | propriétaire du compte développeur | à activer | — |
-| Dépôt GitHub | `georgeorlyissa-ctrl/smartcabb_v2` | à activer | — |
+| Organisation Supabase | propriétaire du projet | ✅ 2FA activée | — |
+| Équipe Vercel | propriétaire du projet | ✅ 2FA activée | — |
+| Play Console | propriétaire du compte développeur | ✅ 2FA activée | — |
+| Dépôt GitHub | `georgeorlyissa-ctrl/smartcabb_v2` | ✅ 2FA activée | — |
 
 ## 3. Prestataires techniques
 

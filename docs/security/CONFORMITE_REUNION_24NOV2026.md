@@ -49,7 +49,7 @@ Ce document répond à trois questions :
 | CI/CD, SAST, DAST, Dependabot | `.github/workflows/*`, `docs/security/CHECKLIST_AUDIT.md` | ✅ |
 | SOS passager/chauffeur + SMS | `docs/EMERGENCY_SOS.md` | ✅ |
 | 2FA admin applicative + session 12 h | `auth-guard.ts`, `AdminLoginScreen` | ✅ |
-| 2FA plateformes (Vercel, GitHub, Play Console) | suivi projet | ✅ (Supabase à finaliser) |
+| 2FA plateformes (Supabase, Vercel, GitHub, Play Console) | suivi projet | ✅ |
 | Rate limiting ciblé, OTP SMS, quotas | Edge Function | ✅ |
 | Chiffrement TLS, secrets hors dépôt | Vercel/Supabase | ✅ |
 
@@ -93,7 +93,7 @@ Ce document répond à trois questions :
 | Former les intervenants terrain à la check-list et aux réflexes incidents | Opérations | 7 jours | Feuille de présence + quiz |
 | Vérifier les documents chauffeurs/véhicules sur un échantillon | Opérations | 7 jours | Check-lists complétées |
 | Tester le scénario « téléphone admin perdu » (révocation + secours) | Admin/Sécurité | 7 jours | Compte rendu d'exercice |
-| Confirmer la 2FA Supabase et la restriction de la clé Google Maps | Admin | 7 jours | Capture/justificatif |
+| Confirmer la restriction de la clé Google Maps | Admin | 7 jours | Capture/justificatif |
 
 ### 5.2 À faire sous 30 jours
 

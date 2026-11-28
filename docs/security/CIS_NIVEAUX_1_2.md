@@ -126,7 +126,7 @@ Légende : ✅ fait · 🟡 partiel · ❌ à faire · ➖ sans objet.
 |---|---|---|---|---|
 | Comptes nominatifs | ✅ | ✅ | ✅ | Maintenir |
 | 2FA admin applicative | ✅ | ✅ | ✅ | Maintenir |
-| 2FA plateformes | ✅ | ✅ | 🟡 | Vercel/GitHub/Play ✅ ; Supabase à finaliser |
+| 2FA plateformes | ✅ | ✅ | ✅ | Supabase, Vercel, GitHub et Play Console protégés |
 | Revue trimestrielle | ✅ | ✅ | 🟡 | Première revue formelle à faire |
 | Gestionnaire de mots de passe | ✅ | ✅ | ❌ | Mettre en place |
 | Accès privilégié juste-à-temps | ➖ | ✅ | ❌ | Évaluer |
@@ -140,7 +140,7 @@ Légende : ✅ fait · 🟡 partiel · ❌ à faire · ➖ sans objet.
 2. Réaliser un exercice de crise tabletop.
 3. Lancer un scan de vulnérabilités (ZAP + revue des dépendances).
 4. Archiver les DPA Supabase, Vercel, EJ SMS, Ejpay, Google.
-5. Finaliser la 2FA Supabase et la restriction Google Maps.
+5. Finaliser la restriction de la clé Google Maps.
 6. Mettre à jour l'inventaire des actifs (AAB, comptes, fournisseurs).
 
 ### 60 jours
