@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-28 (72) — Export PDF des documents + 2FA Supabase confirmée
 
-- **Commit** : `<à compléter>` (branche `main`, poussé sur `origin`)
+- **Commit** : `0c21f12` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : docs / outillage
 - **Objectif** : permettre l'export PDF des politiques et procédures pour signature et archivage, et mettre à jour l'état de la 2FA après activation sur Supabase.
