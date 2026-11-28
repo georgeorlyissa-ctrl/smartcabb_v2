@@ -10,7 +10,10 @@
  * appels vers notre API uniquement :
  *  - remplace `Authorization: Bearer <anon>` par le JWT Supabase de la session
  *    en cours (si elle existe) ;
- *  - ajoute `x-admin-2fa` (session 2FA serveur) pour les routes `/admin/`.
+ *  - ajoute `x-admin-2fa` (session 2FA serveur) dès qu'il existe, pour toutes
+ *    les routes de notre API. Le backend l'ignore sur les routes publiques,
+ *    et cela couvre les routes admin hors `/admin/` (`/drivers`, `/passengers`,
+ *    etc.) qui exigent la 2FA.
  *
  * Les requêtes sans session (visiteur non connecté) conservent la clé anon :
  * les routes publiques (config, santé, carte) continuent de fonctionner.
@@ -40,10 +43,6 @@ async function currentAccessToken(): Promise<string | null> {
 
 function isApiUrl(url: string): boolean {
   return typeof url === 'string' && url.includes(API_MARKER);
-}
-
-function isAdminUrl(url: string): boolean {
-  return isApiUrl(url) && url.includes('/admin/');
 }
 
 function mergeHeaders(input: RequestInfo | URL, init?: RequestInit): Headers {
@@ -93,13 +92,14 @@ export function installApiAuthInterceptor(): void {
     const headers = mergeHeaders(input, init);
     headers.set('Authorization', `Bearer ${token}`);
 
-    if (isAdminUrl(url)) {
-      try {
-        const twoFa = localStorage.getItem('smartcab_admin_2fa_token');
-        if (twoFa) headers.set('x-admin-2fa', twoFa);
-      } catch {
-        /* localStorage indisponible */
-      }
+    // Session 2FA admin : envoyée à toutes les routes de notre API. Le backend
+    // l'ignore sur les routes publiques ; en revanche les routes admin-only
+    // hors `/admin/` (GET /drivers, GET /passengers, etc.) en ont besoin.
+    try {
+      const twoFa = localStorage.getItem('smartcab_admin_2fa_token');
+      if (twoFa) headers.set('x-admin-2fa', twoFa);
+    } catch {
+      /* localStorage indisponible */
     }
 
     return originalFetch(input as any, { ...(init || {}), headers });
