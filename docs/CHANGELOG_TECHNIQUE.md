@@ -44,7 +44,7 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ## 2026-11-28 (71) — Conformité réunion 24/11/2026 : politique, crise, ISO, CIS, incidents, qualité
 
-- **Commit** : `<à compléter>` (branche `main`, poussé sur `origin`)
+- **Commit** : `14cba02` (branche `main`, poussé sur `origin`)
 - **Auteur** : agent OpenCode
 - **Type** : docs (gouvernance sécurité & qualité)
 - **Objectif** : répondre aux recommandations de la réunion du 24 novembre 2026 en produisant les livrables manquants (politique de sécurité, plan de crise, manuel de procédures, CIS niveaux 1-2, cadre ISO 27001/27002, procédure ISO 27035, check-list opérationnelle, charte qualité ISO 9001) et en documentant clairement ce qui était déjà fait.
