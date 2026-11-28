@@ -32,7 +32,7 @@
 | 23 | **Backup** | ✅ | Quotidien 02:00, rétention 30 j, **test de restauration** réel, alerte en cas d'échec | — |
 | 24 | **Disaster recovery** | 🟡 | `INCIDENT_CARD.md` + sauvegardes ; RTO/RPO non formalisés | Écrire RTO (4 h) / RPO (24 h) et tester un scénario complet |
 | 25 | **SIEM** | ❌ | Pas de SIEM (coût) ; remplacé par journal d'audit + alertes email | Envisager un collecteur (Loki/Grafana Cloud) si volumétrie |
-| 26 | **Incident response** | ✅ | Fiche incident 1 page + alertes automatiques (backup, 5xx, restauration) | Faire un exercice à blanc |
+| 26 | **Incident response** | ✅ | Fiche incident 1 page + procédure ISO 27035 + alertes automatiques (backup, 5xx, restauration) | Faire un exercice à blanc |
 
 ## Nouveautés de cette revue
 

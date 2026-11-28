@@ -18,11 +18,11 @@
 
 | Plateforme | Personnes ayant accès | MFA | À vérifier |
 |---|---|---|---|
-| Supabase (projet `zaerjqchzqmcxqblkfkg`) | propriétaire du projet | ⬜ | membres de l'organisation, clés API |
-| Vercel (projet `smartcabb-v2`) | propriétaire du projet | ⬜ | membres de l'équipe, tokens |
-| GitHub (`smartcabb_v2`) | propriétaire du dépôt | ⬜ | collaborateurs, clés de déploiement |
-| Google Play Console | propriétaire du compte | ⬜ | utilisateurs, clés d'upload |
-| Gmail (SMTP) | propriétaire de la boîte | ⬜ | mots de passe d'application actifs |
+| Supabase (projet `zaerjqchzqmcxqblkfkg`) | propriétaire du projet | ⬜ à activer | membres de l'organisation, clés API |
+| Vercel (projet `smartcabb-v2`) | propriétaire du projet | ✅ | membres de l'équipe, tokens |
+| GitHub (`smartcabb_v2`) | propriétaire du dépôt | ✅ | collaborateurs, clés de déploiement |
+| Google Play Console | propriétaire du compte | ✅ | utilisateurs, clés d'upload |
+| Gmail (SMTP) | propriétaire de la boîte | ⬜ à vérifier | mots de passe d'application actifs |
 
 ## 3. Procédure d'ajout d'un accès
 

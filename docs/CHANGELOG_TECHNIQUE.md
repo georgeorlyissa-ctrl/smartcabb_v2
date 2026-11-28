@@ -42,6 +42,58 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-28 (71) — Conformité réunion 24/11/2026 : politique, crise, ISO, CIS, incidents, qualité
+
+- **Commit** : `<à compléter>` (branche `main`, poussé sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : docs (gouvernance sécurité & qualité)
+- **Objectif** : répondre aux recommandations de la réunion du 24 novembre 2026 en produisant les livrables manquants (politique de sécurité, plan de crise, manuel de procédures, CIS niveaux 1-2, cadre ISO 27001/27002, procédure ISO 27035, check-list opérationnelle, charte qualité ISO 9001) et en documentant clairement ce qui était déjà fait.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `docs/security/README.md` | **Nouveau** : index des documents sécurité/qualité |
+| `docs/security/REGISTRE_APPROBATIONS.md` | **Nouveau** : registre des versions et approbations |
+| `docs/security/CONFORMITE_REUNION_24NOV2026.md` | **Nouveau** : analyse d'écart « déjà fait / reste à faire » |
+| `docs/security/POLITIQUE_SECURITE.md` | **Nouveau** : politique de sécurité (SEC-POL-001) |
+| `docs/security/PLAN_GESTION_CRISE.md` | **Nouveau** : plan de gestion de crise et continuité (SEC-CRI-001) |
+| `docs/security/MANUEL_PROCEDURES_INTERNES.md` | **Nouveau** : manuel des procédures et RACI (SEC-MPI-001) |
+| `docs/security/CIS_NIVEAUX_1_2.md` | **Nouveau** : état CIS Controls IG1/IG2 et Benchmarks L1/L2 (SEC-CIS-001) |
+| `docs/security/CADRE_ISO_27001_27002.md` | **Nouveau** : cadre SMSI, registre des risques et SoA simplifiée (SEC-ISO-001) |
+| `docs/security/PROCEDURE_INCIDENTS_ISO_27035.md` | **Nouveau** : procédure complète de gestion des incidents (SEC-INC-001) |
+| `docs/security/CHECKLIST_OPERATIONNELLE.md` | **Nouveau** : check-list avant / pendant / après terrain (SEC-OPS-001) |
+| `docs/quality/CHARTE_QUALITE_SERVICE.md` | **Nouveau** : charte qualité de service ISO 9001 (QUA-CHQ-001) |
+| `docs/SECURITY.md` | Mise à jour de la référence `x-admin-2fa` + renvois vers la gouvernance |
+| `docs/security/ACCESS_REVIEW.md`, `ASSET_INVENTORY.md`, `CIS_IG1_CHECKLIST.md`, `HARDENING_CHECKLIST.md`, `INCIDENT_CARD.md`, `CHECKLIST_AUDIT.md` | Mises à jour de cohérence (2FA plateformes, version AAB, renvois procédure) |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Constat** : les contrôles techniques étaient déjà largement en place (gardes d'authentification, 2FA admin, RLS, sauvegardes testées, journal d'audit, CI/CD, CodeQL, ZAP, OWASP, CIS IG1, hardening, fiche incident). La **gouvernance documentaire** manquait : politique, plan de crise, manuel, cadre ISO, procédure complète d'incident, check-list terrain et charte qualité.
+- **Création** de 11 documents (dont la charte qualité), avec références, rôles, procédures, modèles et blocs d'approbation. Les documents sont des **projets à approuver** par la direction ; aucune certification ISO n'est revendiquée.
+- **Analyse d'écart** : `CONFORMITE_REUNION_24NOV2026.md` récapitule les 8 livrables, l'état avant/après, les actions bloquantes et la feuille de route 30/60/90 jours.
+- **Interprétation** : « CIE » du compte rendu est traité comme **CIS** ; cette hypothèse est explicitée dans les documents.
+- **Aucun changement de code exécutable** : les documents sont en Markdown et n'affectent ni le build ni le runtime.
+
+### Impact produit / comportement visible
+- La direction dispose d'un dossier complet pour la descente sur le terrain et pour un futur audit.
+- Les équipes disposent de procédures claires : qui décide en cas de crise, comment signaler un incident, comment vérifier un chauffeur/véhicule, quels engagements qualité tenir.
+- Les écarts restants sont visibles et priorisés (signatures, exercice de crise, formation, pentest, DPA, 2FA Supabase, PITR).
+
+### Risques & rollback
+- **Risque** : documents non approuvés = pas de valeur opposable ; les cibles RTO/RPO/SLA sont des objectifs internes à valider.
+- **Risque** : ne pas confondre « aligné ISO » et « certifié ISO » ; aucune communication publique ne doit revendiquer une certification.
+- **Rollback** : supprimer les nouveaux fichiers ou `git revert <hash>` ; aucun impact runtime.
+
+### Tests / vérifications
+- [x] Liens Markdown internes vérifiés (0 lien cassé sur les 10 fichiers)
+- [x] Relecture de cohérence avec `SECURITY.md`, `BACKUPS.md`, `INCIDENT_CARD.md`, `CIS_IG1_CHECKLIST.md`, `HARDENING_CHECKLIST.md`
+- [x] Aucun secret ni donnée personnelle dans les documents
+- [x] `npx tsc --noEmit` / `npm run build` non impactés (docs uniquement)
+- [ ] Approbation et signature par la direction
+- [ ] Exercice de crise et formation à planifier
+
+---
+
 ## 2026-11-28 (70) — Admin : conducteurs et clients de nouveau chargés (2FA hors `/admin/`)
 
 - **Commit** : `f89ed68` (branche `main`, poussée sur `origin`)

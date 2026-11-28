@@ -8,6 +8,9 @@
 > sont des réglages précis, vérifiables et automatisables.
 >
 > Dernière revue : 26 novembre 2026.
+>
+> **Synthèse et feuille de route** : `CIS_NIVEAUX_1_2.md` (IG1/IG2 + Benchmarks
+> L1/L2). Ce document détaille les réglages appliqués ou restants.
 
 ## 1. Ce qui s'applique — et ce qui ne s'applique pas
 
@@ -69,14 +72,17 @@ appartiennent pas**. Ce qui reste sous notre contrôle :
 | Mesure | État |
 |---|---|
 | 2FA sur le compte admin applicatif | ✅ |
-| 2FA sur Supabase / Vercel / GitHub / Play Console | ⬜ **à activer par l'exploitant** |
+| 2FA Supabase | ⬜ **à activer** |
+| 2FA Vercel | ✅ |
+| 2FA GitHub | ✅ |
+| 2FA Play Console | ✅ |
 | Comptes nominatifs, aucun compte partagé | ✅ |
 | Revue d'accès trimestrielle | 🟡 procédure prête (`ACCESS_REVIEW.md`) |
 | Gestionnaire de mots de passe | ⬜ à mettre en place |
 
 ## 3. Actions restantes
 
-1. **Activer la 2FA** sur Supabase, Vercel, GitHub, Play Console (bloquant, 10 min).
+1. **Activer la 2FA Supabase** (Vercel, GitHub et Play Console sont déjà protégés).
 2. **Publier une nouvelle AAB** pour embarquer `allowBackup=false` et l'interdiction du trafic en clair.
 3. Passer en revue les **extensions PostgreSQL** et retirer celles qui ne sont pas utilisées.
 4. Décider du **certificate pinning** (optionnel, à faire si un audit l'exige).

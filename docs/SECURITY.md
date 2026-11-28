@@ -31,7 +31,9 @@
 | `optionalUser` | identité facultative (profil public assaini) |
 
 Côté client, `lib/api-auth-interceptor.ts` remplace la clé `anon` par le JWT
-de session et ajoute `x-admin-2fa` pour les routes `/admin/*`.
+de session et ajoute `x-admin-2fa` à **tous** les appels vers notre API (le
+backend l'ignore sur les routes publiques), ce qui couvre aussi les routes admin
+hors `/admin/*` comme `GET /drivers` et `GET /passengers`.
 
 ## 2. Contrôles en place
 
@@ -153,3 +155,19 @@ curl -s "https://<project>.supabase.co/rest/v1/profiles?select=email,phone&limit
 - [ ] Test réel : inscription OTP, course, réservation, paiement, SOS, admin.
 - [ ] Clé Google Maps restreinte par referrer.
 - [ ] Sauvegarde récente vérifiée.
+
+## 6. Gouvernance et documents associés
+
+La politique de sécurité, le plan de gestion de crise, le manuel des procédures,
+la procédure incidents ISO 27035, la check-list opérationnelle et la charte
+qualité sont indexés dans `docs/security/README.md`.
+
+- `docs/security/POLITIQUE_SECURITE.md` — principes, rôles, règles.
+- `docs/security/PLAN_GESTION_CRISE.md` — cellule de crise, continuité.
+- `docs/security/MANUEL_PROCEDURES_INTERNES.md` — procédures et RACI.
+- `docs/security/PROCEDURE_INCIDENTS_ISO_27035.md` — gestion des incidents.
+- `docs/security/CHECKLIST_OPERATIONNELLE.md` — avant / pendant / après terrain.
+- `docs/security/CIS_NIVEAUX_1_2.md` — état CIS Controls et Benchmarks.
+- `docs/security/CADRE_ISO_27001_27002.md` — cadre SMSI et SoA simplifiée.
+- `docs/quality/CHARTE_QUALITE_SERVICE.md` — engagements qualité ISO 9001.
+- `docs/security/CONFORMITE_REUNION_24NOV2026.md` — synthèse des écarts.

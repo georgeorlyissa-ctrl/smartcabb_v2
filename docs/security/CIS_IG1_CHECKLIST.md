@@ -4,6 +4,9 @@
 > application Android (WebView Capacitor), base Supabase, prestataires SMS/paiement.
 > Niveau visé : **IG1** (hygiène de base, adapté à une petite structure).
 > Dernière revue : 26 novembre 2026.
+>
+> **Complément** : `CIS_NIVEAUX_1_2.md` couvre le niveau **IG2** et les
+> **CIS Benchmarks L1/L2** (PostgreSQL, Android, HTTP, comptes).
 
 Légende : ✅ fait · 🟡 partiel · ❌ à faire · ➖ sans objet
 
@@ -25,7 +28,7 @@ Légende : ✅ fait · 🟡 partiel · ❌ à faire · ➖ sans objet
 | 14 | Sensibilisation | ❌ | aucune formation formelle ; dépend d'une seule personne |
 | 15 | Gestion des prestataires | 🟡 | `SUBPROCESSORS.md` créé ; clauses/DPA à récupérer auprès de chaque fournisseur |
 | 16 | Sécurité applicative | ✅ | gardes d'authentification centralisées, validation d'entrée, erreurs génériques, rate limits |
-| 17 | Réponse aux incidents | ✅ | `INCIDENT_CARD.md` + alertes email automatiques |
+| 17 | Réponse aux incidents | ✅ | `INCIDENT_CARD.md` + procédure complète `PROCEDURE_INCIDENTS_ISO_27035.md` + alertes email automatiques |
 | 18 | Tests d'intrusion | ❌ | aucun test externe à ce jour |
 
 ## Points ouverts (par ordre de valeur)

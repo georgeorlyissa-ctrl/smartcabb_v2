@@ -2,6 +2,10 @@
 
 > **1 page, à imprimer ou garder ouverte sur le téléphone.** En cas d'incident, on lit ça et on exécute, on n'improvise pas.
 > Dernière mise à jour : 26 novembre 2026.
+>
+> **Procédure complète** : `PROCEDURE_INCIDENTS_ISO_27035.md` (qualification,
+> rôles, preuves, notification, post-mortem). Cette fiche reste le réflexe
+> terrain des 15 premières minutes.
 
 ## 1. Réflexes des 15 premières minutes
 

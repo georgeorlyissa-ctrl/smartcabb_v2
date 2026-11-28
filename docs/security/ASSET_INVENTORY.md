@@ -13,7 +13,7 @@
 | Base de données + KV métier | `kv_store_2eb02e52`, `profiles`, `rides`, `scheduled_rides`, `transactions`, `audit_logs` | Supabase (PostgreSQL) | 🔴 critique |
 | Authentification | Supabase Auth (JWT, OTP SMS) | Supabase | 🔴 critique |
 | Stockage fichiers | buckets `avatars` (privé), `backups` (privé), `apk` (public) | Supabase Storage | 🟠 élevée |
-| Application Android | `com.smartcabb.app`, versionCode 11 / 1.8 | Play Console (AAB) | 🟠 élevée |
+| Application Android | `com.smartcabb.app`, versionCode 12 / 1.9 | Play Console (AAB) | 🟠 élevée |
 | Panneau admin | `/admin` (même application web) | Vercel | 🔴 critique |
 
 ## 2. Comptes et accès
