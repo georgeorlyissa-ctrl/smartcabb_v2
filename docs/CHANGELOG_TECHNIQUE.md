@@ -42,6 +42,88 @@ Assez de détail pour comprendre le code sans le relire.>
 
 ---
 
+## 2026-11-28 (69) — CTA final : message unique et badges App Store / Google Play
+
+- **Commit** : `60d9afa` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat (UX landing)
+- **Objectif** : simplifier le bloc d'appel à l'action final de la page d'accueil pour ne garder que le message de téléchargement et les deux badges de stores.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `pages/LandingPage.tsx` | Contenu du CTA final remplacé par le message demandé + badges `Google Play` / `App Store` |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- Le titre devient **« Prêt à voyager avec SmartCabb ? »** (EN : « Ready to travel with SmartCabb? ») et le sous-titre **« Téléchargez l'application maintenant et profitez de votre premier tour. »** (EN : « Download the app now and enjoy your first ride. »).
+- Suppression des boutons « Commencer maintenant », « Devenir partenaire », du bouton Play Store sur mesure et des deux encarts « Disponible sur iOS & Android » / « Paiement Cash & Mobile Money ».
+- Réutilisation des composants existants `PlayStoreBadge` (lien Play Store officiel) et `AppStoreBadge` (badge « Très bientôt », non cliquable tant que l'app iOS n'est pas publiée).
+- Les classes d'animation locales `reveal d2/d3/d4` et `ctaInView` sont conservées ; aucun changement de style global.
+
+### Impact produit / comportement visible
+- Le bas de la page d'accueil ne propose plus qu'une action claire : télécharger l'application.
+- Google Play est cliquable ; App Store reste honnêtement marqué « Très bientôt ».
+
+### Risques & rollback
+- **Risque** : aucun risque fonctionnel ; le CTA n'effectue aucun appel réseau.
+- **Rollback** : `git revert 60d9afa` (ou restaurer l'ancien bloc JSX).
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur sur `LandingPage.tsx`
+- [x] `npm run build` — OK
+- [x] Contrôle FR : texte exact « Prêt à voyager avec SmartCabb ? » + sous-titre demandé
+- [x] Contrôle EN : traduction cohérente
+- [x] Capture d'écran : deux badges visibles, aucun ancien bouton
+
+---
+
+## 2026-11-28 (68) — Animations d'apparition sur toutes les pages publiques
+
+- **Commit** : `60d9afa` (branche `main`, poussée sur `origin`)
+- **Auteur** : agent OpenCode
+- **Type** : feat (UI publique)
+- **Objectif** : faire apparaître avec une animation chaque section des pages publiques. Le polyfill `motion` du projet ignorait volontairement `initial` / `whileInView`, donc les pages vitrine ne s'animaient pas.
+
+### Fichiers touchés
+| Fichier | Nature du changement |
+|---|---|
+| `components/public/ScrollReveal.tsx` | Nouveau système global CSS + IntersectionObserver + MutationObserver |
+| `App.tsx` | Montage de `<ScrollReveal />` et correction de la route 404 (`*` → `/*`) |
+| `pages/ContactPage.tsx` | `motion.div` non importé remplacé par des blocs `data-reveal` |
+| `pages/AboutPage.tsx` | `data-reveal` sur mission, vision, image, valeurs et statistiques |
+| `pages/ServicesPage.tsx` | `data-reveal` sur les étapes et cartes de réservation |
+| `pages/TermsPage.tsx` / `pages/PrivacyPage.tsx` / `pages/LegalPage.tsx` | `data-reveal` sur les blocs de contenu |
+| `pages/AccountDeletionPage.tsx` / `pages/TrackRidePage.tsx` | `data-reveal` sur l'en-tête, les cartes et la fiche course |
+| `docs/CHANGELOG_TECHNIQUE.md` | Cette entrée |
+
+### Description technique
+- **Système global** : `ScrollReveal` cible `section, main, [data-reveal]` dans `.app-container`. Les éléments déjà visibles reçoivent une animation CSS immédiate (`scRevealUp`) ; les autres sont observés puis révélés à l'entrée dans le viewport (`threshold: 0`).
+- **Robustesse** : scans différés (150/400/1000/2500 ms + vérifications de mise en page à 3,5 s et 6 s), `MutationObserver` sur les ajouts, les changements de texte et la classe `className` (réparation si React réécrit la classe), écoute `scroll` en capture sur `document` (le `body` est le conteneur de défilement), `pageshow`.
+- **Navigation interne** : remise à zéro de `body.scrollTop` / `documentElement.scrollTop` à chaque changement de route sans ancre, avant peinture (`useLayoutEffect`).
+- **Accessibilité** : `prefers-reduced-motion: reduce` désactive totalement les transitions et animations ; règle `@media print` pour ne jamais masquer du contenu imprimé.
+- **404** : le routeur maison ne gère pas `path="*"` ; la route est passée à `path="/*"` pour que `NotFoundPage` soit réellement rendue et animée.
+
+### Impact produit / comportement visible
+- Toutes les pages publiques (`/`, `/services`, `/contact`, `/about`, `/terms`, `/privacy`, `/legal`, `/account-deletion`, `/reserver`, `/commander`, `/drivers`, `/track`, 404) révèlent leurs sections au défilement.
+- Après un clic de navigation, la nouvelle page s'ouvre en haut et son hero s'anime immédiatement.
+- Aucun contenu ne reste invisible si l'observateur est suspendu (filet de sécurité géométrique).
+
+### Risques & rollback
+- **Risque** : coût négligeable de quelques observateurs sur les pages publiques ; les applications connectées (`/app`, `/admin`, `/driver`, `/auth`) sont exclues.
+- **Rollback** : retirer `<ScrollReveal />` de `App.tsx` ou `git revert 60d9afa`. Les attributs `data-reveal` seuls ne masquent rien sans le composant.
+
+### Tests / vérifications
+- [x] `npx tsc --noEmit` — aucune nouvelle erreur sur les fichiers concernés
+- [x] `npm run build` — OK
+- [x] Boucle sur les 12 pages publiques : éléments enregistrés et révélés après défilement, aucun `data-sc-reveal` restant sans classe
+- [x] `/track` : carte d'erreur révélée après changement de mise en page
+- [x] 404 : contenu React rendu et animé
+- [x] Navigation `/` → `/contact` : `body.scrollTop = 0`
+- [x] `prefers-reduced-motion` : règle CSS vérifiée
+
+---
+
 ## 2026-11-27 (67) — Réservation : contact WhatsApp + champs date/heure guidés
 
 - **Commit** : `2a055ec` (branche `main`, poussée sur `origin`)
